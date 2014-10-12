@@ -39,6 +39,7 @@ class Transition(object):
         for trigger in self.before: getattr(event.model, trigger)()
         machine.get_state(self.source).exit(event)
         machine.update_state(self.dest)
+        event.update()
         machine.get_state(self.source).enter(event)
         for trigger in self.after: getattr(event.model, trigger)()
         return True
@@ -54,6 +55,9 @@ class Event(object):
         self.model = model
         self.args = args
         self.kwargs = kwargs
+
+    def update(self):
+        self.state = self.machine.current_state
 
 
 class Trigger(object):
