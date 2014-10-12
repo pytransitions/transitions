@@ -16,6 +16,12 @@ class Stuff(object):
     def this_fails(self):
         return False
 
+    def goodbye(self):
+        self.message = "So long, suckers!"
+
+    def hello_world(self):
+        self.message = "Hello World!"
+
 
 class TestClass(TestCase):
 
@@ -52,4 +58,15 @@ class TestClass(TestCase):
         m.move()
         self.assertEquals(m.state, 'B')
 
-
+    def test_state_change_listeners(self):
+        s = self.stuff
+        s.machine.add_transition('advance', 'A', 'B')
+        s.machine.add_transition('reverse', 'B', 'A')
+        s.machine.on_enter_B('hello_world')
+        s.machine.on_exit_B('goodbye')
+        s.advance()
+        self.assertEquals(s.state, 'B')
+        self.assertEquals(s.message, 'Hello World!')
+        s.reverse()
+        self.assertEquals(s.state, 'A')
+        self.assertTrue(s.message.startswith('So long'))
