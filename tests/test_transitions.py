@@ -23,6 +23,21 @@ class Stuff(object):
         self.message = "Hello World!"
 
 
+class InheritedStuff(Machine):
+
+    def __init__(self, states, initial='A'):
+
+        self.state = None
+
+        Machine.__init__(self, states=states, initial=initial)
+
+    def this_passes(self):
+        return True
+
+    def this_fails(self):
+        return False
+
+
 class TestClass(TestCase):
 
     def setUp(self):
@@ -35,7 +50,7 @@ class TestClass(TestCase):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'B', conditions='this_passes')
         s.machine.add_transition('advance', 'B', 'C')
-        s.machine.add_transition('advance', 'C', 'task')
+        s.machine.add_transition('advance', 'C', 'D')
         s.advance()
         self.assertEquals(s.state, 'B')
         self.assertFalse(s.is_A())
@@ -70,3 +85,17 @@ class TestClass(TestCase):
         s.reverse()
         self.assertEquals(s.state, 'A')
         self.assertTrue(s.message.startswith('So long'))
+
+    def test_inheritance(self):
+        states = ['A', 'B', 'C', 'D', 'E']
+        s = InheritedStuff(states=states, initial='A')
+        s.add_transition('advance', 'A', 'B', conditions='this_passes')
+        s.add_transition('advance', 'B', 'C')
+        s.add_transition('advance', 'C', 'D')
+        s.advance()
+        self.assertEquals(s.state, 'B')
+        self.assertFalse(s.is_A())
+        self.assertTrue(s.is_B())
+        s.advance()
+        self.assertEquals(s.state, 'C')
+
