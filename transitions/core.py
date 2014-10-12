@@ -1,7 +1,3 @@
-
-from functools import partial
-from sqlalchemy import Column, Text, Integer, String, TIMESTAMP, ForeignKey, Boolean, DateTime
-from sqlalchemy.orm.session import Session
 from functools import partial
 from collections import defaultdict
 
