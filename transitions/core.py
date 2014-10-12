@@ -102,10 +102,7 @@ class Machine(object):
                 self.states[s.name] = s
                 setattr(self.model, 'is_%s' % s.name, partial(self.is_state, s.name))
 
-        if initial is not None:
-            if initial not in self.states:
-                raise ValueError("Initial state '%s' is not in the list of valid states." % initial)
-            self.update_state(initial)
+        self.update_state(initial)
 
         if transitions is not None:
             for t in transitions: self.transition(**t)
@@ -114,10 +111,14 @@ class Machine(object):
         return self.current_state.name == state
         
     def get_state(self, state):
-        return self.states[state] if state in self.states else None
+        if state not in self.states:
+            raise ValueError("State '%s' is not a registered state." % state)
+        return self.states[state]
 
-    def update_state(self, name, save=True):
-        self.current_state = self.states[name]
+    def update_state(self, state, save=True):
+        if isinstance(state, basestring):
+            state = self.get_state(state)
+        self.current_state = state
         self.model.state = self.current_state.name
     
     def add_transition(self, name, source, dest, conditions=None, before=None, after=None, *args, **kwargs):
