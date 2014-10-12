@@ -4,6 +4,7 @@ from collections import defaultdict
 def listify(obj):
     return obj if isinstance(obj, list) or obj is None else [obj]
 
+
 class State(object):
 
     def __init__(self, name, on_enter=None, on_exit=None):
@@ -17,6 +18,10 @@ class State(object):
 
     def exit(self, event):
         for oe in self.on_exit: getattr(event.model, oe)()
+
+    def add_listener(self, listener, func, *args, **kwargs):
+        event_list = getattr(self, 'on_' + listener)
+        event_list.append(func)
 
 
 class Transition(object):
@@ -40,7 +45,7 @@ class Transition(object):
         machine.get_state(self.source).exit(event)
         machine.update_state(self.dest)
         event.update()
-        machine.get_state(self.source).enter(event)
+        machine.get_state(self.dest).enter(event)
         for trigger in self.after: getattr(event.model, trigger)()
         return True
 
@@ -54,7 +59,8 @@ class Event(object):
         self.machine = machine
         self.model = model
         self.args = args
-        self.kwargs = kwargs
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def update(self):
         self.state = self.machine.current_state
@@ -145,7 +151,8 @@ class Machine(object):
             return getattr(self.triggers[name], 'add_' + terms[0])
             
         elif name.startswith('on_enter') or name.startswith('on_exit'):
-            pass
+            state = self.get_state('_'.join(terms[2:]))
+            return partial(state.add_listener, terms[1])
 
 
 class MachineError(Exception):
