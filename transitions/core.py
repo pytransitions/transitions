@@ -8,7 +8,6 @@ def listify(obj):
 class State(object):
 
     def __init__(self, name, on_enter=None, on_exit=None):
-
         self.name = name
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
@@ -27,7 +26,6 @@ class State(object):
 class Transition(object):
 
     def __init__(self, source, dest, conditions=None, before=None, after=None):
-
         self.source = source
         self.dest = dest
         before, after, conditions = (listify(x) for x in [before, after, conditions])
@@ -36,14 +34,13 @@ class Transition(object):
         self.conditions = [] if conditions is None else conditions
 
     def execute(self, event):
-
         machine = event.machine
         for c in self.conditions:
             if not getattr(event.model, c)(): return False
 
         for trigger in self.before: getattr(event.model, trigger)()
         machine.get_state(self.source).exit(event)
-        machine.update_state(self.dest)
+        machine.set_state(self.dest)
         event.update()
         machine.get_state(self.dest).enter(event)
         for trigger in self.after: getattr(event.model, trigger)()
@@ -53,7 +50,6 @@ class Transition(object):
 class Event(object):
 
     def __init__(self, state, trigger, machine, model, *args, **kwargs):
-
         self.state = state
         self.trigger = trigger
         self.machine = machine
@@ -69,7 +65,6 @@ class Event(object):
 class Trigger(object):
 
     def __init__(self, name, machine):
-
         self.name = name
         self.machine = machine
         self.transitions = defaultdict(list)
@@ -93,7 +88,6 @@ class Trigger(object):
 class Machine(object):
 
     def __init__(self, model=None, states=None, initial=None, transitions=None, send_event=False):
-        
         self.model = self if model is None else model 
         self.states = {}
         self.triggers = {}
@@ -108,7 +102,7 @@ class Machine(object):
                 self.states[s.name] = s
                 setattr(self.model, 'is_%s' % s.name, partial(self.is_state, s.name))
 
-        self.update_state(initial)
+        self.set_state(initial)
 
         if transitions is not None:
             for t in transitions: self.transition(**t)
@@ -121,14 +115,13 @@ class Machine(object):
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state]
 
-    def update_state(self, state, save=True):
+    def set_state(self, state, save=True):
         if isinstance(state, basestring):
             state = self.get_state(state)
         self.current_state = state
         self.model.state = self.current_state.name
     
     def add_transition(self, name, source, dest, conditions=None, before=None, after=None, *args, **kwargs):
-
         if name not in self.triggers:
             self.triggers[name] = Trigger(name, self)
             setattr(self.model, name, self.triggers[name].trigger)
