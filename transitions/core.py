@@ -127,9 +127,7 @@ class Machine(object):
             setattr(self.model, name, self.triggers[name].trigger)
 
         if isinstance(source, basestring):
-            source = [source]
-        elif source == '*':
-            source = self.triggers.keys()
+            source = self.states.keys() if source == '*' else [source]
 
         for s in source:
             t = Transition(s, dest, conditions, before, after)
