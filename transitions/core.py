@@ -25,25 +25,21 @@ class State(object):
 
 class Transition(object):
 
-    def __init__(self, source, dest, conditions=None, before=None, after=None):
+    def __init__(self, source, dest, conditions=None):
         self.source = source
         self.dest = dest
-        before, after, conditions = (listify(x) for x in [before, after, conditions])
-        self.before = [] if before is None else before
-        self.after = [] if after is None else after
-        self.conditions = [] if conditions is None else conditions
+        
+        self.conditions = [] if conditions is None else listify(conditions)
 
     def execute(self, event):
         machine = event.machine
         for c in self.conditions:
             if not getattr(event.model, c)(): return False
 
-        for trigger in self.before: getattr(event.model, trigger)()
         machine.get_state(self.source).exit(event)
         machine.set_state(self.dest)
         event.update()
         machine.get_state(self.dest).enter(event)
-        for trigger in self.after: getattr(event.model, trigger)()
         return True
 
 
@@ -64,10 +60,12 @@ class Event(object):
 
 class Trigger(object):
 
-    def __init__(self, name, machine):
+    def __init__(self, name, machine, before=None, after=None):
         self.name = name
         self.machine = machine
         self.transitions = defaultdict(list)
+        self.before = [] if before is None else listify(before)
+        self.after = [] if after is None else listify(after)
 
     def add_transition(self, transition):
         source = transition.source
@@ -80,9 +78,15 @@ class Trigger(object):
         if state_name not in self.transitions:
             raise MachineError("Can't trigger event %s from state %s!" % (self.name, state_name))
         event = Event(self.machine.current_state, self, self.machine, self.machine.model, *args, **kwargs)
+        for trigger in self.before: getattr(event.model, trigger)()
         for t in self.transitions[state_name]:
             if t.execute(event): return True
+        for trigger in self.after: getattr(event.model, trigger)()
         return False
+
+    def add_listener(self, listener, func, *args, **kwargs):
+        event_list = getattr(self, listener)
+        event_list.append(func)
 
 
 class Machine(object):
@@ -123,23 +127,24 @@ class Machine(object):
     
     def add_transition(self, name, source, dest, conditions=None, before=None, after=None, *args, **kwargs):
         if name not in self.triggers:
-            self.triggers[name] = Trigger(name, self)
+            self.triggers[name] = Trigger(name, self, before, after)
             setattr(self.model, name, self.triggers[name].trigger)
 
         if isinstance(source, basestring):
             source = self.states.keys() if source == '*' else [source]
 
         for s in source:
-            t = Transition(s, dest, conditions, before, after)
+            t = Transition(s, dest, conditions)
             self.triggers[name].add_transition(t)
 
     def __getattr__(self, name):
         terms = name.split('_')
         if terms[0] in ['before', 'after']:
             name = '_'.join(terms[1:])
+            print name
             if name not in self.triggers:
                 raise MachineError('Trigger "%s" is not registered.' % name)
-            return getattr(self.triggers[name], 'add_' + terms[0])
+            return partial(self.triggers[name].add_listener, terms[0])
             
         elif name.startswith('on_enter') or name.startswith('on_exit'):
             state = self.get_state('_'.join(terms[2:]))
