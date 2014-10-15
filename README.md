@@ -15,7 +15,7 @@ A lightweight, object-oriented state machine implementation in Python.
 They say [a good example is worth](https://www.google.com/webhp?sourceid=chrome-instant&ion=1&espv=2&ie=UTF-8#q=%22a+good+example+is+worth%22&start=20) 100 pages of API documentation, a million directives, or a thousand words. Well, "they" probably lie... but here's an example anyway:
 
 ```python
-from transitions.core import Machine
+from transitions import Machine
 import random
 
 class NarcolepticSuperhero(object):
