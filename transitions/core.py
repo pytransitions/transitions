@@ -105,7 +105,7 @@ class Machine(object):
         self.set_state(initial)
 
         if transitions is not None:
-            for t in transitions: self.transition(**t)
+            for t in transitions: self.add_transition(**t)
 
     def is_state(self, state):
         return self.current_state.name == state
