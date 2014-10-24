@@ -23,15 +23,15 @@ class State(object):
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
 
-    def enter(self, event):
+    def enter(self, event_data):
         """ Triggered when a state is entered. """
         for oe in self.on_enter:
-            getattr(event.model, oe)()
+            event_data.machine.callback(getattr(event_data.model, oe), event_data)
 
-    def exit(self, event):
+    def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
-            getattr(event.model, oe)()
+            event_data.machine.callback(getattr(event_data.model, oe), event_data)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -76,13 +76,13 @@ class Transition(object):
                 return False
 
         for func in self.before:
-            getattr(event_data.model, func)()
+            machine.callback(getattr(event_data.model, func), event_data)
         machine.get_state(self.source).exit(event_data)
         machine.set_state(self.dest)
         event_data.update()
         machine.get_state(self.dest).enter(event_data)
         for func in self.after:
-            getattr(event_data.model, func)()
+            machine.callback(getattr(event_data.model, func), event_data)
         return True
 
     def add_callback(self, trigger, func):
@@ -107,16 +107,13 @@ class EventData(object):
             model (object): The model/object the machine is bound to.
             args and kwargs: Optional positional or named arguments that 
                 will be stored internally for possible later use.
-                Positional arguments will be stored in self.args;
-                named arguments will be set as attributes in self.
         """
         self.state = state
         self.event = event
         self.machine = machine
         self.model = model
         self.args = args
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        self.kwargs = kwargs
 
     def update(self):
         """ Updates the current State to accurately reflect the Machine. """
@@ -261,6 +258,19 @@ class Machine(object):
         for s in source:
             t = Transition(s, dest, conditions, before, after)
             self.events[trigger].add_transition(t)
+
+    def callback(self, func, event_data):
+        """ Trigger a callback function, possibly wrapping it in an EventData instance.
+        Args:
+            func (callable): The callback function.
+            event_data (EventData): An EventData instance to pass to the callback (if 
+                event sending is enabled) or to extract arguments from (if event 
+                sending is disabled).
+        """
+        if self.send_event:
+            func(event_data)
+        else:
+            func(*event_data.args, **event_data.kwargs)
 
     def __getattr__(self, name):
         terms = name.split('_')
