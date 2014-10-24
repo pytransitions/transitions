@@ -225,16 +225,16 @@ class Machine(object):
             after (string or list): Callables to call after the transition.
 
         """
-        if name not in self.events:
-            self.events[name] = Event(name, self)
-            setattr(self.model, name, self.events[name].trigger)
+        if trigger not in self.events:
+            self.events[trigger] = Event(trigger, self)
+            setattr(self.model, trigger, self.events[trigger].trigger)
 
         if isinstance(source, basestring):
             source = self.states.keys() if source == '*' else [source]
 
         for s in source:
             t = Transition(s, dest, conditions, before, after)
-            self.events[name].add_transition(t)
+            self.events[trigger].add_transition(t)
 
     def __getattr__(self, name):
         terms = name.split('_')
