@@ -179,10 +179,7 @@ class Machine(object):
         if states is not None:
             states = listify(states)
             for s in states:
-                if isinstance(s, basestring):
-                    s = State(s)
-                self.states[s.name] = s
-                setattr(self.model, 'is_%s' % s.name, partial(self.is_state, s.name))
+                self.add_state(s)
 
         self.set_state(initial)
 
@@ -205,6 +202,24 @@ class Machine(object):
             state = self.get_state(state)
         self.current_state = state
         self.model.state = self.current_state.name
+
+    def add_state(self, state, on_enter=None, on_exit=None):
+        """ Add a new state.
+        Args:
+            state (string, dict, or State): a State instance, the name
+                of a new state, or a dict with keywords to pass on to
+                the State initializer.
+            on_enter (string or list): callbacks to trigger when the
+                state is entered. Only valid if first argument is string.
+            on_exit (string or list): callbacks to trigger when the
+                state is exited. Only valid if first argument is string.
+        """
+        if isinstance(state, basestring):
+            state = State(state, on_enter=on_enter, on_exit=on_exit)
+        elif isinstance(state, dict):
+            state = State(**state)
+        self.states[state.name] = state
+        setattr(self.model, 'is_%s' % state.name, partial(self.is_state, state.name))
     
     def add_transition(self, trigger, source, dest, conditions=None, before=None, after=None):
         """ Create a new Transition instance and add it to the internal list.

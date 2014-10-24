@@ -46,7 +46,12 @@ class TestTransitions(TestCase):
     def tearDown(self):
         pass
 
-    def test_basic(self):
+    # def test_machine_initialization(self):
+        # Minimal init without arguments
+        # m = Machine()
+
+
+    def test_transitioning(self):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'B', conditions='this_passes')
         s.machine.add_transition('advance', 'B', 'C')
