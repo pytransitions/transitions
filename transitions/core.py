@@ -30,19 +30,15 @@ class State(object):
         """ Triggered when a state is exited. """
         for oe in self.on_exit: getattr(event.model, oe)()
 
-    def add_listener(self, listener, func, *args, **kwargs):
-        """ Add a new listener to enter/exit events.
+    def add_callback(self, trigger, func):
+        """ Add a new enter or exit callback.
         Args:
-            listener (string): The type of listener to add. Must be one of 
+            trigger (string): The type of triggering event. Must be one of 
                 'enter' or 'exit'.
-            func (string): The callable to call when the listener fires.
-            args and kwargs: Optional positional or named arguments that 
-                will be passed onto the EventData instance passed to all 
-                triggered function.
-
+            func (string): The name of the callback function.
         """
-        event_list = getattr(self, 'on_' + listener)
-        event_list.append(func)
+        callback_list = getattr(self, 'on_' + trigger)
+        callback_list.append(func)
 
 
 class Transition(object):
@@ -66,29 +62,50 @@ class Transition(object):
         
         self.conditions = [] if conditions is None else listify(conditions)
 
-    def execute(self, event):
+    def execute(self, event_data):
         """ Execute the transition.
         Args:
             event: An instance of class EventData.
         """
-        machine = event.machine
+        machine = event_data.machine
         for c in self.conditions:
-            if not getattr(event.model, c)(): return False
+            if not getattr(event_data.model, c)(): return False
 
-        for func in self.before: getattr(event.model, func)()
-        machine.get_state(self.source).exit(event)
+        for func in self.before: getattr(event_data.model, func)()
+        machine.get_state(self.source).exit(event_data)
         machine.set_state(self.dest)
-        event.update()
-        machine.get_state(self.dest).enter(event)
-        for func in self.after: getattr(event.model, func)()
+        event_data.update()
+        machine.get_state(self.dest).enter(event_data)
+        for func in self.after: getattr(event_data.model, func)()
         return True
+
+    def add_callback(self, trigger, func):
+        """ Add a new before or after callback.
+        Args:
+            trigger (string): The type of triggering event. Must be one of 
+                'before' or 'after'.
+            func (string): The name of the callback function.
+        """
+        callback_list = getattr(self, trigger)
+        callback_list.append(func)
 
 
 class EventData(object):
 
-    def __init__(self, state, trigger, machine, model, *args, **kwargs):
+    def __init__(self, state, event, machine, model, *args, **kwargs):
+        """
+        Args:
+            state (State): The State from which the Event was triggered.
+            event (Event): The triggering Event.
+            machine (Machine): The current Machine instance.
+            model (object): The model/object the machine is bound to.
+            args and kwargs: Optional positional or named arguments that 
+                will be stored internally for possible later use.
+                Positional arguments will be stored in self.args;
+                named arguments will be set as attributes in self.
+        """
         self.state = state
-        self.trigger = trigger
+        self.event = event
         self.machine = machine
         self.model = model
         self.args = args
@@ -96,23 +113,39 @@ class EventData(object):
             setattr(self, k, v)
 
     def update(self):
+        """ Updates the current State to accurately reflect the Machine. """
         self.state = self.machine.current_state
 
 
 class Event(object):
 
     def __init__(self, name, machine):
+        """
+        Args:
+            name (string): The name of the event, which is also the name of the 
+                triggering callable (e.g., 'advance' implies an advance() method).
+            machine (Machine): The current Machine instance.
+        """
         self.name = name
         self.machine = machine
         self.transitions = defaultdict(list)
 
     def add_transition(self, transition):
+        """ Add a transition to the list of potential transitions.
+        Args:
+            transition (Transition): The Transition instance to add to the list.
+        """
         source = transition.source
         self.transitions[transition.source].append(transition)
 
     def trigger(self, *args, **kwargs):
         """ Serially execute all transitions that match the current state, 
-        halting as soon as one successfully completes. """
+        halting as soon as one successfully completes. 
+        Args:
+            args and kwargs: Optional positional or named arguments that 
+                will be passed onto the EventData object, enabling arbitrary 
+                state information to be passed on to downstream triggered 
+                functions. """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
             raise MachineError("Can't trigger event %s from state %s!" % (self.name, state_name))
@@ -120,10 +153,6 @@ class Event(object):
         for t in self.transitions[state_name]:
             if t.execute(event): return True
         return False
-
-    def add_listener(self, listener, func, *args, **kwargs):
-        event_list = getattr(self, listener)
-        event_list.append(func)
 
 
 class Machine(object):
@@ -181,11 +210,11 @@ class Machine(object):
             print name
             if name not in self.events:
                 raise MachineError('Event "%s" is not registered.' % name)
-            return partial(self.events[name].add_listener, terms[0])
+            return partial(self.events[name].add_callback, terms[0])
             
         elif name.startswith('on_enter') or name.startswith('on_exit'):
             state = self.get_state('_'.join(terms[2:]))
-            return partial(state.add_listener, terms[1])
+            return partial(state.add_callback, terms[1])
 
 
 class MachineError(Exception):
