@@ -1,6 +1,7 @@
 from functools import partial
 from collections import defaultdict
 
+
 def listify(obj):
     return obj if isinstance(obj, list) or obj is None else [obj]
 
@@ -24,11 +25,13 @@ class State(object):
 
     def enter(self, event):
         """ Triggered when a state is entered. """
-        for oe in self.on_enter: getattr(event.model, oe)()
+        for oe in self.on_enter:
+            getattr(event.model, oe)()
 
     def exit(self, event):
         """ Triggered when a state is exited. """
-        for oe in self.on_exit: getattr(event.model, oe)()
+        for oe in self.on_exit:
+            getattr(event.model, oe)()
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -59,7 +62,7 @@ class Transition(object):
         self.dest = dest
         self.before = [] if before is None else listify(before)
         self.after = [] if after is None else listify(after)
-        
+
         self.conditions = [] if conditions is None else listify(conditions)
 
     def execute(self, event_data):
@@ -69,14 +72,17 @@ class Transition(object):
         """
         machine = event_data.machine
         for c in self.conditions:
-            if not getattr(event_data.model, c)(): return False
+            if not getattr(event_data.model, c)():
+                return False
 
-        for func in self.before: getattr(event_data.model, func)()
+        for func in self.before:
+            getattr(event_data.model, func)()
         machine.get_state(self.source).exit(event_data)
         machine.set_state(self.dest)
         event_data.update()
         machine.get_state(self.dest).enter(event_data)
-        for func in self.after: getattr(event_data.model, func)()
+        for func in self.after:
+            getattr(event_data.model, func)()
         return True
 
     def add_callback(self, trigger, func):
@@ -148,10 +154,13 @@ class Event(object):
                 functions. """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
-            raise MachineError("Can't trigger event %s from state %s!" % (self.name, state_name))
-        event = EventData(self.machine.current_state, self, self.machine, self.machine.model, *args, **kwargs)
+            raise MachineError(
+                "Can't trigger event %s from state %s!" % (self.name, state_name))
+        event = EventData(self.machine.current_state, self,
+                          self.machine, self.machine.model, *args, **kwargs)
         for t in self.transitions[state_name]:
-            if t.execute(event): return True
+            if t.execute(event):
+                return True
         return False
 
 
@@ -170,12 +179,12 @@ class Machine(object):
             transitions (list): An optional list of transitions. Each element is a dictionary 
                 of named arguments to be passed onto the Transition initializer.
         """
-        self.model = self if model is None else model 
+        self.model = self if model is None else model
         self.states = {}
         self.events = {}
         self.current_state = None
         self.send_event = send_event
-        
+
         if states is not None:
             states = listify(states)
             for s in states:
@@ -184,12 +193,13 @@ class Machine(object):
         self.set_state(initial)
 
         if transitions is not None:
-            for t in transitions: self.add_transition(**t)
+            for t in transitions:
+                self.add_transition(**t)
 
     def is_state(self, state):
         """ Check whether the current state matches the named state. """
         return self.current_state.name == state
-        
+
     def get_state(self, state):
         """ Return the State instance with the passed name. """
         if state not in self.states:
@@ -219,8 +229,9 @@ class Machine(object):
         elif isinstance(state, dict):
             state = State(**state)
         self.states[state.name] = state
-        setattr(self.model, 'is_%s' % state.name, partial(self.is_state, state.name))
-    
+        setattr(self.model, 'is_%s' %
+                state.name, partial(self.is_state, state.name))
+
     def add_transition(self, trigger, source, dest, conditions=None, before=None, after=None):
         """ Create a new Transition instance and add it to the internal list.
         Args:
@@ -255,22 +266,19 @@ class Machine(object):
         terms = name.split('_')
         if terms[0] in ['before', 'after']:
             name = '_'.join(terms[1:])
-            print name
             if name not in self.events:
                 raise MachineError('Event "%s" is not registered.' % name)
             return partial(self.events[name].add_callback, terms[0])
-            
+
         elif name.startswith('on_enter') or name.startswith('on_exit'):
             state = self.get_state('_'.join(terms[2:]))
             return partial(state.add_callback, terms[1])
 
 
 class MachineError(Exception):
+
     def __init__(self, value):
         self.value = value
 
     def __str__(self):
         return repr(self.value)
-
-
-
