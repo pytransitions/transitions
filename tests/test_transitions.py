@@ -22,6 +22,12 @@ class Stuff(object):
     def hello_world(self):
         self.message = "Hello World!"
 
+    def set_message(self, message="Hello World!"):
+        self.message = message
+
+    def extract_message(self, event_data):
+        self.message = event_data.kwargs['message']
+
 
 class InheritedStuff(Machine):
 
@@ -65,7 +71,6 @@ class TestTransitions(TestCase):
         m = Machine(model=s, states=states, transitions=transitions, initial='State2')
         s.advance()
         self.assertEquals(s.message, 'Hello World!')
-
 
     def test_transitioning(self):
         s = self.stuff
@@ -120,3 +125,16 @@ class TestTransitions(TestCase):
         s.advance()
         self.assertEquals(s.state, 'C')
 
+    def test_send_event_data(self):
+        states = ['A', 'B', 'C', 'D']
+        s = Stuff()
+        # First pass positional and keyword args directly to the callback
+        m = Machine(model=s, states=states, initial='A', send_event=False)
+        m.add_transition(trigger='advance', source='A', dest='B', before='set_message')
+        s.advance(message='Hallo. My name is Inigo Montoya.')
+        self.assertTrue(s.message.startswith('Hallo.'))
+        # Now wrap arguments in an EventData instance
+        m.send_event = True
+        m.add_transition(trigger='advance', source='B', dest='C', before='extract_message')
+        s.advance(message='You killed my father. Prepare to die.')
+        self.assertTrue(s.message.startswith('You'))
