@@ -158,6 +158,19 @@ class Event(object):
 class Machine(object):
 
     def __init__(self, model=None, states=None, initial=None, transitions=None, send_event=False):
+        """
+        Args:
+            model (object): The object whose states we want to manage. If None, the current 
+                Machine instance will be used the model (i.e., all triggering events will be 
+                attached to the Machine itself).
+            states (list): A list of valid states. Each element can be either a string or a 
+                State instance. If string, a new generic State instance will be created that 
+                has the same name as the string.
+            initial (string): The initial state of the Machine.
+            transitions (list): An optional list of transitions. Each element can be either 
+                a Transition instance, or a dictionary of keyword arguments passed on to 
+                the Transition initializer.
+        """
         self.model = self if model is None else model 
         self.states = {}
         self.events = {}
