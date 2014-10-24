@@ -46,9 +46,25 @@ class TestTransitions(TestCase):
     def tearDown(self):
         pass
 
-    # def test_machine_initialization(self):
-        # Minimal init without arguments
-        # m = Machine()
+    def test_init_machine_with_hella_arguments(self):
+        states = [
+            State('State1'),
+            'State2',
+            {
+                'name': 'State3',
+                'on_enter': 'hello_world'
+            }
+        ]
+        transitions = [
+            { 'trigger': 'advance',
+                'source': 'State2',
+                'dest': 'State3'
+            }
+        ]
+        s = Stuff()
+        m = Machine(model=s, states=states, transitions=transitions, initial='State2')
+        s.advance()
+        self.assertEquals(s.message, 'Hello World!')
 
 
     def test_transitioning(self):
