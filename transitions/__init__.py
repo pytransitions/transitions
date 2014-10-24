@@ -1,1 +1,1 @@
-from core import State, Transition, Event, Trigger, Machine, MachineError
+from core import State, Transition, Event, EventData, Machine, MachineError

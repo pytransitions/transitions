@@ -35,9 +35,9 @@ class State(object):
         Args:
             listener (string): The type of listener to add. Must be one of 
                 'enter' or 'exit'.
-            func (string): The callable to call when the event is triggered.
+            func (string): The callable to call when the listener fires.
             args and kwargs: Optional positional or named arguments that 
-                will be passed onto the Event instance passed to all 
+                will be passed onto the EventData instance passed to all 
                 triggered function.
 
         """
@@ -69,7 +69,7 @@ class Transition(object):
     def execute(self, event):
         """ Execute the transition.
         Args:
-            event: An instance of class Event.
+            event: An instance of class EventData.
         """
         machine = event.machine
         for c in self.conditions:
@@ -84,7 +84,7 @@ class Transition(object):
         return True
 
 
-class Event(object):
+class EventData(object):
 
     def __init__(self, state, trigger, machine, model, *args, **kwargs):
         self.state = state
@@ -99,7 +99,7 @@ class Event(object):
         self.state = self.machine.current_state
 
 
-class Trigger(object):
+class Event(object):
 
     def __init__(self, name, machine):
         self.name = name
@@ -116,7 +116,7 @@ class Trigger(object):
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
             raise MachineError("Can't trigger event %s from state %s!" % (self.name, state_name))
-        event = Event(self.machine.current_state, self, self.machine, self.machine.model, *args, **kwargs)
+        event = EventData(self.machine.current_state, self, self.machine, self.machine.model, *args, **kwargs)
         for t in self.transitions[state_name]:
             if t.execute(event): return True
         return False
@@ -131,7 +131,7 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None, send_event=False):
         self.model = self if model is None else model 
         self.states = {}
-        self.triggers = {}
+        self.events = {}
         self.current_state = None
         self.send_event = send_event
         
@@ -163,25 +163,25 @@ class Machine(object):
         self.model.state = self.current_state.name
     
     def add_transition(self, name, source, dest, conditions=None, before=None, after=None, *args, **kwargs):
-        if name not in self.triggers:
-            self.triggers[name] = Trigger(name, self)
-            setattr(self.model, name, self.triggers[name].trigger)
+        if name not in self.events:
+            self.events[name] = Event(name, self)
+            setattr(self.model, name, self.events[name].trigger)
 
         if isinstance(source, basestring):
             source = self.states.keys() if source == '*' else [source]
 
         for s in source:
             t = Transition(s, dest, conditions, before, after)
-            self.triggers[name].add_transition(t)
+            self.events[name].add_transition(t)
 
     def __getattr__(self, name):
         terms = name.split('_')
         if terms[0] in ['before', 'after']:
             name = '_'.join(terms[1:])
             print name
-            if name not in self.triggers:
-                raise MachineError('Trigger "%s" is not registered.' % name)
-            return partial(self.triggers[name].add_listener, terms[0])
+            if name not in self.events:
+                raise MachineError('Event "%s" is not registered.' % name)
+            return partial(self.events[name].add_listener, terms[0])
             
         elif name.startswith('on_enter') or name.startswith('on_exit'):
             state = self.get_state('_'.join(terms[2:]))
