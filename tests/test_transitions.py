@@ -38,7 +38,7 @@ class InheritedStuff(Machine):
         return False
 
 
-class TestClass(TestCase):
+class TestTransitions(TestCase):
 
     def setUp(self):
         self.stuff = Stuff()
