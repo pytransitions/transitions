@@ -52,8 +52,8 @@ class Transition(object):
                 the transition to take place. Either a list providing the name 
                 of a callable, or a list of callables. For the transition to 
                 occur, ALL callables must return True.
-            before (string or list): Callables to call before the transition.
-            after (string or list): Callables to call after the transition.
+            before (string or list): callbacks to trigger before the transition.
+            after (string or list): callbacks to trigger after the transition.
         """
         self.source = source
         self.dest = dest
@@ -167,9 +167,8 @@ class Machine(object):
                 State instance. If string, a new generic State instance will be created that 
                 has the same name as the string.
             initial (string): The initial state of the Machine.
-            transitions (list): An optional list of transitions. Each element can be either 
-                a Transition instance, or a dictionary of keyword arguments passed on to 
-                the Transition initializer.
+            transitions (list): An optional list of transitions. Each element is a dictionary 
+                of named arguments to be passed onto the Transition initializer.
         """
         self.model = self if model is None else model 
         self.states = {}
@@ -191,20 +190,41 @@ class Machine(object):
             for t in transitions: self.add_transition(**t)
 
     def is_state(self, state):
+        """ Check whether the current state matches the named state. """
         return self.current_state.name == state
         
     def get_state(self, state):
+        """ Return the State instance with the passed name. """
         if state not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state]
 
-    def set_state(self, state, save=True):
+    def set_state(self, state):
+        """ Set the current state. """
         if isinstance(state, basestring):
             state = self.get_state(state)
         self.current_state = state
         self.model.state = self.current_state.name
     
-    def add_transition(self, name, source, dest, conditions=None, before=None, after=None, *args, **kwargs):
+    def add_transition(self, trigger, source, dest, conditions=None, before=None, after=None):
+        """ Create a new Transition instance and add it to the internal list.
+        Args:
+            trigger (string): The name of the method that will trigger the 
+                transition. This will be attached to the currently specified 
+                model (e.g., passing trigger='advance' will create a new 
+                advance() method in the model that triggers the transition.)
+            source(string): The name of the source state--i.e., the state we
+                are transitioning away from.
+            dest (string): The name of the destination State--i.e., the state 
+                we are transitioning into.
+            conditions (string or list): Condition(s) that must pass in order for 
+                the transition to take place. Either a list providing the name 
+                of a callable, or a list of callables. For the transition to 
+                occur, ALL callables must return True.
+            before (string or list): Callables to call before the transition.
+            after (string or list): Callables to call after the transition.
+
+        """
         if name not in self.events:
             self.events[name] = Event(name, self)
             setattr(self.model, name, self.events[name].trigger)
