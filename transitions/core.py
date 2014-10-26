@@ -188,6 +188,7 @@ class Machine(object):
         self.set_state(initial)
 
         if transitions is not None:
+            transitions = listify(transitions)
             for t in transitions:
                 self.add_transition(**t)
 
