@@ -44,7 +44,7 @@ class NarcolepticSuperhero(object):
         self.machine.add_transition('wake_up', 'asleep', 'hanging out')
         
         # Superheroes need to keep in shape.
-        self.machine.add_transition(name='work_out', source='hanging out', dest='hungry')
+        self.machine.add_transition(trigger='work_out', source='hanging out', dest='hungry')
         
         # Those calories won't replenish themselves!
         self.machine.add_transition('eat', 'hungry', 'hanging out')
@@ -160,10 +160,10 @@ states=['solid', 'liquid', 'gas', 'plasma']
 # And some transitions between states. We're lazy, so we'll leave out 
 # the inverse phase transitions (freezing, condensation, etc.).
 transitions = [
-    { 'trigger': 'melt', 'from': 'solid', 'to': 'liquid' },
-    { 'trigger': 'evaporate', 'from': 'liquid', 'to': 'gas' },
-    { 'trigger': 'sublimate', 'from': 'solid', 'to': 'gas' },
-    { 'trigger': 'ionize', 'from': 'gas', 'to': 'plasma' }
+    { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid' },
+    { 'trigger': 'evaporate', 'source': 'liquid', 'dest': 'gas' },
+    { 'trigger': 'sublimate', 'source': 'solid', 'dest': 'gas' },
+    { 'trigger': 'ionize', 'source': 'gas', 'dest': 'plasma' }
 ]
 
 # Initialize
@@ -262,10 +262,10 @@ Some of the above examples already illustrate the use of transitions in passing,
 
 ```python
 transitions = [
-    { 'trigger': 'melt', 'from': 'solid', 'to': 'liquid' },
-    { 'trigger': 'evaporate', 'from': 'liquid', 'to': 'gas' },
-    { 'trigger': 'sublimate', 'from': 'solid', 'to': 'gas' },
-    { 'trigger': 'ionize', 'from': 'gas', 'to': 'plasma' }
+    { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid' },
+    { 'trigger': 'evaporate', 'source': 'liquid', 'dest': 'gas' },
+    { 'trigger': 'sublimate', 'source': 'solid', 'dest': 'gas' },
+    { 'trigger': 'ionize', 'source': 'gas', 'dest': 'plasma' }
 ]
 machine = Machine(model=Matter(), states=states, transitions=transitions)
 ```
@@ -327,8 +327,8 @@ class Matter(object):
     def disappear: print "where'd all the liquid go?"
 
 transitions = [
-    { 'trigger': 'melt', 'from': 'solid', 'to': 'liquid', 'before': 'make_hissing_noises'},
-    { 'trigger': 'evaporate', 'from': 'liquid', 'to': 'gas', 'after': 'disappear' }   
+    { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid', 'before': 'make_hissing_noises'},
+    { 'trigger': 'evaporate', 'source': 'liquid', 'dest': 'gas', 'after': 'disappear' }
 ]
 
 lump = Matter()
