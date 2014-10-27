@@ -209,6 +209,10 @@ class Machine(object):
         self.current_state = state
         self.model.state = self.current_state.name
 
+    def add_state(self, *args, **kwargs):
+        """ Alias for add_states. """
+        self.add_states(*args, **kwargs)
+
     def add_states(self, states, on_enter=None, on_exit=None):
         """ Add new state(s).
         Args:
