@@ -185,6 +185,10 @@ class Machine(object):
         if states is not None:
             self.add_states(states)
 
+        if initial is None:
+            self.add_states('initial')
+            initial = 'initial'
+
         self.set_state(initial)
 
         if transitions is not None:
