@@ -273,7 +273,7 @@ machine = Machine(model=Matter(), states=states, transitions=transitions)
 Alternatively, we can add transitions to a Machine after initialization:
 
 ```python
-machine = Machine(model=lump, states=states)
+machine = Machine(model=lump, states=states, initial='solid')
 machine.add_transition('melt', source='solid', dest='liquid')
 ```
 
@@ -339,13 +339,68 @@ lump.evaporate()
 >>> "where'd all the liquid go?"
 ```
 
+### Passing data
+Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways. First (and by default), you can pass any positional or keyword arguments you like directly to the trigger methods added when transitions were registered:
+
+```python
+class Matter(object):
+    def __init__(self): self.set_environment()
+    def set_environment(self, temp=0, pressure=101.325):
+        self.temp = temp
+        self.pressure = pressure
+    def print_temperature(self): print("Current temperature is %d degrees celsius." % self.temp)
+    def print_pressure(self): print("Current pressure is %.2f kPa." % self.pressure)
+
+lump = Matter()
+machine = Machine(lump, ['solid', 'liquid'], initial='solid')
+machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
+
+lump.melt(45)  # positional arg
+lump.print_temperature()
+> 'Current temperature is 45 degrees celsius.'
+
+machine.set_state('solid')  # reset state so we can melt again
+lump.melt(pressure=300.23)  # keyword args also work
+lump.print_pressure()
+> 'Current pressure is 300.23 kPa.'
+
+```
+
+You can pass any number of arguments you like to the trigger.
+
+There is one important limitation to this approach: every callback function triggered by the state transition must be able to handle _all_ of the arguments. This may cause problems if you have multiple callbacks that each expects somewhat different data. To get around this, Transitions supports an alternate method for sending data. If you set send_events=True at Machine initialization, all arguments to the triggers will be wrapped in an EventData instance and passed on to every callback. (The EventData object also maintains internal references to the source state, model, machine, and trigger associated with the transition, in case you need to access these for anything.)
+
+```python
+class Matter(object):
+
+    def __init__(self):
+        self.temp = 0
+        self.pressure = 101.325
+
+    # Note that sole argument is now the EventData instance
+    def set_environment(self, event):
+        self.temp = event.kwargs.get('temp', 0)
+        self.pressure = event.kwargs.get('pressure', 101.325)
+
+    def print_pressure(self): print("Current pressure is %.2f kPa." % self.pressure)
+
+lump = Matter()
+machine = Machine(lump, ['solid', 'liquid'], send_event=True, initial='solid')
+machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
+
+lump.melt(temp=45, pressure=1853.68)  # positional arg
+lump.print_pressure()
+> 'Current pressure is 1853.68 kPa.'
+
+```
+
+
 ### Alternative initialization patterns
 
 In all of the examples so far, we've attached a new Machine instance to a separate model--specifically, to _lump_ (an instance of class Matter). While this separation keeps things tidy--because we don't have to monkey patch a whole bunch of new methods into our Matter class--it can also get annoying, since it requires us to keep track of which methods get called on our state machine, and which ones get called on the model the state machine is bound to (e.g., lump.on_enter_StateA() vs. machine.add_transition()). Fortunately, Transitions is flexible, and supports two other initialization patterns. First, we can create a standalone state machine that doesn't require another model at all. All we have to do is omit the model argument during initialization:
 
 ```python
 machine = Machine(state=states, transition=transitions, initial='solid')
-machine.set_state('solid')
 machine.melt()
 machine.state
 >>> 'liquid'
