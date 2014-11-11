@@ -421,7 +421,7 @@ class Matter(Machine):
         self.add_transition('melt', 'solid', 'liquid')
     
 lump = Matter()
-lump.state()
+lump.state
 >>> 'solid'
 lump.melt()
 lump.state
