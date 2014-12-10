@@ -1,3 +1,4 @@
+from builtins import object
 from transitions.core import *
 from unittest import TestCase
 
