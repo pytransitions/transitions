@@ -1,3 +1,4 @@
+from builtins import object
 from functools import partial
 from collections import defaultdict
 
@@ -208,7 +209,7 @@ class Machine(object):
 
     def set_state(self, state):
         """ Set the current state. """
-        if isinstance(state, basestring):
+        if isinstance(state, str):
             state = self.get_state(state)
         self.current_state = state
         self.model.state = self.current_state.name
@@ -231,7 +232,7 @@ class Machine(object):
         """
         states = listify(states)
         for state in states:
-            if isinstance(state, basestring):
+            if isinstance(state, str):
                 state = State(state, on_enter=on_enter, on_exit=on_exit)
             elif isinstance(state, dict):
                 state = State(**state)
@@ -262,8 +263,8 @@ class Machine(object):
             self.events[trigger] = Event(trigger, self)
             setattr(self.model, trigger, self.events[trigger].trigger)
 
-        if isinstance(source, basestring):
-            source = self.states.keys() if source == '*' else [source]
+        if isinstance(source, str):
+            source = list(self.states.keys()) if source == '*' else [source]
 
         for s in source:
             t = Transition(s, dest, conditions, before, after)
