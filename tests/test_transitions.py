@@ -1,4 +1,7 @@
-from builtins import object
+try:
+    from builtins import object
+except ImportError:
+    pass
 from transitions.core import *
 from unittest import TestCase
 

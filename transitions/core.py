@@ -1,7 +1,10 @@
-from builtins import object
+try:
+    from builtins import object
+except ImportError:
+    #python2
+    pass
 from functools import partial
-from collections import defaultdict
-
+from collections import defaultdict, OrderedDict
 
 def listify(obj):
     return obj if isinstance(obj, list) or obj is None else [obj]
@@ -178,19 +181,20 @@ class Machine(object):
                 of named arguments to be passed onto the Transition initializer.
         """
         self.model = self if model is None else model
-        self.states = {}
+        self.states = OrderedDict()
         self.events = {}
         self.current_state = None
         self.send_event = send_event
 
-        if states is not None:
-            self.add_states(states)
-
         if initial is None:
             self.add_states('initial')
             initial = 'initial'
+        self._initial = initial
 
-        self.set_state(initial)
+        if states is not None:
+            self.add_states(states)
+
+        self.set_state(self._initial)
 
         if transitions is not None:
             transitions = listify(transitions)
@@ -303,3 +307,4 @@ class MachineError(Exception):
 
     def __str__(self):
         return repr(self.value)
+
