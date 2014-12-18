@@ -1,4 +1,8 @@
-from builtins import object
+try:
+    from builtins import object
+except ImportError:
+    #python2
+    pass
 from functools import partial
 from collections import defaultdict
 
