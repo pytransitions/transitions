@@ -285,6 +285,20 @@ lump.state
 >>> 'liquid'
 ```
 
+#### Automatic transitions for all states
+In addition to any transitions added explicitly, a to_{state}() method will be added automatically whenever a state is added to a Machine instance. This method transitions to the target state no matter what state the state machine is currently in:
+
+```python
+lump.to_liquid()
+lump.state
+>>> 'liquid'
+lump.to_solid()
+lump.state
+>>> 'solid'
+```
+
+This behavior can be disabled if desired by setting auto_transitions=False in the Machine initializer.
+
 #### Transitioning from multiple states
 A given trigger can be attached to multiple transitions, some of which can potentially begin or end in the same state. For example:
 
@@ -316,7 +330,7 @@ machine.add_transition('heat', 'solid', 'gas', conditions='is_flammable')
 machine.add_transition('heat', 'solid', 'liquid', conditions=['is_really_hot'])
 ```
 
-In this somewhat contrived example, calling heat() when the model is in state 'solid' will transition to state 'gas' if is\_flammable returns True. Otherwise, it will transition to state 'liquid' if is\_really\_hot returns True.
+In the above example, calling heat() when the model is in state 'solid' will transition to state 'gas' if is\_flammable returns True. Otherwise, it will transition to state 'liquid' if is\_really\_hot returns True.
 
 #### Callbacks
 As with states, we can attach callbacks to transitions. Every transition has 'before' and 'after' attributes that contain a list of methods to call before and after the transition executes:
