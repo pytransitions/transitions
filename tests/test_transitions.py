@@ -142,3 +142,17 @@ class TestTransitions(TestCase):
         m.add_transition(trigger='advance', source='B', dest='C', before='extract_message')
         s.advance(message='You killed my father. Prepare to die.')
         self.assertTrue(s.message.startswith('You'))
+
+    def test_auto_transitions(self):
+        states = ['A', 'B', 'C']
+        s = Stuff()
+        m = Machine(s, states, initial='A', auto_transitions=True)
+        s.to_C()
+        self.assertEquals(s.state, 'C')
+        s.to_A()
+        self.assertEquals(s.state, 'A')
+        # Should fail if auto transitions is off...
+        m = Machine(s, states, initial='A', auto_transitions=False)
+        with self.assertRaises(TypeError):
+            m.to_C()
+

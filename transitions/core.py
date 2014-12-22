@@ -167,7 +167,8 @@ class Event(object):
 
 class Machine(object):
 
-    def __init__(self, model=None, states=None, initial=None, transitions=None, send_event=False):
+    def __init__(self, model=None, states=None, initial=None, transitions=None, send_event=False,
+                auto_transitions=True):
         """
         Args:
             model (object): The object whose states we want to manage. If None, the current 
@@ -179,12 +180,20 @@ class Machine(object):
             initial (string): The initial state of the Machine.
             transitions (list): An optional list of transitions. Each element is a dictionary 
                 of named arguments to be passed onto the Transition initializer.
+            send_event (boolean): When True, any arguments passed to trigger methods
+                will be wrapped in an EventData object, allowing indirect and encapsulated
+                access to data. When False, all positional and keyword arguments will be
+                passed directly to all callback methods.
+            auto_transitions (boolean): When True (default), every state will automatically 
+                have an associated to_{state}() convenience trigger in the base model.
+
         """
         self.model = self if model is None else model
         self.states = OrderedDict()
         self.events = {}
         self.current_state = None
         self.send_event = send_event
+        self.auto_transitions = auto_transitions
 
         if initial is None:
             self.add_states('initial')
@@ -243,6 +252,10 @@ class Machine(object):
             self.states[state.name] = state
             setattr(self.model, 'is_%s' %
                     state.name, partial(self.is_state, state.name))
+        # Add automatic transitions after all states have been created
+        if self.auto_transitions:
+            for s in states:
+                self.add_transition('to_%s' % s, '*', s)
 
     def add_transition(self, trigger, source, dest, conditions=None, before=None, after=None):
         """ Create a new Transition instance and add it to the internal list.
