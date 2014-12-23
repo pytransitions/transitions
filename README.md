@@ -317,6 +317,25 @@ We can also indicate that a trigger should cause a transition from _all_ states 
 machine.add_transition('to_liquid', '*', 'liquid')
 ```
 
+#### Ordered transitions
+In many cases, we want our state transitions to follow a strict linear sequence. For instance, given states ['A', 'B', 'C'], we might want valid transitions for A --> B, B --> C, and C --> A (but no other pairs). To facilitate this behavior, Transitions provides an add\_ordered\_transitions() method in the Machine class:
+
+```python
+states = ['A', 'B', 'C']
+ # See the "alternative initialization" section for an explanation of the 1st argument to init
+machine = Machine(None, states, initial='A') 
+machine.add_ordered_transitions()
+machine.next_state()
+print(machine.state)
+>>> 'B'
+# We can also define a different order of transitions
+machine = Machine(None, states, initial='A') 
+machine.add_ordered_transitions(['A', 'C', 'B'])
+machine.next_state()
+print(machine.state)
+>>> 'C'
+```
+
 #### Conditional transitions
 Sometimes we only want a particular transition to execute if some specific condition obtains. We can ensure that happens by passing a method or list of methods in the conditions argument:
 
