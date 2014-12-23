@@ -145,14 +145,41 @@ class TestTransitions(TestCase):
 
     def test_auto_transitions(self):
         states = ['A', 'B', 'C']
-        s = Stuff()
-        m = Machine(s, states, initial='A', auto_transitions=True)
-        s.to_C()
-        self.assertEquals(s.state, 'C')
-        s.to_A()
-        self.assertEquals(s.state, 'A')
+        m = Machine(None, states, initial='A', auto_transitions=True)
+        m.to_C()
+        self.assertEquals(m.state, 'C')
+        m.to_A()
+        self.assertEquals(m.state, 'A')
         # Should fail if auto transitions is off...
-        m = Machine(s, states, initial='A', auto_transitions=False)
+        m = Machine(None, states, initial='A', auto_transitions=False)
         with self.assertRaises(TypeError):
             m.to_C()
+
+    def test_ordered_transitions(self):
+        states = ['beginning', 'middle', 'end']
+        m = Machine(None, states)
+        m.add_ordered_transitions()
+        self.assertEquals(m.state, 'initial')
+        m.next_state()
+        self.assertEquals(m.state, 'beginning')
+        m.next_state()
+        m.next_state()
+        self.assertEquals(m.state, 'end')
+        m.next_state()
+        self.assertEquals(m.state, 'initial')
+
+        # Include initial state in loop
+        m = Machine(None, states)
+        m.add_ordered_transitions(loop_includes_initial=False)
+        m.to_end()
+        m.next_state()
+        self.assertEquals(m.state, 'beginning')
+
+        # Test user-determined sequence and trigger name
+        m = Machine(None, states, initial='beginning')
+        m.add_ordered_transitions(['end', 'beginning'], trigger='advance')
+        m.advance()
+        self.assertEquals(m.state, 'end')
+        m.advance()
+        self.assertEquals(m.state, 'beginning')
 

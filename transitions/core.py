@@ -287,6 +287,34 @@ class Machine(object):
             t = Transition(s, dest, conditions, before, after)
             self.events[trigger].add_transition(t)
 
+    def add_ordered_transitions(self, states=None, trigger='next_state', loop=True,
+                            loop_includes_initial=True):
+        """ Add a set of transitions that move linearly from state to state.
+        Args:
+            states (list): A list of state names defining the order of the transitions.
+                E.g., ['A', 'B', 'C'] will generate transitions for A --> B, B --> C,
+                and C --> A (if loop is True). If states is None, all states in the
+                current instance will be used.
+            trigger (string): The name of the trigger method that advances to the
+                next state in the sequence.
+            loop (boolean): Whether or not to add a transition from the last state to
+                the first state.
+            loop_includes_initial (boolean): If no initial state was defined in
+                the machine, setting this to True will cause the _initial state
+                placeholder to be included in the added transitions.
+        """
+        if states is None:
+            states = self.states.keys()
+        if len(states) < 2:
+            raise MachineError("Can't create ordered transitions on a Machine with " +
+                                "fewer than 2 states.")
+        for i in range(1, len(states)):
+            self.add_transition(trigger, states[i-1], states[i])
+        if loop:
+            if not loop_includes_initial:
+                states.remove(self._initial)
+            self.add_transition(trigger, states[-1], states[0])
+
     def callback(self, func, event_data):
         """ Trigger a callback function, possibly wrapping it in an EventData instance.
         Args:
