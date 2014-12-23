@@ -168,7 +168,7 @@ class Event(object):
 class Machine(object):
 
     def __init__(self, model=None, states=None, initial=None, transitions=None, send_event=False,
-                auto_transitions=True):
+                auto_transitions=True, ordered_transitions=False):
         """
         Args:
             model (object): The object whose states we want to manage. If None, the current 
@@ -186,6 +186,8 @@ class Machine(object):
                 passed directly to all callback methods.
             auto_transitions (boolean): When True (default), every state will automatically 
                 have an associated to_{state}() convenience trigger in the base model.
+            ordered_transitions (boolean): Convenience argument that calls
+                add_ordered_transitions() at the end of initialization if set to True.
 
         """
         self.model = self if model is None else model
@@ -209,6 +211,9 @@ class Machine(object):
             transitions = listify(transitions)
             for t in transitions:
                 self.add_transition(**t)
+
+        if ordered_transitions:
+            self.add_ordered_transitions()
 
     def is_state(self, state):
         """ Check whether the current state matches the named state. """

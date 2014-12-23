@@ -183,3 +183,8 @@ class TestTransitions(TestCase):
         m.advance()
         self.assertEquals(m.state, 'beginning')
 
+        # Via init argument
+        m = Machine(None, states, initial='beginning', ordered_transitions=True)
+        m.next_state()
+        self.assertEquals(m.state, 'middle')
+
