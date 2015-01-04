@@ -7,7 +7,7 @@ from functools import partial
 from collections import defaultdict, OrderedDict
 
 def listify(obj):
-    return obj if isinstance(obj, list) or obj is None else [obj]
+    return obj if isinstance(obj, (list, type(None))) else [obj]
 
 
 class State(object):
