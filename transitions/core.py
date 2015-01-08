@@ -309,7 +309,7 @@ class Machine(object):
                 placeholder to be included in the added transitions.
         """
         if states is None:
-            states = self.states.keys()
+            states = list(self.states.keys())  # need to listify for Python3
         if len(states) < 2:
             raise MachineError("Can't create ordered transitions on a Machine with " +
                                 "fewer than 2 states.")
