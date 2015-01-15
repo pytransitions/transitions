@@ -294,7 +294,7 @@ class Machine(object):
                     state.name, partial(self.is_state, state.name))
         # Add automatic transitions after all states have been created
         if self.auto_transitions:
-            for s in states:
+            for s in self.states.keys():
                 self.add_transition('to_%s' % s, '*', s)
 
     def add_transition(self, trigger, source, dest, conditions=None,

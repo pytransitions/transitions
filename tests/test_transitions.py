@@ -162,8 +162,10 @@ class TestTransitions(TestCase):
         self.assertTrue(s.message.startswith('You'))
 
     def test_auto_transitions(self):
-        states = ['A', 'B', 'C']
+        states = ['A', {'name':'B'}, State(name='C')]
         m = Machine(None, states, initial='A', auto_transitions=True)
+        m.to_B()
+        self.assertEquals(m.state, 'B')
         m.to_C()
         self.assertEquals(m.state, 'C')
         m.to_A()
@@ -206,3 +208,4 @@ class TestTransitions(TestCase):
             None, states, initial='beginning', ordered_transitions=True)
         m.next_state()
         self.assertEquals(m.state, 'middle')
+
