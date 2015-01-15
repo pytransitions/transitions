@@ -80,13 +80,26 @@ class TestTransitions(TestCase):
 
     def test_transitioning(self):
         s = self.stuff
-        s.machine.add_transition('advance', 'A', 'B', conditions='this_passes')
+        s.machine.add_transition('advance', 'A', 'B')
         s.machine.add_transition('advance', 'B', 'C')
         s.machine.add_transition('advance', 'C', 'D')
         s.advance()
         self.assertEquals(s.state, 'B')
         self.assertFalse(s.is_A())
         self.assertTrue(s.is_B())
+        s.advance()
+        self.assertEquals(s.state, 'C')
+
+    def test_conditions(self):
+        s = self.stuff
+        s.machine.add_transition('advance', 'A', 'B', conditions='this_passes')
+        s.machine.add_transition('advance', 'B', 'C', unless=['this_fails'])
+        s.machine.add_transition('advance', 'C', 'D', unless=['this_fails',
+                                                              'this_passes'])
+        s.advance()
+        self.assertEquals(s.state, 'B')
+        s.advance()
+        self.assertEquals(s.state, 'C')
         s.advance()
         self.assertEquals(s.state, 'C')
 

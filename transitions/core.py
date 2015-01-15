@@ -53,15 +53,32 @@ class State(object):
 
 class Transition(object):
 
-    def __init__(self, source, dest, conditions=None, before=None, after=None):
+    class Condition(object):
+
+        def __init__(self, func, target=True):
+            self.func = func
+            self.target = target
+
+        def check(self, model):
+            """ Check whether the condition passes.
+            Args:
+                model (object): the data model attached to the current Machine.
+            """
+            return getattr(model, self.func)() == self.target
+
+    def __init__(self, source, dest, conditions=None, unless=None, before=None,
+                 after=None):
         """
         Args:
             source (string): The name of the source State.
             dest (string): The name of the destination State.
             conditions (string, list): Condition(s) that must pass in order for
-                the transition to take place. Either a list providing the name
-                of a callable, or a list of callables. For the transition to
-                occur, ALL callables must return True.
+                the transition to take place. Either a string providing the
+                name of a callable, or a list of callables. For the transition
+                to occur, ALL callables must return True.
+            unless (string, list): Condition(s) that must return False in order
+                for the transition to occur. Behaves just like conditions arg
+                otherwise.
             before (string or list): callbacks to trigger before the
                 transition.
             after (string or list): callbacks to trigger after the transition.
@@ -71,7 +88,13 @@ class Transition(object):
         self.before = [] if before is None else listify(before)
         self.after = [] if after is None else listify(after)
 
-        self.conditions = [] if conditions is None else listify(conditions)
+        self.conditions = []
+        if conditions is not None:
+            for c in listify(conditions):
+                self.conditions.append(self.Condition(c))
+        if unless is not None:
+            for u in listify(unless):
+                self.conditions.append(self.Condition(u, target=False))
 
     def execute(self, event_data):
         """ Execute the transition.
@@ -80,7 +103,7 @@ class Transition(object):
         """
         machine = event_data.machine
         for c in self.conditions:
-            if not getattr(event_data.model, c)():
+            if not c.check(event_data.model):
                 return False
 
         for func in self.before:
@@ -275,7 +298,7 @@ class Machine(object):
                 self.add_transition('to_%s' % s, '*', s)
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       before=None, after=None):
+                       unless=None, before=None, after=None):
         """ Create a new Transition instance and add it to the internal list.
         Args:
             trigger (string): The name of the method that will trigger the
@@ -290,6 +313,9 @@ class Machine(object):
                 for the transition to take place. Either a list providing the
                 name of a callable, or a list of callables. For the transition
                 to occur, ALL callables must return True.
+            unless (string, list): Condition(s) that must return False in order
+                for the transition to occur. Behaves just like conditions arg
+                otherwise.
             before (string or list): Callables to call before the transition.
             after (string or list): Callables to call after the transition.
 
@@ -302,7 +328,7 @@ class Machine(object):
             source = list(self.states.keys()) if source == '*' else [source]
 
         for s in source:
-            t = Transition(s, dest, conditions, before, after)
+            t = Transition(s, dest, conditions, unless, before, after)
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
