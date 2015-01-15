@@ -2,6 +2,9 @@
 
 A lightweight, object-oriented state machine implementation in Python.
 
+## Status
+[![Build Status](https://travis-ci.org/tyarkoni/transitions.png?branch=master)](https://travis-ci.org/tyarkoni/transitions)
+
 ## Installation
 
     pip install transitions
