@@ -354,6 +354,14 @@ machine.add_transition('heat', 'solid', 'liquid', conditions=['is_really_hot'])
 
 In the above example, calling heat() when the model is in state 'solid' will transition to state 'gas' if is\_flammable returns True. Otherwise, it will transition to state 'liquid' if is\_really\_hot returns True.
 
+For convenience, there's also an 'unless' argument that behaves exactly like conditions, but inverted:
+
+```python
+machine.add_transition('heat', 'solid', 'gas', unless=['is_flammable', 'is_really_hot'])
+```
+
+In this case, the model would transition from solid to gas whenever heat() fires, provided that both is_flammable() and is_really_hot() return False.
+
 #### Callbacks
 As with states, we can attach callbacks to transitions. Every transition has 'before' and 'after' attributes that contain a list of methods to call before and after the transition executes:
 
