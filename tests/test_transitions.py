@@ -5,6 +5,7 @@ except ImportError:
 from transitions.core import *
 from unittest import TestCase
 
+
 class Stuff(object):
 
     def __init__(self):
@@ -66,13 +67,14 @@ class TestTransitions(TestCase):
             }
         ]
         transitions = [
-            { 'trigger': 'advance',
+            {'trigger': 'advance',
                 'source': 'State2',
                 'dest': 'State3'
-            }
+             }
         ]
         s = Stuff()
-        m = Machine(model=s, states=states, transitions=transitions, initial='State2')
+        m = Machine(
+            model=s, states=states, transitions=transitions, initial='State2')
         s.advance()
         self.assertEquals(s.message, 'Hello World!')
 
@@ -90,7 +92,8 @@ class TestTransitions(TestCase):
 
     def test_multiple_add_transitions_from_state(self):
         s = self.stuff
-        s.machine.add_transition('advance', 'A', 'B', conditions=['this_fails'])
+        s.machine.add_transition(
+            'advance', 'A', 'B', conditions=['this_fails'])
         s.machine.add_transition('advance', 'A', 'C')
         s.advance()
         self.assertEquals(s.state, 'C')
@@ -134,12 +137,14 @@ class TestTransitions(TestCase):
         s = Stuff()
         # First pass positional and keyword args directly to the callback
         m = Machine(model=s, states=states, initial='A', send_event=False)
-        m.add_transition(trigger='advance', source='A', dest='B', before='set_message')
+        m.add_transition(
+            trigger='advance', source='A', dest='B', before='set_message')
         s.advance(message='Hallo. My name is Inigo Montoya.')
         self.assertTrue(s.message.startswith('Hallo.'))
         # Now wrap arguments in an EventData instance
         m.send_event = True
-        m.add_transition(trigger='advance', source='B', dest='C', before='extract_message')
+        m.add_transition(
+            trigger='advance', source='B', dest='C', before='extract_message')
         s.advance(message='You killed my father. Prepare to die.')
         self.assertTrue(s.message.startswith('You'))
 
@@ -184,7 +189,7 @@ class TestTransitions(TestCase):
         self.assertEquals(m.state, 'beginning')
 
         # Via init argument
-        m = Machine(None, states, initial='beginning', ordered_transitions=True)
+        m = Machine(
+            None, states, initial='beginning', ordered_transitions=True)
         m.next_state()
         self.assertEquals(m.state, 'middle')
-

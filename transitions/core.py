@@ -1,10 +1,11 @@
 try:
     from builtins import object
 except ImportError:
-    #python2
+    # python2
     pass
 from functools import partial
 from collections import defaultdict, OrderedDict
+
 
 def listify(obj):
     return obj if isinstance(obj, (list, type(None))) else [obj]
@@ -16,12 +17,12 @@ class State(object):
         """
         Args:
             name (string): The name of the state
-            on_enter (string, list): Optional callable(s) to trigger when a state 
-                is entered. Can be either a string providing the name of a callable, 
-                or a list of strings.
-            on_exit (string, list): Optional callable(s) to trigger when a state 
-                is exited. Can be either a string providing the name of a callable, 
-                or a list of strings.
+            on_enter (string, list): Optional callable(s) to trigger when a
+                state is entered. Can be either a string providing the name of
+                a callable, or a list of strings.
+            on_exit (string, list): Optional callable(s) to trigger when a
+                state is exited. Can be either a string providing the name of a
+                callable, or a list of strings.
         """
         self.name = name
         self.on_enter = listify(on_enter) if on_enter else []
@@ -30,17 +31,19 @@ class State(object):
     def enter(self, event_data):
         """ Triggered when a state is entered. """
         for oe in self.on_enter:
-            event_data.machine.callback(getattr(event_data.model, oe), event_data)
+            event_data.machine.callback(
+                getattr(event_data.model, oe), event_data)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
-            event_data.machine.callback(getattr(event_data.model, oe), event_data)
+            event_data.machine.callback(
+                getattr(event_data.model, oe), event_data)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
         Args:
-            trigger (string): The type of triggering event. Must be one of 
+            trigger (string): The type of triggering event. Must be one of
                 'enter' or 'exit'.
             func (string): The name of the callback function.
         """
@@ -55,11 +58,12 @@ class Transition(object):
         Args:
             source (string): The name of the source State.
             dest (string): The name of the destination State.
-            conditions (string, list): Condition(s) that must pass in order for 
-                the transition to take place. Either a list providing the name 
-                of a callable, or a list of callables. For the transition to 
+            conditions (string, list): Condition(s) that must pass in order for
+                the transition to take place. Either a list providing the name
+                of a callable, or a list of callables. For the transition to
                 occur, ALL callables must return True.
-            before (string or list): callbacks to trigger before the transition.
+            before (string or list): callbacks to trigger before the
+                transition.
             after (string or list): callbacks to trigger after the transition.
         """
         self.source = source
@@ -92,7 +96,7 @@ class Transition(object):
     def add_callback(self, trigger, func):
         """ Add a new before or after callback.
         Args:
-            trigger (string): The type of triggering event. Must be one of 
+            trigger (string): The type of triggering event. Must be one of
                 'before' or 'after'.
             func (string): The name of the callback function.
         """
@@ -109,8 +113,8 @@ class EventData(object):
             event (Event): The triggering Event.
             machine (Machine): The current Machine instance.
             model (object): The model/object the machine is bound to.
-            args and kwargs: Optional positional or named arguments that 
-                will be stored internally for possible later use.
+            args and kwargs: Optional positional or named arguments that will
+                be stored internally for possible later use.
         """
         self.state = state
         self.event = event
@@ -129,8 +133,9 @@ class Event(object):
     def __init__(self, name, machine):
         """
         Args:
-            name (string): The name of the event, which is also the name of the 
-                triggering callable (e.g., 'advance' implies an advance() method).
+            name (string): The name of the event, which is also the name of the
+                triggering callable (e.g., 'advance' implies an advance()
+                method).
             machine (Machine): The current Machine instance.
         """
         self.name = name
@@ -140,23 +145,25 @@ class Event(object):
     def add_transition(self, transition):
         """ Add a transition to the list of potential transitions.
         Args:
-            transition (Transition): The Transition instance to add to the list.
+            transition (Transition): The Transition instance to add to the
+                list.
         """
         source = transition.source
         self.transitions[transition.source].append(transition)
 
     def trigger(self, *args, **kwargs):
         """ Serially execute all transitions that match the current state, 
-        halting as soon as one successfully completes. 
+        halting as soon as one successfully completes.
         Args:
-            args and kwargs: Optional positional or named arguments that 
-                will be passed onto the EventData object, enabling arbitrary 
-                state information to be passed on to downstream triggered 
-                functions. """
+            args and kwargs: Optional positional or named arguments that will
+                be passed onto the EventData object, enabling arbitrary state
+                information to be passed on to downstream triggered functions.
+        """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
             raise MachineError(
-                "Can't trigger event %s from state %s!" % (self.name, state_name))
+                "Can't trigger event %s from state %s!" % (self.name,
+                                                           state_name))
         event = EventData(self.machine.current_state, self,
                           self.machine, self.machine.model, *args, **kwargs)
         for t in self.transitions[state_name]:
@@ -167,27 +174,32 @@ class Event(object):
 
 class Machine(object):
 
-    def __init__(self, model=None, states=None, initial=None, transitions=None, send_event=False,
-                auto_transitions=True, ordered_transitions=False):
+    def __init__(self, model=None, states=None, initial=None, transitions=None,
+                 send_event=False, auto_transitions=True,
+                 ordered_transitions=False):
         """
         Args:
-            model (object): The object whose states we want to manage. If None, the current 
-                Machine instance will be used the model (i.e., all triggering events will be 
-                attached to the Machine itself).
-            states (list): A list of valid states. Each element can be either a string or a 
-                State instance. If string, a new generic State instance will be created that 
-                has the same name as the string.
+            model (object): The object whose states we want to manage. If None,
+                the current Machine instance will be used the model (i.e., all
+                triggering events will be attached to the Machine itself).
+            states (list): A list of valid states. Each element can be either a
+                string or a State instance. If string, a new generic State
+                instance will be created that has the same name as the string.
             initial (string): The initial state of the Machine.
-            transitions (list): An optional list of transitions. Each element is a dictionary 
-                of named arguments to be passed onto the Transition initializer.
-            send_event (boolean): When True, any arguments passed to trigger methods
-                will be wrapped in an EventData object, allowing indirect and encapsulated
-                access to data. When False, all positional and keyword arguments will be
-                passed directly to all callback methods.
-            auto_transitions (boolean): When True (default), every state will automatically 
-                have an associated to_{state}() convenience trigger in the base model.
+            transitions (list): An optional list of transitions. Each element
+                is a dictionary of named arguments to be passed onto the
+                Transition initializer.
+            send_event (boolean): When True, any arguments passed to trigger
+                methods will be wrapped in an EventData object, allowing
+                indirect and encapsulated access to data. When False, all
+                positional and keyword arguments will be passed directly to all
+                callback methods.
+            auto_transitions (boolean): When True (default), every state will
+                automatically have an associated to_{state}() convenience
+                trigger in the base model.
             ordered_transitions (boolean): Convenience argument that calls
-                add_ordered_transitions() at the end of initialization if set to True.
+                add_ordered_transitions() at the end of initialization if set
+                to True.
 
         """
         self.model = self if model is None else model
@@ -239,14 +251,14 @@ class Machine(object):
     def add_states(self, states, on_enter=None, on_exit=None):
         """ Add new state(s).
         Args:
-            state (list, string, dict, or State): a list, a State instance, 
-                the name of a new state, or a dict with keywords to pass on 
-                to the State initializer. If a list, each element can be 
-                of any of the latter three types.
-            on_enter (string or list): callbacks to trigger when the
-                state is entered. Only valid if first argument is string.
-            on_exit (string or list): callbacks to trigger when the
-                state is exited. Only valid if first argument is string.
+            state (list, string, dict, or State): a list, a State instance, the
+                name of a new state, or a dict with keywords to pass on to the
+                State initializer. If a list, each element can be of any of the
+                latter three types.
+            on_enter (string or list): callbacks to trigger when the state is
+                entered. Only valid if first argument is string.
+            on_exit (string or list): callbacks to trigger when the state is
+                exited. Only valid if first argument is string.
         """
         states = listify(states)
         for state in states:
@@ -262,21 +274,22 @@ class Machine(object):
             for s in states:
                 self.add_transition('to_%s' % s, '*', s)
 
-    def add_transition(self, trigger, source, dest, conditions=None, before=None, after=None):
+    def add_transition(self, trigger, source, dest, conditions=None,
+                       before=None, after=None):
         """ Create a new Transition instance and add it to the internal list.
         Args:
-            trigger (string): The name of the method that will trigger the 
-                transition. This will be attached to the currently specified 
-                model (e.g., passing trigger='advance' will create a new 
+            trigger (string): The name of the method that will trigger the
+                transition. This will be attached to the currently specified
+                model (e.g., passing trigger='advance' will create a new
                 advance() method in the model that triggers the transition.)
             source(string): The name of the source state--i.e., the state we
                 are transitioning away from.
-            dest (string): The name of the destination State--i.e., the state 
+            dest (string): The name of the destination State--i.e., the state
                 we are transitioning into.
-            conditions (string or list): Condition(s) that must pass in order for 
-                the transition to take place. Either a list providing the name 
-                of a callable, or a list of callables. For the transition to 
-                occur, ALL callables must return True.
+            conditions (string or list): Condition(s) that must pass in order
+                for the transition to take place. Either a list providing the
+                name of a callable, or a list of callables. For the transition
+                to occur, ALL callables must return True.
             before (string or list): Callables to call before the transition.
             after (string or list): Callables to call after the transition.
 
@@ -292,18 +305,18 @@ class Machine(object):
             t = Transition(s, dest, conditions, before, after)
             self.events[trigger].add_transition(t)
 
-    def add_ordered_transitions(self, states=None, trigger='next_state', loop=True,
-                            loop_includes_initial=True):
+    def add_ordered_transitions(self, states=None, trigger='next_state',
+                                loop=True, loop_includes_initial=True):
         """ Add a set of transitions that move linearly from state to state.
         Args:
-            states (list): A list of state names defining the order of the transitions.
-                E.g., ['A', 'B', 'C'] will generate transitions for A --> B, B --> C,
-                and C --> A (if loop is True). If states is None, all states in the
-                current instance will be used.
-            trigger (string): The name of the trigger method that advances to the
-                next state in the sequence.
-            loop (boolean): Whether or not to add a transition from the last state to
-                the first state.
+            states (list): A list of state names defining the order of the
+                transitions. E.g., ['A', 'B', 'C'] will generate transitions
+                for A --> B, B --> C, and C --> A (if loop is True). If states
+                is None, all states in the current instance will be used.
+            trigger (string): The name of the trigger method that advances to
+                the next state in the sequence.
+            loop (boolean): Whether or not to add a transition from the last
+                state to the first state.
             loop_includes_initial (boolean): If no initial state was defined in
                 the machine, setting this to True will cause the _initial state
                 placeholder to be included in the added transitions.
@@ -311,22 +324,23 @@ class Machine(object):
         if states is None:
             states = list(self.states.keys())  # need to listify for Python3
         if len(states) < 2:
-            raise MachineError("Can't create ordered transitions on a Machine with " +
-                                "fewer than 2 states.")
+            raise MachineError("Can't create ordered transitions on a Machine "
+                               "with fewer than 2 states.")
         for i in range(1, len(states)):
-            self.add_transition(trigger, states[i-1], states[i])
+            self.add_transition(trigger, states[i - 1], states[i])
         if loop:
             if not loop_includes_initial:
                 states.remove(self._initial)
             self.add_transition(trigger, states[-1], states[0])
 
     def callback(self, func, event_data):
-        """ Trigger a callback function, possibly wrapping it in an EventData instance.
+        """ Trigger a callback function, possibly wrapping it in an EventData
+        instance.
         Args:
             func (callable): The callback function.
-            event_data (EventData): An EventData instance to pass to the callback (if 
-                event sending is enabled) or to extract arguments from (if event 
-                sending is disabled).
+            event_data (EventData): An EventData instance to pass to the
+                callback (if event sending is enabled) or to extract arguments
+                from (if event sending is disabled).
         """
         if self.send_event:
             func(event_data)
@@ -353,4 +367,3 @@ class MachineError(Exception):
 
     def __str__(self):
         return repr(self.value)
-
