@@ -175,7 +175,7 @@ class Event(object):
         self.transitions[transition.source].append(transition)
 
     def trigger(self, *args, **kwargs):
-        """ Serially execute all transitions that match the current state, 
+        """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes.
         Args:
             args and kwargs: Optional positional or named arguments that will
@@ -282,11 +282,22 @@ class Machine(object):
                 entered. Only valid if first argument is string.
             on_exit (string or list): callbacks to trigger when the state is
                 exited. Only valid if first argument is string.
+
+        Notes:
+            if a model is provided and on_enter or on_exit is None, the model will be scanned for
+            methods matching the patern on_enter_<state>, on_exit_<state>
         """
+
         states = listify(states)
         for state in states:
             if isinstance(state, str):
-                state = State(state, on_enter=on_enter, on_exit=on_exit)
+                enter_fn = on_enter
+                if enter_fn is None and self != self.model and hasattr(self.model, 'on_enter_'+state):
+                    enter_fn = 'on_enter_'+state
+                exit_fn = on_exit
+                if exit_fn is None and self != self.model and hasattr(self.model, 'on_exit_'+state):
+                    exit_fn = 'on_exit_'+state
+                state = State(state, on_enter=enter_fn, on_exit=exit_fn)
             elif isinstance(state, dict):
                 state = State(**state)
             self.states[state.name] = state
