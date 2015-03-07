@@ -282,10 +282,6 @@ class Machine(object):
                 entered. Only valid if first argument is string.
             on_exit (string or list): callbacks to trigger when the state is
                 exited. Only valid if first argument is string.
-
-        Notes:
-            if a model is provided and on_enter or on_exit is None, the model will be scanned for
-            methods matching the patern on_enter_<state>, on_exit_<state>
         """
 
         states = listify(states)
