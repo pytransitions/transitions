@@ -291,18 +291,17 @@ class Machine(object):
         states = listify(states)
         for state in states:
             if isinstance(state, str):
-                enter_fn = on_enter
-                if enter_fn is None and self != self.model and hasattr(self.model, 'on_enter_'+state):
-                    enter_fn = 'on_enter_'+state
-                exit_fn = on_exit
-                if exit_fn is None and self != self.model and hasattr(self.model, 'on_exit_'+state):
-                    exit_fn = 'on_exit_'+state
-                state = State(state, on_enter=enter_fn, on_exit=exit_fn)
+                state = State(state, on_enter=on_enter, on_exit=on_exit)
             elif isinstance(state, dict):
                 state = State(**state)
             self.states[state.name] = state
             setattr(self.model, 'is_%s' %
                     state.name, partial(self.is_state, state.name))
+            state_name = state.name
+            if self != self.model and hasattr(self.model, 'on_enter_'+state_name):
+                state.add_callback('enter', 'on_enter_'+state_name)
+            if self != self.model and hasattr(self.model, 'on_exit_'+state_name):
+                state.add_callback('exit', 'on_exit_'+state_name)
         # Add automatic transitions after all states have been created
         if self.auto_transitions:
             for s in self.states.keys():

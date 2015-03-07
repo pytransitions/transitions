@@ -27,6 +27,11 @@ class Stuff(object):
     def hello_world(self):
         self.message = "Hello World!"
 
+    def hello_F(self):
+        if not hasattr(self, 'message'):
+            self.message = ''
+        self.message += "Hello F!"
+
     def set_message(self, message="Hello World!"):
         self.message = message
 
@@ -145,13 +150,15 @@ class TestTransitions(TestCase):
         s = self.stuff
         s.machine.add_transition('go_e', 'A', 'E')
         s.machine.add_transition('go_f', 'E', 'F')
+        s.machine.on_enter_F('hello_F')
         s.go_e()
         self.assertEquals(s.state, 'E')
         self.assertEquals(s.message, 'I am E!')
         s.go_f()
         self.assertEquals(s.state, 'F')
         self.assertEquals(s.exit_message, 'E go home...')
-        self.assertEquals(s.message, 'I am F!')
+        assert 'I am F!' in s.message
+        assert 'Hello F!' in s.message
 
     def test_inheritance(self):
         states = ['A', 'B', 'C', 'D', 'E']
