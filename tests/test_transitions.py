@@ -2,7 +2,7 @@ try:
     from builtins import object
 except ImportError:
     pass
-from transitions.core import *
+from transitions.core import Machine, State
 from unittest import TestCase
 
 
@@ -87,7 +87,7 @@ class TestTransitions(TestCase):
              }
         ]
         s = Stuff()
-        m = Machine(
+        Machine(
             model=s, states=states, transitions=transitions, initial='State2')
         s.advance()
         self.assertEquals(s.message, 'Hello World!')
@@ -190,7 +190,7 @@ class TestTransitions(TestCase):
         self.assertTrue(s.message.startswith('You'))
 
     def test_auto_transitions(self):
-        states = ['A', {'name':'B'}, State(name='C')]
+        states = ['A', {'name': 'B'}, State(name='C')]
         m = Machine(None, states, initial='A', auto_transitions=True)
         m.to_B()
         self.assertEquals(m.state, 'B')
@@ -236,4 +236,3 @@ class TestTransitions(TestCase):
             None, states, initial='beginning', ordered_transitions=True)
         m.next_state()
         self.assertEquals(m.state, 'middle')
-

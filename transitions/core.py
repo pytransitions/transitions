@@ -171,7 +171,6 @@ class Event(object):
             transition (Transition): The Transition instance to add to the
                 list.
         """
-        source = transition.source
         self.transitions[transition.source].append(transition)
 
     def trigger(self, *args, **kwargs):
@@ -294,10 +293,12 @@ class Machine(object):
             setattr(self.model, 'is_%s' %
                     state.name, partial(self.is_state, state.name))
             state_name = state.name
-            if self != self.model and hasattr(self.model, 'on_enter_'+state_name):
-                state.add_callback('enter', 'on_enter_'+state_name)
-            if self != self.model and hasattr(self.model, 'on_exit_'+state_name):
-                state.add_callback('exit', 'on_exit_'+state_name)
+            if self != self.model and hasattr(
+                    self.model, 'on_enter_' + state_name):
+                state.add_callback('enter', 'on_enter_' + state_name)
+            if self != self.model and hasattr(
+                    self.model, 'on_exit_' + state_name):
+                state.add_callback('exit', 'on_exit_' + state_name)
         # Add automatic transitions after all states have been created
         if self.auto_transitions:
             for s in self.states.keys():
