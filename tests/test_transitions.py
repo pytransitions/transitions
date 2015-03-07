@@ -12,7 +12,7 @@ class Stuff(object):
 
         self.state = None
 
-        states = ['A', 'B', 'C', 'D', 'E']
+        states = ['A', 'B', 'C', 'D', 'E', 'F']
         self.machine = Machine(self, states=states, initial='A')
 
     def this_passes(self):
@@ -27,11 +27,25 @@ class Stuff(object):
     def hello_world(self):
         self.message = "Hello World!"
 
+    def hello_F(self):
+        if not hasattr(self, 'message'):
+            self.message = ''
+        self.message += "Hello F!"
+
     def set_message(self, message="Hello World!"):
         self.message = message
 
     def extract_message(self, event_data):
         self.message = event_data.kwargs['message']
+
+    def on_enter_E(self):
+        self.message = "I am E!"
+
+    def on_exit_E(self):
+        self.exit_message = "E go home..."
+
+    def on_enter_F(self):
+        self.message = "I am F!"
 
 
 class InheritedStuff(Machine):
@@ -131,6 +145,20 @@ class TestTransitions(TestCase):
         s.reverse()
         self.assertEquals(s.state, 'A')
         self.assertTrue(s.message.startswith('So long'))
+
+    def test_state_model_change_listeners(self):
+        s = self.stuff
+        s.machine.add_transition('go_e', 'A', 'E')
+        s.machine.add_transition('go_f', 'E', 'F')
+        s.machine.on_enter_F('hello_F')
+        s.go_e()
+        self.assertEquals(s.state, 'E')
+        self.assertEquals(s.message, 'I am E!')
+        s.go_f()
+        self.assertEquals(s.state, 'F')
+        self.assertEquals(s.exit_message, 'E go home...')
+        assert 'I am F!' in s.message
+        assert 'Hello F!' in s.message
 
     def test_inheritance(self):
         states = ['A', 'B', 'C', 'D', 'E']
