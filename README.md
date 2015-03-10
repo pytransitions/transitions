@@ -246,6 +246,20 @@ lump.sublimate()
 >>> 'hello, new state!'
 ```
 
+In addition to passing in callbacks when initializing a State, or adding them dynamically, it's also possible to define callbacks in the model class itself, which may increase code clarity. For example:
+
+```python
+class Matter(object):
+    def say_hello(self): print "hello, new state!"
+    def say_goodbye(self): print "goodbye, old state!"
+    def on_enter_A(self): print "We've just entered state A!"
+    
+lump = Matter()
+machine = Machine(lump, states=['A', 'B', 'C'])
+```
+
+Now, any time we transition to state A, the on_enter_A() method defined in the Matter class will fire.
+
 #### Checking state
 We can always check the current state of the model by inspecting the .state attribute. We can also check whether the model is in a specific state using is\_{state name}(). Lastly, if we want to retrieve the actual State object for the current state, we can do that through the Machine instance's get\_state() method.
 
