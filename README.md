@@ -426,7 +426,7 @@ lump.print_pressure()
 
 You can pass any number of arguments you like to the trigger.
 
-There is one important limitation to this approach: every callback function triggered by the state transition must be able to handle _all_ of the arguments. This may cause problems if you have multiple callbacks that each expects somewhat different data. To get around this, Transitions supports an alternate method for sending data. If you set send_events=True at Machine initialization, all arguments to the triggers will be wrapped in an EventData instance and passed on to every callback. (The EventData object also maintains internal references to the source state, model, machine, and trigger associated with the transition, in case you need to access these for anything.)
+There is one important limitation to this approach: every callback function triggered by the state transition must be able to handle _all_ of the arguments. This may cause problems if you have multiple callbacks that each expects somewhat different data. To get around this, Transitions supports an alternate method for sending data. If you set send_event=True at Machine initialization, all arguments to the triggers will be wrapped in an EventData instance and passed on to every callback. (The EventData object also maintains internal references to the source state, model, machine, and trigger associated with the transition, in case you need to access these for anything.)
 
 ```python
 class Matter(object):
@@ -435,7 +435,9 @@ class Matter(object):
         self.temp = 0
         self.pressure = 101.325
 
-    # Note that sole argument is now the EventData instance
+    # Note that the sole argument is now the EventData instance.
+    # This object stores positional arguments passed to the trigger method in the
+    # .args property, and stores keywords arguments in the .kwargs dictionary.
     def set_environment(self, event):
         self.temp = event.kwargs.get('temp', 0)
         self.pressure = event.kwargs.get('pressure', 101.325)
@@ -446,7 +448,7 @@ lump = Matter()
 machine = Machine(lump, ['solid', 'liquid'], send_event=True, initial='solid')
 machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
 
-lump.melt(temp=45, pressure=1853.68)  # positional arg
+lump.melt(temp=45, pressure=1853.68)  # keyword args
 lump.print_pressure()
 > 'Current pressure is 1853.68 kPa.'
 
