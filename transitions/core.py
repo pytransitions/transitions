@@ -244,7 +244,10 @@ class Machine(object):
         if transitions is not None:
             transitions = listify(transitions)
             for t in transitions:
-                self.add_transition(**t)
+                if isinstance(t, list):
+                    self.add_transition(*t)
+                else:
+                    self.add_transition(**t)
 
         if ordered_transitions:
             self.add_ordered_transitions()

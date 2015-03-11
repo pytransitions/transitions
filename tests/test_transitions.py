@@ -92,6 +92,28 @@ class TestTransitions(TestCase):
         s.advance()
         self.assertEquals(s.message, 'Hello World!')
 
+    def test_transition_definitions(self):
+        states = ['A', 'B', 'C', 'D']
+        # Define with list of dictionaries
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+        m = Machine(states=states, transitions=transitions, initial='A')
+        m.walk()
+        self.assertEquals(m.state, 'B')
+        # Define with list of lists
+        transitions = [
+            ['walk', 'A', 'B'],
+            ['run', 'B', 'C'],
+            ['sprint', 'C', 'D']
+        ]
+        m = Machine(states=states, transitions=transitions, initial='A')
+        m.to_C()
+        m.sprint()
+        self.assertEquals(m.state, 'D')
+
     def test_transitioning(self):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'B')
