@@ -287,6 +287,17 @@ transitions = [
 machine = Machine(model=Matter(), states=states, transitions=transitions)
 ```
 
+Defining transitions in dictionaries has the benefit of clarity, but can be cumbersome. If we're after brevity, we can choose to define our transitions using lists. We just need to make sure that the elements in each list are in the same order as positional arguments in the Transition initialization (i.e., trigger, source, destination, etc.). The following list-of-lists specification is functionally equivalent to the list-of-dictionaries approach above:
+
+```python
+transitions = [
+    ['melt', 'solid', 'liquid'],
+    ['evaporate', 'liquid', 'gas'],
+    ['sublimate', 'solid', 'gas'],
+    ['ionize', 'gas', 'plasma']
+]
+```
+
 Alternatively, we can add transitions to a Machine after initialization:
 
 ```python
