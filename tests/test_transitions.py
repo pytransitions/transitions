@@ -2,7 +2,7 @@ try:
     from builtins import object
 except ImportError:
     pass
-from transitions.core import Machine, State
+from transitions.core import Machine, State, MachineError
 from unittest import TestCase
 
 
@@ -258,3 +258,17 @@ class TestTransitions(TestCase):
             None, states, initial='beginning', ordered_transitions=True)
         m.next_state()
         self.assertEquals(m.state, 'middle')
+
+    def test_ignore_invalid_triggers(self):
+        a_state = State('A')
+        transitions = [['a_to_b', 'A', 'B']]
+        # Exception is triggered by default
+        b_state = State('B')
+        m = Machine(None, states=[a_state, b_state], transitions=transitions,
+                    initial='B')
+        with self.assertRaises(MachineError):
+            m.a_to_b()
+        # Exception is suppressed, so this passes
+        b_state = State('B', ignore_invalid_triggers=True)
+        m = Machine(None, states=[a_state, b_state], transitions=transitions,
+                    initial='B')

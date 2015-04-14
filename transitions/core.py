@@ -13,7 +13,8 @@ def listify(obj):
 
 class State(object):
 
-    def __init__(self, name, on_enter=None, on_exit=None, ignore=False):
+    def __init__(self, name, on_enter=None, on_exit=None,
+                 ignore_invalid_triggers=False):
         """
         Args:
             name (string): The name of the state
@@ -23,12 +24,12 @@ class State(object):
             on_exit (string, list): Optional callable(s) to trigger when a
                 state is exited. Can be either a string providing the name of a
                 callable, or a list of strings.
-            ignore (Boolean): Optional flag to indicate if unhandled triggers
-                should raise an exception
+            ignore_invalid_triggers (Boolean): Optional flag to indicate if
+                unhandled/invalid triggers should raise an exception
 
         """
         self.name = name
-        self.ignore = ignore
+        self.ignore_invalid_triggers = ignore_invalid_triggers
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
 
@@ -187,7 +188,7 @@ class Event(object):
         """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
-            if not self.machine.current_state.ignore :
+            if not self.machine.current_state.ignore_invalid_triggers:
                 raise MachineError(
                     "Can't trigger event %s from state %s!" % (self.name,
                                                                state_name))
