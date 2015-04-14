@@ -272,3 +272,4 @@ class TestTransitions(TestCase):
         b_state = State('B', ignore_invalid_triggers=True)
         m = Machine(None, states=[a_state, b_state], transitions=transitions,
                     initial='B')
+        m.a_to_b()
