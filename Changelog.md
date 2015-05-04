@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5 (May 4, 2015)
+- Added ability to suppress invalid trigger calls
+- Shorthand definition of transitions via lists
+
 ## 0.2.4 (March 11, 2015)
 - Automatic detection of predefined state callbacks
 - Fixed bug in automatic transition creation

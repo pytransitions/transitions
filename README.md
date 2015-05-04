@@ -308,9 +308,31 @@ machine.add_transition('melt', source='solid', dest='liquid')
 The trigger argument defines the name of the new triggering method that gets attached to the base model. When this method is called, it will try to execute the transition:
 
 ```python
-lump.melt()
-lump.state
->>> 'liquid'
+>>> lump.melt()
+>>> lump.state
+'liquid'
+```
+
+By default, calling an invalid trigger will raise an exception:
+
+```python
+>>> lump.to_gas()
+>>> # This won't work because only objects in a solid state can melt
+>>> lump.melt()
+transitions.core.MachineError: "Can't trigger event melt from state gas!"
+```
+
+In general, this behavior is desirable, as it can help alert you to problems in your code. But in some cases, you might want to silently ignore invalid triggers. You can do this by setting ignore_invalid_triggers=True on either a state-by-state basis, or globally for all states:
+
+```python
+>>> # Globally suppress invalid trigger exceptions
+>>> m = Machine(lump, states, initial='solid', ignore_invalid_triggers=True)
+>>> # ...or suppress for only one group of states
+>>> states = ['new_state1', 'new_state2']
+>>> m.add_states(states, ignore_invalid_triggers=True)
+>>> # ...or even just for a single state. Here, exceptions will only be suppressed when the current state is A.
+>>> states = [State('A', ignore_invalid_triggers=True), 'B', 'C']
+>>> m = Machine(lump, states)
 ```
 
 #### Automatic transitions for all states
