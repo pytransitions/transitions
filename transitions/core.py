@@ -204,7 +204,7 @@ class Machine(object):
 
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
-                 ordered_transitions=False):
+                 ordered_transitions=False, ignore_invalid_triggers=None):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -228,7 +228,10 @@ class Machine(object):
             ordered_transitions (boolean): Convenience argument that calls
                 add_ordered_transitions() at the end of initialization if set
                 to True.
-
+            ignore_invalid_triggers: when True, any calls to trigger methods
+                that are not valid for the present state (e.g., calling an
+                a_to_b() trigger when the current state is c) will be silently
+                ignored rather than raising an invalid transition exception.
         """
         self.model = self if model is None else model
         self.states = OrderedDict()
@@ -236,6 +239,7 @@ class Machine(object):
         self.current_state = None
         self.send_event = send_event
         self.auto_transitions = auto_transitions
+        self.ignore_invalid_triggers = ignore_invalid_triggers
 
         if initial is None:
             self.add_states('initial')
@@ -279,7 +283,8 @@ class Machine(object):
         """ Alias for add_states. """
         self.add_states(*args, **kwargs)
 
-    def add_states(self, states, on_enter=None, on_exit=None):
+    def add_states(self, states, on_enter=None, on_exit=None,
+                   ignore_invalid_triggers=None):
         """ Add new state(s).
         Args:
             state (list, string, dict, or State): a list, a State instance, the
@@ -290,13 +295,29 @@ class Machine(object):
                 entered. Only valid if first argument is string.
             on_exit (string or list): callbacks to trigger when the state is
                 exited. Only valid if first argument is string.
+            ignore_invalid_triggers: when True, any calls to trigger methods
+                that are not valid for the present state (e.g., calling an
+                a_to_b() trigger when the current state is c) will be silently
+                ignored rather than raising an invalid transition exception.
+                Note that this argument takes precedence over the same
+                argument defined at the Machine level, and is in turn
+                overridden by any ignore_invalid_triggers explicitly
+                passed in an individual state's initialization arguments.
         """
+
+        ignore = ignore_invalid_triggers
+        if ignore is None:
+            ignore = self.ignore_invalid_triggers
 
         states = listify(states)
         for state in states:
             if isinstance(state, str):
-                state = State(state, on_enter=on_enter, on_exit=on_exit)
+                state = State(
+                    state, on_enter=on_enter, on_exit=on_exit,
+                    ignore_invalid_triggers=ignore)
             elif isinstance(state, dict):
+                if 'ignore_invalid_triggers' not in state:
+                    state['ignore_invalid_triggers'] = ignore
                 state = State(**state)
             self.states[state.name] = state
             setattr(self.model, 'is_%s' %

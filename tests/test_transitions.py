@@ -264,12 +264,24 @@ class TestTransitions(TestCase):
         transitions = [['a_to_b', 'A', 'B']]
         # Exception is triggered by default
         b_state = State('B')
-        m = Machine(None, states=[a_state, b_state], transitions=transitions,
-                    initial='B')
+        m1 = Machine(None, states=[a_state, b_state], transitions=transitions,
+                     initial='B')
         with self.assertRaises(MachineError):
-            m.a_to_b()
+            m1.a_to_b()
         # Exception is suppressed, so this passes
         b_state = State('B', ignore_invalid_triggers=True)
-        m = Machine(None, states=[a_state, b_state], transitions=transitions,
-                    initial='B')
-        m.a_to_b()
+        m2 = Machine(None, states=[a_state, b_state], transitions=transitions,
+                     initial='B')
+        m2.a_to_b()
+        # Set for some states but not others
+        new_states = ['C', 'D']
+        m1.add_states(new_states, ignore_invalid_triggers=True)
+        m1.to_D()
+        m1.a_to_b()  # passes because exception suppressed for D
+        m1.to_B()
+        with self.assertRaises(MachineError):
+            m1.a_to_b()
+        # Set at machine level
+        m3 = Machine(None, states=[a_state, b_state], transitions=transitions,
+                     initial='B', ignore_invalid_triggers=True)
+        m3.a_to_b()
