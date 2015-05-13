@@ -104,6 +104,8 @@ class TestTransitions(TestCase):
         self.assertEquals(m.initial, 'A')
         m = Machine(states=states, transitions=transitions, initial='C')
         self.assertEquals(m.initial, 'C')
+        m = Machine(states=states, transitions=transitions)
+        self.assertEquals(m.initial, 'initial')
 
     def test_transition_definitions(self):
         states = ['A', 'B', 'C', 'D']
