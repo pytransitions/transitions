@@ -262,6 +262,11 @@ class Machine(object):
         if ordered_transitions:
             self.add_ordered_transitions()
 
+    @property
+    def initial(self):
+        """ Return the initial state. """
+        return self._initial
+
     def is_state(self, state):
         """ Check whether the current state matches the named state. """
         return self.current_state.name == state
