@@ -5,6 +5,7 @@ except ImportError:
     pass
 from functools import partial
 from collections import defaultdict, OrderedDict
+from six import string_types
 
 
 def listify(obj):
@@ -279,7 +280,7 @@ class Machine(object):
 
     def set_state(self, state):
         """ Set the current state. """
-        if isinstance(state, str):
+        if isinstance(state, string_types):
             state = self.get_state(state)
         self.current_state = state
         self.model.state = self.current_state.name
@@ -316,7 +317,7 @@ class Machine(object):
 
         states = listify(states)
         for state in states:
-            if isinstance(state, str):
+            if isinstance(state, string_types):
                 state = State(
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore)
@@ -366,7 +367,7 @@ class Machine(object):
             self.events[trigger] = Event(trigger, self)
             setattr(self.model, trigger, self.events[trigger].trigger)
 
-        if isinstance(source, str):
+        if isinstance(source, string_types):
             source = list(self.states.keys()) if source == '*' else [source]
 
         for s in source:
