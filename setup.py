@@ -26,7 +26,7 @@ setup(
     package_data={'transitions': ['data/*'],
                 'transitions.tests': ['data/*']
                 },
-    install_requires=['six']
+    install_requires=['six'],
     download_url='https://github.com/tyarkoni/transitions/archive/%s.tar.gz' % __version__,
     **extra_setuptools_args
     )
