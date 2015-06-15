@@ -5,6 +5,10 @@ except ImportError:
 from transitions.core import Machine, State, MachineError
 from unittest import TestCase
 
+try:
+    from unittest.mock import MagicMock
+except ImportError:
+    from mock import MagicMock
 
 class Stuff(object):
 
@@ -300,3 +304,16 @@ class TestTransitions(TestCase):
         m3 = Machine(None, states=[a_state, b_state], transitions=transitions,
                      initial='B', ignore_invalid_triggers=True)
         m3.a_to_b()
+
+    def test_generic_callbacks(self):
+
+        m = Machine(None, states=['A', 'B'], before_state_change='before_state_change',
+            after_state_change='after_state_change', send_event=True, initial='A', auto_transitions=True)
+
+        m.before_state_change = MagicMock()
+        m.after_state_change = MagicMock()
+
+        m.to_B()
+        self.assertTrue(m.before_state_change.called)
+        self.assertTrue(m.after_state_change.called)
+
