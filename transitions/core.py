@@ -9,7 +9,10 @@ from six import string_types
 
 
 def listify(obj):
-    return obj if isinstance(obj, (list, type(None))) else [obj]
+    if obj is None:
+        return []
+    else:
+        return obj if isinstance(obj, (list, type(None))) else [obj]
 
 
 class State(object):
@@ -205,7 +208,8 @@ class Machine(object):
 
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
-                 ordered_transitions=False, ignore_invalid_triggers=None):
+                 ordered_transitions=False, ignore_invalid_triggers=None,
+                 before_state_change=None, after_state_change=None):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -233,6 +237,12 @@ class Machine(object):
                 that are not valid for the present state (e.g., calling an
                 a_to_b() trigger when the current state is c) will be silently
                 ignored rather than raising an invalid transition exception.
+            before_state_change: A callable called on every change state before
+                the transition happened. It receives the very same args as normal
+                callbacks
+            after_state_change: A callable called on every change state after
+                the transition happened. It receives the very same args as normal
+                callbacks
         """
         self.model = self if model is None else model
         self.states = OrderedDict()
@@ -241,6 +251,8 @@ class Machine(object):
         self.send_event = send_event
         self.auto_transitions = auto_transitions
         self.ignore_invalid_triggers = ignore_invalid_triggers
+        self.before_state_change = before_state_change
+        self.after_state_change = after_state_change
 
         if initial is None:
             self.add_states('initial')
@@ -369,6 +381,12 @@ class Machine(object):
 
         if isinstance(source, string_types):
             source = list(self.states.keys()) if source == '*' else [source]
+
+        if self.before_state_change:
+            before = listify(before) + listify(self.before_state_change)
+
+        if self.after_state_change:
+            after = listify(after) + listify(self.after_state_change)
 
         for s in source:
             t = Transition(s, dest, conditions, unless, before, after)
