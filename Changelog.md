@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.6 (July 26, 2015)
+- Added rudimentary logging for key transition and state change events
+- Added generic before/after callbacks that apply to all state changes
+- Ensured string type compatibility across Python 2 and 3
+
 ## 0.2.5 (May 4, 2015)
 - Added ability to suppress invalid trigger calls
 - Shorthand definition of transitions via lists
