@@ -2,7 +2,8 @@ try:
     from builtins import object
 except ImportError:
     pass
-from transitions.core import Machine, State, MachineError
+
+from transitions import Machine, State, MachineError
 from unittest import TestCase
 
 

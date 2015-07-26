@@ -7,6 +7,10 @@ from functools import partial
 from collections import defaultdict, OrderedDict
 from six import string_types
 
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+
 
 def listify(obj):
     return obj if isinstance(obj, (list, type(None))) else [obj]
@@ -39,12 +43,14 @@ class State(object):
         for oe in self.on_enter:
             event_data.machine.callback(
                 getattr(event_data.model, oe), event_data)
+        logger.info("Entered state %s", self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
             event_data.machine.callback(
                 getattr(event_data.model, oe), event_data)
+        logger.info("Exited state %s", self.name)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -107,19 +113,25 @@ class Transition(object):
         Args:
             event: An instance of class EventData.
         """
+        logger.info("Initiating transition from state %s to state %s...",
+                    self.source, self.dest)
         machine = event_data.machine
         for c in self.conditions:
             if not c.check(event_data.model):
+                logger.info("Transition condition failed: %s() does not " +
+                            "return %s. Transition halted.", c.func, c.target)
                 return False
 
         for func in self.before:
             machine.callback(getattr(event_data.model, func), event_data)
+            logger.info("Executing callback '%s' before transition.", func)
         machine.get_state(self.source).exit(event_data)
         machine.set_state(self.dest)
         event_data.update()
         machine.get_state(self.dest).enter(event_data)
         for func in self.after:
             machine.callback(getattr(event_data.model, func), event_data)
+            logger.info("Executed callback '%s' after transition.", func)
         return True
 
     def add_callback(self, trigger, func):
