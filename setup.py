@@ -27,6 +27,7 @@ setup(
                 'transitions.tests': ['data/*']
                 },
     install_requires=['six'],
+    license='MIT',
     download_url='https://github.com/tyarkoni/transitions/archive/%s.tar.gz' % __version__,
     **extra_setuptools_args
     )
