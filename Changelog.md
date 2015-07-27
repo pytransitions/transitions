@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.7 (July 27, 2015)
+- Fixed import bug that prevented dependency installation at setup
+
 ## 0.2.6 (July 26, 2015)
 - Added rudimentary logging for key transition and state change events
 - Added generic before/after callbacks that apply to all state changes
