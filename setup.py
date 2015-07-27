@@ -1,7 +1,7 @@
 import os
 import sys
 from setuptools import setup
-from transitions.version import __version__
+from version import __version__
 
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools
