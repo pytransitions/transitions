@@ -8,8 +8,8 @@ from collections import defaultdict, OrderedDict
 from six import string_types
 
 import logging
-logging.basicConfig()
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def listify(obj):
