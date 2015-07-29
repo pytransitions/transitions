@@ -26,6 +26,12 @@ class Stuff(object):
     def this_fails(self):
         return False
 
+    def this_fails_by_default(self, boolean=False):
+        return boolean
+
+    def extract_boolean(self, event_data):
+        return event_data.kwargs['boolean']
+
     def goodbye(self):
         self.message = "So long, suckers!"
 
@@ -215,7 +221,7 @@ class TestTransitions(TestCase):
         s.advance()
         self.assertEquals(s.state, 'C')
 
-    def test_send_event_data(self):
+    def test_send_event_data_callbacks(self):
         states = ['A', 'B', 'C', 'D']
         s = Stuff()
         # First pass positional and keyword args directly to the callback
@@ -230,6 +236,22 @@ class TestTransitions(TestCase):
             trigger='advance', source='B', dest='C', before='extract_message')
         s.advance(message='You killed my father. Prepare to die.')
         self.assertTrue(s.message.startswith('You'))
+
+    def test_send_event_data_conditions(self):
+        states = ['A', 'B', 'C', 'D']
+        s = Stuff()
+        # First pass positional and keyword args directly to the condition
+        m = Machine(model=s, states=states, initial='A', send_event=False)
+        m.add_transition(
+            trigger='advance', source='A', dest='B', conditions='this_fails_by_default')
+        s.advance(boolean=True)
+        self.assertEquals(s.state, 'B')
+        # Now wrap arguments in an EventData instance
+        m.send_event = True
+        m.add_transition(
+            trigger='advance', source='B', dest='C', conditions='extract_boolean')
+        s.advance(boolean=False)
+        self.assertEquals(s.state, 'B')
 
     def test_auto_transitions(self):
         states = ['A', {'name': 'B'}, State(name='C')]

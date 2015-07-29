@@ -5,3 +5,5 @@ build/
 dist
 dist/*
 *.egg-info
+*.iml
+.idea
