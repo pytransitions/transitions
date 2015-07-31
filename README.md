@@ -197,8 +197,8 @@ The soul of any good state machine (and of many bad ones, no doubt) is a set of 
 # pass one State, one string, and one dict.
 states = [
     State(name='solid'),
-    'liquid',
-    { 'name': 'gas'}
+    'liquid', 
+    { 'name': 'gas', 'name': 'plasma'}
     ]
 machine = Machine(lump, states)
 
@@ -209,7 +209,8 @@ machine = Machine(lump)
 solid = State('solid')
 liquid = State('liquid')
 gas = State('gas')
-machine.add_states([solid, liquid, gas])
+plasma = State('plasma')
+machine.add_states([solid, liquid, gas, plasma])
 
 ```
 
@@ -229,7 +230,7 @@ lump = Matter()
 states = [
     State(name='solid', on_exit=['say_goodbye']),
     'liquid',
-    { 'name': 'gas' }
+    { 'name': 'gas', 'name': 'plasma'}
     ]
     
 machine = Machine(lump, states=states)
@@ -252,13 +253,13 @@ In addition to passing in callbacks when initializing a State, or adding them dy
 class Matter(object):
     def say_hello(self): print "hello, new state!"
     def say_goodbye(self): print "goodbye, old state!"
-    def on_enter_A(self): print "We've just entered state A!"
+    def on_enter_solid(self): print "We've just entered state solid!"
     
 lump = Matter()
-machine = Machine(lump, states=['A', 'B', 'C'])
+machine = Machine(lump, states=['solid', 'liquid', 'gas', 'plasma'])
 ```
 
-Now, any time we transition to state A, the on_enter_A() method defined in the Matter class will fire.
+Now, any time we transition to state solid, the on_enter_solid() method defined in the Matter class will fire.
 
 #### Checking state
 We can always check the current state of the model by inspecting the .state attribute. We can also check whether the model is in a specific state using is\_{state name}(). Lastly, if we want to retrieve the actual State object for the current state, we can do that through the Machine instance's get\_state() method.
