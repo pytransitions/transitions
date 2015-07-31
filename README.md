@@ -198,7 +198,7 @@ The soul of any good state machine (and of many bad ones, no doubt) is a set of 
 states = [
     State(name='solid'),
     'liquid', 
-    { 'name': 'gas', 'name': 'plasma'}
+    { 'name': 'gas'}, {'name': 'plasma'}
     ]
 machine = Machine(lump, states)
 
@@ -230,7 +230,7 @@ lump = Matter()
 states = [
     State(name='solid', on_exit=['say_goodbye']),
     'liquid',
-    { 'name': 'gas', 'name': 'plasma'}
+    { 'name': 'gas'}, {'name': 'plasma'}
     ]
     
 machine = Machine(lump, states=states)
