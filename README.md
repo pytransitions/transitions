@@ -226,7 +226,7 @@ class Matter(object):
     
 lump = Matter()
 
-# Same states as above, but now we give StateA an exit callback
+# Same states as above, but now we give state solid an exit callback
 states = [
     State(name='solid', on_exit=['say_goodbye']),
     'liquid',
@@ -238,7 +238,7 @@ machine.add_transition('sublimate', 'solid', 'gas')
     
 # Callbacks can also be added after initialization using 
 # the dynamically added on_enter_ and on_exist_ methods.
-lump.on_enter_StateC('say_hello')
+lump.on_enter_gas('say_hello')
 
 # Test out the callbacks...
 lump.set_state('solid')
@@ -491,7 +491,7 @@ lump.print_pressure()
 
 ### Alternative initialization patterns
 
-In all of the examples so far, we've attached a new Machine instance to a separate model--specifically, to _lump_ (an instance of class Matter). While this separation keeps things tidy--because we don't have to monkey patch a whole bunch of new methods into our Matter class--it can also get annoying, since it requires us to keep track of which methods get called on our state machine, and which ones get called on the model the state machine is bound to (e.g., lump.on_enter_StateA() vs. machine.add_transition()). Fortunately, Transitions is flexible, and supports two other initialization patterns. First, we can create a standalone state machine that doesn't require another model at all. All we have to do is omit the model argument during initialization:
+In all of the examples so far, we've attached a new Machine instance to a separate model--specifically, to _lump_ (an instance of class Matter). While this separation keeps things tidy--because we don't have to monkey patch a whole bunch of new methods into our Matter class--it can also get annoying, since it requires us to keep track of which methods get called on our state machine, and which ones get called on the model the state machine is bound to (e.g., lump.on_enter_solid() vs. machine.add_transition()). Fortunately, Transitions is flexible, and supports two other initialization patterns. First, we can create a standalone state machine that doesn't require another model at all. All we have to do is omit the model argument during initialization:
 
 ```python
 machine = Machine(states=states, transitions=transitions, initial='solid')
