@@ -196,9 +196,9 @@ The soul of any good state machine (and of many bad ones, no doubt) is a set of 
 # initializer. We can mix types; in this case, we 
 # pass one State, one string, and one dict.
 states = [
-    State(name='StateA'),
-    'StateB',
-    { 'name': 'StateC'}
+    State(name='solid'),
+    'liquid',
+    { 'name': 'gas'}
     ]
 machine = Machine(lump, states)
 
@@ -206,10 +206,10 @@ machine = Machine(lump, states)
 # addition of states and state callbacks, but the net
 # result is identical to the above.
 machine = Machine(lump)
-state_a = State('StateA')
-state_b = State('StateB')
-state_c = State('StateC')
-machine.add_states([state_a, state_b, state_c])
+solid = State('solid')
+liquid = State('liquid')
+gas = State('gas')
+machine.add_states([solid, liquid, gas])
 
 ```
 
@@ -227,9 +227,9 @@ lump = Matter()
 
 # Same states as above, but now we give StateA an exit callback
 states = [
-    State(name='StateA', on_exit=['say_goodbye']),
-    'StateB',
-    { 'name': 'StateC' }
+    State(name='solid', on_exit=['say_goodbye']),
+    'liquid',
+    { 'name': 'gas' }
     ]
     
 machine = Machine(lump, states=states)
