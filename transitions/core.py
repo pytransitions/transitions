@@ -74,12 +74,19 @@ class Transition(object):
             self.func = func
             self.target = target
 
-        def check(self, model):
+        def check(self, event_data):
             """ Check whether the condition passes.
             Args:
-                model (object): the data model attached to the current Machine.
+                event_data (EventData): An EventData instance to pass to the
+                condition (if event sending is enabled) or to extract arguments
+                from (if event sending is disabled). Also contains the data model
+                attached to the current machine which is used to invoke the condition.
             """
-            return getattr(model, self.func)() == self.target
+            predicate = getattr(event_data.model, self.func)
+            if event_data.machine.send_event:
+                return predicate(event_data) == self.target
+            else:
+                return predicate(*event_data.args, **event_data.kwargs) == self.target
 
     def __init__(self, source, dest, conditions=None, unless=None, before=None,
                  after=None):
@@ -120,7 +127,7 @@ class Transition(object):
                     self.source, self.dest)
         machine = event_data.machine
         for c in self.conditions:
-            if not c.check(event_data.model):
+            if not c.check(event_data):
                 logger.info("Transition condition failed: %s() does not " +
                             "return %s. Transition halted.", c.func, c.target)
                 return False
