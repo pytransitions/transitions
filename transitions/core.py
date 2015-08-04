@@ -79,14 +79,16 @@ class Transition(object):
             Args:
                 event_data (EventData): An EventData instance to pass to the
                 condition (if event sending is enabled) or to extract arguments
-                from (if event sending is disabled). Also contains the data model
-                attached to the current machine which is used to invoke the condition.
+                from (if event sending is disabled). Also contains the data
+                model attached to the current machine which is used to invoke
+                the condition.
             """
             predicate = getattr(event_data.model, self.func)
             if event_data.machine.send_event:
                 return predicate(event_data) == self.target
             else:
-                return predicate(*event_data.args, **event_data.kwargs) == self.target
+                return predicate(
+                    *event_data.args, **event_data.kwargs) == self.target
 
     def __init__(self, source, dest, conditions=None, unless=None, before=None,
                  after=None):

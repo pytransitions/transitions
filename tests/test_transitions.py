@@ -11,6 +11,7 @@ try:
 except ImportError:
     from mock import MagicMock
 
+
 class Stuff(object):
 
     def __init__(self):
@@ -243,13 +244,15 @@ class TestTransitions(TestCase):
         # First pass positional and keyword args directly to the condition
         m = Machine(model=s, states=states, initial='A', send_event=False)
         m.add_transition(
-            trigger='advance', source='A', dest='B', conditions='this_fails_by_default')
+            trigger='advance', source='A', dest='B',
+            conditions='this_fails_by_default')
         s.advance(boolean=True)
         self.assertEquals(s.state, 'B')
         # Now wrap arguments in an EventData instance
         m.send_event = True
         m.add_transition(
-            trigger='advance', source='B', dest='C', conditions='extract_boolean')
+            trigger='advance', source='B', dest='C',
+            conditions='extract_boolean')
         s.advance(boolean=False)
         self.assertEquals(s.state, 'B')
 
@@ -330,8 +333,10 @@ class TestTransitions(TestCase):
 
     def test_generic_callbacks(self):
 
-        m = Machine(None, states=['A', 'B'], before_state_change='before_state_change',
-            after_state_change='after_state_change', send_event=True, initial='A', auto_transitions=True)
+        m = Machine(None, states=['A', 'B'],
+                    before_state_change='before_state_change',
+                    after_state_change='after_state_change', send_event=True,
+                    initial='A', auto_transitions=True)
 
         m.before_state_change = MagicMock()
         m.after_state_change = MagicMock()
@@ -339,4 +344,3 @@ class TestTransitions(TestCase):
         m.to_B()
         self.assertTrue(m.before_state_change.called)
         self.assertTrue(m.after_state_change.called)
-
