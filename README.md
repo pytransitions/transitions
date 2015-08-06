@@ -13,6 +13,26 @@ A lightweight, object-oriented state machine implementation in Python.
 
     python setup.py install
 
+
+## Table of Contents
+- [Quickstart](#quickstart)
+- [Non-Quickstart](#the-non-quickstart)
+    - [Basic initialization](#basic-initialization)
+    - [States](#states)
+        - [Callbacks](#state-callbacks)
+        - [Checking state](#checking-state)
+    - [Transitions](#transitions)
+        - [Automatic transitions](#automatic-transitions-for-all-states)
+        - [Transitioning from multiple states](#transitioning-from-multiple-states)
+        - [Ordered transitions](#ordered-transitions)
+        - [Conditional transitions](#conditional-transitions)
+        - [Callbacks](#transition-callbacks)
+    - [Passing data](#passing-data)
+    - [Alternative initialization patterns](#alternative-initialization-patterns)
+    - [Logging](#logging)
+    - [Bug reports etc.](#bug-reports)
+
+
 ## Quickstart
 
 They say [a good example is worth](https://www.google.com/webhp?sourceid=chrome-instant&ion=1&espv=2&ie=UTF-8#q=%22a+good+example+is+worth%22&start=20) 100 pages of API documentation, a million directives, or a thousand words. Well, "they" probably lie... but here's an example anyway:
@@ -197,8 +217,8 @@ The soul of any good state machine (and of many bad ones, no doubt) is a set of 
 # pass one State, one string, and one dict.
 states = [
     State(name='solid'),
-    'liquid', 
-    { 'name': 'gas'}, {'name': 'plasma'}
+    'liquid',
+    { 'name': 'gas'}
     ]
 machine = Machine(lump, states)
 
@@ -209,12 +229,11 @@ machine = Machine(lump)
 solid = State('solid')
 liquid = State('liquid')
 gas = State('gas')
-plasma = State('plasma')
-machine.add_states([solid, liquid, gas, plasma])
+machine.add_states([solid, liquid, gas])
 
 ```
 
-#### Callbacks
+#### <a name="state-callbacks"></a>Callbacks
 A State can also be associated with a list of _enter_ and _exit_ callbacks, which will be triggered whenever the state machine enters or leaves that state. Callbacks can be specified during initialization or added later. For convenience, whenever a new State is added to a Machine, dynamic on\_enter\_{state name} and on\_exit\_{state name} methods are created.
 
 ```python
@@ -226,11 +245,11 @@ class Matter(object):
     
 lump = Matter()
 
-# Same states as above, but now we give state solid an exit callback
+# Same states as above, but now we give StateA an exit callback
 states = [
     State(name='solid', on_exit=['say_goodbye']),
     'liquid',
-    { 'name': 'gas'}, {'name': 'plasma'}
+    { 'name': 'gas' }
     ]
     
 machine = Machine(lump, states=states)
@@ -238,7 +257,7 @@ machine.add_transition('sublimate', 'solid', 'gas')
     
 # Callbacks can also be added after initialization using 
 # the dynamically added on_enter_ and on_exist_ methods.
-lump.on_enter_gas('say_hello')
+lump.on_enter_StateC('say_hello')
 
 # Test out the callbacks...
 lump.set_state('solid')
@@ -253,13 +272,13 @@ In addition to passing in callbacks when initializing a State, or adding them dy
 class Matter(object):
     def say_hello(self): print "hello, new state!"
     def say_goodbye(self): print "goodbye, old state!"
-    def on_enter_solid(self): print "We've just entered state solid!"
+    def on_enter_A(self): print "We've just entered state A!"
     
 lump = Matter()
-machine = Machine(lump, states=['solid', 'liquid', 'gas', 'plasma'])
+machine = Machine(lump, states=['A', 'B', 'C'])
 ```
 
-Now, any time we transition to state solid, the on_enter_solid() method defined in the Matter class will fire.
+Now, any time we transition to state A, the on_enter_A() method defined in the Matter class will fire.
 
 #### Checking state
 We can always check the current state of the model by inspecting the .state attribute. We can also check whether the model is in a specific state using is\_{state name}(). Lastly, if we want to retrieve the actual State object for the current state, we can do that through the Machine instance's get\_state() method.
@@ -410,7 +429,15 @@ machine.add_transition('heat', 'solid', 'gas', unless=['is_flammable', 'is_reall
 
 In this case, the model would transition from solid to gas whenever heat() fires, provided that both is_flammable() and is_really_hot() return False.
 
-#### Callbacks
+Note that condition-checking methods will passively receive optional arguments and/or data objects passed to triggering methods. For instance, the following call:
+
+```python
+lump.heat(temp=74)
+```
+
+...would pass the temp=74 optional kwarg to the is_flammable() check (possibly wrapped in an EventData instance). For more on this, see the [Passing data](#passing-data) section below.
+
+#### <a name="transition-callbacks"></a>Callbacks
 As with states, we can attach callbacks to transitions. Every transition has 'before' and 'after' attributes that contain a list of methods to call before and after the transition executes:
 
 ```python
@@ -491,7 +518,7 @@ lump.print_pressure()
 
 ### Alternative initialization patterns
 
-In all of the examples so far, we've attached a new Machine instance to a separate model--specifically, to _lump_ (an instance of class Matter). While this separation keeps things tidy--because we don't have to monkey patch a whole bunch of new methods into our Matter class--it can also get annoying, since it requires us to keep track of which methods get called on our state machine, and which ones get called on the model the state machine is bound to (e.g., lump.on_enter_solid() vs. machine.add_transition()). Fortunately, Transitions is flexible, and supports two other initialization patterns. First, we can create a standalone state machine that doesn't require another model at all. All we have to do is omit the model argument during initialization:
+In all of the examples so far, we've attached a new Machine instance to a separate model--specifically, to _lump_ (an instance of class Matter). While this separation keeps things tidy--because we don't have to monkey patch a whole bunch of new methods into our Matter class--it can also get annoying, since it requires us to keep track of which methods get called on our state machine, and which ones get called on the model the state machine is bound to (e.g., lump.on_enter_StateA() vs. machine.add_transition()). Fortunately, Transitions is flexible, and supports two other initialization patterns. First, we can create a standalone state machine that doesn't require another model at all. All we have to do is omit the model argument during initialization:
 
 ```python
 machine = Machine(states=states, transitions=transitions, initial='solid')
@@ -524,6 +551,21 @@ lump.state
 
 Here we get to consolidate all state machine functionality in our existing model, which is often a more natural way to think about things than sticking all of the functionality we want in a separate standalone Machine instance.
 
-## I have a [bug report/issue/question]...
-For bug reports and other issues, please open an issue on GitHub. For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
+### Logging
 
+Transitions includes very rudimentary logging capabilities. A number of events--namely, state changes, transition triggers, and conditional checks--are logged as INFO-level events using the standard Python logging module. This means that logging to standard output can be easily configured in one's script:
+
+```python
+
+# Set up logging
+import logging
+from transitions import logger
+logger.setLevel(logging.INFO)
+
+# Business as usual
+machine = Machine(states=states, transitions=transitions, initial='solid')
+...
+```
+
+### <a name="bug-reports"></a>I have a [bug report/issue/question]...
+For bug reports and other issues, please open an issue on GitHub. For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
