@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.8 (August, 6, 2015)
+- README improvements, added TOC, and typo fixes
+- Condition checks now receive optional data
+- Removed invasive basicConfig() call introduced with logging in 0.2.6
+
 ## 0.2.7 (July 27, 2015)
 - Fixed import bug that prevented dependency installation at setup
 
