@@ -344,3 +344,16 @@ class TestTransitions(TestCase):
         m.to_B()
         self.assertTrue(m.before_state_change.called)
         self.assertTrue(m.after_state_change.called)
+
+    def test_pickle(self):
+        states = ['A', 'B', 'C', 'D']
+        # Define with list of dictionaries
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+        m = Machine(states=states, transitions=transitions, initial='A')
+        import pickle
+        dump = pickle.dumps(m)
+        self.assertIsNotNone(dump)
