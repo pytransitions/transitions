@@ -346,6 +346,7 @@ class TestTransitions(TestCase):
         self.assertTrue(m.after_state_change.called)
 
     def test_pickle(self):
+        import pickle
         states = ['A', 'B', 'C', 'D']
         # Define with list of dictionaries
         transitions = [
@@ -354,6 +355,9 @@ class TestTransitions(TestCase):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
         m = Machine(states=states, transitions=transitions, initial='A')
-        import pickle
+        m.walk()
         dump = pickle.dumps(m)
         self.assertIsNotNone(dump)
+        m2 = pickle.loads(dump)
+        self.assertEqual(m.state, m2.state)
+        m2.run()

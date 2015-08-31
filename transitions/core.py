@@ -456,6 +456,8 @@ class Machine(object):
             func(*event_data.args, **event_data.kwargs)
 
     def __getattr__(self, name):
+        if name.startswith('__'):
+            raise AttributeError
         terms = name.split('_')
         if terms[0] in ['before', 'after']:
             name = '_'.join(terms[1:])
