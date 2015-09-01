@@ -344,3 +344,25 @@ class TestTransitions(TestCase):
         m.to_B()
         self.assertTrue(m.before_state_change.called)
         self.assertTrue(m.after_state_change.called)
+
+    def test_pickle(self):
+        import sys
+        if sys.version_info < (3, 4):
+            import dill as pickle
+        else:
+            import pickle
+
+        states = ['A', 'B', 'C', 'D']
+        # Define with list of dictionaries
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+        m = Machine(states=states, transitions=transitions, initial='A')
+        m.walk()
+        dump = pickle.dumps(m)
+        self.assertIsNotNone(dump)
+        m2 = pickle.loads(dump)
+        self.assertEqual(m.state, m2.state)
+        m2.run()
