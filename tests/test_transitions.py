@@ -346,7 +346,12 @@ class TestTransitions(TestCase):
         self.assertTrue(m.after_state_change.called)
 
     def test_pickle(self):
-        import pickle
+        import sys
+        if sys.version_info < (3, 4):
+            import dill as pickle
+        else:
+            import pickle
+
         states = ['A', 'B', 'C', 'D']
         # Define with list of dictionaries
         transitions = [

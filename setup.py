@@ -28,6 +28,7 @@ setup(
                 'transitions.tests': ['data/*']
                 },
     install_requires=['six'],
+    tests_require=['dill'],
     license='MIT',
     download_url='https://github.com/tyarkoni/transitions/archive/%s.tar.gz' % __version__,
     **extra_setuptools_args
