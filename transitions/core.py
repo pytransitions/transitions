@@ -46,14 +46,14 @@ class State(object):
         for oe in self.on_enter:
             event_data.machine.callback(
                 getattr(event_data.model, oe), event_data)
-        logger.info("Entered state %s", self.name)
+        logger.info("Entered state %s" % self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
             event_data.machine.callback(
                 getattr(event_data.model, oe), event_data)
-        logger.info("Exited state %s", self.name)
+        logger.info("Exited state %s" % self.name)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -136,14 +136,14 @@ class Transition(object):
 
         for func in self.before:
             machine.callback(getattr(event_data.model, func), event_data)
-            logger.info("Executing callback '%s' before transition.", func)
+            logger.info("Executing callback '%s' before transition." % func)
         machine.get_state(self.source).exit(event_data)
         machine.set_state(self.dest)
         event_data.update()
         machine.get_state(self.dest).enter(event_data)
         for func in self.after:
             machine.callback(getattr(event_data.model, func), event_data)
-            logger.info("Executed callback '%s' after transition.", func)
+            logger.info("Executed callback '%s' after transition." % func)
         return True
 
     def add_callback(self, trigger, func):
