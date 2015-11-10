@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9 (November 10, 2015)
+- Enabled pickling in Python 3.4 (and in < 3.4 with the dill module)
+- Added reference to generating Transition in EventData objects
+- Fixed minor bugs
+
 ## 0.2.8 (August, 6, 2015)
 - README improvements, added TOC, and typo fixes
 - Condition checks now receive optional data
