@@ -487,7 +487,7 @@ lump.print_pressure()
 
 You can pass any number of arguments you like to the trigger.
 
-There is one important limitation to this approach: every callback function triggered by the state transition must be able to handle _all_ of the arguments. This may cause problems if you have multiple callbacks that each expects somewhat different data. To get around this, Transitions supports an alternate method for sending data. If you set send_event=True at Machine initialization, all arguments to the triggers will be wrapped in an EventData instance and passed on to every callback. (The EventData object also maintains internal references to the source state, model, machine, and trigger associated with the transition, in case you need to access these for anything.)
+There is one important limitation to this approach: every callback function triggered by the state transition must be able to handle _all_ of the arguments. This may cause problems if you have multiple callbacks that each expects somewhat different data. To get around this, Transitions supports an alternate method for sending data. If you set send_event=True at Machine initialization, all arguments to the triggers will be wrapped in an EventData instance and passed on to every callback. (The EventData object also maintains internal references to the source state, model, transition, machine, and trigger associated with the event, in case you need to access these for anything.)
 
 ```python
 class Matter(object):

@@ -159,13 +159,15 @@ class Transition(object):
 
 class EventData(object):
 
-    def __init__(self, state, event, machine, model, *args, **kwargs):
+    def __init__(self, state, event, machine, model, transition=None, *args,
+                 **kwargs):
         """
         Args:
             state (State): The State from which the Event was triggered.
             event (Event): The triggering Event.
             machine (Machine): The current Machine instance.
             model (object): The model/object the machine is bound to.
+            transition (Transition): The transition associated with the event.
             args and kwargs: Optional positional or named arguments that will
                 be stored internally for possible later use.
         """
@@ -173,6 +175,7 @@ class EventData(object):
         self.event = event
         self.machine = machine
         self.model = model
+        self.transition = transition
         self.args = args
         self.kwargs = kwargs
 
@@ -220,6 +223,7 @@ class Event(object):
         event = EventData(self.machine.current_state, self,
                           self.machine, self.machine.model, *args, **kwargs)
         for t in self.transitions[state_name]:
+            event.transition = t
             if t.execute(event):
                 return True
         return False
