@@ -159,23 +159,22 @@ class Transition(object):
 
 class EventData(object):
 
-    def __init__(self, state, event, machine, model, transition=None, *args,
-                 **kwargs):
+    def __init__(self, state, event, machine, model, args, kwargs):
         """
         Args:
             state (State): The State from which the Event was triggered.
             event (Event): The triggering Event.
             machine (Machine): The current Machine instance.
             model (object): The model/object the machine is bound to.
-            transition (Transition): The transition associated with the event.
-            args and kwargs: Optional positional or named arguments that will
-                be stored internally for possible later use.
+            args (list): Optional positional arguments from trigger method
+                to store internally for possible later use.
+            kwargs (dict): Optional keyword arguments from trigger method
+                to store internally for possible later use.
         """
         self.state = state
         self.event = event
         self.machine = machine
         self.model = model
-        self.transition = transition
         self.args = args
         self.kwargs = kwargs
 
@@ -221,7 +220,7 @@ class Event(object):
                     "Can't trigger event %s from state %s!" % (self.name,
                                                                state_name))
         event = EventData(self.machine.current_state, self, self.machine,
-                          self.machine.model, None, *args, **kwargs)
+                          self.machine.model, args=args, kwargs=kwargs)
         for t in self.transitions[state_name]:
             event.transition = t
             if t.execute(event):
