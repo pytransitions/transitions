@@ -220,8 +220,8 @@ class Event(object):
                 raise MachineError(
                     "Can't trigger event %s from state %s!" % (self.name,
                                                                state_name))
-        event = EventData(self.machine.current_state, self,
-                          self.machine, self.machine.model, *args, **kwargs)
+        event = EventData(self.machine.current_state, self, self.machine,
+                          self.machine.model, None, *args, **kwargs)
         for t in self.transitions[state_name]:
             event.transition = t
             if t.execute(event):

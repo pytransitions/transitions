@@ -50,8 +50,8 @@ class Stuff(object):
     def extract_message(self, event_data):
         self.message = event_data.kwargs['message']
 
-    def on_enter_E(self):
-        self.message = "I am E!"
+    def on_enter_E(self, msg=None):
+        self.message = "I am E!" if msg is None else msg
 
     def on_exit_E(self):
         self.exit_message = "E go home..."
@@ -223,14 +223,19 @@ class TestTransitions(TestCase):
         self.assertEquals(s.state, 'C')
 
     def test_send_event_data_callbacks(self):
-        states = ['A', 'B', 'C', 'D']
+        states = ['A', 'B', 'C', 'D', 'E']
         s = Stuff()
         # First pass positional and keyword args directly to the callback
-        m = Machine(model=s, states=states, initial='A', send_event=False)
+        m = Machine(model=s, states=states, initial='A', send_event=False,
+                    auto_transitions=True)
         m.add_transition(
             trigger='advance', source='A', dest='B', before='set_message')
         s.advance(message='Hallo. My name is Inigo Montoya.')
         self.assertTrue(s.message.startswith('Hallo.'))
+        # Make sure callbacks handle arguments properly
+        s.to_E("Optional message")
+        self.assertEquals(s.message, 'Optional message')
+        s.to_B()
         # Now wrap arguments in an EventData instance
         m.send_event = True
         m.add_transition(
