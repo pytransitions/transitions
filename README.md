@@ -260,7 +260,7 @@ machine.add_transition('sublimate', 'solid', 'gas')
 lump.on_enter_StateC('say_hello')
 
 # Test out the callbacks...
-lump.set_state('solid')
+machine.set_state('solid')
 lump.sublimate()
 >>> 'goodbye, old state!'
 >>> 'hello, new state!'
