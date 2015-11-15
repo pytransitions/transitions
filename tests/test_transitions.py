@@ -272,7 +272,7 @@ class TestTransitions(TestCase):
         self.assertEquals(m.state, 'A')
         # Should fail if auto transitions is off...
         m = Machine(None, states, initial='A', auto_transitions=False)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             m.to_C()
 
     def test_ordered_transitions(self):

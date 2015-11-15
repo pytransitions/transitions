@@ -6,7 +6,7 @@ except ImportError:
 from functools import partial
 from collections import defaultdict, OrderedDict
 from six import string_types
-
+import inspect
 import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -365,12 +365,15 @@ class Machine(object):
             setattr(self.model, 'is_%s' %
                     state.name, partial(self.is_state, state.name))
             state_name = state.name
-            if self != self.model and hasattr(
-                    self.model, 'on_enter_' + state_name):
-                state.add_callback('enter', 'on_enter_' + state_name)
-            if self != self.model and hasattr(
-                    self.model, 'on_exit_' + state_name):
-                state.add_callback('exit', 'on_exit_' + state_name)
+            #  Add enter/exit callbacks if there are existing bound methods
+            enter_callback = 'on_enter_' + state_name
+            if hasattr(self.model, enter_callback) and \
+                    inspect.ismethod(getattr(self.model, enter_callback)):
+                state.add_callback('enter', enter_callback)
+            exit_callback = 'on_exit_' + state_name
+            if hasattr(self.model, exit_callback) and \
+                    inspect.ismethod(getattr(self.model, exit_callback)):
+                state.add_callback('exit', exit_callback)
         # Add automatic transitions after all states have been created
         if self.auto_transitions:
             for s in self.states.keys():
@@ -471,6 +474,8 @@ class Machine(object):
         elif name.startswith('on_enter') or name.startswith('on_exit'):
             state = self.get_state('_'.join(terms[2:]))
             return partial(state.add_callback, terms[1])
+        else:
+            raise AttributeError
 
 
 class MachineError(Exception):
