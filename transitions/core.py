@@ -215,10 +215,12 @@ class Event(object):
         """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
-            if not self.machine.current_state.ignore_invalid_triggers:
-                raise MachineError(
-                    "Can't trigger event %s from state %s!" % (self.name,
-                                                               state_name))
+            msg = "Can't trigger event %s from state %s!" % (self.name,
+                                                             state_name)
+            if self.machine.current_state.ignore_invalid_triggers:
+                logging.warning(msg)
+            else:
+                raise MachineError(msg)
         event = EventData(self.machine.current_state, self, self.machine,
                           self.machine.model, args=args, kwargs=kwargs)
         for t in self.transitions[state_name]:
