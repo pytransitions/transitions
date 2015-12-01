@@ -568,4 +568,4 @@ machine = Machine(states=states, transitions=transitions, initial='solid')
 ```
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
-For bug reports and other issues, please open an issue on GitHub. For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
+For bug reports and other issues, please open an issue on GitHub. For usage questions, post on Stack Overflow, making sure to tag your question with the transitions and python tags. For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
