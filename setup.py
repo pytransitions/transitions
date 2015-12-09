@@ -7,7 +7,7 @@ with open('transitions/version.py') as f:
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools
 
-tests_require = ['dill']
+tests_require = ['dill', 'pygraphviz']
 
 extra_setuptools_args = {}
 if 'setuptools' in sys.modules:
