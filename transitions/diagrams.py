@@ -1,10 +1,17 @@
-import pygraphviz as pgv
+import abc
+try:
+    import pygraphviz as pgv
+except:
+    pgv = None
 
 
 class Diagram(object):
     def __init__(self, machine):
         self.machine = machine
 
+    @abc.abstractmethod
+    def get_graph(self):
+        return
 
 class AGraph(Diagram):
     state_attributes = {
@@ -24,6 +31,8 @@ class AGraph(Diagram):
         Args:
             title (string): Optional title for the graph.
         """
+        if not pgv:
+            raise Exception('AGraph diagram requires pygraphviz')
 
         if title is None:
             title = self.__class__.__name__
