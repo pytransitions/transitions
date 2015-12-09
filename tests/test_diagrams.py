@@ -23,7 +23,7 @@ class TestDiagrams(TestCase):
         graph = m.get_graph()
 
         # check for a valid pygraphviz diagram
-        self.assertNotEquals(graph, None)
+        self.assertIsNotNone(graph)
         self.assertTrue("digraph" in str(graph))
 
         # write diagram to temp file
