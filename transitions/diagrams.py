@@ -5,13 +5,14 @@ class Diagram(object):
     def __init__(self, machine):
         self.machine = machine
 
-class AGraph(Diagram)
-    self.state_attributes = {
+
+class AGraph(Diagram):
+    state_attributes = {
         'shape': 'circle',
         'height': '1.2',
     }
 
-    self.machine_attributes = {
+    machine_attributes = {
         'directed': True,
         'strict': False,
         'rankdir': 'LR',
@@ -34,13 +35,13 @@ class AGraph(Diagram)
 
         # For each state, draw a circle
         for state in self.machine.states.items():
-            shape = state_attrs['shape']
+            shape = self.state_attributes['shape']
 
             # We want the first state to be a double circle (UML style)
             if state == self.machine.states.items()[0]:
                 shape = 'doublecircle'
             else:
-                shape = state_attrs['shape']
+                shape = self.state_attributes['shape']
 
             state = state[0]
             fsm_graph.add_node(n=state, shape=shape)
