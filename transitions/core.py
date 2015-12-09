@@ -6,6 +6,7 @@ except ImportError:
 from functools import partial
 from collections import defaultdict, OrderedDict
 from six import string_types
+from .diagram import Diagram
 import inspect
 import logging
 logger = logging.getLogger(__name__)
@@ -462,6 +463,9 @@ class Machine(object):
             func(event_data)
         else:
             func(*event_data.args, **event_data.kwargs)
+
+    def get_graph(self, title=None):
+        return Diagram(self).get_graph(title)
 
     def __getattr__(self, name):
         if name.startswith('__'):
