@@ -464,8 +464,8 @@ class Machine(object):
         else:
             func(*event_data.args, **event_data.kwargs)
 
-    def get_graph(self, title=None):
-        return AGraph(self).get_graph(title)
+    def get_graph(self, title=None, diagram_class=AGraph):
+        return diagram_class(self).get_graph(title)
 
     def __getattr__(self, name):
         if name.startswith('__'):
