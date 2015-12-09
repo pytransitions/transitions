@@ -28,6 +28,7 @@ A lightweight, object-oriented state machine implementation in Python.
         - [Conditional transitions](#conditional-transitions)
         - [Callbacks](#transition-callbacks)
     - [Passing data](#passing-data)
+    - [Diagrams](#diagrams)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
     - [Bug reports etc.](#bug-reports)
@@ -515,6 +516,14 @@ lump.print_pressure()
 
 ```
 
+### Diagrams
+
+Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have pygraphviz installed ("pip install pygraphviz"). Generating a state diagram for any machine is as simple as calling its get_graph() method, which returns a PyGraphviz AGraph instance. For example:
+
+```python
+graph = machine.get_graph()
+graph.draw('my_state_diagram.png', prog='dot')
+```
 
 ### Alternative initialization patterns
 
