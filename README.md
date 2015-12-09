@@ -525,6 +525,10 @@ graph = machine.get_graph()
 graph.draw('my_state_diagram.png', prog='dot')
 ```
 
+This produces something like this:
+
+![state diagram example](https://cloud.githubusercontent.com/assets/19777/11530591/1a0c08a6-98f6-11e5-88a7-756585aafbbb.png)
+
 ### Alternative initialization patterns
 
 In all of the examples so far, we've attached a new Machine instance to a separate model--specifically, to _lump_ (an instance of class Matter). While this separation keeps things tidy--because we don't have to monkey patch a whole bunch of new methods into our Matter class--it can also get annoying, since it requires us to keep track of which methods get called on our state machine, and which ones get called on the model the state machine is bound to (e.g., lump.on_enter_StateA() vs. machine.add_transition()). Fortunately, Transitions is flexible, and supports two other initialization patterns. First, we can create a standalone state machine that doesn't require another model at all. All we have to do is omit the model argument during initialization:
