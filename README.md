@@ -101,7 +101,7 @@ class NarcolepticSuperhero(object):
         return random.random() < 0.5
 
     def change_into_super_secret_costume(self):
-        print "Beauty, eh?"
+        print("Beauty, eh?")
 ```
 
 There, now we've baked a state machine into our NarcolepticSuperhero. Let's take him/her/it out for a spin...
@@ -241,8 +241,8 @@ A State can also be associated with a list of _enter_ and _exit_ callbacks, whic
 # Our old Matter class, now with  a couple of new methods we 
 # can trigger when entering or exit states.
 class Matter(object):
-    def say_hello(self): print "hello, new state!"
-    def say_goodbye(self): print "goodbye, old state!"
+    def say_hello(self): print("hello, new state!")
+    def say_goodbye(self): print("goodbye, old state!")
     
 lump = Matter()
 
@@ -271,9 +271,9 @@ In addition to passing in callbacks when initializing a State, or adding them dy
 
 ```python
 class Matter(object):
-    def say_hello(self): print "hello, new state!"
-    def say_goodbye(self): print "goodbye, old state!"
-    def on_enter_A(self): print "We've just entered state A!"
+    def say_hello(self): print("hello, new state!")
+    def say_goodbye(self): print("goodbye, old state!")
+    def on_enter_A(self): print("We've just entered state A!")
     
 lump = Matter()
 machine = Machine(lump, states=['A', 'B', 'C'])
@@ -443,8 +443,8 @@ As with states, we can attach callbacks to transitions. Every transition has 'be
 
 ```python
 class Matter(object):
-    def make_hissing_noises(self): print "HISSSSSSSSSSSSSSSS"
-    def disappear: print "where'd all the liquid go?"
+    def make_hissing_noises(self): print("HISSSSSSSSSSSSSSSS")
+    def disappear: print("where'd all the liquid go?")
 
 transitions = [
     { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid', 'before': 'make_hissing_noises'},
@@ -546,8 +546,8 @@ An alternative and potentially better approach is to have the model inherit from
 
 ```python
 class Matter(Machine):
-    def say_hello(self): print "hello, new state!"
-    def say_goodbye(self): print "goodbye, old state!"
+    def say_hello(self): print("hello, new state!")
+    def say_goodbye(self): print("goodbye, old state!")
 
     def __init__(self):
         states = ['solid', 'liquid', 'gas']
