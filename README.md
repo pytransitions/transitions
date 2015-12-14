@@ -444,7 +444,7 @@ As with states, we can attach callbacks to transitions. Every transition has 'be
 ```python
 class Matter(object):
     def make_hissing_noises(self): print("HISSSSSSSSSSSSSSSS")
-    def disappear: print("where'd all the liquid go?")
+    def disappear(self): print("where'd all the liquid go?")
 
 transitions = [
     { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid', 'before': 'make_hissing_noises'},
