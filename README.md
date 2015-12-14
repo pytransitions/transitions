@@ -551,7 +551,7 @@ class Matter(Machine):
 
     def __init__(self):
         states = ['solid', 'liquid', 'gas']
-        Machine.__init__(self, states, initial='solid')
+        Machine.__init__(self, states=states, initial='solid')
         self.add_transition('melt', 'solid', 'liquid')
     
 lump = Matter()
