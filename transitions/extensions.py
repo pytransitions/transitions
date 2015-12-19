@@ -83,6 +83,7 @@ class HierarchicalMachine(Machine):
 
     def __init__(self, *args, **kwargs):
         self.blueprints = {'states': [], 'transitions': []}
+        self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
         # if the initial state is no leaf, traverse the tree
@@ -104,6 +105,7 @@ class HierarchicalMachine(Machine):
     # state machines.
     def _flatten(self, states, on_enter=None, on_exit=None,
                  ignore_invalid_triggers=None, parent=None):
+        states = listify(states)
         new_states = []
         prefix = (parent + '_') if parent is not None else ''
         for state in states:
@@ -129,12 +131,23 @@ class HierarchicalMachine(Machine):
                     tmp_states.extend(children)
 
                 tmp_states.insert(0, NestedState(**state))
+            elif isinstance(state, HierarchicalMachine):
+                tmp_states.extend(self._flatten(state.blueprints['states'], on_enter=on_enter, on_exit=on_exit,
+                                                ignore_invalid_triggers=ignore_invalid_triggers, parent=parent))
+                for trans in state.blueprints['transitions']:
+                    source = trans['source']
+                    source = prefix + source if not source == '*' else source
+                    dest = prefix + trans['dest']
+                    self._buffered_transitions.append((trans['trigger'], source, dest, trans.get('conditions', None),
+                                                       trans.get('unless', None), trans.get('before', None),
+                                                       trans.get('after', None)))
             else:
                 tmp_states.append(state)
             new_states.extend(tmp_states)
         return new_states
 
     def _to_blueprint(self, states):
+        states = listify(states)
         blueprints = []
         for state in states:
             if isinstance(state, string_types):
@@ -149,17 +162,23 @@ class HierarchicalMachine(Machine):
                       'ignore_invalid_triggers': state.ignore_invalid_triggers}
                 if state.children is not None:
                     bp['children'] = self._to_blueprint(state.children)
+            elif isinstance(state, HierarchicalMachine):
+                if len(blueprints) > 0:
+                    raise ValueError
+                return state.blueprints['states']
 
             blueprints.append(bp)
         return blueprints
 
     def add_states(self, states, *args, **kwargs):
-        states = listify(states)
         self.blueprints['states'].extend(self._to_blueprint(states))
 
         # preprocess states to flatten the configuration and resolve nesting
         new_states = self._flatten(states, *args, **kwargs)
         super(HierarchicalMachine, self).add_states(new_states, *args, **kwargs)
+        while len(self._buffered_transitions) > 0:
+            args = self._buffered_transitions.pop()
+            self.add_transition(*args)
 
     # collect the names of all children of a list of NestedSets
     def _traverse_nested(self, children):
@@ -174,13 +193,19 @@ class HierarchicalMachine(Machine):
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None):
         if not (trigger.startswith('to_') and source == '*'):
+            bp_before = None
+            bp_after = None
             if self.before_state_change:
-                before = listify(before) + listify(self.before_state_change)
+                bp_before = listify(self.before_state_change)
+                bp_before.extend(listify(before))
+                bp_before = unify(bp_before)
             if self.after_state_change:
-                after = listify(after) + listify(self.after_state_change)
+                bp_after = listify(after)
+                bp_after.extend(listify(self.after_state_change))
+                bp_after = unify(bp_after)
             self.blueprints['transitions'].append({'trigger': trigger, 'source': source, 'dest': dest,
-                                                   'conditions': conditions, 'unless': unless, 'before': before,
-                                                   'after': after})
+                                                   'conditions': conditions, 'unless': unless, 'before': bp_before,
+                                                   'after': bp_after})
         if isinstance(source, string_types):
             source = list(self.states.keys()) if source == '*' else [source]
 
@@ -234,3 +259,17 @@ class ConcurrentStateMachine(HierarchicalMachine):
                     return super(ConcurrentStateMachine, self).__getattribute__(name)(*args, **kwargs)
             return locked_method
         return tmp
+
+
+# helper functions to filter duplicates in transition functions
+def unify(seq):
+    return list(_unify(seq))
+
+
+def _unify(seq):
+    seen = set()
+    for x in seq:
+        if x in seen:
+            continue
+        seen.add(x)
+        yield x

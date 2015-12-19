@@ -134,10 +134,11 @@ class Transition(object):
                 logger.info("Transition condition failed: %s() does not " +
                             "return %s. Transition halted.", c.func, c.target)
                 return False
-        self._change_state(event_data)
         for func in self.before:
             machine.callback(getattr(event_data.model, func), event_data)
             logger.info("Executing callback '%s' before transition." % func)
+
+        self._change_state(event_data)
 
         for func in self.after:
             machine.callback(getattr(event_data.model, func), event_data)
@@ -292,7 +293,6 @@ class Machine(object):
         if states is not None:
             self.add_states(states)
 
-        print self.states
         self.set_state(self._initial)
 
         if transitions is not None:
