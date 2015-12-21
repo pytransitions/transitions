@@ -1,4 +1,6 @@
 from .core import State, Machine, Transition, listify
+from .diagrams import AGraph
+
 from threading import RLock
 from six import string_types
 from os.path import commonprefix
@@ -9,6 +11,44 @@ import copy
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+
+class AAGraph(AGraph):
+    seen = []
+
+    def _add_nodes(self, states, container):
+        for state in states:
+            if state.name in self.seen:
+                continue
+            elif state.children is not None:
+                self.seen.append(state.name)
+                sub = container.add_subgraph(name="cluster_"+state.name, rank='same', label=state.name)
+                self._add_nodes(state.children, sub)
+            else:
+                # We want the first state to be a double circle (UML style)
+                if state == list(self.machine.states.items())[0]:
+                    shape = 'doublecircle'
+                else:
+                    shape = self.state_attributes['shape']
+
+                state = state.name
+                self.seen.append(state)
+                shape = self.state_attributes['shape']
+                container.add_node(n=state, shape=shape)
+
+    def _add_edges(self, events, sub):
+        for event in events.items():
+            event = event[1]
+            label = str(event.name)
+
+            for transition in event.transitions.items():
+                src = transition[0]
+                dst = self.machine.get_state(transition[1][0].dest)
+                if dst.children is not None:
+                    dst = dst.get_initial().name
+                else:
+                    dst = dst.name
+
+                sub.add_edge(src, dst, label=label)
 
 # Added parent and children parameter children is a list of NestedStates
 # and parent is the full name of the parent e.g. Foo_Bar_Baz.
@@ -38,7 +78,7 @@ class NestedTransition(Transition):
 
         # First, we want to figure out if source and destination share
         # parent states. We do a simple string comparison.
-        # E.g. Foo.Bar.Baz1.A and Foo.Ball.Boo.B will share 'Foo.Ba' which will be resolved later
+        # E.g. Foo_Bar_Baz1_A and Foo_Ball_Boo_B will share 'Foo_Ba' which will be resolved later
         if source_state.parent is not None and dest_state.parent is not None:
             shared_parent = commonprefix([source_state.parent, dest_state.parent])
 
@@ -48,7 +88,7 @@ class NestedTransition(Transition):
             source_parent = source_state.parent
 
             # The loop is ended if we reach a root state or if source's parent is part of the shared_parent string
-            # With source equals Foo.Bar.Baz1.A and shared_parent Foo.Ba, Foo will not be exited.
+            # E.g. for Foo_Bar_Baz1_A with shared_parent Foo_Ba, Foo will not be exited.
             if source_parent is None or (shared_parent is not None and shared_parent.startswith(source_parent)):
                 break;
             source_state = machine.get_state(source_parent)
@@ -56,6 +96,7 @@ class NestedTransition(Transition):
         enter_queue = []
 
         # Now we have to enter all the parent states of destination EXCEPT the ones still active (the shared_parents)
+        # we achieve by generating a list top down from destination to shared parent
         source_name = machine.get_state(source_state.parent).name if source_state.parent is not None else None
 
         # If destination contains children, get the leaf state
@@ -221,6 +262,8 @@ class HierarchicalMachine(Machine):
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
                                                         unless=unless, before=before, after=after)
 
+    def get_graph(self, title=None, diagram_class=AAGraph):
+        return super(HierarchicalMachine, self).get_graph(title, diagram_class)
 
 # lock access to methods of the state machine
 # can be used if threaded access to the state machine is required.
