@@ -3,6 +3,7 @@ try:
 except ImportError:
     pass
 
+from transitions import MachineError
 from transitions import HierarchicalMachine as Machine
 from transitions import NestedState as State
 
@@ -56,11 +57,9 @@ class Stuff(object):
         self.message += "Hello F!"
 
     def increase_level(self):
-        print 'inc'
         self.level += 1
 
     def decrease_level(self):
-        print 'dec'
         self.level -= 1
 
     def set_message(self, message="Hello World!"):
@@ -132,7 +131,6 @@ class TestTransitions(TestCase):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
-        print 'mpp'
         m = Machine(states=states, transitions=transitions, initial='A')
         self.assertEquals(m.initial, 'A')
         m = Machine(states=states, transitions=transitions, initial='C')
@@ -270,6 +268,9 @@ class TestTransitions(TestCase):
         s.to_A()
         self.assertEquals(s.state, 'A')
         self.assertEquals(s.level, 1)
+        s.to_C_3_a()
+        self.assertEquals(s.state, 'C_3_a')
+        self.assertEquals(s.level, 3)
 
     def test_ordered_transitions(self):
         states = ['beginning', 'middle', 'end']

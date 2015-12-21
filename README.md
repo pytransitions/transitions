@@ -31,6 +31,9 @@ A lightweight, object-oriented state machine implementation in Python.
     - [Diagrams](#diagrams)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
+    - Extensions
+        - [Hierarchical State Machine](#hsm)
+        - [Threading](#threading)
     - [Bug reports etc.](#bug-reports)
 
 
@@ -578,6 +581,141 @@ logger.setLevel(logging.INFO)
 # Business as usual
 machine = Machine(states=states, transitions=transitions, initial='solid')
 ...
+```
+
+### Extension: <a name="hsm"></a>Hierarchical State Machine (HSM)
+
+Transitions includes an extension module which allows to nest states. This allows to create contexts and to model cases where states are related to certain subtasks in the state machine. To create a nested state, either import `NestedState` from transitions or use a dictionary with initialization arguments.
+
+```python
+from transitions import HierarchicalMachine as Machine
+from transitions import NestedState as State
+
+states = ['standing', 'walking', {'name': 'caffeinated', 'children':['dithering', 'running']}]
+transitions = [
+  ['walk', 'standing', 'walking'],
+  ['stop', 'walking', 'standing'],
+  ['drink', '*', 'caffeinated'],
+  ['walk', 'caffeinated_dithering', 'caffeinated_running'],
+  ['relax', 'caffeinated', 'standing']
+]
+machine = Machine(states=states, transitions=transitions, initial='standing', ignore_invalid_triggers=True)
+
+machine.walk() # Walking now
+machine.stop() # let's stop for a moment
+machine.drink() # coffee time
+machine.state
+>>> 'caffeinated_dithering'
+machine.walk() # we have to go faster
+machine.state
+>>> 'caffeinated_running'
+machine.stop() # can't stop moving!
+machine.state
+>>> 'caffeinated_running'
+machine.relax() # leave nested state
+machine.state # phew, what a ride
+>>> 'standing'
+```
+
+Some things that have to be considered when working with nested states: State *names are concatenated*. A substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be refered to as `foo_bar_baz` and so on. When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates. If you transit into a state with nested states and do not specify a child, the *first declared child will be entered*. Third, a transition specified for a parent state will be resolved and *added to all substates*.
+
+```python
+states = ['A', 'B', 
+  {'name': 'C', 'children':['1', '2', 
+    {'name': '3', 'children': ['a', 'b', 'c']}
+  ]}
+]
+
+transitions = [
+    ['reset', 'C', 'A']
+]
+
+# we rely on auto transitions
+machine = Machine(states=states, transitions=transitions, initial='A')
+
+machine.to_B() # exit state A, enter state B
+machine.to_C() # exit B, enter C, enter C_1
+machine.to_C_3() # exit C_1, enter C_3, enter C_3_a
+machine.state
+>>> 'C_3_a'
+machine.to_C_2() # exit C_3_a, exit C_3, enter C_2
+machine.reset() # exit C_2, exit C, enter A
+machine.to_C_3_a() # exit A, enter C, enter C_3, enter C_3_a
+```
+
+### Extension: Reuse of previously created HSMs
+
+Besides semantical order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them. Transitions offers two ways to achieve this: You can either *pass a state machine* as an argument or retrieve the machine's *blueprint*, store this as plain text somewhere and pass this to a new machine.
+
+```python
+count_states = ['1', '2', '3', 'done']
+count_trans = [
+    ['increase', '1', '2'],
+    ['increase', '2', '3'],
+    ['decrease', '3', '2'],
+    ['decrease', '2', '1'],
+    ['done', '3', 'done'],
+    ['reset', '*', '1']
+]
+
+counter = Machine(states=count_states, transitions=count_trans, initial='1')
+
+calculator.increase() # love my counter
+calculator.blueprints #  
+>>> {'states': ['1', '2', '3', 'done'], 'transitions': [{'unless': None, 'dest': '2', 'after': None, 'source': '1', 'trigger': 'increase', 'conditions': None, 'before': None}, ...]}
+...
+states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
+# states = ['waiting', 'collecting', {'name': 'counting', children: counter.blueprints}]
+
+transitions = [
+    ['collect', '*', 'collecting'],
+    ['wait', '*', 'waiting'],
+    ['count', 'wait', 'counting']
+]
+
+collector = Machine(states=states, transitions=transitions, initial='waiting')
+collector.collect() # collecting
+collector.count() # let's see what we got
+collector.increase() # counting_2
+collector.increase() # counting_3
+collector.done() # counting_done
+collector.wait() # go back to waiting
+```
+
+Sometimes you want such an embedded state collection to 'return' which means after it is done it should exit and transit to one of your states. To achieve this behaviour you can remap state transitions. In the example above we would like the counter to return if the state `done` was reached. This is done as follows:
+
+```python
+states = ['waiting', 'collecting', {'name': 'counting', children: counter, 'remap': {'done': 'waiting'}}]
+
+... # same as above
+
+collector.increase() # counting_3
+collector.done()
+collector.state
+>>> 'waiting' # be aware that 'finish will entirely be removed from the state machine
+```
+
+If a reused state machine does not have a final state, you can of course add the transitions manually. If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'A']` to achieve the same behaviour.
+
+### <a name="threading"></a>Extension: Threadsafe(-ish) State Machine
+
+In cases where event dispatching is done in Threads, one can use either `LockedMachine` or `LockedHSM` where **function access** (!sic) is secured with reentrant locks. This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
+
+```python
+from transition import LockedMachine as Machine
+import thread
+import time
+
+states = ['A', 'B', 'C']
+machine = Machine(states=states, initial='A')
+
+# let us assume that entering B will take some time
+thread.start_new_thread (self.stuff.to_B, ())
+time.sleep(0.01) # thread requires some time to start
+machine.to_C() # synchronized access; won't execute before thread is done
+thread.start_new_thread (self.stuff.to_B, ())
+# accessing attributes directly
+machine.new_attrib = 42 # not synchronized! will mess with execution order
 ```
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...

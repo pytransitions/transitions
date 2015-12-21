@@ -16,6 +16,8 @@ class AAGraph(AGraph):
     seen = []
 
     def _add_nodes(self, states, container):
+        # to be able to process children recursively as well as the state dict of a machine
+        states = states.values() if isinstance(states, dict) else states
         for state in states:
             if state.name in self.seen:
                 continue
@@ -49,6 +51,7 @@ class AAGraph(AGraph):
                     dst = dst.name
 
                 sub.add_edge(src, dst, label=label)
+
 
 # Added parent and children parameter children is a list of NestedStates
 # and parent is the full name of the parent e.g. Foo_Bar_Baz.
@@ -145,20 +148,25 @@ class HierarchicalMachine(Machine):
     # its parent's name. Substate Bar of Foo becomes Foo_Bar. An alternative approach would be to use actual nested
     # state machines.
     def _flatten(self, states, on_enter=None, on_exit=None,
-                 ignore_invalid_triggers=None, parent=None):
+                 ignore_invalid_triggers=None, parent=None, remap={}):
         states = listify(states)
         new_states = []
+        ignore = ignore_invalid_triggers
+        if ignore is None:
+            ignore = self.ignore_invalid_triggers
         prefix = (parent + '_') if parent is not None else ''
         for state in states:
             tmp_states = []
             # other state representations are handled almost like in the base class but a parent parameter is added
             if isinstance(state, string_types):
+                if state in remap:
+                    continue
                 tmp_states.append(NestedState(prefix + state, on_enter=on_enter, on_exit=on_exit, parent=parent,
-                                  ignore_invalid_triggers=ignore_invalid_triggers))
+                                  ignore_invalid_triggers=ignore))
             elif isinstance(state, dict):
                 state = copy.deepcopy(state)
                 if 'ignore_invalid_triggers' not in state:
-                    state['ignore_invalid_triggers'] = ignore_invalid_triggers
+                    state['ignore_invalid_triggers'] = ignore
                 state['parent'] = parent
                 state['name'] = prefix + state['name']
 
@@ -167,18 +175,21 @@ class HierarchicalMachine(Machine):
                     # Concat the state names with the current scope. The scope is the concatenation of all
                     # previous parents. Call _flatten again to check for more nested states.
                     children = self._flatten(state['children'], on_enter=on_enter, on_exit=on_exit,
-                                             ignore_invalid_triggers=ignore_invalid_triggers, parent=state['name'])
+                                             ignore_invalid_triggers=ignore,
+                                             parent=state['name'], remap=state.get('remap', {}))
                     state['children'] = children
+                    state.pop('remap', None)
                     tmp_states.extend(children)
 
                 tmp_states.insert(0, NestedState(**state))
             elif isinstance(state, HierarchicalMachine):
                 tmp_states.extend(self._flatten(state.blueprints['states'], on_enter=on_enter, on_exit=on_exit,
-                                                ignore_invalid_triggers=ignore_invalid_triggers, parent=parent))
+                                                ignore_invalid_triggers=ignore,
+                                                parent=parent, remap=remap))
                 for trans in state.blueprints['transitions']:
                     source = trans['source']
                     source = prefix + source if not source == '*' else source
-                    dest = prefix + trans['dest']
+                    dest = prefix + trans['dest'] if trans['dest'] not in remap else remap[trans['dest']]
                     self._buffered_transitions.append((trans['trigger'], source, dest, trans.get('conditions', None),
                                                        trans.get('unless', None), trans.get('before', None),
                                                        trans.get('after', None)))
@@ -265,41 +276,42 @@ class HierarchicalMachine(Machine):
     def get_graph(self, title=None, diagram_class=AAGraph):
         return super(HierarchicalMachine, self).get_graph(title, diagram_class)
 
+
 # lock access to methods of the state machine
 # can be used if threaded access to the state machine is required.
-class MutexMachine(Machine):
+class LockedMachine(Machine):
 
     def __init__(self, *args, **kwargs):
         self._lock = RLock()
-        super(MutexMachine, self).__init__(*args, **kwargs)
+        super(LockedMachine, self).__init__(*args, **kwargs)
 
     def __getattribute__(self, name):
-        tmp = super(MutexMachine, self).__getattribute__(name)
+        tmp = super(LockedMachine, self).__getattribute__(name)
         if inspect.ismethod(tmp):
-            lock = super(MutexMachine, self).__getattribute__('_lock')
+            lock = super(LockedMachine, self).__getattribute__('_lock')
 
             def locked_method(*args, **kwargs):
                 with lock:
-                    return super(MutexMachine, self).__getattribute__(name)(*args, **kwargs)
+                    return super(LockedMachine, self).__getattribute__(name)(*args, **kwargs)
             return locked_method
         return tmp
 
 
 # Uses HSM as well as Mutex features
-class ConcurrentStateMachine(HierarchicalMachine):
+class LockedHSM(HierarchicalMachine):
 
     def __init__(self, *args, **kwargs):
         self._lock = RLock()
-        super(ConcurrentStateMachine, self).__init__(*args, **kwargs)
+        super(LockedHSM, self).__init__(*args, **kwargs)
 
     def __getattribute__(self, name):
-        tmp = super(ConcurrentStateMachine, self).__getattribute__(name)
+        tmp = super(LockedHSM, self).__getattribute__(name)
         if inspect.ismethod(tmp):
-            lock = super(ConcurrentStateMachine, self).__getattribute__('_lock')
+            lock = super(LockedHSM, self).__getattribute__('_lock')
 
             def locked_method(*args, **kwargs):
                 with lock:
-                    return super(ConcurrentStateMachine, self).__getattribute__(name)(*args, **kwargs)
+                    return super(LockedHSM, self).__getattribute__(name)(*args, **kwargs)
             return locked_method
         return tmp
 

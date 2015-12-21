@@ -70,10 +70,10 @@ class AGraph(Diagram):
         fsm_graph.node_attr.update(self.state_attributes)
 
         # For each state, draw a circle
-        self._add_nodes(self.machine.states.values(), fsm_graph)
+        self._add_nodes(self.machine.states, fsm_graph)
         fsm_graph.add_node('null', shape='plaintext', label='')
 
         self._add_edges(self.machine.events, fsm_graph)
-        fsm_graph.add_edge('null', self.machine.states.items()[0][0])
+        fsm_graph.add_edge('null', list(self.machine.states.items())[0][0])
 
         return fsm_graph

@@ -178,3 +178,55 @@ class TestTransitions(TestCase):
         self.assertEqual(walker.state, 'A')
         walker.calc()
         self.assertEqual(walker.state, 'C_1')
+
+    def test_blueprint_remap(self):
+        states = ['1', '2', '3', 'finished']
+        transitions = [
+            {'trigger': 'increase', 'source': '1', 'dest': '2'},
+            {'trigger': 'increase', 'source': '2', 'dest': '3'},
+            {'trigger': 'decrease', 'source': '3', 'dest': '2'},
+            {'trigger': 'decrease', 'source': '1', 'dest': '1'},
+            {'trigger': 'reset', 'source': '*', 'dest': '1'},
+            {'trigger': 'done', 'source': '3', 'dest': 'finished'}
+        ]
+
+        counter = Machine(states=states, transitions=transitions, initial='1')
+
+        new_states = ['A', 'B', {'name': 'C', 'children': counter, 'remap': {'finished': 'A'}}]
+        new_transitions = [
+            {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'forward', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
+            {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
+            {'trigger': 'calc', 'source': '*', 'dest': 'C'},
+        ]
+
+        walker = Machine(states=new_states, transitions=new_transitions, before_state_change='watch',
+                         after_state_change='look_back', initial='A')
+
+        walker.watch = lambda: 'walk'
+        walker.look_back = lambda: 'look_back'
+
+        counter.increase()
+        counter.increase()
+        counter.done()
+        self.assertEqual(counter.state, 'finished')
+
+        with self.assertRaises(MachineError):
+            walker.increase()
+        self.assertEqual(walker.state, 'A')
+        walker.forward()
+        walker.forward()
+        self.assertEqual(walker.state, 'C_1')
+        walker.increase()
+        self.assertEqual(walker.state, 'C_2')
+        walker.reset()
+        self.assertEqual(walker.state, 'C_1')
+        walker.to_A()
+        self.assertEqual(walker.state, 'A')
+        walker.calc()
+        self.assertEqual(walker.state, 'C_1')
+        walker.increase()
+        walker.increase()
+        walker.done()
+        self.assertEqual(walker.state, 'A')

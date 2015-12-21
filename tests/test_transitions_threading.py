@@ -4,10 +4,9 @@ except ImportError:
     pass
 
 import time
-import thread
+from threading import Thread
 
-from transitions import State, MachineError
-from transitions import MutexMachine as Machine
+from transitions import LockedMachine as Machine
 from unittest import TestCase
 
 try:
@@ -52,13 +51,15 @@ class TestTransitions(TestCase):
         pass
 
     def test_thread_access(self):
-        thread.start_new_thread ( self.stuff.to_B, ())
+        thread = Thread(target = self.stuff.to_B)
+        thread.start()
         # give thread some time to start
         time.sleep(0.01)
         self.assertTrue( self.stuff.machine.is_state("B"))
 
     def test_parallel_access(self):
-        thread.start_new_thread(self.stuff.to_B, ())
+        thread = Thread(target = self.stuff.to_B)
+        thread.start()
         # give thread some time to start
         time.sleep(0.01)
         self.stuff.to_C()
