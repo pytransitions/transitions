@@ -36,7 +36,9 @@ A lightweight, object-oriented state machine implementation in Python.
 
 ## Quickstart
 
-They say [a good example is worth](https://www.google.com/webhp?sourceid=chrome-instant&ion=1&espv=2&ie=UTF-8#q=%22a+good+example+is+worth%22&start=20) 100 pages of API documentation, a million directives, or a thousand words. Well, "they" probably lie... but here's an example anyway:
+They say [a good example is worth](https://www.google.com/webhp?ie=UTF-8#q=%22a+good+example+is+worth%22&start=20) 100 pages of API documentation, a million directives, or a thousand words. 
+
+Well, "they" probably lie...but here's an example anyway:
 
 ```python
 from transitions import Machine
@@ -104,7 +106,7 @@ class NarcolepticSuperhero(object):
         print("Beauty, eh?")
 ```
 
-There, now we've baked a state machine into our NarcolepticSuperhero. Let's take him/her/it out for a spin...
+There, now you've baked a state machine into `NarcolepticSuperhero`. Let's take him/her/it out for a spin...
 
 ```python
 >>> batman = NarcolepticSuperhero("Batman")
@@ -155,7 +157,7 @@ MachineError: "Can't trigger event clean_up from state asleep!"
 
 ### Basic initialization
 
-Getting our state machine up and running is pretty simple. Let's say we have an object called _lump_--an instance of class Matter--whose states we want to manage:
+Getting a state machine up and running is pretty simple. Let's say you have the object `lump` (an instance of class `Matter`), and you want to manage its states:
 
 ```python
 class Matter(object):
@@ -164,7 +166,7 @@ class Matter(object):
 lump = Matter()
 ```
 
-We can initialize a minimal working state machine bound to _lump_ like so:
+You can initialize a (_minimal_) working state machine bound to `lump` like this:
 
 ```python
 from transitions import Machine
@@ -175,7 +177,9 @@ lump.state
 >>> 'solid'
 ```
 
-I say "minimal", because while this state machine is technically operational, it doesn't actually _do_ anything. It'll start its life in the 'solid' state, but won't ever move into any other state, because we haven't defined any transitions yet. So let's try again.
+I say “minimal”, because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined...yet!
+
+Let's try again.
 
 ```python
 # The states
@@ -206,11 +210,19 @@ lump.state
 >>> 'plasma'
 ```
 
-Notice the shiny new methods attached to our Matter instance (evaporate(), ionize(), etc.), each of which triggers the corresponding transition. We don't have to explicitly define these methods anywhere; the name of each transition is bound to the model we passed to the Machine initializer (in this case, _lump_).
+Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. You don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`).
 
 ### States
 
-The soul of any good state machine (and of many bad ones, no doubt) is a set of states. Above, we defined the valid model states by giving the Machine initializer a list of strings. But internally, states are actually represented as State objects. You can initialize and modify States in a number of ways. Specifically, you can (a) pass a string to the Machine initializer giving the name(s) of the state(s); (b) directly initialize each new State object; or (c) pass a dictionary that contains initialization arguments. The following snippets illustrate several ways to achieve the same goal:
+The soul of any good state machine (and of many bad ones, no doubt) is a set of states. Above, we defined the valid model states by passing a list of strings to the `Machine` initializer. But internally, states are actually represented as `State` objects. 
+
+You can initialize and modify States in a number of ways. Specifically, you can: 
+
+- pass a string to the `Machine` initializer giving the name(s) of the state(s), or
+- directly initialize each new `State` object, or 
+- pass a dictionary with initialization arguments
+
+The following snippets illustrate several ways to achieve the same goal:
 
 ```python
 # Create a list of 3 states to pass to the Machine
@@ -235,7 +247,9 @@ machine.add_states([solid, liquid, gas])
 ```
 
 #### <a name="state-callbacks"></a>Callbacks
-A State can also be associated with a list of _enter_ and _exit_ callbacks, which will be triggered whenever the state machine enters or leaves that state. Callbacks can be specified during initialization or added later. For convenience, whenever a new State is added to a Machine, dynamic on\_enter\_{state name} and on\_exit\_{state name} methods are created.
+A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization, or add them later. 
+
+For convenience, whenever a new `State` is added to a `Machine`, the methods `on_enter_«state name»` and `on_exit_«state name»` are dynamically created.
 
 ```python
 # Our old Matter class, now with  a couple of new methods we 
@@ -267,7 +281,7 @@ lump.sublimate()
 >>> 'hello, new state!'
 ```
 
-In addition to passing in callbacks when initializing a State, or adding them dynamically, it's also possible to define callbacks in the model class itself, which may increase code clarity. For example:
+In addition to passing in callbacks when initializing a `State`, or adding them dynamically, it's also possible to define callbacks in the model class itself, which may increase code clarity. For example:
 
 ```python
 class Matter(object):
@@ -279,10 +293,15 @@ lump = Matter()
 machine = Machine(lump, states=['A', 'B', 'C'])
 ```
 
-Now, any time we transition to state A, the on_enter_A() method defined in the Matter class will fire.
+Now, any time `lump` transitions to state `A`, the `on_enter_A()` method defined in the `Matter` class will fire.
 
 #### Checking state
-We can always check the current state of the model by inspecting the .state attribute. We can also check whether the model is in a specific state using is\_{state name}(). Lastly, if we want to retrieve the actual State object for the current state, we can do that through the Machine instance's get\_state() method.
+You can always check the current state of the model by either:
+
+- inspecting the `.state` attribute, or
+- calling `is_«state name»()`
+
+And if you want to retrieve the actual `State` object for the current state, you can do that through the `Machine` instance's `get_state()` method.
 
 ```python
 lump.state
@@ -296,7 +315,9 @@ machine.get_state().name
 ```
 
 ### Transitions
-Some of the above examples already illustrate the use of transitions in passing, but here we'll explore them in more detail. As with states, each transition is represented internally as its own object--an instance of class Transition. The quickest way to initialize a set of transitions is to pass a dictionary, or list of dictionaries, to the Machine initializer. We already saw this above:
+Some of the above examples already illustrate the use of transitions in passing, but here we'll explore them in more detail. 
+
+As with states, each transition is represented internally as its own object--an instance of class `Transition`. The quickest way to initialize a set of transitions is to pass a dictionary, or list of dictionaries, to the `Machine` initializer. We already saw this above:
 
 ```python
 transitions = [
@@ -308,7 +329,9 @@ transitions = [
 machine = Machine(model=Matter(), states=states, transitions=transitions)
 ```
 
-Defining transitions in dictionaries has the benefit of clarity, but can be cumbersome. If we're after brevity, we can choose to define our transitions using lists. We just need to make sure that the elements in each list are in the same order as positional arguments in the Transition initialization (i.e., trigger, source, destination, etc.). The following list-of-lists specification is functionally equivalent to the list-of-dictionaries approach above:
+Defining transitions in dictionaries has the benefit of clarity, but can be cumbersome. If you're after brevity, you might choose to define transitions using lists. Just make sure that the elements in each list are in the same order as the positional arguments in the `Transition` initialization (i.e., `trigger`, `source`, `destination`, etc.). 
+
+The following list-of-lists is functionally equivalent to the list-of-dictionaries above:
 
 ```python
 transitions = [
@@ -319,14 +342,14 @@ transitions = [
 ]
 ```
 
-Alternatively, we can add transitions to a Machine after initialization:
+Alternatively, you can add transitions to a `Machine` after initialization:
 
 ```python
 machine = Machine(model=lump, states=states, initial='solid')
 machine.add_transition('melt', source='solid', dest='liquid')
 ```
 
-The trigger argument defines the name of the new triggering method that gets attached to the base model. When this method is called, it will try to execute the transition:
+The `trigger` argument defines the name of the new triggering method that gets attached to the base model. When this method is called, it will try to execute the transition:
 
 ```python
 >>> lump.melt()
@@ -343,7 +366,7 @@ By default, calling an invalid trigger will raise an exception:
 transitions.core.MachineError: "Can't trigger event melt from state gas!"
 ```
 
-In general, this behavior is desirable, as it can help alert you to problems in your code. But in some cases, you might want to silently ignore invalid triggers. You can do this by setting ignore_invalid_triggers=True on either a state-by-state basis, or globally for all states:
+This behavior is generally desirable, since it helps alert you to problems in your code. But in some cases, you might want to silently ignore invalid triggers. You can do this by setting `ignore_invalid_triggers=True` (either on a state-by-state basis, or globally for all states):
 
 ```python
 >>> # Globally suppress invalid trigger exceptions
@@ -357,7 +380,7 @@ In general, this behavior is desirable, as it can help alert you to problems in 
 ```
 
 #### Automatic transitions for all states
-In addition to any transitions added explicitly, a to_{state}() method will be added automatically whenever a state is added to a Machine instance. This method transitions to the target state no matter what state the state machine is currently in:
+In addition to any transitions added explicitly, a `to_«state»()` method is created automatically whenever a state is added to a `Machine` instance. This method transitions to the target state no matter which state the machine is currently in:
 
 ```python
 lump.to_liquid()
@@ -368,7 +391,7 @@ lump.state
 >>> 'solid'
 ```
 
-This behavior can be disabled if desired by setting auto_transitions=False in the Machine initializer.
+If you desire, you can disable this behavior by setting `auto_transitions=False` in the `Machine` initializer.
 
 #### Transitioning from multiple states
 A given trigger can be attached to multiple transitions, some of which can potentially begin or end in the same state. For example:
@@ -380,16 +403,18 @@ machine.add_transition('transmogrify', 'plasma', 'solid')
 machine.add_transition('transmogrify', 'plasma', 'gas')
 ```
 
-In this case, calling transmogrify() will set the model's state to solid if it's currently plasma, and set it to plasma otherwise. Note that only the first matching transition will execute--hence, the transition defined in the last line above won't do anything.
+In this case, calling `transmogrify()` will set the model's state to `'solid'` if it's currently `'plasma'`, and set it to `'plasma'` otherwise. (Note that only the _first_ matching transition will execute; thus, the transition defined in the last line above won't do anything.)
 
-We can also indicate that a trigger should cause a transition from _all_ states to a particular destination by using the wildcard:
+You can also make a trigger cause a transition from _all_ states to a particular destination by using the `'*'` wildcard:
 
 ```python
 machine.add_transition('to_liquid', '*', 'liquid')
 ```
 
 #### Ordered transitions
-In many cases, we want our state transitions to follow a strict linear sequence. For instance, given states ['A', 'B', 'C'], we might want valid transitions for A --> B, B --> C, and C --> A (but no other pairs). To facilitate this behavior, Transitions provides an add\_ordered\_transitions() method in the Machine class:
+A common desire is for state transitions to follow a strict linear sequence. For instance, given states `['A', 'B', 'C']`, you might want valid transitions for `A` → `B`, `B` → `C`, and `C` → `A` (but no other pairs). 
+
+To facilitate this behavior, Transitions provides an `add_ordered_transitions()` method in the `Machine` class:
 
 ```python
 states = ['A', 'B', 'C']
@@ -408,7 +433,7 @@ print(machine.state)
 ```
 
 #### Conditional transitions
-Sometimes we only want a particular transition to execute if some specific condition obtains. We can ensure that happens by passing a method or list of methods in the conditions argument:
+Sometimes you only want a particular transition to execute if a specific condition occurs. You can do this by passing a method, or list of methods, in the `conditions` argument:
 
 ```python
 # Our Matter class, now with a bunch of methods that return booleans.
@@ -420,15 +445,15 @@ machine.add_transition('heat', 'solid', 'gas', conditions='is_flammable')
 machine.add_transition('heat', 'solid', 'liquid', conditions=['is_really_hot'])
 ```
 
-In the above example, calling heat() when the model is in state 'solid' will transition to state 'gas' if is\_flammable returns True. Otherwise, it will transition to state 'liquid' if is\_really\_hot returns True.
+In the above example, calling `heat()` when the model is in state `'solid'` will transition to state `'gas'` if `is_flammable` returns `True`. Otherwise, it will transition to state `'liquid'` if `is_really_hot` returns `True`.
 
-For convenience, there's also an 'unless' argument that behaves exactly like conditions, but inverted:
+For convenience, there's also an `'unless'` argument that behaves exactly like conditions, but inverted:
 
 ```python
 machine.add_transition('heat', 'solid', 'gas', unless=['is_flammable', 'is_really_hot'])
 ```
 
-In this case, the model would transition from solid to gas whenever heat() fires, provided that both is_flammable() and is_really_hot() return False.
+In this case, the model would transition from solid to gas whenever `heat()` fires, provided that both `is_flammable()` and `is_really_hot()` return `False`.
 
 Note that condition-checking methods will passively receive optional arguments and/or data objects passed to triggering methods. For instance, the following call:
 
@@ -436,10 +461,10 @@ Note that condition-checking methods will passively receive optional arguments a
 lump.heat(temp=74)
 ```
 
-...would pass the temp=74 optional kwarg to the is_flammable() check (possibly wrapped in an EventData instance). For more on this, see the [Passing data](#passing-data) section below.
+...would pass the `temp=74` optional kwarg to the `is_flammable()` check (possibly wrapped in an `EventData` instance). For more on this, see the [Passing data](#passing-data) section below.
 
 #### <a name="transition-callbacks"></a>Callbacks
-As with states, we can attach callbacks to transitions. Every transition has 'before' and 'after' attributes that contain a list of methods to call before and after the transition executes:
+You can attach callbacks to transitions as well as states. Every transition has `'before'` and `'after'` attributes that contain a list of methods to call before and after the transition executes:
 
 ```python
 class Matter(object):
@@ -460,7 +485,9 @@ lump.evaporate()
 ```
 
 ### Passing data
-Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways. First (and by default), you can pass any positional or keyword arguments you like directly to the trigger methods added when transitions were registered:
+Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways. 
+
+First (the default), you can pass any positional or keyword arguments directly to the trigger methods (created when you call `add_transition()`):
 
 ```python
 class Matter(object):
@@ -488,7 +515,9 @@ lump.print_pressure()
 
 You can pass any number of arguments you like to the trigger.
 
-There is one important limitation to this approach: every callback function triggered by the state transition must be able to handle _all_ of the arguments. This may cause problems if you have multiple callbacks that each expects somewhat different data. To get around this, Transitions supports an alternate method for sending data. If you set send_event=True at Machine initialization, all arguments to the triggers will be wrapped in an EventData instance and passed on to every callback. (The EventData object also maintains internal references to the source state, model, transition, machine, and trigger associated with the event, in case you need to access these for anything.)
+There is one important limitation to this approach: every callback function triggered by the state transition must be able to handle _all_ of the arguments. This may cause problems if the callbacks each expect somewhat different data. 
+
+To get around this, Transitions supports an alternate method for sending data. If you set `send_event=True` at `Machine` initialization, all arguments to the triggers will be wrapped in an `EventData` instance and passed on to every callback. (The `EventData` object also maintains internal references to the source state, model, transition, machine, and trigger associated with the event, in case you need to access these for anything.)
 
 ```python
 class Matter(object):
@@ -518,7 +547,7 @@ lump.print_pressure()
 
 ### Diagrams
 
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have pygraphviz installed ("pip install pygraphviz"). Generating a state diagram for any machine is as simple as calling its get_graph() method, which returns a PyGraphviz AGraph instance. For example:
+Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). Generating a state diagram for any machine is as simple as calling its `get_graph()` method, which returns a PyGraphviz `AGraph` instance. For example:
 
 ```python
 graph = machine.get_graph()
@@ -531,7 +560,11 @@ This produces something like this:
 
 ### Alternative initialization patterns
 
-In all of the examples so far, we've attached a new Machine instance to a separate model--specifically, to _lump_ (an instance of class Matter). While this separation keeps things tidy--because we don't have to monkey patch a whole bunch of new methods into our Matter class--it can also get annoying, since it requires us to keep track of which methods get called on our state machine, and which ones get called on the model the state machine is bound to (e.g., lump.on_enter_StateA() vs. machine.add_transition()). Fortunately, Transitions is flexible, and supports two other initialization patterns. First, we can create a standalone state machine that doesn't require another model at all. All we have to do is omit the model argument during initialization:
+In all of the examples so far, we've attached a new `Machine` instance to a separate model (`lump`, an instance of class `Matter`). While this separation keeps things tidy (because you don't have to monkey patch a whole bunch of new methods into the `Matter` class), it can also get annoying, since it requires you to keep track of which methods are called on the state machine, and which ones are called on the model that the state machine is bound to (e.g., `lump.on_enter_StateA()` vs. `machine.add_transition()`). 
+
+Fortunately, Transitions is flexible, and supports two other initialization patterns. 
+
+First, you can create a standalone state machine that doesn't require another model at all. Simply omit the model argument during initialization:
 
 ```python
 machine = Machine(states=states, transitions=transitions, initial='solid')
@@ -540,9 +573,11 @@ machine.state
 >>> 'liquid'
 ```
 
-If we initialize our machine this way, we will then attach all triggering events (like evaporate(), sublimate(), etc.) and all callback functions directly to the Machine instance. This approach has the benefit of consolidating all of our state machine functionality in one place, but can feel a little bit unnatural if you think state logic should be contained within the model itself rather than in a separate controller.
+If you initialize the machine this way, you can then attach all triggering events (like `evaporate()`, `sublimate()`, etc.) and all callback functions directly to the `Machine` instance. 
 
-An alternative and potentially better approach is to have the model inherit from the Machine class. Transitions is designed to support inheritance seamlessly. Just be sure to override class Machine's init method:
+This approach has the benefit of consolidating all of the state machine functionality in one place, but can feel a little bit unnatural if you think state logic should be contained within the model itself rather than in a separate controller.
+
+An alternative (potentially better) approach is to have the model inherit from the `Machine` class. Transitions is designed to support inheritance seamlessly. (just be sure to override class `Machine`'s `__init__` method!):
 
 ```python
 class Matter(Machine):
@@ -562,11 +597,11 @@ lump.state
 >>> 'liquid'
 ```
 
-Here we get to consolidate all state machine functionality in our existing model, which is often a more natural way to think about things than sticking all of the functionality we want in a separate standalone Machine instance.
+Here you get to consolidate all state machine functionality into your existing model, which often feels more natural way than sticking all of the functionality we want in a separate standalone `Machine` instance.
 
 ### Logging
 
-Transitions includes very rudimentary logging capabilities. A number of events--namely, state changes, transition triggers, and conditional checks--are logged as INFO-level events using the standard Python logging module. This means that logging to standard output can be easily configured in one's script:
+Transitions includes very rudimentary logging capabilities. A number of events--namely, state changes, transition triggers, and conditional checks--are logged as INFO-level events using the standard Python `logging` module. This means you can easily configure logging to standard output in a script:
 
 ```python
 
@@ -581,4 +616,8 @@ machine = Machine(states=states, transitions=transitions, initial='solid')
 ```
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
-For bug reports and other issues, please open an issue on GitHub. For usage questions, post on Stack Overflow, making sure to tag your question with the transitions and python tags. For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
+For bug reports and other issues, please open an issue on GitHub. 
+
+For usage questions, post on Stack Overflow, making sure to tag your question with the `transitions` and `python` tags. 
+
+For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
