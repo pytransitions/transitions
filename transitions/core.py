@@ -134,18 +134,22 @@ class Transition(object):
                 logger.info("Transition condition failed: %s() does not " +
                             "return %s. Transition halted.", c.func, c.target)
                 return False
-
         for func in self.before:
             machine.callback(getattr(event_data.model, func), event_data)
             logger.info("Executing callback '%s' before transition." % func)
-        machine.get_state(self.source).exit(event_data)
-        machine.set_state(self.dest)
-        event_data.update()
-        machine.get_state(self.dest).enter(event_data)
+
+        self._change_state(event_data)
+
         for func in self.after:
             machine.callback(getattr(event_data.model, func), event_data)
             logger.info("Executed callback '%s' after transition." % func)
         return True
+
+    def _change_state(self, event_data):
+        event_data.machine.get_state(self.source).exit(event_data)
+        event_data.machine.set_state(self.dest)
+        event_data.update()
+        event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
         """ Add a new before or after callback.
@@ -302,6 +306,10 @@ class Machine(object):
         if ordered_transitions:
             self.add_ordered_transitions()
 
+    @staticmethod
+    def _create_transition(*args, **kwargs):
+        return Transition(*args, **kwargs)
+
     @property
     def initial(self):
         """ Return the initial state. """
@@ -419,7 +427,7 @@ class Machine(object):
             after = listify(after) + listify(self.after_state_change)
 
         for s in source:
-            t = Transition(s, dest, conditions, unless, before, after)
+            t = self._create_transition(s, dest, conditions, unless, before, after)
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',

@@ -26,6 +26,33 @@ class AGraph(Diagram):
         'ratio': '0.3'
     }
 
+    def _add_nodes(self, states, container):
+        # For each state, draw a circle
+        for state in states:
+            shape = self.state_attributes['shape']
+
+            # We want the first state to be a double circle (UML style)
+            if state == list(self.machine.states.items())[0]:
+                shape = 'doublecircle'
+            else:
+                shape = self.state_attributes['shape']
+
+            state = state[0]
+            container.add_node(n=state, shape=shape)
+
+    def _add_edges(self, events, container):
+        for state in events.items():
+            shape = self.state_attributes['shape']
+
+            # We want the first state to be a double circle (UML style)
+            if state == list(self.machine.states.items())[0]:
+                shape = 'doublecircle'
+            else:
+                shape = self.state_attributes['shape']
+
+            state = state[0]
+            container.add_node(n=state, shape=shape)
+
     def get_graph(self, title=None):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object
         Args:
@@ -43,30 +70,10 @@ class AGraph(Diagram):
         fsm_graph.node_attr.update(self.state_attributes)
 
         # For each state, draw a circle
-        for state in self.machine.states.items():
-            shape = self.state_attributes['shape']
-
-            # We want the first state to be a double circle (UML style)
-            if state == list(self.machine.states.items())[0]:
-                shape = 'doublecircle'
-            else:
-                shape = self.state_attributes['shape']
-
-            state = state[0]
-            fsm_graph.add_node(n=state, shape=shape)
-
+        self._add_nodes(self.machine.states, fsm_graph)
         fsm_graph.add_node('null', shape='plaintext', label='')
-        fsm_graph.add_edge('null', 'new')
 
-        # For each event, add the transitions
-        for event in self.machine.events.items():
-            event = event[1]
-            label = str(event.name)
-
-            for transition in event.transitions.items():
-                src = transition[0]
-                dst = transition[1][0].dest
-
-                fsm_graph.add_edge(src, dst, label=label)
+        self._add_edges(self.machine.events, fsm_graph)
+        fsm_graph.add_edge('null', list(self.machine.states.items())[0][0])
 
         return fsm_graph
