@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 (January 2, 2016)
+Release 0.3 includes a number of new features (nesting, multithreading, and graphing) as well as bug fixes and minor improvements:
+- Support for nested states (thanks to @aleneum)
+- Basic multithreading support for function access (thanks to @aleneum)
+- Basic graphing support via graphviz (thanks to @svdgraaf)
+- Stylistic edits, minor fixes, and improvements to README
+- Expanded and refactored tests
+- Minor bug fixes
+
 ## 0.2.9 (November 10, 2015)
 - Enabled pickling in Python 3.4 (and in < 3.4 with the dill module)
 - Added reference to generating Transition in EventData objects
