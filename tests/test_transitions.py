@@ -5,74 +5,12 @@ except ImportError:
 
 from transitions import Machine, State, MachineError
 from unittest import TestCase
+from .test_utils import Stuff, InheritedStuff
 
 try:
     from unittest.mock import MagicMock
 except ImportError:
     from mock import MagicMock
-
-
-class Stuff(object):
-
-    def __init__(self):
-
-        self.state = None
-
-        states = ['A', 'B', 'C', 'D', 'E', 'F']
-        self.machine = Machine(self, states=states, initial='A')
-
-    def this_passes(self):
-        return True
-
-    def this_fails(self):
-        return False
-
-    def this_fails_by_default(self, boolean=False):
-        return boolean
-
-    def extract_boolean(self, event_data):
-        return event_data.kwargs['boolean']
-
-    def goodbye(self):
-        self.message = "So long, suckers!"
-
-    def hello_world(self):
-        self.message = "Hello World!"
-
-    def hello_F(self):
-        if not hasattr(self, 'message'):
-            self.message = ''
-        self.message += "Hello F!"
-
-    def set_message(self, message="Hello World!"):
-        self.message = message
-
-    def extract_message(self, event_data):
-        self.message = event_data.kwargs['message']
-
-    def on_enter_E(self, msg=None):
-        self.message = "I am E!" if msg is None else msg
-
-    def on_exit_E(self):
-        self.exit_message = "E go home..."
-
-    def on_enter_F(self):
-        self.message = "I am F!"
-
-
-class InheritedStuff(Machine):
-
-    def __init__(self, states, initial='A'):
-
-        self.state = None
-
-        Machine.__init__(self, states=states, initial=initial)
-
-    def this_passes(self):
-        return True
-
-    def this_fails(self):
-        return False
 
 
 class TestTransitions(TestCase):

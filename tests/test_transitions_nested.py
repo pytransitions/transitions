@@ -3,9 +3,10 @@ try:
 except ImportError:
     pass
 
-from transitions import MachineError
 from transitions import HierarchicalMachine as Machine
 from transitions import NestedState as State
+from .test_utils import Stuff
+
 
 from unittest import TestCase
 
@@ -15,88 +16,12 @@ except ImportError:
     from mock import MagicMock
 
 
-class Stuff(object):
-
-    def __init__(self):
-
-        self.state = None
-        self.message = None
-
-        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
-                  'D', 'E', 'F']
-        self.machine = Machine(self, states=states, initial='A')
-        self.level = 1
-
-    def this_passes(self):
-        return True
-
-    def this_fails(self):
-        return False
-
-    def this_fails_by_default(self, boolean=False):
-        return boolean
-
-    def extract_boolean(self, event_data):
-        return event_data.kwargs['boolean']
-
-    def goodbye(self):
-        self.message = "So long, suckers!"
-
-    def hello_world(self):
-        self.message = "Hello World!"
-
-    def greet(self):
-        self.message = "Hi"
-
-    def meet(self):
-        self.message = "Nice to meet you"
-
-    def hello_F(self):
-        if not hasattr(self, 'message'):
-            self.message = ''
-        self.message += "Hello F!"
-
-    def increase_level(self):
-        self.level += 1
-
-    def decrease_level(self):
-        self.level -= 1
-
-    def set_message(self, message="Hello World!"):
-        self.message = message
-
-    def extract_message(self, event_data):
-        self.message = event_data.kwargs['message']
-
-    def on_enter_E(self, msg=None):
-        self.message = "I am E!" if msg is None else msg
-
-    def on_exit_E(self):
-        self.exit_message = "E go home..."
-
-    def on_enter_F(self):
-        self.message = "I am F!"
-
-
-class InheritedStuff(Machine):
-
-    def __init__(self, states, initial='A'):
-
-        self.state = None
-
-        Machine.__init__(self, states=states, initial=initial)
-
-    def this_passes(self):
-        return True
-
-    def this_fails(self):
-        return False
-
-
 class TestTransitions(TestCase):
 
     def setUp(self):
-        self.stuff = Stuff()
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
+                  'D', 'E', 'F']
+        self.stuff = Stuff(states, Machine)
 
     def tearDown(self):
         pass

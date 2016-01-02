@@ -6,7 +6,8 @@ except ImportError:
 import time
 from threading import Thread
 
-from transitions import LockedMachine as Machine
+from transitions import LockedHierarchicalMachine as Machine
+from .test_utils import Stuff
 from unittest import TestCase
 
 try:
@@ -15,52 +16,34 @@ except ImportError:
     from mock import MagicMock
 
 
-class Stuff(object):
-
-    def __init__(self):
-
-        self.state = None
-
-        states = ['A', 'B', 'C', 'D', 'E', 'F']
-        self.machine = Machine(self, states=states, initial='A')
-
-    def on_enter_B(self):
-        time.sleep(1)
-
-class InheritedStuff(Machine):
-
-    def __init__(self, states, initial='A'):
-
-        self.state = None
-
-        Machine.__init__(self, states=states, initial=initial)
-
-    def this_passes(self):
-        return True
-
-    def this_fails(self):
-        return False
+def heavy_processing():
+    time.sleep(1)
 
 
 class TestTransitions(TestCase):
 
     def setUp(self):
-        self.stuff = Stuff()
+        self.stuff = Stuff(machine_cls=Machine)
+        self.stuff.heavy_processing = heavy_processing
+        self.stuff.machine.add_transition('process', '*', 'B', before='heavy_processing')
 
     def tearDown(self):
         pass
 
     def test_thread_access(self):
-        thread = Thread(target = self.stuff.to_B)
+        thread = Thread(target=self.stuff.process)
         thread.start()
         # give thread some time to start
         time.sleep(0.01)
-        self.assertTrue( self.stuff.machine.is_state("B"))
+        self.assertTrue(self.stuff.machine.is_state("B"))
 
     def test_parallel_access(self):
-        thread = Thread(target = self.stuff.to_B)
+        thread = Thread(target=self.stuff.process)
         thread.start()
         # give thread some time to start
         time.sleep(0.01)
         self.stuff.to_C()
+        # if 'process' has not been locked, it is still running
+        # we have to wait to be sure it is done
+        time.sleep(1)
         self.assertEqual(self.stuff.state, "C")

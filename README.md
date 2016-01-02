@@ -660,8 +660,8 @@ count_trans = [
 
 counter = Machine(states=count_states, transitions=count_trans, initial='1')
 
-calculator.increase() # love my counter
-calculator.blueprints #  
+counter.increase() # love my counter
+counter.blueprints #  
 >>> {'states': ['1', '2', '3', 'done'], 'transitions': [{'unless': None, 'dest': '2', 'after': None, 'source': '1', 'trigger': 'increase', 'conditions': None, 'before': None}, ...]}
 ...
 states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
@@ -703,18 +703,20 @@ In cases where event dispatching is done in Threads, one can use either `LockedM
 
 ```python
 from transition import LockedMachine as Machine
-import thread
+from threading import Thread
 import time
 
 states = ['A', 'B', 'C']
 machine = Machine(states=states, initial='A')
 
 # let us assume that entering B will take some time
-thread.start_new_thread (self.stuff.to_B, ())
+thread = Thread(target=self.stuff.to_B)
+thread.start()
 time.sleep(0.01) # thread requires some time to start
 machine.to_C() # synchronized access; won't execute before thread is done
-thread.start_new_thread (self.stuff.to_B, ())
 # accessing attributes directly
+thread = Thread(target=self.stuff.to_B)
+thread.start()
 machine.new_attrib = 42 # not synchronized! will mess with execution order
 ```
 

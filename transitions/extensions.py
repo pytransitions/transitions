@@ -123,6 +123,15 @@ class NestedTransition(Transition):
             s.enter(event_data)
 
 
+class LockedTransition(Transition):
+    def __init__(self, *args, **kwargs):
+        super(LockedTransition, self).__init__(*args, **kwargs)
+
+    def execute(self, event_data):
+        with event_data.machine.lock:
+            super(LockedTransition, self).execute(event_data)
+
+
 class HierarchicalMachine(Machine):
 
     def __init__(self, *args, **kwargs):
@@ -282,38 +291,31 @@ class HierarchicalMachine(Machine):
 class LockedMachine(Machine):
 
     def __init__(self, *args, **kwargs):
-        self._lock = RLock()
+        self.lock = RLock()
         super(LockedMachine, self).__init__(*args, **kwargs)
 
-    def __getattribute__(self, name):
-        tmp = super(LockedMachine, self).__getattribute__(name)
-        if inspect.ismethod(tmp):
-            lock = super(LockedMachine, self).__getattribute__('_lock')
+    @staticmethod
+    def _create_transition(*args, **kwargs):
+        return LockedTransition(*args, **kwargs)
 
+    def __getattribute__(self, item):
+        f = super(LockedMachine, self).__getattribute__
+        tmp = f(item)
+        if inspect.ismethod(tmp):
+            lock = f('lock')
             def locked_method(*args, **kwargs):
                 with lock:
-                    return super(LockedMachine, self).__getattribute__(name)(*args, **kwargs)
+                    res = f(item)(*args, **kwargs)
+                    return res
             return locked_method
         return tmp
 
 
 # Uses HSM as well as Mutex features
-class LockedHSM(HierarchicalMachine):
+class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
 
     def __init__(self, *args, **kwargs):
-        self._lock = RLock()
-        super(LockedHSM, self).__init__(*args, **kwargs)
-
-    def __getattribute__(self, name):
-        tmp = super(LockedHSM, self).__getattribute__(name)
-        if inspect.ismethod(tmp):
-            lock = super(LockedHSM, self).__getattribute__('_lock')
-
-            def locked_method(*args, **kwargs):
-                with lock:
-                    return super(LockedHSM, self).__getattribute__(name)(*args, **kwargs)
-            return locked_method
-        return tmp
+        super(LockedHierarchicalMachine, self).__init__(*args, **kwargs)
 
 
 # helper functions to filter duplicates in transition functions
