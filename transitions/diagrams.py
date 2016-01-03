@@ -6,12 +6,14 @@ except:
 
 
 class Diagram(object):
+
     def __init__(self, machine):
         self.machine = machine
 
     @abc.abstractmethod
     def get_graph(self):
         return
+
 
 class AGraph(Diagram):
     state_attributes = {
@@ -32,7 +34,7 @@ class AGraph(Diagram):
             shape = self.state_attributes['shape']
 
             # We want the first state to be a double circle (UML style)
-            if state == list(self.machine.states.items())[0]:
+            if state == list(states.items())[0]:
                 shape = 'doublecircle'
             else:
                 shape = self.state_attributes['shape']
@@ -41,17 +43,16 @@ class AGraph(Diagram):
             container.add_node(n=state, shape=shape)
 
     def _add_edges(self, events, container):
-        for state in events.items():
-            shape = self.state_attributes['shape']
+        # For each event, add an edge
+        for event in events.items():
+            event = event[1]
+            label = str(event.name)
 
-            # We want the first state to be a double circle (UML style)
-            if state == list(self.machine.states.items())[0]:
-                shape = 'doublecircle'
-            else:
-                shape = self.state_attributes['shape']
+            for transition in event.transitions.items():
+                src = transition[0]
+                dst = transition[1][0].dest
 
-            state = state[0]
-            container.add_node(n=state, shape=shape)
+                container.add_edge(src, dst, label=label)
 
     def get_graph(self, title=None):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object
@@ -71,9 +72,9 @@ class AGraph(Diagram):
 
         # For each state, draw a circle
         self._add_nodes(self.machine.states, fsm_graph)
-        fsm_graph.add_node('null', shape='plaintext', label='')
+        # fsm_graph.add_node('null', shape='plaintext', label='')
 
         self._add_edges(self.machine.events, fsm_graph)
-        fsm_graph.add_edge('null', list(self.machine.states.items())[0][0])
+        # fsm_graph.add_edge('null', list(self.states.items())[0][0])
 
         return fsm_graph
