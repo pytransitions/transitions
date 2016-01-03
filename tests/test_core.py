@@ -132,6 +132,25 @@ class TestTransitions(TestCase):
         self.assertEquals(s.state, 'A')
         self.assertTrue(s.message.startswith('So long'))
 
+    def test_before_after_callback_addition(self):
+        m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
+        m.add_transition('move', 'A', 'B')
+        trans = m.events['move'].transitions['A'][0]
+        trans.add_callback('after', 'increase_level')
+        m.model.move()
+        self.assertEquals(m.model.level, 2)
+
+    def test_before_after_transition_listeners(self):
+        m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
+        m.add_transition('move', 'A', 'B')
+        m.add_transition('move', 'B', 'C')
+
+        m.before_move('increase_level')
+        m.model.move()
+        self.assertEquals(m.model.level, 2)
+        m.model.move()
+        self.assertEquals(m.model.level, 3)
+
     def test_state_model_change_listeners(self):
         s = self.stuff
         s.machine.add_transition('go_e', 'A', 'E')
