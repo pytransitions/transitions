@@ -9,6 +9,7 @@ from six import string_types
 from .diagrams import AGraph
 import inspect
 import logging
+import itertools
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -233,6 +234,16 @@ class Event(object):
             if t.execute(event):
                 return True
         return False
+
+    def add_callback(self, trigger, func):
+        """ Add a new before or after callback to all available transitions.
+        Args:
+            trigger (string): The type of triggering event. Must be one of
+                'before' or 'after'.
+            func (string): The name of the callback function.
+        """
+        for t in itertools.chain(*self.transitions.values()):
+            t.add_callback(trigger, func)
 
 
 class Machine(object):
