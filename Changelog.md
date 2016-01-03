@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 (January 3, 2016)
+Mostly a bug fix release. Changes include:
+- Fixes graphing bug introduced in 0.3.0 (thanks to @wtgee)
+- Fixes bug in dynamic addition of before/after callbacks (though this is a currently undocumented feature)
+- Adds coveralls support and badge
+- Adds a few tests to achieve near-100% coverage
+
 ## 0.3.0 (January 2, 2016)
 Release 0.3 includes a number of new features (nesting, multithreading, and graphing) as well as bug fixes and minor improvements:
 - Support for nested states (thanks to @aleneum)
