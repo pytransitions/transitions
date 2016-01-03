@@ -30,7 +30,7 @@ class AGraph(Diagram):
 
     def _add_nodes(self, states, container):
         # For each state, draw a circle
-        for state in states:
+        for state in states.keys():
             shape = self.state_attributes['shape']
 
             # We want the first state to be a double circle (UML style)
@@ -39,7 +39,6 @@ class AGraph(Diagram):
             else:
                 shape = self.state_attributes['shape']
 
-            state = state[0]
             container.add_node(n=state, shape=shape)
 
     def _add_edges(self, events, container):
