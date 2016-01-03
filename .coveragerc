@@ -1,0 +1,3 @@
+[run]
+source = transitions
+include = */transitions/*
