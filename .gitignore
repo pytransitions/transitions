@@ -7,3 +7,4 @@ dist/*
 *.egg-info
 *.iml
 .idea
+.coverage

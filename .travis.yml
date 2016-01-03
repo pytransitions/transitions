@@ -7,6 +7,9 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y graphviz
 install:
+  - pip install python-coveralls coverage
   - pip install -r requirements.txt
   - pip install -r requirements_test.txt
-script:  nosetests
+script:  nosetests --with-coverage --with-doctest
+after_success:
+  - coveralls --config_file .coveragerc
