@@ -5,7 +5,7 @@ except ImportError:
 
 from transitions import HierarchicalMachine as Machine
 from transitions import NestedState as State
-from .test_utils import Stuff
+from .utils import Stuff
 
 
 from unittest import TestCase

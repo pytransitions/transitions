@@ -5,7 +5,7 @@ except ImportError:
 
 from transitions import Machine, State, MachineError
 from unittest import TestCase
-from .test_utils import Stuff, InheritedStuff
+from .utils import Stuff, InheritedStuff
 
 try:
     from unittest.mock import MagicMock
@@ -37,8 +37,7 @@ class TestTransitions(TestCase):
              }
         ]
         s = Stuff()
-        Machine(
-            model=s, states=states, transitions=transitions, initial='State2')
+        m = Machine(model=s, states=states, transitions=transitions, initial='State2')
         s.advance()
         self.assertEquals(s.message, 'Hello World!')
 

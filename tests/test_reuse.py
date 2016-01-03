@@ -5,7 +5,7 @@ except ImportError:
 
 from transitions import MachineError
 from transitions import HierarchicalMachine as Machine
-from .test_utils import Stuff
+from .utils import Stuff
 
 from unittest import TestCase
 

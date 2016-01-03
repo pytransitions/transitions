@@ -7,7 +7,7 @@ import time
 from threading import Thread
 
 from transitions import LockedHierarchicalMachine as Machine
-from .test_utils import Stuff
+from .utils import Stuff
 from unittest import TestCase
 
 try:
