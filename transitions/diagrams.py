@@ -28,13 +28,16 @@ class AGraph(Diagram):
         'ratio': '0.3'
     }
 
-    def _add_nodes(self, states, container):
+    def _add_nodes(self, states, container, first_state=None):
         # For each state, draw a circle
         for state in states.keys():
             shape = self.state_attributes['shape']
 
+            if first_state is None:
+                first_state = list(states.keys())[0]
+
             # We want the first state to be a double circle (UML style)
-            if state == list(states.keys())[0]:
+            if state == first_state:
                 shape = 'doublecircle'
             else:
                 shape = self.state_attributes['shape']
@@ -53,10 +56,11 @@ class AGraph(Diagram):
 
                 container.add_edge(src, dst, label=label)
 
-    def get_graph(self, title=None):
+    def get_graph(self, title=None, initial_state=None):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object
         Args:
             title (string): Optional title for the graph.
+            initial_state (string): Optional name for initial state.
         """
         if not pgv:
             raise Exception('AGraph diagram requires pygraphviz')
@@ -66,11 +70,16 @@ class AGraph(Diagram):
         elif title is False:
             title = ''
 
+        if initial_state is None:
+            first_state = list(self.machine.states.keys())[0]
+        else:
+            first_state = initial_state
+
         fsm_graph = pgv.AGraph(title=title, **self.machine_attributes)
         fsm_graph.node_attr.update(self.state_attributes)
 
         # For each state, draw a circle
-        self._add_nodes(self.machine.states, fsm_graph)
+        self._add_nodes(self.machine.states, fsm_graph, first_state=first_state)
 
         self._add_edges(self.machine.events, fsm_graph)
 
