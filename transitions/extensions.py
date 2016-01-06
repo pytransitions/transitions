@@ -23,18 +23,17 @@ class AAGraph(AGraph):
                 continue
             elif state.children is not None:
                 self.seen.append(state.name)
-                sub = container.add_subgraph(name="cluster_"+state.name, rank='same', label=state.name)
+                sub = container.add_subgraph(name="cluster_"+state.name, label=state.name)
                 self._add_nodes(state.children, sub)
             else:
-                # We want the first state to be a double circle (UML style)
-                if state == list(self.machine.states.items())[0]:
+                # We want the inital state to be a double circle (UML style)
+                if state.name == self.machine._initial:
                     shape = 'doublecircle'
                 else:
                     shape = self.state_attributes['shape']
 
                 state = state.name
                 self.seen.append(state)
-                shape = self.state_attributes['shape']
                 container.add_node(n=state, shape=shape)
 
     def _add_edges(self, events, sub):
