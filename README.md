@@ -681,7 +681,7 @@ machine.to_C_3_a() # exit A, enter C, enter C_3, enter C_3_a
 
 ### Extension: Reuse of previously created HSMs
 
-Besides semantical order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them. Transitions offers two ways to achieve this: You can either *pass a state machine* as an argument or retrieve the machine's *blueprint*, store this as plain text somewhere and pass this to a new machine.
+Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them. Transitions offers two ways to achieve this: You can either *pass a state machine* as an argument or retrieve the machine's *blueprint*, store this as plain text somewhere and pass this to a new machine.
 
 ```python
 count_states = ['1', '2', '3', 'done']
@@ -697,7 +697,7 @@ count_trans = [
 counter = Machine(states=count_states, transitions=count_trans, initial='1')
 
 counter.increase() # love my counter
-counter.blueprints #  
+counter.blueprints
 >>> {'states': ['1', '2', '3', 'done'], 'transitions': [{'unless': None, 'dest': '2', 'after': None, 'source': '1', 'trigger': 'increase', 'conditions': None, 'before': None}, ...]}
 ...
 states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
@@ -728,14 +728,14 @@ states = ['waiting', 'collecting', {'name': 'counting', children: counter, 'rema
 collector.increase() # counting_3
 collector.done()
 collector.state
->>> 'waiting' # be aware that 'finish will entirely be removed from the state machine
+>>> 'waiting' # be aware that 'finish' will entirely be removed from the state machine
 ```
 
 If a reused state machine does not have a final state, you can of course add the transitions manually. If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'A']` to achieve the same behaviour.
 
 ### <a name="threading"></a>Extension: Threadsafe(-ish) State Machine
 
-In cases where event dispatching is done in Threads, one can use either `LockedMachine` or `LockedHSM` where **function access** (!sic) is secured with reentrant locks. This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
+In cases where event dispatching is done in threads, one can use either `LockedMachine` or `LockedHierarchicalMachine` where **function access** (!sic) is secured with reentrant locks. This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
 
 ```python
 from transition import LockedMachine as Machine

@@ -23,18 +23,17 @@ class AAGraph(AGraph):
                 continue
             elif state.children is not None:
                 self.seen.append(state.name)
-                sub = container.add_subgraph(name="cluster_"+state.name, rank='same', label=state.name)
+                sub = container.add_subgraph(name="cluster_"+state.name, label=state.name)
                 self._add_nodes(state.children, sub)
             else:
-                # We want the first state to be a double circle (UML style)
-                if state == list(self.machine.states.items())[0]:
+                # We want the inital state to be a double circle (UML style)
+                if state.name == self.machine._initial:
                     shape = 'doublecircle'
                 else:
                     shape = self.state_attributes['shape']
 
                 state = state.name
                 self.seen.append(state)
-                shape = self.state_attributes['shape']
                 container.add_node(n=state, shape=shape)
 
     def _add_edges(self, events, sub):
@@ -124,12 +123,17 @@ class NestedTransition(Transition):
 
 
 class LockedTransition(Transition):
-    def __init__(self, *args, **kwargs):
-        super(LockedTransition, self).__init__(*args, **kwargs)
 
     def execute(self, event_data):
         with event_data.machine.lock:
-            super(LockedTransition, self).execute(event_data)
+            return super(LockedTransition, self).execute(event_data)
+
+
+class LockedNestedTransition(NestedTransition):
+
+    def execute(self, event_data):
+        with event_data.machine.lock:
+            return super(LockedNestedTransition, self).execute(event_data)
 
 
 class HierarchicalMachine(Machine):
@@ -301,7 +305,7 @@ class LockedMachine(Machine):
     def __getattribute__(self, item):
         f = super(LockedMachine, self).__getattribute__
         tmp = f(item)
-        if inspect.ismethod(tmp):
+        if inspect.ismethod(tmp) and item not in "__getattribute__":
             lock = f('lock')
             def locked_method(*args, **kwargs):
                 with lock:
@@ -316,6 +320,10 @@ class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
 
     def __init__(self, *args, **kwargs):
         super(LockedHierarchicalMachine, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def _create_transition(*args, **kwargs):
+        return LockedNestedTransition(*args, **kwargs)
 
 
 # helper functions to filter duplicates in transition functions
