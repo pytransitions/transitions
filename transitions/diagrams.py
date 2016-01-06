@@ -33,11 +33,8 @@ class AGraph(Diagram):
         for state in states.keys():
             shape = self.state_attributes['shape']
 
-            if first_state is None:
-                first_state = list(states.keys())[0]
-
-            # We want the first state to be a double circle (UML style)
-            if state == first_state:
+            # We want the initial state to be a double circle (UML style)
+            if state == self.machine._initial:
                 shape = 'doublecircle'
             else:
                 shape = self.state_attributes['shape']
