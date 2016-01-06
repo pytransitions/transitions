@@ -33,8 +33,11 @@ class AGraph(Diagram):
         for state in states.keys():
             shape = self.state_attributes['shape']
 
+            if first_state is None:
+                first_state = self.machine._initial
+
             # We want the initial state to be a double circle (UML style)
-            if state == self.machine._initial:
+            if state == first_state:
                 shape = 'doublecircle'
             else:
                 shape = self.state_attributes['shape']
@@ -67,16 +70,11 @@ class AGraph(Diagram):
         elif title is False:
             title = ''
 
-        if initial_state is None:
-            first_state = list(self.machine.states.keys())[0]
-        else:
-            first_state = initial_state
-
         fsm_graph = pgv.AGraph(title=title, **self.machine_attributes)
         fsm_graph.node_attr.update(self.state_attributes)
 
         # For each state, draw a circle
-        self._add_nodes(self.machine.states, fsm_graph, first_state=first_state)
+        self._add_nodes(self.machine.states, fsm_graph)
 
         self._add_edges(self.machine.events, fsm_graph)
 
