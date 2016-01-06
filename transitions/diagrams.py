@@ -31,7 +31,6 @@ class AGraph(Diagram):
     def _add_nodes(self, states, container, initial_state=None):
         # For each state, draw a circle
         for state in states.keys():
-            shape = self.state_attributes['shape']
 
             if initial_state is None:
                 initial_state = self.machine._initial
@@ -69,7 +68,7 @@ class AGraph(Diagram):
         elif title is False:
             title = ''
 
-        fsm_graph = pgv.AGraph(title=title, **self.machine_attributes)
+        fsm_graph = pgv.AGraph(label=title, **self.machine_attributes)
         fsm_graph.node_attr.update(self.state_attributes)
 
         # For each state, draw a circle
