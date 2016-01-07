@@ -290,6 +290,16 @@ class HierarchicalMachine(Machine):
         return super(HierarchicalMachine, self).get_graph(title, diagram_class)
 
 
+class LockedMethod:
+    def __init__(self, lock, func):
+        self.lock = lock
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        with self.lock:
+            return self.func(*args, **kwargs)
+
+
 # lock access to methods of the state machine
 # can be used if threaded access to the state machine is required.
 class LockedMachine(Machine):
@@ -306,13 +316,11 @@ class LockedMachine(Machine):
         f = super(LockedMachine, self).__getattribute__
         tmp = f(item)
         if inspect.ismethod(tmp) and item not in "__getattribute__":
-            lock = f('lock')
-            def locked_method(*args, **kwargs):
-                with lock:
-                    res = f(item)(*args, **kwargs)
-                    return res
-            return locked_method
+            return LockedMethod(f('lock'), tmp)
         return tmp
+
+    def __getattr__(self, item):
+        return super(LockedMachine, self).__getattribute__(item)
 
 
 # Uses HSM as well as Mutex features
