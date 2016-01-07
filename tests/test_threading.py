@@ -48,25 +48,41 @@ class TestTransitions(TestCase):
         time.sleep(1)
         self.assertEqual(self.stuff.state, "C")
 
-    # # pickling test disabled due to issues with python >= 3.4, pickle and locks
-    # def test_pickle(self):
-    #     import sys
-    #     if sys.version_info < (3, 4):
-    #         import dill as pickle
-    #     else:
-    #         import pickle
-    #
-    #     states = ['A', 'B', 'C', 'D']
-    #     # Define with list of dictionaries
-    #     transitions = [
-    #         {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
-    #         {'trigger': 'run', 'source': 'B', 'dest': 'C'},
-    #         {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-    #     ]
-    #     m = Machine(states=states, transitions=transitions, initial='A')
-    #     m.walk()
-    #     dump = pickle.dumps(m)
-    #     self.assertIsNotNone(dump)
-    #     m2 = pickle.loads(dump)
-    #     self.assertEqual(m.state, m2.state)
-    #     m2.run()
+    def test_pickle(self):
+        import sys
+        if sys.version_info < (3, 4):
+            import dill as pickle
+        else:
+            import pickle
+
+        # go to non initial state B
+        self.stuff.to_B()
+        # pickle Stuff model
+        dump = pickle.dumps(self.stuff)
+        self.assertIsNotNone(dump)
+        stuff2 = pickle.loads(dump)
+        self.assertTrue(stuff2.machine.is_state("B"))
+        # check if machines of stuff and stuff2 are truly separated
+        stuff2.to_A()
+        self.stuff.to_C()
+        self.assertTrue(stuff2.machine.is_state("A"))
+        thread = Thread(target=stuff2.process)
+        thread.start()
+        # give thread some time to start
+        time.sleep(0.01)
+        # both objects should be in different states
+        # and also not share locks
+        begin = time.time()
+        # stuff should not be locked and execute fast
+        self.assertTrue(self.stuff.machine.is_state("C"))
+        fast = time.time()
+        # stuff2 should be locked and take about 1 second
+        # to be executed
+        self.assertTrue(stuff2.machine.is_state("B"))
+        blocked = time.time()
+        self.assertAlmostEqual(fast-begin, 0, delta=0.1)
+        self.assertAlmostEqual(blocked-begin, 1, delta=0.1)
+
+
+
+
