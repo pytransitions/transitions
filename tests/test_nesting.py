@@ -5,10 +5,8 @@ except ImportError:
 
 from transitions import HierarchicalMachine as Machine
 from transitions import NestedState as State
+from .test_core import TestTransitions as TestsCore
 from .utils import Stuff
-
-
-from unittest import TestCase
 
 try:
     from unittest.mock import MagicMock
@@ -16,7 +14,7 @@ except ImportError:
     from mock import MagicMock
 
 
-class TestTransitions(TestCase):
+class TestTransitions(TestsCore):
 
     def setUp(self):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
@@ -252,3 +250,23 @@ class TestTransitions(TestCase):
         m2 = pickle.loads(dump)
         self.assertEqual(m.state, m2.state)
         m2.run()
+
+    def test_callbacks_duplicate(self):
+
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'C', 'before': 'before_state_change',
+             'after': 'after_state_change'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'}
+        ]
+
+        m = Machine(None, states=['A', 'B', 'C'], transitions=transitions,
+                    before_state_change='before_state_change',
+                    after_state_change='after_state_change', send_event=True,
+                    initial='A', auto_transitions=True)
+
+        m.before_state_change = MagicMock()
+        m.after_state_change = MagicMock()
+
+        m.walk()
+        self.assertEqual(m.before_state_change.call_count, 2)
+        self.assertEqual(m.after_state_change.call_count, 2)

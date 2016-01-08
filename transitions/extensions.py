@@ -206,8 +206,10 @@ class HierarchicalMachine(Machine):
                     self._buffered_transitions.append((trans['trigger'], source, dest, trans.get('conditions', None),
                                                        trans.get('unless', None), trans.get('before', None),
                                                        trans.get('after', None)))
-            else:
+            elif isinstance(state, NestedState):
                 tmp_states.append(state)
+                if state.children:
+                    tmp_states.extend(self._flatten(state.children))
             new_states.extend(tmp_states)
         return new_states
 
@@ -227,10 +229,13 @@ class HierarchicalMachine(Machine):
                       'ignore_invalid_triggers': state.ignore_invalid_triggers}
                 if state.children is not None:
                     bp['children'] = self._to_blueprint(state.children)
-            elif isinstance(state, HierarchicalMachine):
-                if len(blueprints) > 0:
-                    raise ValueError
+            elif isinstance(state, Machine):
+                # this happens if there
+                if len(states) > 1:
+                    raise ValueError("States arrays and nested machines cannot be mixed!")
                 return state.blueprints['states']
+            else:
+                raise ValueError('Do not know state of type %s' % type(state))
 
             blueprints.append(bp)
         return blueprints
@@ -261,13 +266,9 @@ class HierarchicalMachine(Machine):
             bp_before = None
             bp_after = None
             if self.before_state_change:
-                bp_before = listify(self.before_state_change)
-                bp_before.extend(listify(before))
-                bp_before = unify(bp_before)
+                bp_before = listify(before) + listify(self.before_state_change)
             if self.after_state_change:
-                bp_after = listify(after)
-                bp_after.extend(listify(self.after_state_change))
-                bp_after = unify(bp_after)
+                bp_after = listify(after) + listify(self.after_state_change)
             self.blueprints['transitions'].append({'trigger': trigger, 'source': source, 'dest': dest,
                                                    'conditions': conditions, 'unless': unless, 'before': bp_before,
                                                    'after': bp_after})
@@ -320,7 +321,10 @@ class LockedMachine(Machine):
         return tmp
 
     def __getattr__(self, item):
-        return super(LockedMachine, self).__getattribute__(item)
+        try:
+            return super(LockedMachine, self).__getattribute__(item)
+        except AttributeError:
+            return super(LockedMachine, self).__getattr__(item)
 
 
 # Uses HSM as well as Mutex features
@@ -332,17 +336,3 @@ class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
     @staticmethod
     def _create_transition(*args, **kwargs):
         return LockedNestedTransition(*args, **kwargs)
-
-
-# helper functions to filter duplicates in transition functions
-def unify(seq):
-    return list(_unify(seq))
-
-
-def _unify(seq):
-    seen = set()
-    for x in seq:
-        if x in seen:
-            continue
-        seen.add(x)
-        yield x
