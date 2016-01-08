@@ -140,4 +140,3 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
         blocked = time.time()
         self.assertAlmostEqual(fast-begin, 0, delta=0.1)
         self.assertAlmostEqual(blocked-begin, 1, delta=0.1)
-
