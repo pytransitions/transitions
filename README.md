@@ -605,14 +605,14 @@ Here you get to consolidate all state machine functionality into your existing m
 
 ### Logging
 
-Transitions includes very rudimentary logging capabilities. A number of events--namely, state changes, transition triggers, and conditional checks--are logged as INFO-level events using the standard Python `logging` module. This means you can easily configure logging to standard output in a script:
+Transitions includes very rudimentary logging capabilities. A number of events -- namely, state changes, transition triggers, and conditional checks -- are logged using the standard Python `logging` module (with different log levels). This means you can easily configure logging to standard output in a script:
 
 ```python
 
 # Set up logging
 import logging
 from transitions import logger
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)  # logging.DEBUG for verbosity
 
 # Business as usual
 machine = Machine(states=states, transitions=transitions, initial='solid')
