@@ -218,6 +218,8 @@ class Event(object):
             args and kwargs: Optional positional or named arguments that will
                 be passed onto the EventData object, enabling arbitrary state
                 information to be passed on to downstream triggered functions.
+        Returns: boolean indicating whether or not a transition was
+            successfully executed (True if successful, False if not).
         """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
