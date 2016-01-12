@@ -126,6 +126,8 @@ class Transition(object):
         """ Execute the transition.
         Args:
             event: An instance of class EventData.
+        Returns: boolean indicating whether or not the transition was
+            successfully executed (True if successful, False if not).
         """
         logger.info("Initiating transition from state %s to state %s...",
                     self.source, self.dest)
