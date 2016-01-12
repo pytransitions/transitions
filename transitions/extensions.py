@@ -15,7 +15,7 @@ logger.addHandler(logging.NullHandler())
 class AAGraph(AGraph):
     seen = []
 
-    def _add_nodes(self, states, container):
+    def _add_nodes(self, states, container, initial_state=None):
         # to be able to process children recursively as well as the state dict of a machine
         states = states.values() if isinstance(states, dict) else states
         for state in states:
@@ -23,11 +23,14 @@ class AAGraph(AGraph):
                 continue
             elif state.children is not None:
                 self.seen.append(state.name)
-                sub = container.add_subgraph(name="cluster_"+state.name, label=state.name)
+                sub = container.add_subgraph(name="cluster_" + state.name, label=state.name)
                 self._add_nodes(state.children, sub)
             else:
+                if initial_state is None:
+                    initial_state = self.machine._initial
+
                 # We want the inital state to be a double circle (UML style)
-                if state.name == self.machine._initial:
+                if state.name == initial_state:
                     shape = 'doublecircle'
                 else:
                     shape = self.state_attributes['shape']
@@ -92,7 +95,7 @@ class NestedTransition(Transition):
             # The loop is ended if we reach a root state or if source's parent is part of the shared_parent string
             # E.g. for Foo_Bar_Baz1_A with shared_parent Foo_Ba, Foo will not be exited.
             if source_parent is None or (shared_parent is not None and shared_parent.startswith(source_parent)):
-                break;
+                break
             source_state = machine.get_state(source_parent)
 
         enter_queue = []
@@ -175,7 +178,7 @@ class HierarchicalMachine(Machine):
                 if state in remap:
                     continue
                 tmp_states.append(NestedState(prefix + state, on_enter=on_enter, on_exit=on_exit, parent=parent,
-                                  ignore_invalid_triggers=ignore))
+                                              ignore_invalid_triggers=ignore))
             elif isinstance(state, dict):
                 state = copy.deepcopy(state)
                 if 'ignore_invalid_triggers' not in state:

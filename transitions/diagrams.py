@@ -28,13 +28,15 @@ class AGraph(Diagram):
         'ratio': '0.3'
     }
 
-    def _add_nodes(self, states, container):
+    def _add_nodes(self, states, container, initial_state=None):
         # For each state, draw a circle
         for state in states.keys():
-            shape = self.state_attributes['shape']
+
+            if initial_state is None:
+                initial_state = self.machine._initial
 
             # We want the initial state to be a double circle (UML style)
-            if state == self.machine._initial:
+            if state == initial_state:
                 shape = 'doublecircle'
             else:
                 shape = self.state_attributes['shape']
@@ -66,7 +68,7 @@ class AGraph(Diagram):
         elif title is False:
             title = ''
 
-        fsm_graph = pgv.AGraph(title=title, **self.machine_attributes)
+        fsm_graph = pgv.AGraph(label=title, **self.machine_attributes)
         fsm_graph.node_attr.update(self.state_attributes)
 
         # For each state, draw a circle
