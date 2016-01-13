@@ -44,15 +44,15 @@ class AAGraph(AGraph):
             event = event[1]
             label = str(event.name)
 
-            for transition in event.transitions.items():
-                src = transition[0]
-                dst = self.machine.get_state(transition[1][0].dest)
-                if dst.children is not None:
-                    dst = dst.get_initial().name
-                else:
-                    dst = dst.name
-
-                sub.add_edge(src, dst, label=label)
+            for transitions in event.transitions.items():
+                src = transitions[0]
+                for t in transitions[1]:
+                    dst = self.machine.get_state(t.dest)
+                    if dst.children is not None:
+                        dst = dst.get_initial().name
+                    else:
+                        dst = dst.name
+                    sub.add_edge(src, dst, label=label)
 
 
 # Added parent and children parameter children is a list of NestedStates

@@ -17,11 +17,14 @@ class TestDiagrams(TestCase):
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D', 'conditions': 'is_fast'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
         ]
 
-        m = Machine(states=states, transitions=transitions, initial='A')
+        m = Machine(states=states, transitions=transitions, initial='A', auto_transitions=False)
         graph = m.get_graph()
+        self.assertIsNotNone(graph)
+        self.assertTrue("digraph" in str(graph))
 
         # Test that graph properties match the Machine
         self.assertEqual(
@@ -30,9 +33,8 @@ class TestDiagrams(TestCase):
         for t in triggers:
             self.assertIsNotNone(getattr(m, t))
 
+        self.assertEqual(len(graph.edges()), len(transitions))
         # check for a valid pygraphviz diagram
-        self.assertIsNotNone(graph)
-        self.assertTrue("digraph" in str(graph))
 
         # write diagram to temp file
         target = tempfile.NamedTemporaryFile()
@@ -41,30 +43,34 @@ class TestDiagrams(TestCase):
 
         # cleanup temp file
         target.close()
+        print(graph)
 
     def test_nested_agraph_diagram(self):
         ''' Same as above, but with nested states. '''
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
         transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},   # 1 edge
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},    # + 1 edge
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 3 edges
+             'conditions': 'is_fast'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 3 edges = 8 edges
         ]
 
-        m = HierarchicalMachine(states=states, transitions=transitions, initial='A')
+        m = HierarchicalMachine(states=states, transitions=transitions, initial='A', auto_transitions=False)
         graph = m.get_graph()
+        self.assertIsNotNone(graph)
+        self.assertTrue("digraph" in str(graph))
 
         # Test that graph properties match the Machine
         # print((set(m.states.keys()), )
         node_names = set([n.name for n in graph.nodes()])
         self.assertEqual(set(m.states.keys()) - set('C'), node_names)
+
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
             self.assertIsNotNone(getattr(m, t))
 
-        # check for a valid pygraphviz diagram
-        self.assertIsNotNone(graph)
-        self.assertTrue("digraph" in str(graph))
+        self.assertEqual(len(graph.edges()), 8) # see above
 
         # write diagram to temp file
         target = tempfile.NamedTemporaryFile()
