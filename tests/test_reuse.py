@@ -5,6 +5,7 @@ except ImportError:
 
 from transitions import MachineError
 from transitions import HierarchicalMachine as Machine
+from transitions import NestedState
 from .utils import Stuff
 
 from unittest import TestCase
@@ -18,7 +19,8 @@ except ImportError:
 class TestTransitions(TestCase):
 
     def setUp(self):
-        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
+        states = ['A', 'B',
+                  {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
         self.stuff = Stuff(states, Machine)
 
@@ -46,19 +48,33 @@ class TestTransitions(TestCase):
         self.assertEqual(m.blueprints['transitions'][3]['source'], 'D')
 
     def test_blueprint_nested(self):
-        states = ['A', {'name': 'B', 'on_enter': 'chirp', 'children': ['1', '2', '3']}, 'C', 'D']
+        c1 = NestedState('C_1', parent='C')
+        c2 = NestedState('C_2', parent='C')
+        c3 = NestedState('C_3', parent='C')
+        c = NestedState('C', children=[c1, c2, c3])
+
+        states = ['A', {'name': 'B', 'on_enter': 'chirp', 'children': ['1', '2', '3']},
+                  c, 'D']
         # Define with list of dictionaries
         transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B','before': 'before_state_change',
+             'after': 'after_state_change' },
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
         m = Machine(states=states, transitions=transitions, before_state_change='before_state_change',
                     after_state_change='after_state_change', initial='A')
 
+        m.before_state_change = MagicMock()
+        m.after_state_change = MagicMock()
+
         self.assertEqual(len(m.blueprints['states']), 4)
         self.assertEqual(m.blueprints['states'][3], 'D')
         self.assertEqual(len(m.blueprints['transitions']), 3)
+        # transition 'walk' before should contain two calls of the same method
+        self.assertEqual(len(m.blueprints['transitions'][0]['before']), 2)
+        self.assertEqual(len(m.blueprints['transitions'][0]['after']), 2)
+        self.assertEqual(len(m.blueprints['transitions'][1]['before']), 1)
         self.assertEqual(m.blueprints['transitions'][2]['trigger'], 'sprint')
 
         m.add_transition('fly', 'D', 'A')
@@ -161,3 +177,17 @@ class TestTransitions(TestCase):
         walker.increase()
         walker.done()
         self.assertEqual(walker.state, 'A')
+
+    def test_wrong_nesting(self):
+
+        correct = ['A', {'name': 'B', 'children': self.stuff.machine}]
+        wrong_type = ['A', {'name': 'B', 'children': self.stuff}]
+        siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}]
+
+        m = Machine(None, states=correct)
+
+        with self.assertRaises(ValueError):
+            m = Machine(None, states=wrong_type)
+
+        with self.assertRaises(ValueError):
+            m = Machine(None, states=siblings)

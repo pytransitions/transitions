@@ -49,11 +49,11 @@ class AGraph(Diagram):
             event = event[1]
             label = str(event.name)
 
-            for transition in event.transitions.items():
-                src = transition[0]
-                dst = transition[1][0].dest
-
-                container.add_edge(src, dst, label=label)
+            for transitions in event.transitions.items():
+                src = transitions[0]
+                for t in transitions[1]:
+                    dst = t.dest
+                    container.add_edge(src, dst, label=label)
 
     def get_graph(self, title=None):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object
