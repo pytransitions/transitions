@@ -228,7 +228,7 @@ class Event(object):
             msg = "Can't trigger event %s from state %s!" % (self.name,
                                                              state_name)
             if self.machine.current_state.ignore_invalid_triggers:
-                logging.warning(msg)
+                logger.warning(msg)
             else:
                 raise MachineError(msg)
         event = EventData(self.machine.current_state, self, self.machine,
