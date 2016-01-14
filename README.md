@@ -415,6 +415,8 @@ You can also make a trigger cause a transition from _all_ states to a particular
 machine.add_transition('to_liquid', '*', 'liquid')
 ```
 
+Note that wildcard transitions will only apply to states that exist at the time of the add_transition() call. Calling a wildcard-based transition when the model is in a state added after the transition was defined will elicit an invalid transition message, and will not transition to the target state.
+
 #### Ordered transitions
 A common desire is for state transitions to follow a strict linear sequence. For instance, given states `['A', 'B', 'C']`, you might want valid transitions for `A` → `B`, `B` → `C`, and `C` → `A` (but no other pairs). 
 
