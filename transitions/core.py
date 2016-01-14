@@ -48,14 +48,14 @@ class State(object):
         for oe in self.on_enter:
             event_data.machine.callback(
                 getattr(event_data.model, oe), event_data)
-        logger.info("Entered state %s" % self.name)
+        logger.debug("Entered state %s" % self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
             event_data.machine.callback(
                 getattr(event_data.model, oe), event_data)
-        logger.info("Exited state %s" % self.name)
+        logger.debug("Exited state %s" % self.name)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -129,23 +129,25 @@ class Transition(object):
         Returns: boolean indicating whether or not the transition was
             successfully executed (True if successful, False if not).
         """
-        logger.info("Initiating transition from state %s to state %s...",
-                    self.source, self.dest)
+        logger.debug("Initiating transition from state %s to state %s...",
+                     self.source, self.dest)
         machine = event_data.machine
         for c in self.conditions:
             if not c.check(event_data):
-                logger.info("Transition condition failed: %s() does not " +
-                            "return %s. Transition halted.", c.func, c.target)
+                logger.error("Transition condition failed: %s() does not " +
+                             "return %s. Transition halted.", c.func, c.target)
                 return False
         for func in self.before:
             machine.callback(getattr(event_data.model, func), event_data)
-            logger.info("Executing callback '%s' before transition." % func)
+            logger.debug("Executing callback '%s' before transition." % func)
 
         self._change_state(event_data)
 
         for func in self.after:
             machine.callback(getattr(event_data.model, func), event_data)
-            logger.info("Executed callback '%s' after transition." % func)
+            logger.debug("Executed callback '%s' after transition." % func)
+        logger.info("Transitioned from state %s to state %s",
+                    self.source, self.dest)
         return True
 
     def _change_state(self, event_data):
