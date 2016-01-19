@@ -24,6 +24,13 @@ class AGraph(Diagram):
         'color': 'black',
     }
 
+    machine_attributes = {
+        'directed': True,
+        'strict': False,
+        'rankdir': 'LR',
+        'ratio': '0.3'
+    }
+
     def _add_nodes(self, states, container, initial_state=None):
         # For each state, draw a circle
         for state in states.keys():
