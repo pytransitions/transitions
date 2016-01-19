@@ -255,7 +255,7 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
-                 before_state_change=None, after_state_change=None):
+                 before_state_change=None, after_state_change=None, with_graph=False):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -289,6 +289,8 @@ class Machine(object):
             after_state_change: A callable called on every change state after
                 the transition happened. It receives the very same args as normal
                 callbacks
+            with_graph (boolean): Store the graph object with the machine so that
+                changes can be tracked if True, defaults to False.
         """
         self.model = self if model is None else model
         self.states = OrderedDict()
@@ -320,6 +322,9 @@ class Machine(object):
 
         if ordered_transitions:
             self.add_ordered_transitions()
+
+        if with_graph:
+            self._graph = self.get_graph()
 
     @staticmethod
     def _create_transition(*args, **kwargs):
@@ -490,6 +495,37 @@ class Machine(object):
     def get_graph(self, title=None, diagram_class=AGraph):
         return diagram_class(self).get_graph(title)
 
+    def set_edge_state(self, edge_from, edge_to, state='default'):
+        """ Mark a node as active by changing the attributes """
+        assert hasattr(self, '_graph')
+
+        edge = self._graph.get_edge(edge_from, edge_to)
+
+        # Reset all the edges
+        for e in self._graph.edges_iter():
+            e.attr.update(self.default_edge_attributes)
+
+        try:
+            edge.attr.update(getattr(self, '{}_edge_attributes'.format(state)))
+        except KeyError:
+            edge.attr.update(self.default_edge_attributes)
+
+    def set_node_state(self, node_name=None, state='default', reset=False):
+        assert hasattr(self, '_graph')
+
+        if node_name is None:
+            node_name = self.state
+
+        if reset:
+            for n in self._graph.nodes_iter():
+                n.attr.update(self.default_state_attributes)
+
+        node = self._graph.get_node(node_name)
+        try:
+            node.attr.update(getattr(self, '{}_state_attributes'.format(state)))
+        except KeyError:
+            node.attr.update(self.default_state_attributes)
+
     def __getattr__(self, name):
         if name.startswith('__'):
             raise AttributeError
@@ -505,6 +541,33 @@ class Machine(object):
             return partial(state.add_callback, terms[1])
         else:
             raise AttributeError
+
+    default_state_attributes = {
+        'shape': 'circle',
+        'height': '1.2',
+        'style': 'filled',
+        'fillcolor': 'white',
+        'color': 'black',
+    }
+
+    active_state_attributes = {
+        'color': 'red',
+        'fillcolor': 'darksalmon',
+        'shape': 'doublecircle'
+    }
+
+    previous_state_attributes = {
+        'color': 'blue',
+        'fillcolor': 'azure2',
+    }
+
+    default_edge_attributes = {
+        'color': 'black',
+    }
+
+    previous_edge_attributes = {
+        'color': 'blue',
+    }
 
 
 class MachineError(Exception):
