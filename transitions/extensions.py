@@ -283,11 +283,15 @@ class HierarchicalMachine(Machine):
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
                                                         unless=unless, before=before, after=after)
 
-    def get_graph(self, title=None, diagram_class=AAGraph):
-        return super(HierarchicalMachine, self).get_graph(title, diagram_class)
+    def get_graph(self, title=None, force_new=False, diagram_class=AAGraph):
+        if self._graph is None or force_new:
+            self._graph = super(HierarchicalMachine, self).get_graph(title, diagram_class)
+
+        return self._graph
 
 
 class LockedMethod:
+
     def __init__(self, lock, func):
         self.lock = lock
         self.func = func

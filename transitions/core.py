@@ -323,6 +323,7 @@ class Machine(object):
         if ordered_transitions:
             self.add_ordered_transitions()
 
+        self._graph = None
         if with_graph:
             self._graph = self.get_graph(title="State Machine")
 
@@ -492,8 +493,11 @@ class Machine(object):
         else:
             func(*event_data.args, **event_data.kwargs)
 
-    def get_graph(self, title=None, diagram_class=AGraph):
-        return diagram_class(self).get_graph(title)
+    def get_graph(self, title=None, force_new=False, diagram_class=AGraph):
+        if self._graph is None or force_new:
+            self._graph = diagram_class(self).get_graph(title)
+
+        return self._graph
 
     def set_edge_state(self, edge_from, edge_to, state='default'):
         """ Mark a node as active by changing the attributes """
