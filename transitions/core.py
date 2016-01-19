@@ -324,7 +324,7 @@ class Machine(object):
             self.add_ordered_transitions()
 
         if with_graph:
-            self._graph = self.get_graph()
+            self._graph = self.get_graph(title="State Machine")
 
     @staticmethod
     def _create_transition(*args, **kwargs):
