@@ -15,7 +15,7 @@ logger.addHandler(logging.NullHandler())
 class AAGraph(AGraph):
     seen = []
 
-    def _add_nodes(self, states, container, initial_state=None):
+    def _add_nodes(self, states, container):
         # to be able to process children recursively as well as the state dict of a machine
         states = states.values() if isinstance(states, dict) else states
         for state in states:
@@ -26,14 +26,7 @@ class AAGraph(AGraph):
                 sub = container.add_subgraph(name="cluster_" + state.name, label=state.name)
                 self._add_nodes(state.children, sub)
             else:
-                if initial_state is None:
-                    initial_state = self.machine._initial
-
-                # We want the inital state to be a double circle (UML style)
-                if state.name == initial_state:
-                    shape = 'doublecircle'
-                else:
-                    shape = self.state_attributes['shape']
+                shape = self.default_state_attributes['shape']
 
                 state = state.name
                 self.seen.append(state)
@@ -290,11 +283,15 @@ class HierarchicalMachine(Machine):
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
                                                         unless=unless, before=before, after=after)
 
-    def get_graph(self, title=None, diagram_class=AAGraph):
-        return super(HierarchicalMachine, self).get_graph(title, diagram_class)
+    def get_graph(self, title=None, force_new=False, diagram_class=AAGraph):
+        if self._graph is None or force_new:
+            self._graph = super(HierarchicalMachine, self).get_graph(title, diagram_class)
+
+        return self._graph
 
 
 class LockedMethod:
+
     def __init__(self, lock, func):
         self.lock = lock
         self.func = func
