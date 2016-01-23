@@ -314,7 +314,7 @@ lump.is_gas()
 >>> False
 lump.is_solid()
 >>> True
-machine.get_state().name
+machine.get_state(lump.state).name
 >>> 'solid'
 ```
 
