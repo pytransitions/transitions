@@ -33,5 +33,13 @@ setup(
     tests_require=tests_require,
     license='MIT',
     download_url='https://github.com/tyarkoni/transitions/archive/%s.tar.gz' % __version__,
+    classifiers=[
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+    ],
     **extra_setuptools_args
 )
