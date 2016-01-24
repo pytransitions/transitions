@@ -71,10 +71,10 @@ class NarcolepticSuperhero(object):
         # the Machine initializer as the transitions= argument.
         
         # At some point, every superhero must rise and shine.
-        self.machine.add_transition('wake_up', 'asleep', 'hanging out')
+        self.machine.add_transition(trigger='wake_up', source='asleep', dest='hanging out')
         
         # Superheroes need to keep in shape.
-        self.machine.add_transition(trigger='work_out', source='hanging out', dest='hungry')
+        self.machine.add_transition('work_out', 'hanging out', 'hungry')
         
         # Those calories won't replenish themselves!
         self.machine.add_transition('eat', 'hungry', 'hanging out')
