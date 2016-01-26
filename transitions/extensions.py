@@ -1,4 +1,4 @@
-from .core import State, Machine, Transition, listify
+from .core import State, Machine, Transition, Event, listify
 from .diagrams import AGraph
 
 from threading import RLock
@@ -123,20 +123,6 @@ class NestedTransition(Transition):
         # enter all states of the queue in reversed order, starting from topmost state
         for s in enter_queue[::-1]:
             s.enter(event_data)
-
-
-class LockedTransition(Transition):
-
-    def execute(self, event_data):
-        with event_data.machine.lock:
-            return super(LockedTransition, self).execute(event_data)
-
-
-class LockedNestedTransition(NestedTransition):
-
-    def execute(self, event_data):
-        with event_data.machine.lock:
-            return super(LockedNestedTransition, self).execute(event_data)
 
 
 class HierarchicalMachine(Machine):
@@ -304,6 +290,13 @@ class LockedMethod:
             return self.func(*args, **kwargs)
 
 
+class LockedEvent(Event):
+
+    def trigger(self, *args, **kwargs):
+        with self.machine.lock:
+            super(LockedEvent, self).trigger(*args, **kwargs)
+
+
 # lock access to methods of the state machine
 # can be used if threaded access to the state machine is required.
 class LockedMachine(Machine):
@@ -311,10 +304,6 @@ class LockedMachine(Machine):
     def __init__(self, *args, **kwargs):
         self.lock = RLock()
         super(LockedMachine, self).__init__(*args, **kwargs)
-
-    @staticmethod
-    def _create_transition(*args, **kwargs):
-        return LockedTransition(*args, **kwargs)
 
     def __getattribute__(self, item):
         f = super(LockedMachine, self).__getattribute__
@@ -329,13 +318,15 @@ class LockedMachine(Machine):
         except AttributeError:
             return super(LockedMachine, self).__getattr__(item)
 
+    def add_transition(self, trigger, source, dest, **kwargs):
+        if trigger not in self.events:
+            self.events[trigger] = LockedEvent(trigger, self)
+            setattr(self.model, trigger, self.events[trigger].trigger)
+        super(LockedMachine, self).add_transition(trigger, source, dest, **kwargs)
+
 
 # Uses HSM as well as Mutex features
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
 
     def __init__(self, *args, **kwargs):
         super(LockedHierarchicalMachine, self).__init__(*args, **kwargs)
-
-    @staticmethod
-    def _create_transition(*args, **kwargs):
-        return LockedNestedTransition(*args, **kwargs)

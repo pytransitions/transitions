@@ -5,6 +5,7 @@ except ImportError:
 
 import time
 from threading import Thread
+import logging
 
 from transitions import LockedHierarchicalMachine
 from transitions import LockedMachine
@@ -18,8 +19,17 @@ except ImportError:
     from mock import MagicMock
 
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
+
 def heavy_processing():
     time.sleep(1)
+
+
+def heavy_checking():
+    time.sleep(1)
+    return False
 
 
 class TestLockedTransitions(TestCore):
@@ -49,6 +59,17 @@ class TestLockedTransitions(TestCore):
         # we have to wait to be sure it is done
         time.sleep(1)
         self.assertEqual(self.stuff.state, "C")
+
+    def test_conditional_access(self):
+        self.stuff.heavy_checking = heavy_checking # checking takes 1s and returns False
+        self.stuff.machine.add_transition('advance', 'A', 'B', conditions='heavy_checking')
+        self.stuff.machine.add_transition('advance', 'A', 'D')
+        t = Thread(target=self.stuff.advance)
+        t.start()
+        time.sleep(0.1)
+        logger.info('Check if state transition done...')
+        # Thread will release lock before Transition is finished
+        self.assertTrue(self.stuff.machine.is_state('D'))
 
     def test_pickle(self):
         import sys
