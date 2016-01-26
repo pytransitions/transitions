@@ -1,6 +1,6 @@
 # transitions
 
-A lightweight, object-oriented state machine implementation in Python.
+A lightweight, object-oriented state machine implementation in Python. Compatible with Python 2.7+ and 3.0+.
 
 ## Status
 * [![Build Status](https://travis-ci.org/tyarkoni/transitions.png?branch=master)](https://travis-ci.org/tyarkoni/transitions)
