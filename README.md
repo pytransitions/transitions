@@ -285,6 +285,8 @@ lump.sublimate()
 >>> 'hello, new state!'
 ```
 
+Note that the on_enter state will *not* fire when a Machine is first initialized. I.e., if you have an on_enter_A() callback defined, and initialize the Machine with initial='A', on_enter_A() will not be fired until the next time you enter state A. (If you need to make sure on_enter_A() fires at initialization, you can simply create a dummy initial state and then explicitly call to_A() inside the __init__ method.)
+
 In addition to passing in callbacks when initializing a `State`, or adding them dynamically, it's also possible to define callbacks in the model class itself, which may increase code clarity. For example:
 
 ```python
