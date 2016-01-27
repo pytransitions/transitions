@@ -16,9 +16,12 @@ class Diagram(object):
 
 
 class AGraph(Diagram):
-    state_attributes = {
+    default_state_attributes = {
         'shape': 'circle',
         'height': '1.2',
+        'style': 'filled',
+        'fillcolor': 'white',
+        'color': 'black',
     }
 
     machine_attributes = {
@@ -32,14 +35,7 @@ class AGraph(Diagram):
         # For each state, draw a circle
         for state in states.keys():
 
-            if initial_state is None:
-                initial_state = self.machine._initial
-
-            # We want the initial state to be a double circle (UML style)
-            if state == initial_state:
-                shape = 'doublecircle'
-            else:
-                shape = self.state_attributes['shape']
+            shape = self.default_state_attributes['shape']
 
             container.add_node(n=state, shape=shape)
 
@@ -69,7 +65,7 @@ class AGraph(Diagram):
             title = ''
 
         fsm_graph = pgv.AGraph(label=title, **self.machine_attributes)
-        fsm_graph.node_attr.update(self.state_attributes)
+        fsm_graph.node_attr.update(self.default_state_attributes)
 
         # For each state, draw a circle
         self._add_nodes(self.machine.states, fsm_graph)
