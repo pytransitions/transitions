@@ -16,13 +16,6 @@ class Diagram(object):
 
 
 class AGraph(Diagram):
-    default_state_attributes = {
-        'shape': 'circle',
-        'height': '1.2',
-        'style': 'filled',
-        'fillcolor': 'white',
-        'color': 'black',
-    }
 
     machine_attributes = {
         'directed': True,
@@ -31,11 +24,42 @@ class AGraph(Diagram):
         'ratio': '0.3'
     }
 
+    style_attributes = {
+        'node': {
+            'default': {
+                'shape': 'circle',
+                'height': '1.2',
+                'style': 'filled',
+                'fillcolor': 'white',
+                'color': 'black',
+            },
+            'active': {
+                'color': 'red',
+                'fillcolor': 'darksalmon',
+                'shape': 'doublecircle'
+            },
+            'previous': {
+                'color': 'blue',
+                'fillcolor': 'azure2',
+            }
+        },
+        'edge': {
+            'default': {
+                'color': 'black',
+
+            },
+            'previous': {
+                'color': 'blue',
+
+            }
+        }
+    }
+
     def _add_nodes(self, states, container, initial_state=None):
         # For each state, draw a circle
         for state in states.keys():
 
-            shape = self.default_state_attributes['shape']
+            shape = self.style_attributes['state']['default']['shape']
 
             container.add_node(n=state, shape=shape)
 
@@ -65,11 +89,13 @@ class AGraph(Diagram):
             title = ''
 
         fsm_graph = pgv.AGraph(label=title, **self.machine_attributes)
-        fsm_graph.node_attr.update(self.default_state_attributes)
+        fsm_graph.node_attr.update(self.style_attributes['node']['default'])
 
         # For each state, draw a circle
         self._add_nodes(self.machine.states, fsm_graph)
 
         self._add_edges(self.machine.events, fsm_graph)
+
+        setattr(fsm_graph, 'style_attributes', self.style_attributes)
 
         return fsm_graph

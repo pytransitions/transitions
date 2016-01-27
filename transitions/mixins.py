@@ -16,7 +16,10 @@ class AAGraph(AGraph):
                 sub = container.add_subgraph(name="cluster_" + state.name, label=state.name)
                 self._add_nodes(state.children, sub)
             else:
-                shape = 'doublecircle'
+                try:
+                    shape = self.style_attributes['node']['default']['shape']
+                except KeyError:
+                    shape = 'circle'
 
                 state = state.name
                 self.seen.append(state)
@@ -42,38 +45,12 @@ class MachineGraphSupport(object):
 
     def __init__(self, *args, **kwargs):
         self.graph = None
-        self.default_state_attributes = {
-            'shape': 'circle',
-            'height': '1.2',
-            'style': 'filled',
-            'fillcolor': 'white',
-            'color': 'black',
-        }
-
-        self.active_state_attributes = {
-            'color': 'red',
-            'fillcolor': 'darksalmon',
-            'shape': 'doublecircle'
-        }
-
-        self.previous_state_attributes = {
-            'color': 'blue',
-            'fillcolor': 'azure2',
-        }
-
-        self.default_edge_attributes = {
-            'color': 'black',
-        }
-
-        self.previous_edge_attributes = {
-            'color': 'blue',
-        }
         super(MachineGraphSupport, self).__init__(*args, **kwargs)
 
-    def get_graph(self, title=None, diagram_class=AGraph, force_new=False):
+    def get_graph(self, title=None, diagram_class=AAGraph, force_new=False):
         if self.graph is None or force_new:
             self.graph = diagram_class(self).get_graph(title)
-            self.set_node_state(self.initial, state='active', reset=True)
+            self.set_node_style(self.graph.get_node(self.initial), 'active')
 
         return self.graph
 
@@ -85,12 +62,12 @@ class MachineGraphSupport(object):
 
         # Reset all the edges
         for e in self.graph.edges_iter():
-            e.attr.update(self.default_edge_attributes)
+            self.set_edge_style(e, 'default')
 
         try:
-            edge.attr.update(getattr(self, '{}_edge_attributes'.format(state)))
+            self.set_edge_style(edge, state)
         except KeyError:
-            edge.attr.update(self.default_edge_attributes)
+            self.set_edge_style(edge, 'default')
 
     def set_node_state(self, node_name=None, state='default', reset=False):
         assert hasattr(self, 'graph')
@@ -100,13 +77,21 @@ class MachineGraphSupport(object):
 
         if reset:
             for n in self.graph.nodes_iter():
-                n.attr.update(self.default_state_attributes)
+                self.set_node_style(n, 'default')
 
         node = self.graph.get_node(node_name)
         try:
-            node.attr.update(getattr(self, '{}_state_attributes'.format(state)))
+            self.set_node_style(node, state)
         except KeyError:
-            node.attr.update(self.default_state_attributes)
+            self.set_node_style(node, 'default')
+
+    def set_node_style(self, item, style='default'):
+        style_attr = self.graph.style_attributes.get('node', {}).get(style)
+        item.attr.update(style_attr)
+
+    def set_edge_style(self, item, style='default'):
+        style_attr = self.graph.style_attributes.get('edge', {}).get(style)
+        item.attr.update(style_attr)
 
     @staticmethod
     def _create_transition(*args, **kwargs):
