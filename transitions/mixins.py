@@ -11,7 +11,7 @@ class AAGraph(AGraph):
         for state in states:
             if state.name in self.seen:
                 continue
-            elif state.children is not None:
+            elif hasattr(state, 'children') and state.children is not None:
                 self.seen.append(state.name)
                 sub = container.add_subgraph(name="cluster_" + state.name, label=state.name)
                 self._add_nodes(state.children, sub)
@@ -34,7 +34,7 @@ class AAGraph(AGraph):
                 src = transitions[0]
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
-                    if dst.children is not None:
+                    if hasattr(dst, 'children') and dst.children is not None:
                         dst = dst.get_initial().name
                     else:
                         dst = dst.name
@@ -43,14 +43,18 @@ class AAGraph(AGraph):
 
 class MachineGraphSupport(object):
 
-    def __init__(self, *args, **kwargs):
-        self.graph = None
+    def __init__(self, title='State Machine', *args, **kwargs):
         super(MachineGraphSupport, self).__init__(*args, **kwargs)
 
+        # Create graph at beginnning
+        self.graph = self.get_graph(title=title)
+
+        # Set initial node as active
+        self.set_node_style(self.graph.get_node(self.initial), 'active')
+
     def get_graph(self, title=None, diagram_class=AAGraph, force_new=False):
-        if self.graph is None or force_new:
+        if not hasattr(self, 'graph') or force_new:
             self.graph = diagram_class(self).get_graph(title)
-            self.set_node_style(self.graph.get_node(self.initial), 'active')
 
         return self.graph
 
