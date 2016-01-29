@@ -1,13 +1,10 @@
+from ..core import Machine, Transition, State, listify
 
-from .core import State, Machine, Transition, listify
-
-from threading import RLock
 from six import string_types
 from os.path import commonprefix
-import inspect
-import logging
 import copy
 
+import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -25,7 +22,7 @@ class NestedState(State):
     # A step with children will be initialized with the first child which
     # is a Leaf in the hierarchical tree and does not contain further children.
     def get_initial(self):
-        state = self.children[0]
+        state = self.children[0] if self.children is not None else self
         return state.get_initial() if state.children is not None else state
 
 
@@ -80,20 +77,6 @@ class NestedTransition(Transition):
         # enter all states of the queue in reversed order, starting from topmost state
         for s in enter_queue[::-1]:
             s.enter(event_data)
-
-
-class LockedTransition(Transition):
-
-    def execute(self, event_data):
-        with event_data.machine.lock:
-            return super(LockedTransition, self).execute(event_data)
-
-
-class LockedNestedTransition(NestedTransition):
-
-    def execute(self, event_data):
-        with event_data.machine.lock:
-            return super(LockedNestedTransition, self).execute(event_data)
 
 
 class HierarchicalMachine(Machine):
@@ -247,50 +230,3 @@ class HierarchicalMachine(Machine):
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
                                                         unless=unless, before=before, after=after)
 
-
-class LockedMethod:
-
-    def __init__(self, lock, func):
-        self.lock = lock
-        self.func = func
-
-    def __call__(self, *args, **kwargs):
-        with self.lock:
-            return self.func(*args, **kwargs)
-
-
-# lock access to methods of the state machine
-# can be used if threaded access to the state machine is required.
-class LockedMachine(Machine):
-
-    def __init__(self, *args, **kwargs):
-        self.lock = RLock()
-        super(LockedMachine, self).__init__(*args, **kwargs)
-
-    @staticmethod
-    def _create_transition(*args, **kwargs):
-        return LockedTransition(*args, **kwargs)
-
-    def __getattribute__(self, item):
-        f = super(LockedMachine, self).__getattribute__
-        tmp = f(item)
-        if inspect.ismethod(tmp) and item not in "__getattribute__":
-            return LockedMethod(f('lock'), tmp)
-        return tmp
-
-    def __getattr__(self, item):
-        try:
-            return super(LockedMachine, self).__getattribute__(item)
-        except AttributeError:
-            return super(LockedMachine, self).__getattr__(item)
-
-
-# Uses HSM as well as Mutex features
-class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
-
-    def __init__(self, *args, **kwargs):
-        super(LockedHierarchicalMachine, self).__init__(*args, **kwargs)
-
-    @staticmethod
-    def _create_transition(*args, **kwargs):
-        return LockedNestedTransition(*args, **kwargs)

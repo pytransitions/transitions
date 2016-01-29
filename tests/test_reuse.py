@@ -4,8 +4,8 @@ except ImportError:
     pass
 
 from transitions import MachineError
-from transitions import HierarchicalMachine as Machine
-from transitions import NestedState
+from transitions.extensions import HierarchicalMachine as Machine
+from transitions.extensions import NestedState
 from .utils import Stuff
 
 from unittest import TestCase

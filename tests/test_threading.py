@@ -7,8 +7,7 @@ import time
 from threading import Thread
 import logging
 
-from transitions import LockedHierarchicalMachine
-from transitions import LockedMachine
+from transitions.extensions import MachineFactory
 from .test_nesting import TestTransitions as TestsNested
 from .test_core import TestTransitions as TestCore
 from .utils import Stuff
@@ -35,7 +34,7 @@ def heavy_checking():
 class TestLockedTransitions(TestCore):
 
     def setUp(self):
-        self.stuff = Stuff(machine_cls=LockedMachine)
+        self.stuff = Stuff(machine_cls=MachineFactory.get_predefined(locked=True))
         self.stuff.heavy_processing = heavy_processing
         self.stuff.machine.add_transition('process', '*', 'B', before='heavy_processing')
 
@@ -84,6 +83,7 @@ class TestLockedTransitions(TestCore):
         dump = pickle.dumps(self.stuff)
         self.assertIsNotNone(dump)
         stuff2 = pickle.loads(dump)
+        print(stuff2)
         self.assertTrue(stuff2.machine.is_state("B"))
         # check if machines of stuff and stuff2 are truly separated
         stuff2.to_A()
@@ -112,7 +112,7 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
     def setUp(self):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
           'D', 'E', 'F']
-        self.stuff = Stuff(states, machine_cls=LockedHierarchicalMachine)
+        self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, nested=True))
         self.stuff.heavy_processing = heavy_processing
         self.stuff.machine.add_transition('process', '*', 'B', before='heavy_processing')
 
