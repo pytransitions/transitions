@@ -253,7 +253,7 @@ machine.add_states([solid, liquid, gas])
 #### <a name="state-callbacks"></a>Callbacks
 A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization, or add them later. 
 
-For convenience, whenever a new `State` is added to a `Machine`, the methods `on_enter_«state name»` and `on_exit_«state name»` are dynamically created.
+For convenience, whenever a new `State` is added to a `Machine`, the methods `on_enter_«state name»` and `on_exit_«state name»` are dynamically created on the Machine (not on the model!), which allow you to dynamically add new enter and exit callbacks later if you need them.
 
 ```python
 # Our old Matter class, now with  a couple of new methods we 
@@ -275,8 +275,10 @@ machine = Machine(lump, states=states)
 machine.add_transition('sublimate', 'solid', 'gas')
     
 # Callbacks can also be added after initialization using 
-# the dynamically added on_enter_ and on_exist_ methods.
-lump.on_enter_StateC('say_hello')
+# the dynamically added on_enter_ and on_exit_ methods.
+# Note that the initial call to add the callback is made
+# on the Machine and not on the model.
+machine.on_enter_StateC('say_hello')
 
 # Test out the callbacks...
 machine.set_state('solid')
