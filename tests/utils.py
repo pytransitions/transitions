@@ -10,6 +10,7 @@ class Stuff(object):
         states = ['A', 'B', 'C', 'D', 'E', 'F'] if states is None else states
         self.machine = machine_cls(self, states=states, initial='A')
         self.level = 1
+        self.machine_cls = machine_cls
 
     @staticmethod
     def this_passes():

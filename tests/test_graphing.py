@@ -3,24 +3,10 @@ try:
 except ImportError:
     pass
 
-from transitions import Machine
-from transitions import HierarchicalMachine
-from transitions.mixins import MachineGraphSupport
+from transitions.extensions import MachineFactory
 from unittest import TestCase
 import tempfile
 import os
-
-
-class MachineGraph(MachineGraphSupport, Machine):
-
-    def __init__(self, *args, **kwargs):
-        super(MachineGraph, self).__init__(*args, **kwargs)
-
-
-class HierMachineGraph(MachineGraphSupport, HierarchicalMachine):
-
-    def __init__(self, *args, **kwargs):
-        super(HierMachineGraph, self).__init__(*args, **kwargs)
 
 
 class TestDiagrams(TestCase):
@@ -34,7 +20,8 @@ class TestDiagrams(TestCase):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
         ]
 
-        m = MachineGraph(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        machine_cls = MachineFactory.get_predefined(graph=True)
+        m = machine_cls(states=states, transitions=transitions, initial='A', auto_transitions=False, title='a test')
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue("digraph" in str(graph))
@@ -69,7 +56,8 @@ class TestDiagrams(TestCase):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 3 edges = 8 edges
         ]
 
-        m = HierMachineGraph(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
+        m = hsm_graph_cls(states=states, transitions=transitions, initial='A', auto_transitions=False, title='A test')
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue("digraph" in str(graph))
@@ -84,6 +72,9 @@ class TestDiagrams(TestCase):
             self.assertIsNotNone(getattr(m, t))
 
         self.assertEqual(len(graph.edges()), 8)  # see above
+
+        m.walk()
+        m.run()
 
         # write diagram to temp file
         target = tempfile.NamedTemporaryFile()
@@ -104,7 +95,8 @@ class TestDiagrams(TestCase):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 3 edges = 8 edges
         ]
 
-        m = HierMachineGraph(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
+        m = hsm_graph_cls(states=states, transitions=transitions, initial='A', auto_transitions=False)
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue("digraph" in str(graph))
