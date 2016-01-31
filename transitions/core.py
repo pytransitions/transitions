@@ -92,7 +92,7 @@ class Transition(object):
                     *event_data.args, **event_data.kwargs) == self.target
 
     def __init__(self, source, dest, conditions=None, unless=None, before=None,
-                 after=None):
+                 after=None, before_check=None):
         """
         Args:
             source (string): The name of the source State.
@@ -107,9 +107,11 @@ class Transition(object):
             before (string or list): callbacks to trigger before the
                 transition.
             after (string or list): callbacks to trigger after the transition.
+            before_check (string or list): callbacks to trigger before conditions are checked
         """
         self.source = source
         self.dest = dest
+        self.before_check = [] if before_check is None else listify(before_check)
         self.before = [] if before is None else listify(before)
         self.after = [] if after is None else listify(after)
 
@@ -131,6 +133,11 @@ class Transition(object):
         logger.info("Initiating transition from state %s to state %s...",
                     self.source, self.dest)
         machine = event_data.machine
+
+        for func in self.before_check:
+            machine.callback(getattr(event_data.model, func), event_data)
+            logger.info("Executing before_trigger callback '%s'." % func)
+
         for c in self.conditions:
             if not c.check(event_data):
                 logger.info("Transition condition failed: %s() does not " +
@@ -154,10 +161,10 @@ class Transition(object):
         event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
-        """ Add a new before or after callback.
+        """ Add a new before_transition, after, or before_check callback.
         Args:
             trigger (string): The type of triggering event. Must be one of
-                'before' or 'after'.
+                'before', 'after' or 'before_check'.
             func (string): The name of the callback function.
         """
         callback_list = getattr(self, trigger)
@@ -242,7 +249,7 @@ class Event(object):
         """ Add a new before or after callback to all available transitions.
         Args:
             trigger (string): The type of triggering event. Must be one of
-                'before' or 'after'.
+                'before', 'after' or 'before_check'.
             func (string): The name of the callback function.
         """
         for t in itertools.chain(*self.transitions.values()):
@@ -405,7 +412,7 @@ class Machine(object):
                 self.add_transition('to_%s' % s, '*', s)
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before=None, after=None):
+                       unless=None, before=None, after=None, before_check=None):
         """ Create a new Transition instance and add it to the internal list.
         Args:
             trigger (string): The name of the method that will trigger the
@@ -425,7 +432,7 @@ class Machine(object):
                 otherwise.
             before (string or list): Callables to call before the transition.
             after (string or list): Callables to call after the transition.
-
+            before_check (string or list): Callables to call when the trigger is activated
         """
         if trigger not in self.events:
             self.events[trigger] = Event(trigger, self)
@@ -441,7 +448,7 @@ class Machine(object):
             after = listify(after) + listify(self.after_state_change)
 
         for s in source:
-            t = self._create_transition(s, dest, conditions, unless, before, after)
+            t = self._create_transition(s, dest, conditions, unless, before, after, before_check)
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
@@ -493,7 +500,7 @@ class Machine(object):
             else:
                 raise AttributeError("{} does not exist".format(name))
         terms = name.split('_')
-        if terms[0] in ['before', 'after']:
+        if terms[0] in ['before', 'after', 'before_check']:
             name = '_'.join(terms[1:])
             if name not in self.events:
                 raise MachineError('Event "%s" is not registered.' % name)

@@ -494,6 +494,39 @@ lump.evaporate()
 >>> "where'd all the liquid go?"
 ```
 
+There is also a `'before_check'` callback that is executed as soon as the trigger runs, before any `'conditions'` are checked:
+
+```python
+class Matter(object):
+    heat = False
+    attempts = 0
+    def count_attempts(self): self.attempts += 1
+    def is_really_hot(self): return self.heat
+    def heat_up(self): self.heat = random.random() < 0.25
+    def stats(self): print('It took you %i attempts to melt the lump!' %self.attempts)
+
+states=['solid', 'liquid', 'gas', 'plasma']
+
+transitions = [
+    { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid', 'before_check': ['heat_up', 'count_attempts'], 'conditions': 'is_really_hot', 'after': 'stats'},
+]
+
+lump = Matter()
+machine = Machine(lump, states, transitions=transitions, initial='solid')
+lump.melt()
+lump.melt()
+lump.melt()
+lump.melt()
+>>> "It took you 4 attempts to melt the lump!"
+```
+
+In summary, callbacks on transitions are executed in the following order:
+
+* `'before_check'` (executed as soon as the trigger is called)
+* `'conditions'` / `'unless'` (conditions *may* fail and halt the transition)
+* `'before'` (executed while the model is still in the source state)
+* `'after'` (executed while the model is in the destination state)
+
 ### Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways. 
 
