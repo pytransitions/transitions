@@ -204,7 +204,7 @@ class HierarchicalMachine(Machine):
         return names
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before=None, after=None):
+                       unless=None, before=None, after=None, prepare=None):
         if not (trigger.startswith('to_') and source == '*'):
             bp_before = None
             bp_after = None

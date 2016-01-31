@@ -151,6 +151,35 @@ class TestTransitions(TestCase):
         m.model.move()
         self.assertEquals(m.model.level, 3)
 
+    def test_prepare(self):
+        m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
+        m.add_transition('move', 'A', 'B', prepare='increase_level')
+        m.add_transition('move', 'B', 'C', prepare='increase_level')
+        m.add_transition('move', 'C', 'A', prepare='increase_level', conditions='this_fails')
+        m.add_transition('dont_move', 'A', 'C', prepare='increase_level')
+
+        m.prepare_move('increase_level')
+
+        m.model.move()
+        self.assertEquals(m.model.state, 'B')
+        self.assertEquals(m.model.level, 3)
+
+        m.model.move()
+        self.assertEquals(m.model.state, 'C')
+        self.assertEquals(m.model.level, 5)
+
+        # State does not advance, but increase_level still runs
+        m.model.move()
+        self.assertEquals(m.model.state, 'C')
+        self.assertEquals(m.model.level, 7)
+
+        # An invalid transition shouldn't execute the callback
+        with self.assertRaises(MachineError):
+            m.model.dont_move()
+
+        self.assertEquals(m.model.state, 'C')
+        self.assertEquals(m.model.level, 7)
+
     def test_state_model_change_listeners(self):
         s = self.stuff
         s.machine.add_transition('go_e', 'A', 'E')
