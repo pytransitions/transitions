@@ -10,7 +10,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
 
     pip install transitions
 
-...or clone the repo from GitHub and then:
+... or clone the repo from GitHub and then:
 
     python setup.py install
 
@@ -42,7 +42,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
 
 They say [a good example is worth](https://www.google.com/webhp?ie=UTF-8#q=%22a+good+example+is+worth%22&start=20) 100 pages of API documentation, a million directives, or a thousand words. 
 
-Well, "they" probably lie...but here's an example anyway:
+Well, "they" probably lie... but here's an example anyway:
 
 ```python
 from transitions import Machine
@@ -66,7 +66,7 @@ class NarcolepticSuperhero(object):
         # Initialize the state machine
         self.machine = Machine(model=self, states=NarcolepticSuperhero.states, initial='asleep')
         
-        # add some transitions. We could also define these using a static list of 
+        # Add some transitions. We could also define these using a static list of
         # dictionaries, as we did with states above, and then pass the list to 
         # the Machine initializer as the transitions= argument.
         
@@ -181,7 +181,7 @@ lump.state
 >>> 'solid'
 ```
 
-I say “minimal”, because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined...yet!
+I say “minimal”, because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined... yet!
 
 Let's try again.
 
@@ -278,7 +278,7 @@ machine.add_transition('sublimate', 'solid', 'gas')
 # the dynamically added on_enter_ and on_exit_ methods.
 # Note that the initial call to add the callback is made
 # on the Machine and not on the model.
-machine.on_enter_StateC('say_hello')
+machine.on_enter_gas('say_hello')
 
 # Test out the callbacks...
 machine.set_state('solid')
@@ -287,7 +287,7 @@ lump.sublimate()
 >>> 'hello, new state!'
 ```
 
-Note that the on_enter state will *not* fire when a Machine is first initialized. I.e., if you have an on_enter_A() callback defined, and initialize the Machine with initial='A', on_enter_A() will not be fired until the next time you enter state A. (If you need to make sure on_enter_A() fires at initialization, you can simply create a dummy initial state and then explicitly call to_A() inside the __init__ method.)
+Note that `on_enter_«state name»` callback will *not* fire when a Machine is first initialized. For example if you have an `on_enter_A()` callback defined, and initialize the `Machine` with `initial='A'`, `on_enter_A()` will not be fired until the next time you enter state `A`. (If you need to make sure `on_enter_A()` fires at initialization, you can simply create a dummy initial state and then explicitly call `to_A()` inside the `__init__` method.)
 
 In addition to passing in callbacks when initializing a `State`, or adding them dynamically, it's also possible to define callbacks in the model class itself, which may increase code clarity. For example:
 
@@ -471,7 +471,7 @@ Note that condition-checking methods will passively receive optional arguments a
 lump.heat(temp=74)
 ```
 
-...would pass the `temp=74` optional kwarg to the `is_flammable()` check (possibly wrapped in an `EventData` instance). For more on this, see the [Passing data](#passing-data) section below.
+... would pass the `temp=74` optional kwarg to the `is_flammable()` check (possibly wrapped in an `EventData` instance). For more on this, see the [Passing data](#passing-data) section below.
 
 #### <a name="transition-callbacks"></a>Callbacks
 You can attach callbacks to transitions as well as states. Every transition has `'before'` and `'after'` attributes that contain a list of methods to call before and after the transition executes:
@@ -514,12 +514,12 @@ machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
 
 lump.melt(45)  # positional arg
 lump.print_temperature()
-> 'Current temperature is 45 degrees celsius.'
+>>> 'Current temperature is 45 degrees celsius.'
 
 machine.set_state('solid')  # reset state so we can melt again
 lump.melt(pressure=300.23)  # keyword args also work
 lump.print_pressure()
-> 'Current pressure is 300.23 kPa.'
+>>> 'Current pressure is 300.23 kPa.'
 
 ```
 
@@ -551,7 +551,7 @@ machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
 
 lump.melt(temp=45, pressure=1853.68)  # keyword args
 lump.print_pressure()
-> 'Current pressure is 1853.68 kPa.'
+>>> 'Current pressure is 1853.68 kPa.'
 
 ```
 
@@ -744,7 +744,7 @@ If a reused state machine does not have a final state, you can of course add the
 In cases where event dispatching is done in threads, one can use either `LockedMachine` or `LockedHierarchicalMachine` where **function access** (!sic) is secured with reentrant locks. This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
 
 ```python
-from transition import LockedMachine as Machine
+from transitions import LockedMachine as Machine
 from threading import Thread
 import time
 
