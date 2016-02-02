@@ -216,7 +216,8 @@ class HierarchicalMachine(Machine):
                                                    'conditions': conditions, 'unless': unless, 'before': bp_before,
                                                    'after': bp_after})
         if isinstance(source, string_types):
-            source = list(self.states.keys()) if source == '*' else [source]
+            source = [x.name for x in self.states.values() if x.children is None] \
+                if source == '*' else [source]
 
         for s in source:
             state = self.get_state(s)

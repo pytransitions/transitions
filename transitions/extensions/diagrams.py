@@ -103,7 +103,10 @@ class AGraph(Diagram):
 
 
 class AAGraph(AGraph):
-    seen = []
+
+    def __init__(self, *args, **kwargs):
+        self.seen = []
+        super(AAGraph, self).__init__(*args, **kwargs)
 
     def _add_nodes(self, states, container):
         # to be able to process children recursively as well as the state dict of a machine

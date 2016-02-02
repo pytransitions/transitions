@@ -94,6 +94,8 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('advance', 'A', 'B')
         s.machine.add_transition('advance', 'B', 'C')
         s.machine.add_transition('advance', 'C', 'D')
+        s.machine.add_transition('reset', '*', 'A')
+        self.assertEqual(len(s.machine.events['reset'].transitions['C_1']), 1)
         s.advance()
         self.assertEquals(s.state, 'B')
         self.assertFalse(s.is_A())
