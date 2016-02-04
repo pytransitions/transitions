@@ -494,22 +494,49 @@ class Machine(object):
         else:
             func(*event_data.args, **event_data.kwargs)
 
+    @staticmethod
+    def _identify_callback(name):
+        callbacks = ['before', 'after', 'prepare', 'on_enter', 'on_exit']
+        separator = '_'
+
+        # Does the prefix match a known callback?
+        try:
+            callback_type = callbacks[[name.find(x) for x in callbacks].index(0)]
+        except ValueError:
+            return None, None
+
+        # Extract the target by cutting the string after the type and separator
+        target = name[len(callback_type) + len(separator):]
+
+        # Make sure there is actually a target to avoid index error and enforce _ as a separator
+        if target == '' or name[len(callback_type)] != separator:
+            return None, None
+
+        return callback_type, target
+
     def __getattr__(self, name):
         if name.startswith('__'):
             if name in self.__dict__:
                 return self.__dict__[name]
             else:
                 raise AttributeError("{} does not exist".format(name))
-        terms = name.split('_')
-        if terms[0] in ['before', 'after', 'prepare']:
-            name = '_'.join(terms[1:])
-            if name not in self.events:
-                raise MachineError('Event "%s" is not registered.' % name)
-            return partial(self.events[name].add_callback, terms[0])
 
-        elif name.startswith('on_enter') or name.startswith('on_exit'):
-            state = self.get_state('_'.join(terms[2:]))
-            return partial(state.add_callback, terms[1])
+        # Could be a callback
+        callback_type, target = self._identify_callback(name)
+
+        if callback_type is not None:
+            if callback_type in ['before', 'after', 'prepare']:
+                if target not in self.events:
+                    raise MachineError('Event "%s" is not registered.' % target)
+                return partial(self.events[target].add_callback, callback_type)
+
+            elif callback_type in ['on_enter', 'on_exit']:
+                state = self.get_state(target)
+                return partial(state.add_callback, callback_type[3:])
+
+            else:
+                raise AttributeError("{} does not exist".format(name))
+
         else:
             if name in self.__dict__:
                 return self.__dict__[name]
