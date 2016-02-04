@@ -8,3 +8,5 @@ dist/*
 *.iml
 .idea
 .coverage
+.ipynb_checkpoints
+examples/state.png

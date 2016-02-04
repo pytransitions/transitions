@@ -3,8 +3,8 @@ try:
 except ImportError:
     pass
 
-from transitions import HierarchicalMachine as Machine
-from transitions import NestedState as State
+from transitions.extensions import MachineFactory
+from transitions.extensions import NestedState as State
 from .test_core import TestTransitions as TestsCore
 from .utils import Stuff
 
@@ -19,7 +19,8 @@ class TestTransitions(TestsCore):
     def setUp(self):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
-        self.stuff = Stuff(states, Machine)
+        machine_cls = MachineFactory.get_predefined(nested=True)
+        self.stuff = Stuff(states, machine_cls)
 
     def tearDown(self):
         pass
@@ -40,7 +41,7 @@ class TestTransitions(TestsCore):
              }
         ]
         s = Stuff()
-        Machine(
+        self.stuff.machine_cls(
             model=s, states=states, transitions=transitions, initial='State2')
         s.advance()
         self.assertEquals(s.message, 'Hello World!')
@@ -54,11 +55,11 @@ class TestTransitions(TestsCore):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
-        m = Machine(states=states, transitions=transitions, initial='A')
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         self.assertEquals(m.initial, 'A')
-        m = Machine(states=states, transitions=transitions, initial='C')
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='C')
         self.assertEquals(m.initial, 'C_1')
-        m = Machine(states=states, transitions=transitions)
+        m = self.stuff.machine_cls(states=states, transitions=transitions)
         self.assertEquals(m.initial, 'initial')
 
     def test_transition_definitions(self):
@@ -70,7 +71,7 @@ class TestTransitions(TestsCore):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'},
             {'trigger': 'run', 'source': 'C_1', 'dest': 'C_2'}
         ]
-        m = Machine(states=states, transitions=transitions, initial='A')
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.walk()
         self.assertEquals(m.state, 'B')
         m.run()
@@ -83,7 +84,7 @@ class TestTransitions(TestsCore):
             ['run', 'B', 'C'],
             ['sprint', 'C', 'D']
         ]
-        m = Machine(states=states, transitions=transitions, initial='A')
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.to_C()
         m.sprint()
         self.assertEquals(m.state, 'D')
@@ -93,6 +94,8 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('advance', 'A', 'B')
         s.machine.add_transition('advance', 'B', 'C')
         s.machine.add_transition('advance', 'C', 'D')
+        s.machine.add_transition('reset', '*', 'A')
+        self.assertEqual(len(s.machine.events['reset'].transitions['C_1']), 1)
         s.advance()
         self.assertEquals(s.state, 'B')
         self.assertFalse(s.is_A())
@@ -126,7 +129,7 @@ class TestTransitions(TestsCore):
 
     def test_use_machine_as_model(self):
         states = ['A', 'B', 'C', 'D']
-        m = Machine(states=states, initial='A')
+        m = self.stuff.machine_cls(states=states, initial='A')
         m.add_transition('move', 'A', 'B')
         m.add_transition('move_to_C', 'B', 'C')
         m.move()
@@ -197,7 +200,7 @@ class TestTransitions(TestsCore):
 
     def test_ordered_transitions(self):
         states = ['beginning', 'middle', 'end']
-        m = Machine(None, states)
+        m = self.stuff.machine_cls(None, states)
         m.add_ordered_transitions()
         self.assertEquals(m.state, 'initial')
         m.next_state()
@@ -209,14 +212,14 @@ class TestTransitions(TestsCore):
         self.assertEquals(m.state, 'initial')
 
         # Include initial state in loop
-        m = Machine(None, states)
+        m = self.stuff.machine_cls(None, states)
         m.add_ordered_transitions(loop_includes_initial=False)
         m.to_end()
         m.next_state()
         self.assertEquals(m.state, 'beginning')
 
         # Test user-determined sequence and trigger name
-        m = Machine(None, states, initial='beginning')
+        m = self.stuff.machine_cls(None, states, initial='beginning')
         m.add_ordered_transitions(['end', 'beginning'], trigger='advance')
         m.advance()
         self.assertEquals(m.state, 'end')
@@ -224,7 +227,7 @@ class TestTransitions(TestsCore):
         self.assertEquals(m.state, 'beginning')
 
         # Via init argument
-        m = Machine(
+        m = self.stuff.machine_cls(
             None, states, initial='beginning', ordered_transitions=True)
         m.next_state()
         self.assertEquals(m.state, 'middle')
@@ -243,7 +246,7 @@ class TestTransitions(TestsCore):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
-        m = Machine(states=states, transitions=transitions, initial='A')
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.walk()
         dump = pickle.dumps(m)
         self.assertIsNotNone(dump)
@@ -259,7 +262,7 @@ class TestTransitions(TestsCore):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'}
         ]
 
-        m = Machine(None, states=['A', 'B', 'C'], transitions=transitions,
+        m = self.stuff.machine_cls(None, states=['A', 'B', 'C'], transitions=transitions,
                     before_state_change='before_state_change',
                     after_state_change='after_state_change', send_event=True,
                     initial='A', auto_transitions=True)
@@ -270,3 +273,13 @@ class TestTransitions(TestsCore):
         m.walk()
         self.assertEqual(m.before_state_change.call_count, 2)
         self.assertEqual(m.after_state_change.call_count, 2)
+
+
+class TestWithGraphTransitions(TestTransitions):
+
+    def setUp(self):
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
+                  'D', 'E', 'F']
+
+        machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
+        self.stuff = Stuff(states, machine_cls)

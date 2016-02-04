@@ -6,7 +6,6 @@ except ImportError:
 from functools import partial
 from collections import defaultdict, OrderedDict
 from six import string_types
-from .diagrams import AGraph
 import inspect
 import logging
 import itertools
@@ -487,12 +486,12 @@ class Machine(object):
         else:
             func(*event_data.args, **event_data.kwargs)
 
-    def get_graph(self, title=None, diagram_class=AGraph):
-        return diagram_class(self).get_graph(title)
-
     def __getattr__(self, name):
         if name.startswith('__'):
-            raise AttributeError
+            if name in self.__dict__:
+                return self.__dict__[name]
+            else:
+                raise AttributeError("{} does not exist".format(name))
         terms = name.split('_')
         if terms[0] in ['before', 'after']:
             name = '_'.join(terms[1:])
@@ -504,7 +503,10 @@ class Machine(object):
             state = self.get_state('_'.join(terms[2:]))
             return partial(state.add_callback, terms[1])
         else:
-            raise AttributeError
+            if name in self.__dict__:
+                return self.__dict__[name]
+            else:
+                raise AttributeError("{} does not exist".format(name))
 
 
 class MachineError(Exception):
