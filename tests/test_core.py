@@ -145,7 +145,7 @@ class TestTransitions(TestCase):
         m.add_transition('move', 'A', 'B')
         m.add_transition('move', 'B', 'C')
 
-        m.before_move('increase_level')
+        m.before_transition_move('increase_level')
         m.model.move()
         self.assertEquals(m.model.level, 2)
         m.model.move()
@@ -174,7 +174,9 @@ class TestTransitions(TestCase):
         self.assertEquals(m.model.level, 7)
 
         # An invalid transition shouldn't execute the callback
-        m.model.dont_move()
+        with self.assertRaises(MachineError):
+                m.model.dont_move()
+
         self.assertEquals(m.model.state, 'C')
         self.assertEquals(m.model.level, 7)
 
@@ -212,7 +214,7 @@ class TestTransitions(TestCase):
         m = Machine(model=s, states=states, initial='A', send_event=False,
                     auto_transitions=True)
         m.add_transition(
-            trigger='advance', source='A', dest='B', before='set_message')
+            trigger='advance', source='A', dest='B', before_transition='set_message')
         s.advance(message='Hallo. My name is Inigo Montoya.')
         self.assertTrue(s.message.startswith('Hallo.'))
         # Make sure callbacks handle arguments properly
@@ -222,7 +224,7 @@ class TestTransitions(TestCase):
         # Now wrap arguments in an EventData instance
         m.send_event = True
         m.add_transition(
-            trigger='advance', source='B', dest='C', before='extract_message')
+            trigger='advance', source='B', dest='C', before_transition='extract_message')
         s.advance(message='You killed my father. Prepare to die.')
         self.assertTrue(s.message.startswith('You'))
 

@@ -257,7 +257,7 @@ class TestTransitions(TestsCore):
     def test_callbacks_duplicate(self):
 
         transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'C', 'before': 'before_state_change',
+            {'trigger': 'walk', 'source': 'A', 'dest': 'C', 'before_transition': 'before_state_change',
              'after': 'after_state_change'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'}
         ]

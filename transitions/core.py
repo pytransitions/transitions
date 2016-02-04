@@ -91,7 +91,7 @@ class Transition(object):
                 return predicate(
                     *event_data.args, **event_data.kwargs) == self.target
 
-    def __init__(self, source, dest, conditions=None, unless=None, before=None,
+    def __init__(self, source, dest, conditions=None, unless=None, before_transition=None,
                  after=None, before_check=None):
         """
         Args:
@@ -104,7 +104,7 @@ class Transition(object):
             unless (string, list): Condition(s) that must return False in order
                 for the transition to occur. Behaves just like conditions arg
                 otherwise.
-            before (string or list): callbacks to trigger before the
+            before_transition (string or list): callbacks to trigger before the
                 transition.
             after (string or list): callbacks to trigger after the transition.
             before_check (string or list): callbacks to trigger before conditions are checked
@@ -112,7 +112,7 @@ class Transition(object):
         self.source = source
         self.dest = dest
         self.before_check = [] if before_check is None else listify(before_check)
-        self.before = [] if before is None else listify(before)
+        self.before_transition = [] if before_transition is None else listify(before_transition)
         self.after = [] if after is None else listify(after)
 
         self.conditions = []
@@ -136,14 +136,14 @@ class Transition(object):
 
         for func in self.before_check:
             machine.callback(getattr(event_data.model, func), event_data)
-            logger.info("Executing before_trigger callback '%s'." % func)
+            logger.info("Executing callback '%s' before conditions." % func)
 
         for c in self.conditions:
             if not c.check(event_data):
                 logger.info("Transition condition failed: %s() does not " +
                             "return %s. Transition halted.", c.func, c.target)
                 return False
-        for func in self.before:
+        for func in self.before_transition:
             machine.callback(getattr(event_data.model, func), event_data)
             logger.info("Executing callback '%s' before transition." % func)
 
@@ -164,7 +164,7 @@ class Transition(object):
         """ Add a new before_transition, after, or before_check callback.
         Args:
             trigger (string): The type of triggering event. Must be one of
-                'before', 'after' or 'before_check'.
+                'before_transition', 'after' or 'before_check'.
             func (string): The name of the callback function.
         """
         callback_list = getattr(self, trigger)
@@ -246,10 +246,10 @@ class Event(object):
         return False
 
     def add_callback(self, trigger, func):
-        """ Add a new before or after callback to all available transitions.
+        """ Add a new before_transition, after or before_check callback to all available transitions.
         Args:
             trigger (string): The type of triggering event. Must be one of
-                'before', 'after' or 'before_check'.
+                'before_transition', 'after' or 'before_check'.
             func (string): The name of the callback function.
         """
         for t in itertools.chain(*self.transitions.values()):
@@ -412,7 +412,7 @@ class Machine(object):
                 self.add_transition('to_%s' % s, '*', s)
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before=None, after=None, before_check=None):
+                       unless=None, before_transition=None, after=None, before_check=None):
         """ Create a new Transition instance and add it to the internal list.
         Args:
             trigger (string): The name of the method that will trigger the
@@ -430,7 +430,7 @@ class Machine(object):
             unless (string, list): Condition(s) that must return False in order
                 for the transition to occur. Behaves just like conditions arg
                 otherwise.
-            before (string or list): Callables to call before the transition.
+            before_transition (string or list): Callables to call before the transition.
             after (string or list): Callables to call after the transition.
             before_check (string or list): Callables to call when the trigger is activated
         """
@@ -442,13 +442,13 @@ class Machine(object):
             source = list(self.states.keys()) if source == '*' else [source]
 
         if self.before_state_change:
-            before = listify(before) + listify(self.before_state_change)
+            before_transition = listify(before_transition) + listify(self.before_state_change)
 
         if self.after_state_change:
             after = listify(after) + listify(self.after_state_change)
 
         for s in source:
-            t = self._create_transition(s, dest, conditions, unless, before, after, before_check)
+            t = self._create_transition(s, dest, conditions, unless, before_transition, after, before_check)
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
@@ -500,7 +500,7 @@ class Machine(object):
             else:
                 raise AttributeError("{} does not exist".format(name))
         terms = name.split('_')
-        if terms[0] in ['before', 'after', 'before_check']:
+        if terms[0] in ['before_transition', 'after', 'before_check']:
             name = '_'.join(terms[1:])
             if name not in self.events:
                 raise MachineError('Event "%s" is not registered.' % name)

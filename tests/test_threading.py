@@ -36,7 +36,7 @@ class TestLockedTransitions(TestCore):
     def setUp(self):
         self.stuff = Stuff(machine_cls=MachineFactory.get_predefined(locked=True))
         self.stuff.heavy_processing = heavy_processing
-        self.stuff.machine.add_transition('process', '*', 'B', before='heavy_processing')
+        self.stuff.machine.add_transition('process', '*', 'B', before_transition='heavy_processing')
 
     def tearDown(self):
         pass
@@ -114,7 +114,7 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
           'D', 'E', 'F']
         self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, nested=True))
         self.stuff.heavy_processing = heavy_processing
-        self.stuff.machine.add_transition('process', '*', 'B', before='heavy_processing')
+        self.stuff.machine.add_transition('process', '*', 'B', before_transition='heavy_processing')
 
     def test_parallel_access(self):
         thread = Thread(target=self.stuff.process)
