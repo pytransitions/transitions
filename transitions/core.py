@@ -263,6 +263,10 @@ class Event(object):
 
 class Machine(object):
 
+    # Naming parameters for transition callbacks - legacy names must go last
+    callbacks = ['before_transition', 'after', 'before_check', 'on_enter', 'on_exit', 'before']
+    separator = '_'
+
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
@@ -503,32 +507,28 @@ class Machine(object):
         else:
             func(*event_data.args, **event_data.kwargs)
 
-    @staticmethod
-    def _identify_callback(name):
-        # Legacy names must go last
-        callbacks = ['before_transition', 'after', 'before_check', 'on_enter', 'on_exit', 'before']
-        separator = '_'
-
+    @classmethod
+    def _identify_callback(cls, name):
         # Does the prefix match a known callback?
         try:
-            callback_type = callbacks[[name.find(x) for x in callbacks].index(0)]
+            callback_type = cls.callbacks[[name.find(x) for x in cls.callbacks].index(0)]
         except ValueError:
             return None, None
 
         # For compatibility, we need to alias the old callbacks to the new ones for a while
         if len(name) == len(callback_type) and callback_type in ['before_transition', 'before_check']:
             logger.info('"before" callback is deprecated; use "before_transition_*" (callback was: "%s")', name)
-            name = separator.join(['before_transition'] + name.split(separator)[1:])
+            name = cls.separator.join(['before_transition'] + name.split(cls.separator)[1:])
         elif callback_type == 'before':
             logger.info('"before" callback is deprecated; use "before_transition_*" (callback was: "%s")', name)
-            name = separator.join(['before_transition'] + name.split(separator)[1:])
+            name = cls.separator.join(['before_transition'] + name.split(cls.separator)[1:])
             callback_type = 'before_transition'
 
         # Extract the target by cutting the string after the type and separator
-        target = name[len(callback_type) + len(separator):]
+        target = name[len(callback_type) + len(cls.separator):]
 
         # Enforce _ as a separator after the callback type and make sure there is actually a target
-        if name[len(callback_type)] != separator or target is '':
+        if name[len(callback_type)] != cls.separator or target is '':
             return None, None
 
         return callback_type, target
