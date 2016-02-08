@@ -256,6 +256,10 @@ class Event(object):
 
 class Machine(object):
 
+    # Callback naming parameters
+    callbacks = ['before', 'after', 'prepare', 'on_enter', 'on_exit']
+    separator = '_'
+
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
@@ -494,22 +498,19 @@ class Machine(object):
         else:
             func(*event_data.args, **event_data.kwargs)
 
-    @staticmethod
-    def _identify_callback(name):
-        callbacks = ['before', 'after', 'prepare', 'on_enter', 'on_exit']
-        separator = '_'
-
+    @classmethod
+    def _identify_callback(cls, name):
         # Does the prefix match a known callback?
         try:
-            callback_type = callbacks[[name.find(x) for x in callbacks].index(0)]
+            callback_type = cls.callbacks[[name.find(x) for x in cls.callbacks].index(0)]
         except ValueError:
             return None, None
 
         # Extract the target by cutting the string after the type and separator
-        target = name[len(callback_type) + len(separator):]
+        target = name[len(callback_type) + len(cls.separator):]
 
         # Make sure there is actually a target to avoid index error and enforce _ as a separator
-        if target == '' or name[len(callback_type)] != separator:
+        if target == '' or name[len(callback_type)] != cls.separator:
             return None, None
 
         return callback_type, target
