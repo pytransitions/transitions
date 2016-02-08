@@ -92,7 +92,7 @@ class Transition(object):
                     *event_data.args, **event_data.kwargs) == self.target
 
     def __init__(self, source, dest, conditions=None, unless=None, before_transition=None,
-                 after=None, before_check=None):
+                 after=None, before_check=None, before=None):
         """
         Args:
             source (string): The name of the source State.
@@ -109,6 +109,11 @@ class Transition(object):
             after (string or list): callbacks to trigger after the transition.
             before_check (string or list): callbacks to trigger before conditions are checked
         """
+        # For compatibility, we need to alias the old parameter names to the new ones:
+        if before is not None:
+            logger.info('"before" callback is deprecated; use "before_transition_*" (callback was: "%s")', before)
+            before_transition = before
+
         self.source = source
         self.dest = dest
         self.before_check = [] if before_check is None else listify(before_check)
@@ -412,7 +417,7 @@ class Machine(object):
                 self.add_transition('to_%s' % s, '*', s)
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before_transition=None, after=None, before_check=None):
+                       unless=None, before_transition=None, after=None, before_check=None, before=None):
         """ Create a new Transition instance and add it to the internal list.
         Args:
             trigger (string): The name of the method that will trigger the
@@ -434,6 +439,11 @@ class Machine(object):
             after (string or list): Callables to call after the transition.
             before_check (string or list): Callables to call when the trigger is activated
         """
+        # For compatibility, we need to alias the old parameter names to the new ones:
+        if before is not None:
+            logger.info('"before" callback is deprecated; use "before_transition_*" (callback was: "%s")', before)
+            before_transition = before
+
         if trigger not in self.events:
             self.events[trigger] = Event(trigger, self)
             setattr(self.model, trigger, self.events[trigger].trigger)
@@ -496,7 +506,7 @@ class Machine(object):
     @staticmethod
     def _identify_callback(name):
         # Legacy names must go last
-        callbacks = ['before_transition', 'after', 'before_check', 'on_enter', 'on_exit']
+        callbacks = ['before_transition', 'after', 'before_check', 'on_enter', 'on_exit', 'before']
         separator = '_'
 
         # Does the prefix match a known callback?
@@ -504,6 +514,15 @@ class Machine(object):
             callback_type = callbacks[[name.find(x) for x in callbacks].index(0)]
         except ValueError:
             return None, None
+
+        # For compatibility, we need to alias the old callbacks to the new ones for a while
+        if len(name) == len(callback_type) and callback_type in ['before_transition', 'before_check']:
+            logger.info('"before" callback is deprecated; use "before_transition_*" (callback was: "%s")', name)
+            name = separator.join(['before_transition'] + name.split(separator)[1:])
+        elif callback_type == 'before':
+            logger.info('"before" callback is deprecated; use "before_transition_*" (callback was: "%s")', name)
+            name = separator.join(['before_transition'] + name.split(separator)[1:])
+            callback_type = 'before_transition'
 
         # Extract the target by cutting the string after the type and separator
         target = name[len(callback_type) + len(separator):]
