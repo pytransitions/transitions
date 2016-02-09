@@ -145,11 +145,40 @@ class TestTransitions(TestCase):
         m.add_transition('move', 'A', 'B')
         m.add_transition('move', 'B', 'C')
 
-        m.before_move('increase_level')
+        m.before_transition_move('increase_level')
         m.model.move()
         self.assertEquals(m.model.level, 2)
         m.model.move()
         self.assertEquals(m.model.level, 3)
+
+    def test_before_check(self):
+        m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
+        m.add_transition('move', 'A', 'B', before_check='increase_level')
+        m.add_transition('move', 'B', 'C', before_check='increase_level')
+        m.add_transition('move', 'C', 'A', before_check='increase_level', conditions='this_fails')
+        m.add_transition('dont_move', 'A', 'C', before_check='increase_level')
+
+        m.before_check_move('increase_level')
+
+        m.model.move()
+        self.assertEquals(m.model.state, 'B')
+        self.assertEquals(m.model.level, 3)
+
+        m.model.move()
+        self.assertEquals(m.model.state, 'C')
+        self.assertEquals(m.model.level, 5)
+
+        # State does not advance, but increase_level still runs
+        m.model.move()
+        self.assertEquals(m.model.state, 'C')
+        self.assertEquals(m.model.level, 7)
+
+        # An invalid transition shouldn't execute the callback
+        with self.assertRaises(MachineError):
+                m.model.dont_move()
+
+        self.assertEquals(m.model.state, 'C')
+        self.assertEquals(m.model.level, 7)
 
     def test_state_model_change_listeners(self):
         s = self.stuff
@@ -185,7 +214,7 @@ class TestTransitions(TestCase):
         m = Machine(model=s, states=states, initial='A', send_event=False,
                     auto_transitions=True)
         m.add_transition(
-            trigger='advance', source='A', dest='B', before='set_message')
+            trigger='advance', source='A', dest='B', before_transition='set_message')
         s.advance(message='Hallo. My name is Inigo Montoya.')
         self.assertTrue(s.message.startswith('Hallo.'))
         # Make sure callbacks handle arguments properly
@@ -195,7 +224,7 @@ class TestTransitions(TestCase):
         # Now wrap arguments in an EventData instance
         m.send_event = True
         m.add_transition(
-            trigger='advance', source='B', dest='C', before='extract_message')
+            trigger='advance', source='B', dest='C', before_transition='extract_message')
         s.advance(message='You killed my father. Prepare to die.')
         self.assertTrue(s.message.startswith('You'))
 
@@ -340,3 +369,133 @@ class TestTransitions(TestCase):
         m2 = pickle.loads(dump)
         self.assertEqual(m.state, m2.state)
         m2.run()
+
+    def test___getattr___and_identify_callback(self):
+        m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
+        m.add_transition('move', 'A', 'B')
+        m.add_transition('move', 'B', 'C')
+
+        callback = m.__getattr__('before_transition_move')
+        self.assertTrue(callable(callback))
+
+        with self.assertRaises(MachineError):
+            m.__getattr__('before_transition_no_such_transition')
+
+        with self.assertRaises(MachineError):
+            m.__getattr__('before_transition_no_such_transition')
+
+        with self.assertRaises(AttributeError):
+            m.__getattr__('__no_such_method__')
+
+        type, target = m._identify_callback('on_exit_foobar')
+        self.assertEqual(type, 'on_exit')
+        self.assertEqual(target, 'foobar')
+
+        type, target = m._identify_callback('on_exitfoobar')
+        self.assertEqual(type, None)
+        self.assertEqual(target, None)
+
+        type, target = m._identify_callback('notacallback_foobar')
+        self.assertEqual(type, None)
+        self.assertEqual(target, None)
+
+        type, target = m._identify_callback('totallyinvalid')
+        self.assertEqual(type, None)
+        self.assertEqual(target, None)
+
+        type, target = m._identify_callback('before_transition__foobar')
+        self.assertEqual(type, 'before_transition')
+        self.assertEqual(target, '_foobar')
+
+        type, target = m._identify_callback('before_transition__this__user__likes__underscores')
+        self.assertEqual(type, 'before_transition')
+        self.assertEqual(target, '_this__user__likes__underscores')
+
+        type, target = m._identify_callback('_______________')
+        self.assertEqual(type, None)
+        self.assertEqual(target, None)
+
+    def test_state_and_transition_with_underscore(self):
+        m = Machine(Stuff(), states=['_A_', '_B_', '_C_'], initial='_A_')
+        m.add_transition('_move_', '_A_', '_B_', before_check='increase_level')
+        m.add_transition('_after_', '_B_', '_C_', before_check='increase_level')
+        m.add_transition('_on_exit_', '_C_', '_A_', before_check='increase_level', conditions='this_fails')
+
+        m.model._move_()
+        self.assertEquals(m.model.state, '_B_')
+        self.assertEquals(m.model.level, 2)
+
+        m.model._after_()
+        self.assertEquals(m.model.state, '_C_')
+        self.assertEquals(m.model.level, 3)
+
+        # State does not advance, but increase_level still runs
+        m.model._on_exit_()
+        self.assertEquals(m.model.state, '_C_')
+        self.assertEquals(m.model.level, 4)
+
+    def test_callback_identification(self):
+        m = Machine(Stuff(), states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A')
+        m.add_transition('transition', 'A', 'B', before='increase_level')
+        m.add_transition('after', 'B', 'C', before='increase_level')
+        m.add_transition('on_exit_A', 'C', 'D', before='increase_level', conditions='this_fails')
+        m.add_transition('check', 'C', 'E', before='increase_level')
+        m.add_transition('before_check', 'E', 'F', before='increase_level')
+        m.add_transition('before', 'F', 'A', before='increase_level')
+
+        with self.assertRaises(AttributeError):
+            m.before_check('increase_level')
+
+        m.before_transition('increase_level')
+        m.before_after('increase_level')
+        m.before_on_exit_A('increase_level')
+        m.before_before_check('increase_level')
+        m.before_before('increase_level')
+
+        m.model.transition()
+        self.assertEquals(m.model.state, 'B')
+        self.assertEquals(m.model.level, 3)
+
+        m.model.after()
+        self.assertEquals(m.model.state, 'C')
+        self.assertEquals(m.model.level, 5)
+
+        m.model.on_exit_A()
+        self.assertEquals(m.model.state, 'C')
+        self.assertEquals(m.model.level, 5)
+
+        m.model.check()
+        self.assertEquals(m.model.state, 'E')
+        self.assertEquals(m.model.level, 6)
+
+        m.model.before_check()
+        self.assertEquals(m.model.state, 'F')
+        self.assertEquals(m.model.level, 8)
+
+        m.model.before()
+        self.assertEquals(m.model.state, 'A')
+        self.assertEquals(m.model.level, 10)
+
+        # An invalid transition shouldn't execute the callback
+        with self.assertRaises(MachineError):
+                m.model.on_exit_A()
+
+        type, target = m._identify_callback('before_stuff')
+        self.assertEqual(type, 'before_transition')
+        self.assertEqual(target, 'stuff')
+
+        type, target = m._identify_callback('before_transition_')
+        self.assertIs(type, None)
+        self.assertIs(target, None)
+
+        type, target = m._identify_callback('before_')
+        self.assertIs(type, None)
+        self.assertIs(target, None)
+
+    def test_autofixing_before(self):
+        self.stuff.before_check_callback = MagicMock()
+        self.stuff.machine.add_transition('check', 'A', 'B')
+        self.stuff.machine.before_check('before_check_callback')
+        self.stuff.check()
+        self.assertTrue(self.stuff.machine.is_state('B'))
+        #self.assertTrue(self.stuff.before_check_callback.called)

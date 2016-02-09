@@ -57,7 +57,7 @@ class TestTransitions(TestCase):
                   c, 'D']
         # Define with list of dictionaries
         transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B','before': 'before_state_change',
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B','before_transition': 'before_state_change',
              'after': 'after_state_change' },
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
