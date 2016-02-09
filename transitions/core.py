@@ -45,15 +45,13 @@ class State(object):
     def enter(self, event_data):
         """ Triggered when a state is entered. """
         for oe in self.on_enter:
-            event_data.machine.callback(
-                getattr(event_data.model, oe), event_data)
+            event_data.machine.callback(oe, event_data)
         logger.info("Entered state %s" % self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
-            event_data.machine.callback(
-                getattr(event_data.model, oe), event_data)
+            event_data.machine.callback(oe, event_data)
         logger.info("Exited state %s" % self.name)
 
     def add_callback(self, trigger, func):
@@ -137,13 +135,13 @@ class Transition(object):
                             "return %s. Transition halted.", c.func, c.target)
                 return False
         for func in self.before:
-            machine.callback(getattr(event_data.model, func), event_data)
+            machine.callback(func, event_data)
             logger.info("Executing callback '%s' before transition." % func)
 
         self._change_state(event_data)
 
         for func in self.after:
-            machine.callback(getattr(event_data.model, func), event_data)
+            machine.callback(func, event_data)
             logger.info("Executed callback '%s' after transition." % func)
         return True
 
@@ -481,6 +479,9 @@ class Machine(object):
                 callback (if event sending is enabled) or to extract arguments
                 from (if event sending is disabled).
         """
+        if isinstance(func, string_types):
+            func = getattr(event_data.model, func)
+
         if self.send_event:
             func(event_data)
         else:

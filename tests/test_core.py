@@ -292,7 +292,7 @@ class TestTransitions(TestCase):
                      initial='B', ignore_invalid_triggers=True)
         m3.a_to_b()
 
-    def test_generic_callbacks(self):
+    def test_string_callbacks(self):
 
         m = Machine(None, states=['A', 'B'],
                     before_state_change='before_state_change',
@@ -301,6 +301,19 @@ class TestTransitions(TestCase):
 
         m.before_state_change = MagicMock()
         m.after_state_change = MagicMock()
+
+        m.to_B()
+        self.assertTrue(m.before_state_change.called)
+        self.assertTrue(m.after_state_change.called)
+
+    def test_function_callbacks(self):
+        before_state_change = MagicMock()
+        after_state_change = MagicMock()
+
+        m = Machine(None, states=['A', 'B'],
+                    before_state_change=before_state_change,
+                    after_state_change=after_state_change, send_event=True,
+                    initial='A', auto_transitions=True)
 
         m.to_B()
         self.assertTrue(m.before_state_change.called)
