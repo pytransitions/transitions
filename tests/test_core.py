@@ -411,9 +411,14 @@ class TestTransitions(TestCase):
         self.assertEqual(type, 'before_transition')
         self.assertEqual(target, '_this__user__likes__underscores')
 
-        type, target = m._identify_callback('_______________')
-        self.assertEqual(type, None)
-        self.assertEqual(target, None)
+        # Check the two cases where we have legacy naming collisions
+        type, target = m._identify_callback('before_check')
+        self.assertEqual(type, 'before_transition')
+        self.assertEqual(target, 'check')
+
+        type, target = m._identify_callback('before_transition')
+        self.assertEqual(type, 'before_transition')
+        self.assertEqual(target, 'transition')
 
     def test_state_and_transition_with_underscore(self):
         m = Machine(Stuff(), states=['_A_', '_B_', '_C_'], initial='_A_')
@@ -443,12 +448,10 @@ class TestTransitions(TestCase):
         m.add_transition('before_check', 'E', 'F', before='increase_level')
         m.add_transition('before', 'F', 'A', before='increase_level')
 
-        with self.assertRaises(AttributeError):
-            m.before_check('increase_level')
-
         m.before_transition('increase_level')
         m.before_after('increase_level')
         m.before_on_exit_A('increase_level')
+        m.before_check('increase_level')
         m.before_before_check('increase_level')
         m.before_before('increase_level')
 
@@ -466,15 +469,15 @@ class TestTransitions(TestCase):
 
         m.model.check()
         self.assertEquals(m.model.state, 'E')
-        self.assertEquals(m.model.level, 6)
+        self.assertEquals(m.model.level, 7)
 
         m.model.before_check()
         self.assertEquals(m.model.state, 'F')
-        self.assertEquals(m.model.level, 8)
+        self.assertEquals(m.model.level, 9)
 
         m.model.before()
         self.assertEquals(m.model.state, 'A')
-        self.assertEquals(m.model.level, 10)
+        self.assertEquals(m.model.level, 11)
 
         # An invalid transition shouldn't execute the callback
         with self.assertRaises(MachineError):
