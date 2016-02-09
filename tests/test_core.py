@@ -498,4 +498,27 @@ class TestTransitions(TestCase):
         self.stuff.machine.before_check('before_check_callback')
         self.stuff.check()
         self.assertTrue(self.stuff.machine.is_state('B'))
-        #self.assertTrue(self.stuff.before_check_callback.called)
+        self.assertTrue(self.stuff.before_check_callback.called)
+
+    # This is a misuse case. In cases where transitions are called 'check', the naming convention
+    # 'before_check_<transition>' and 'before_transition_<transition>' collides with the old schema which was
+    # 'before_<transition>' if one wants to add callbacks.
+    # To fix this the function 'before_check' is internally handled as 'before_transition_check' because that
+    # is most likely what the user intended to do.
+    # Should the user also have a transition called 'transition_check' the naming collides and
+    # callbacks added to 'transition_check' will be added to 'check' instead.
+    def test_autofixing_break(self):
+        self.stuff.before_check_callback = MagicMock()
+        self.stuff.before_transition_check_callback = MagicMock()
+        self.stuff.machine.add_transition('check', 'B', 'A')
+        self.stuff.machine.add_transition('transition_check', 'A', 'B')
+        self.stuff.machine.before_check('before_check_callback')
+        self.stuff.machine.before_transition_check('before_transition_check_callback')
+        self.stuff.transition_check()
+        self.assertTrue(self.stuff.machine.is_state('B'))
+        self.assertFalse(self.stuff.before_check_callback.called)
+        self.assertFalse(self.stuff.before_transition_check_callback.called)
+        self.stuff.check()
+        self.assertTrue(self.stuff.machine.is_state('A'))
+        self.assertTrue(self.stuff.before_check_callback.called)
+        self.assertTrue(self.stuff.before_transition_check_callback.called)

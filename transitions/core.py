@@ -172,7 +172,7 @@ class Transition(object):
         """
         callback_list = getattr(self, trigger)
         callback_list.append(func)
-
+        print(callback_list)
 
 class EventData(object):
 
@@ -521,6 +521,7 @@ class Machine(object):
         if len(name) == len(callback_type) and callback_type in ['before_transition', 'before_check']:
             logger.info('"before" callback is deprecated; use "before_transition_*" (callback was: "%s")', name)
             name = cls.separator.join(['before_transition'] + name.split(cls.separator)[1:])
+            callback_type = 'before_transition'
         elif callback_type == 'before':
             logger.info('"before" callback is deprecated; use "before_transition_*" (callback was: "%s")', name)
             name = cls.separator.join(['before_transition'] + name.split(cls.separator)[1:])
