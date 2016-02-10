@@ -206,14 +206,18 @@ class HierarchicalMachine(Machine):
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before_transition=None, after=None, before_check=None, before=None):
         if not (trigger.startswith('to_') and source == '*'):
-            bp_before = None
-            bp_after = None
+            bp_before_transition = before_transition if before_transition else before
+            bp_before_check = before_check
+            bp_after = after
             if self.before_state_change:
-                bp_before = listify(before_transition) + listify(self.before_state_change)
+                bp_before_transition = listify(before_transition) + listify(self.before_state_change)
+                bp_before_check = listify(before_check) + listify(self.before_state_change)
             if self.after_state_change:
                 bp_after = listify(after) + listify(self.after_state_change)
             self.blueprints['transitions'].append({'trigger': trigger, 'source': source, 'dest': dest,
-                                                   'conditions': conditions, 'unless': unless, 'before': bp_before,
+                                                   'conditions': conditions, 'unless': unless,
+                                                   'before_transition': bp_before_transition,
+                                                   'before_check': bp_before_check,
                                                    'after': bp_after})
         if isinstance(source, string_types):
             source = [x.name for x in self.states.values() if x.children is None] \
@@ -228,6 +232,6 @@ class HierarchicalMachine(Machine):
                 source.remove(s)
                 source.extend(self._traverse_nested(state.children))
 
-        super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
-                                                        unless=unless, before_transition=before_transition, after=after)
-
+        super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
+                                                        before_check=before_check, before_transition=before_transition,
+                                                        after=after)
