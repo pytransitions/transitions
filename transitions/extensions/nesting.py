@@ -9,6 +9,31 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
+class FunctionWrapper(object):
+    def __init__(self, func, path):
+        if len(path) > 0:
+            self.add(func, path)
+            self._func = None
+        else:
+            self._func = func
+
+    def add(self, func, path):
+        if len(path) > 0:
+            name = path[0]
+            if name[0].isdigit():
+                name = '_' + name
+            if hasattr(self, name):
+                getattr(self, name).add(func, path[1:])
+            else:
+                x = FunctionWrapper(func, path[1:])
+                setattr(self, name, x)
+        else:
+            self._func = func
+
+    def __call__(self, *args, **kwargs):
+        return self._func(*args, **kwargs)
+
+
 # Added parent and children parameter children is a list of NestedStates
 # and parent is the full name of the parent e.g. Foo_Bar_Baz.
 class NestedState(State):
@@ -44,7 +69,6 @@ class NestedState(State):
                     tmp_self.exit(event_data)
                     tmp_self = tmp_self.parent
                     tmp_state = tmp_state.parent
-                print(tmp_self.level)
                 tmp_self.exit(event_data)
                 return tmp_self.level
         else:
@@ -54,7 +78,6 @@ class NestedState(State):
         return 0
 
     def enter_nested(self, event_data, level=None):
-        print('+',level)
         if level is not None and level != self.level:
             self.parent.enter_nested(event_data, level)
         self.enter(event_data)
@@ -67,7 +90,6 @@ class NestedTransition(Transition):
         dest_state = machine.get_state(self.dest)
         source_state = machine.current_state
         lvl = source_state.exit_nested(event_data, dest_state)
-        print(0, lvl)
         event_data.machine.set_state(self.dest)
         event_data.update()
         dest_state.enter_nested(event_data, lvl)
@@ -93,6 +115,7 @@ class NestedEvent(Event):
             if t.execute(event):
                 return True
         return False
+
 
 class HierarchicalMachine(Machine):
 
@@ -192,19 +215,10 @@ class HierarchicalMachine(Machine):
         # preprocess states to flatten the configuration and resolve nesting
         new_states = self.traverse(states, *args, **kwargs)
         super(HierarchicalMachine, self).add_states(new_states, *args, **kwargs)
+
         while len(self._buffered_transitions) > 0:
             args = self._buffered_transitions.pop()
             self.add_transition(*args)
-
-    # collect the names of all children of a list of NestedSets
-    def _traverse_nested(self, children):
-        names = []
-        for c in children:
-            if c.children is not None:
-                names.extend(self._traverse_nested(c.children))
-            else:
-                names.append(c.name)
-        return names
 
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None):
@@ -222,8 +236,22 @@ class HierarchicalMachine(Machine):
             source = [x.name for x in self.states.values()] if source == '*' else [source]
 
         if trigger not in self.events:
-             self.events[trigger] = NestedEvent(trigger, self)
-             setattr(self.model, trigger, self.events[trigger].trigger)
+            self.events[trigger] = NestedEvent(trigger, self)
+            if trigger.startswith('to_'):
+                path = trigger[3:].split(NestedState.separator)
+                if hasattr(self.model, 'to_' + path[0]):
+                    t = getattr(self.model, 'to_' + path[0])
+                    t.add(self.events[trigger].trigger, path[1:])
+                else:
+                    t = FunctionWrapper(self.events[trigger].trigger, path[1:])
+                    setattr(self.model, 'to_' + path[0], t)
+            else:
+                setattr(self.model, trigger, self.events[trigger].trigger)
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
                                                         unless=unless, before=before, after=after)
 
+    def on_enter(self, state_name, callback):
+        self.get_state(state_name).add_callback('enter', callback)
+
+    def on_exit(self, state_name, callback):
+        self.get_state(state_name).add_callback('exit', callback)

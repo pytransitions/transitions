@@ -48,10 +48,11 @@ class TestTransitions(TestCase):
         self.assertEqual(m.blueprints['transitions'][3]['source'], 'D')
 
     def test_blueprint_nested(self):
-        c1 = NestedState('C_1', parent='C')
-        c2 = NestedState('C_2', parent='C')
-        c3 = NestedState('C_3', parent='C')
-        c = NestedState('C', children=[c1, c2, c3])
+        c = NestedState('C')
+        c1 = NestedState('C_1', parent=c)
+        c2 = NestedState('C_2', parent=c)
+        c3 = NestedState('C_3', parent=c)
+        c.children = [c1, c2, c3]
 
         states = ['A', {'name': 'B', 'on_enter': 'chirp', 'children': ['1', '2', '3']},
                   c, 'D']

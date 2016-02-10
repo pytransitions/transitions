@@ -138,7 +138,7 @@ class AAGraph(AGraph):
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
                     if hasattr(dst, 'children') and dst.children is not None:
-                        dst = dst.get_initial().name
+                        dst = dst.name
                     else:
                         dst = dst.name
                     sub.add_edge(src, dst, label=label)
@@ -223,7 +223,7 @@ class TransitionGraphSupport(Transition):
 
         # Mark the active node
         dest = event_data.machine.get_state(self.dest)
-        dest = dest.name if not hasattr(dest, 'children') else dest.get_initial().name
+        dest = dest.name
         event_data.machine.set_node_state(dest, state='active', reset=True)
 
         # Mark the previous node and path used
