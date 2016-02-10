@@ -82,7 +82,7 @@ class NarcolepticSuperhero(object):
         # Superheroes are always on call. ALWAYS. But they're not always 
         # dressed in work-appropriate clothing.
         self.machine.add_transition('distress_call', '*', 'saving the world', 
-                         before='change_into_super_secret_costume')
+                         before_transition='change_into_super_secret_costume')
         
         # When they get off work, they're all sweaty and disgusting. But before
         # they do anything else, they have to meticulously log their latest 
@@ -474,7 +474,7 @@ lump.heat(temp=74)
 ... would pass the `temp=74` optional kwarg to the `is_flammable()` check (possibly wrapped in an `EventData` instance). For more on this, see the [Passing data](#passing-data) section below.
 
 #### <a name="transition-callbacks"></a>Callbacks
-You can attach callbacks to transitions as well as states. Every transition has `'before'` and `'after'` attributes that contain a list of methods to call before and after the transition executes:
+You can attach callbacks to transitions as well as states. Every transition has `'before_transition'` and `'after'` attributes that contain a list of methods to call before and after the transition executes:
 
 ```python
 class Matter(object):
@@ -482,7 +482,7 @@ class Matter(object):
     def disappear(self): print("where'd all the liquid go?")
 
 transitions = [
-    { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid', 'before': 'make_hissing_noises'},
+    { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid', 'before_transition': 'make_hissing_noises'},
     { 'trigger': 'evaporate', 'source': 'liquid', 'dest': 'gas', 'after': 'disappear' }
 ]
 
@@ -493,6 +493,39 @@ lump.melt()
 lump.evaporate()
 >>> "where'd all the liquid go?"
 ```
+
+There is also a `'before_check'` callback that is executed as soon as the trigger runs, before any `'conditions'` are checked:
+
+```python
+class Matter(object):
+    heat = False
+    attempts = 0
+    def count_attempts(self): self.attempts += 1
+    def is_really_hot(self): return self.heat
+    def heat_up(self): self.heat = random.random() < 0.25
+    def stats(self): print('It took you %i attempts to melt the lump!' %self.attempts)
+
+states=['solid', 'liquid', 'gas', 'plasma']
+
+transitions = [
+    { 'trigger': 'melt', 'source': 'solid', 'dest': 'liquid', 'before_check': ['heat_up', 'count_attempts'], 'conditions': 'is_really_hot', 'after': 'stats'},
+]
+
+lump = Matter()
+machine = Machine(lump, states, transitions=transitions, initial='solid')
+lump.melt()
+lump.melt()
+lump.melt()
+lump.melt()
+>>> "It took you 4 attempts to melt the lump!"
+```
+
+In summary, callbacks on transitions are executed in the following order:
+
+* `'before_check'` (executed as soon as the trigger is called)
+* `'conditions'` / `'unless'` (conditions *may* fail and halt the transition)
+* `'before_transition'` (executed while the model is still in the source state)
+* `'after'` (executed while the model is in the destination state)
 
 ### Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways. 
@@ -510,7 +543,7 @@ class Matter(object):
 
 lump = Matter()
 machine = Machine(lump, ['solid', 'liquid'], initial='solid')
-machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
+machine.add_transition('melt', 'solid', 'liquid', before_transition='set_environment')
 
 lump.melt(45)  # positional arg
 lump.print_temperature()
@@ -547,7 +580,7 @@ class Matter(object):
 
 lump = Matter()
 machine = Machine(lump, ['solid', 'liquid'], send_event=True, initial='solid')
-machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
+machine.add_transition('melt', 'solid', 'liquid', before_transition='set_environment')
 
 lump.melt(temp=45, pressure=1853.68)  # keyword args
 lump.print_pressure()
@@ -704,7 +737,7 @@ counter = Machine(states=count_states, transitions=count_trans, initial='1')
 
 counter.increase() # love my counter
 counter.blueprints
->>> {'states': ['1', '2', '3', 'done'], 'transitions': [{'unless': None, 'dest': '2', 'after': None, 'source': '1', 'trigger': 'increase', 'conditions': None, 'before': None}, ...]}
+>>> {'states': ['1', '2', '3', 'done'], 'transitions': [{'unless': None, 'dest': '2', 'after': None, 'source': '1', 'trigger': 'increase', 'conditions': None, 'before_transition': None}, ...]}
 ...
 states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
 # states = ['waiting', 'collecting', {'name': 'counting', children: counter.blueprints}]

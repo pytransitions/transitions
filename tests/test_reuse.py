@@ -57,7 +57,7 @@ class TestTransitions(TestCase):
                   c, 'D']
         # Define with list of dictionaries
         transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B','before': 'before_state_change',
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B','before_transition': 'before_state_change',
              'after': 'after_state_change' },
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
@@ -72,9 +72,9 @@ class TestTransitions(TestCase):
         self.assertEqual(m.blueprints['states'][3], 'D')
         self.assertEqual(len(m.blueprints['transitions']), 3)
         # transition 'walk' before should contain two calls of the same method
-        self.assertEqual(len(m.blueprints['transitions'][0]['before']), 2)
+        self.assertEqual(len(m.blueprints['transitions'][0]['before_transition']), 2)
         self.assertEqual(len(m.blueprints['transitions'][0]['after']), 2)
-        self.assertEqual(len(m.blueprints['transitions'][1]['before']), 1)
+        self.assertEqual(len(m.blueprints['transitions'][1]['before_transition']), 1)
         self.assertEqual(m.blueprints['transitions'][2]['trigger'], 'sprint')
 
         m.add_transition('fly', 'D', 'A')
