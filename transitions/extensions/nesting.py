@@ -1,4 +1,4 @@
-from ..core import Machine, Transition, State, listify
+from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
 
 from six import string_types
 from os.path import commonprefix
@@ -12,72 +12,87 @@ logger.addHandler(logging.NullHandler())
 # Added parent and children parameter children is a list of NestedStates
 # and parent is the full name of the parent e.g. Foo_Bar_Baz.
 class NestedState(State):
+    separator = '.'
 
     def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, children=None, parent=None):
+        self._name = name
+        self.parent = parent
         super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
                                           ignore_invalid_triggers=ignore_invalid_triggers)
         self.children = children
-        self.parent = parent
+        self.level = self.parent.level + 1 if self.parent is not None else 0
 
-    # A step with children will be initialized with the first child which
-    # is a Leaf in the hierarchical tree and does not contain further children.
-    def get_initial(self):
-        state = self.children[0] if self.children is not None else self
-        return state.get_initial() if state.children is not None else state
+    @property
+    def name(self):
+        return (self.parent.name + NestedState.separator + self._name) if self.parent else self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    def exit_nested(self, event_data, target_state=None):
+        if target_state and target_state.level > 0 and self.level > 0:
+            if self.level > target_state.level:
+                self.exit(event_data)
+                return self.parent.exit_nested(event_data, target_state)
+            elif self.level <= target_state.level:
+                tmp_state = target_state
+                while self.level != tmp_state.level:
+                    tmp_state = target_state.parent
+                tmp_self = self
+                while tmp_self.level > 0 and tmp_state.parent.name != tmp_self.parent.name:
+                    tmp_self.exit(event_data)
+                    tmp_self = tmp_self.parent
+                    tmp_state = tmp_state.parent
+                print(tmp_self.level)
+                tmp_self.exit(event_data)
+                return tmp_self.level
+        else:
+            self.exit(event_data)
+            if self.parent:
+                return self.parent.exit_nested(event_data, None)
+        return 0
+
+    def enter_nested(self, event_data, level=None):
+        print('+',level)
+        if level is not None and level != self.level:
+            self.parent.enter_nested(event_data, level)
+        self.enter(event_data)
 
 
 class NestedTransition(Transition):
-
     # The actual state change method 'execute' in Transition was restructured to allow overriding
     def _change_state(self, event_data):
         machine = event_data.machine
         dest_state = machine.get_state(self.dest)
-        source_state = machine.get_state(self.source)
-        shared_parent = None
-
-        # First, we want to figure out if source and destination share
-        # parent states. We do a simple string comparison.
-        # E.g. Foo_Bar_Baz1_A and Foo_Ball_Boo_B will share 'Foo_Ba' which will be resolved later
-        if source_state.parent is not None and dest_state.parent is not None:
-            shared_parent = commonprefix([source_state.parent, dest_state.parent])
-
-        while True:
-            # We use the shared_parent to exit all parent states of the source which are not parents of destination
-            source_state.exit(event_data)
-            source_parent = source_state.parent
-
-            # The loop is ended if we reach a root state or if source's parent is part of the shared_parent string
-            # E.g. for Foo_Bar_Baz1_A with shared_parent Foo_Ba, Foo will not be exited.
-            if source_parent is None or (shared_parent is not None and shared_parent.startswith(source_parent)):
-                break
-            source_state = machine.get_state(source_parent)
-
-        enter_queue = []
-
-        # Now we have to enter all the parent states of destination EXCEPT the ones still active (the shared_parents)
-        # we achieve by generating a list top down from destination to shared parent
-        source_name = machine.get_state(source_state.parent).name if source_state.parent is not None else None
-
-        # If destination contains children, get the leaf state
-        if dest_state.children is not None:
-            dest_state = dest_state.get_initial()
-        tmp_state = dest_state
-        while True:
-            # All states will be pushed into a list starting from the
-            # destination state until the shared parent is reached
-            enter_queue.append(tmp_state)
-            if tmp_state.parent == source_name:
-                break
-            tmp_state = machine.get_state(tmp_state.parent)
-
-        # change the active state
-        event_data.machine.set_state(dest_state.name)
+        source_state = machine.current_state
+        lvl = source_state.exit_nested(event_data, dest_state)
+        print(0, lvl)
+        event_data.machine.set_state(self.dest)
         event_data.update()
+        dest_state.enter_nested(event_data, lvl)
 
-        # enter all states of the queue in reversed order, starting from topmost state
-        for s in enter_queue[::-1]:
-            s.enter(event_data)
 
+class NestedEvent(Event):
+
+    def trigger(self, *args, **kwargs):
+        tmp = self.machine.current_state
+        while tmp.parent and tmp.name not in self.transitions:
+            tmp = tmp.parent
+        if tmp.name not in self.transitions:
+            msg = "Can't trigger event %s from state %s!" % (self.name,
+                                                             self.machine.current_state.name)
+            if self.machine.current_state.ignore_invalid_triggers:
+                logger.warning(msg)
+            else:
+                raise MachineError(msg)
+        event = EventData(self.machine.current_state, self, self.machine,
+                          self.machine.model, args=args, kwargs=kwargs)
+        for t in self.transitions[tmp.name]:
+            event.transition = t
+            if t.execute(event):
+                return True
+        return False
 
 class HierarchicalMachine(Machine):
 
@@ -85,14 +100,6 @@ class HierarchicalMachine(Machine):
         self.blueprints = {'states': [], 'transitions': []}
         self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
-
-        # if the initial state is no leaf, traverse the tree
-        initial = self.get_state(self._initial)
-        if initial.children is not None:
-            initial = initial.get_initial()
-            self._initial = initial.name
-            self.set_state(initial)
-            self._last_state = initial
 
     # Instead of creating transitions directly, Machine now use a factory method which can be overridden
     @staticmethod
@@ -103,56 +110,52 @@ class HierarchicalMachine(Machine):
     # are converted into linked states with a naming scheme that concatenates the state name with
     # its parent's name. Substate Bar of Foo becomes Foo_Bar. An alternative approach would be to use actual nested
     # state machines.
-    def _flatten(self, states, on_enter=None, on_exit=None,
+    def traverse(self, states, on_enter=None, on_exit=None,
                  ignore_invalid_triggers=None, parent=None, remap={}):
         states = listify(states)
         new_states = []
         ignore = ignore_invalid_triggers
         if ignore is None:
             ignore = self.ignore_invalid_triggers
-        prefix = (parent + '_') if parent is not None else ''
         for state in states:
             tmp_states = []
             # other state representations are handled almost like in the base class but a parent parameter is added
             if isinstance(state, string_types):
                 if state in remap:
                     continue
-                tmp_states.append(NestedState(prefix + state, on_enter=on_enter, on_exit=on_exit, parent=parent,
+                tmp_states.append(NestedState(state, on_enter=on_enter, on_exit=on_exit, parent=parent,
                                               ignore_invalid_triggers=ignore))
             elif isinstance(state, dict):
                 state = copy.deepcopy(state)
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
                 state['parent'] = parent
-                state['name'] = prefix + state['name']
 
                 if 'children' in state:
-
                     # Concat the state names with the current scope. The scope is the concatenation of all
                     # previous parents. Call _flatten again to check for more nested states.
-                    children = self._flatten(state['children'], on_enter=on_enter, on_exit=on_exit,
-                                             ignore_invalid_triggers=ignore,
-                                             parent=state['name'], remap=state.get('remap', {}))
-                    state['children'] = children
-                    state.pop('remap', None)
-                    tmp_states.extend(children)
-
-                tmp_states.insert(0, NestedState(**state))
+                    p = NestedState(state['name'], on_enter=on_enter, on_exit=on_exit,
+                                    ignore_invalid_triggers=ignore, parent=parent)
+                    p.children = self.traverse(state['children'], on_enter=on_enter, on_exit=on_exit,
+                                               ignore_invalid_triggers=ignore,
+                                               parent=p, remap=state.get('remap', {}))
+                    tmp_states.append(p)
+                    tmp_states.extend(p.children)
+                else:
+                    tmp_states.insert(0, NestedState(**state))
             elif isinstance(state, HierarchicalMachine):
-                tmp_states.extend(self._flatten(state.blueprints['states'], on_enter=on_enter, on_exit=on_exit,
+                tmp_states.extend(self.traverse(state.blueprints['states'], on_enter=on_enter, on_exit=on_exit,
                                                 ignore_invalid_triggers=ignore,
                                                 parent=parent, remap=remap))
                 for trans in state.blueprints['transitions']:
                     source = trans['source']
-                    source = prefix + source if not source == '*' else source
-                    dest = prefix + trans['dest'] if trans['dest'] not in remap else remap[trans['dest']]
+                    dest = trans['dest'] if trans['dest'] not in remap else remap[trans['dest']]
                     self._buffered_transitions.append((trans['trigger'], source, dest, trans.get('conditions', None),
                                                        trans.get('unless', None), trans.get('before', None),
                                                        trans.get('after', None)))
             elif isinstance(state, NestedState):
                 tmp_states.append(state)
-                if state.children:
-                    tmp_states.extend(self._flatten(state.children))
+
             new_states.extend(tmp_states)
         return new_states
 
@@ -187,7 +190,7 @@ class HierarchicalMachine(Machine):
         self.blueprints['states'].extend(self._to_blueprint(states))
 
         # preprocess states to flatten the configuration and resolve nesting
-        new_states = self._flatten(states, *args, **kwargs)
+        new_states = self.traverse(states, *args, **kwargs)
         super(HierarchicalMachine, self).add_states(new_states, *args, **kwargs)
         while len(self._buffered_transitions) > 0:
             args = self._buffered_transitions.pop()
@@ -216,18 +219,11 @@ class HierarchicalMachine(Machine):
                                                    'conditions': conditions, 'unless': unless, 'before': bp_before,
                                                    'after': bp_after})
         if isinstance(source, string_types):
-            source = [x.name for x in self.states.values() if x.children is None] \
-                if source == '*' else [source]
+            source = [x.name for x in self.states.values()] if source == '*' else [source]
 
-        for s in source:
-            state = self.get_state(s)
-            # if a transition should be possible from a branch state,
-            # it should be possible from all its children as well.
-            # e.g. C -advance-> A will also create C_1 -advance-> A, C_4_U -advance-> A and so so.
-            if state.children is not None:
-                source.remove(s)
-                source.extend(self._traverse_nested(state.children))
-
+        if trigger not in self.events:
+             self.events[trigger] = NestedEvent(trigger, self)
+             setattr(self.model, trigger, self.events[trigger].trigger)
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
                                                         unless=unless, before=before, after=after)
 

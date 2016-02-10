@@ -58,7 +58,7 @@ class TestTransitions(TestsCore):
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         self.assertEquals(m.initial, 'A')
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='C')
-        self.assertEquals(m.initial, 'C_1')
+        self.assertEquals(m.initial, 'C')
         m = self.stuff.machine_cls(states=states, transitions=transitions)
         self.assertEquals(m.initial, 'initial')
 
@@ -69,15 +69,15 @@ class TestTransitions(TestsCore):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'},
-            {'trigger': 'run', 'source': 'C_1', 'dest': 'C_2'}
+            {'trigger': 'run', 'source': 'C', 'dest': 'C.1'}
         ]
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.walk()
         self.assertEquals(m.state, 'B')
         m.run()
-        self.assertEquals(m.state, 'C_1')
+        self.assertEquals(m.state, 'C')
         m.run()
-        self.assertEquals(m.state, 'C_2')
+        self.assertEquals(m.state, 'C.1')
         # Define with list of lists
         transitions = [
             ['walk', 'A', 'B'],
@@ -95,13 +95,13 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('advance', 'B', 'C')
         s.machine.add_transition('advance', 'C', 'D')
         s.machine.add_transition('reset', '*', 'A')
-        self.assertEqual(len(s.machine.events['reset'].transitions['C_1']), 1)
+        self.assertEqual(len(s.machine.events['reset'].transitions['C.1']), 1)
         s.advance()
         self.assertEquals(s.state, 'B')
         self.assertFalse(s.is_A())
         self.assertTrue(s.is_B())
         s.advance()
-        self.assertEquals(s.state, 'C_1')
+        self.assertEquals(s.state, 'C')
 
     def test_conditions(self):
         s = self.stuff
@@ -112,20 +112,20 @@ class TestTransitions(TestsCore):
         s.advance()
         self.assertEquals(s.state, 'B')
         s.advance()
-        self.assertEquals(s.state, 'C_1')
+        self.assertEquals(s.state, 'C')
         s.advance()
-        self.assertEquals(s.state, 'C_1')
+        self.assertEquals(s.state, 'C')
 
     def test_multiple_add_transitions_from_state(self):
         s = self.stuff
         s.machine.add_transition(
             'advance', 'A', 'B', conditions=['this_fails'])
         s.machine.add_transition('advance', 'A', 'C')
-        s.machine.add_transition('advance', 'C_1', 'C_2')
+        s.machine.add_transition('advance', 'C', 'C.2')
         s.advance()
-        self.assertEquals(s.state, 'C_1')
+        self.assertEquals(s.state, 'C')
         s.advance()
-        self.assertEquals(s.state, 'C_2')
+        self.assertEquals(s.state, 'C.2')
 
     def test_use_machine_as_model(self):
         states = ['A', 'B', 'C', 'D']
@@ -144,8 +144,8 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('fast', 'A', 'C_3')
         s.machine.on_enter_C('hello_world')
         s.machine.on_exit_C('goodbye')
-        s.machine.on_enter_C_3_a('greet')
-        s.machine.on_exit_C_3('meet')
+        s.machine.on_enter_C._3.a('greet')
+        s.machine.on_exit_C._3('meet')
         s.advance()
         self.assertEquals(s.state, 'C_1')
         self.assertEquals(s.message, 'Hello World!')
@@ -167,35 +167,35 @@ class TestTransitions(TestsCore):
 
     def test_enter_exit_nested(self):
         s = self.stuff
-        s.machine.add_transition('advance', 'A', 'C')
+        s.machine.add_transition('advance', 'A', 'C.1')
         s.machine.add_transition('reverse', 'C', 'A')
-        s.machine.add_transition('lower', 'C_1', 'C_3')
-        s.machine.add_transition('rise', 'C_3', 'C_1')
-        s.machine.add_transition('fast', 'A', 'C_3')
+        s.machine.add_transition('lower', 'C.1', 'C.3.a')
+        s.machine.add_transition('rise', 'C.3', 'C.1')
+        s.machine.add_transition('fast', 'A', 'C.3.a')
         for name, state in s.machine.states.items():
             state.on_enter.append('increase_level')
             state.on_exit.append('decrease_level')
 
         s.advance()
-        self.assertEquals(s.state, 'C_1')
+        self.assertEquals(s.state, 'C.1')
         self.assertEquals(s.level, 2)
         s.lower()
-        self.assertEquals(s.state, 'C_3_a')
+        self.assertEquals(s.state, 'C.3.a')
         self.assertEquals(s.level, 3)
         s.rise()
-        self.assertEquals(s.state, 'C_1')
+        self.assertEquals(s.state, 'C.1')
         self.assertEquals(s.level, 2)
         s.reverse()
         self.assertEquals(s.state, 'A')
         self.assertEquals(s.level, 1)
         s.fast()
-        self.assertEquals(s.state, 'C_3_a')
+        self.assertEquals(s.state, 'C.3.a')
         self.assertEquals(s.level, 3)
         s.to_A()
         self.assertEquals(s.state, 'A')
         self.assertEquals(s.level, 1)
-        s.to_C_3_a()
-        self.assertEquals(s.state, 'C_3_a')
+        s.to_C._3.a()
+        self.assertEquals(s.state, 'C.3.a')
         self.assertEquals(s.level, 3)
 
     def test_ordered_transitions(self):
