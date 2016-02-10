@@ -206,15 +206,16 @@ class HierarchicalMachine(Machine):
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None):
         if not (trigger.startswith('to_') and source == '*'):
-            bp_before = None
-            bp_after = None
+            bp_prepare = prepare
+            bp_before = before
+            bp_after = after
             if self.before_state_change:
                 bp_before = listify(before) + listify(self.before_state_change)
             if self.after_state_change:
                 bp_after = listify(after) + listify(self.after_state_change)
             self.blueprints['transitions'].append({'trigger': trigger, 'source': source, 'dest': dest,
-                                                   'conditions': conditions, 'unless': unless, 'before': bp_before,
-                                                   'after': bp_after})
+                                                   'conditions': conditions, 'unless': unless, 'prepare': bp_prepare,
+                                                   'before': bp_before, 'after': bp_after})
         if isinstance(source, string_types):
             source = [x.name for x in self.states.values() if x.children is None] \
                 if source == '*' else [source]
@@ -229,5 +230,5 @@ class HierarchicalMachine(Machine):
                 source.extend(self._traverse_nested(state.children))
 
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
-                                                        unless=unless, before=before, after=after)
+                                                        unless=unless, prepare=prepare, before=before, after=after)
 
