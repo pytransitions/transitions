@@ -535,14 +535,8 @@ class Machine(object):
                 state = self.get_state(target)
                 return partial(state.add_callback, callback_type[3:])
 
-            else:
-                raise AttributeError("{} does not exist".format(name))
-
-        else:
-            if name in self.__dict__:
-                return self.__dict__[name]
-            else:
-                raise AttributeError("{} does not exist".format(name))
+        # Nothing matched
+        raise AttributeError("{} does not exist".format(name))
 
 
 class MachineError(Exception):
