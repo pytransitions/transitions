@@ -27,61 +27,6 @@ class TestTransitions(TestCase):
     def tearDown(self):
         pass
 
-    def test_blueprint_simple(self):
-        states = ['A', 'B', 'C', 'D']
-        # Define with list of dictionaries
-        transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
-        m = Machine(states=states, transitions=transitions, before_state_change='before_state_change',
-                    after_state_change='after_state_change', initial='A')
-
-        self.assertEqual(len(m.blueprints['states']), 4)
-        self.assertEqual(m.blueprints['states'][3], 'D')
-        self.assertEqual(len(m.blueprints['transitions']), 3)
-        self.assertEqual(m.blueprints['transitions'][2]['trigger'], 'sprint')
-
-        m.add_transition('fly', 'D', 'A')
-        self.assertEqual(len(m.blueprints['transitions']), 4)
-        self.assertEqual(m.blueprints['transitions'][3]['source'], 'D')
-
-    def test_blueprint_nested(self):
-        c = NestedState('C')
-        c1 = NestedState('C_1', parent=c)
-        c2 = NestedState('C_2', parent=c)
-        c3 = NestedState('C_3', parent=c)
-        c.children = [c1, c2, c3]
-
-        states = ['A', {'name': 'B', 'on_enter': 'chirp', 'children': ['1', '2', '3']},
-                  c, 'D']
-        # Define with list of dictionaries
-        transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B','before': 'before_state_change',
-             'after': 'after_state_change' },
-            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
-        m = Machine(states=states, transitions=transitions, before_state_change='before_state_change',
-                    after_state_change='after_state_change', initial='A')
-
-        m.before_state_change = MagicMock()
-        m.after_state_change = MagicMock()
-
-        self.assertEqual(len(m.blueprints['states']), 4)
-        self.assertEqual(m.blueprints['states'][3], 'D')
-        self.assertEqual(len(m.blueprints['transitions']), 3)
-        # transition 'walk' before should contain two calls of the same method
-        self.assertEqual(len(m.blueprints['transitions'][0]['before']), 2)
-        self.assertEqual(len(m.blueprints['transitions'][0]['after']), 2)
-        self.assertEqual(len(m.blueprints['transitions'][1]['before']), 1)
-        self.assertEqual(m.blueprints['transitions'][2]['trigger'], 'sprint')
-
-        m.add_transition('fly', 'D', 'A')
-        self.assertEqual(len(m.blueprints['transitions']), 4)
-        self.assertEqual(m.blueprints['transitions'][3]['source'], 'D')
-
     def test_blueprint_reuse(self):
         states = ['1', '2', '3']
         transitions = [
@@ -98,7 +43,7 @@ class TestTransitions(TestCase):
         new_states = ['A', 'B', {'name':'C', 'children': counter}]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'forward', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'forward', 'source': 'B', 'dest': 'C.1'},
             {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
             {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
             {'trigger': 'calc', 'source': '*', 'dest': 'C'},
@@ -117,15 +62,15 @@ class TestTransitions(TestCase):
         self.assertEqual(walker.state, 'A')
         walker.forward()
         walker.forward()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C.1')
         walker.increase()
-        self.assertEqual(walker.state, 'C_2')
+        self.assertEqual(walker.state, 'C.2')
         walker.reset()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C.1')
         walker.to_A()
         self.assertEqual(walker.state, 'A')
         walker.calc()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C')
 
     def test_blueprint_remap(self):
         states = ['1', '2', '3', 'finished']
@@ -143,10 +88,10 @@ class TestTransitions(TestCase):
         new_states = ['A', 'B', {'name': 'C', 'children': counter, 'remap': {'finished': 'A'}}]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'forward', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'forward', 'source': 'B', 'dest': 'C.1'},
             {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
             {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
-            {'trigger': 'calc', 'source': '*', 'dest': 'C'},
+            {'trigger': 'calc', 'source': '*', 'dest': 'C.1'},
         ]
 
         walker = Machine(states=new_states, transitions=new_transitions, before_state_change='watch',
@@ -165,19 +110,21 @@ class TestTransitions(TestCase):
         self.assertEqual(walker.state, 'A')
         walker.forward()
         walker.forward()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C.1')
         walker.increase()
-        self.assertEqual(walker.state, 'C_2')
+        self.assertEqual(walker.state, 'C.2')
         walker.reset()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C.1')
         walker.to_A()
         self.assertEqual(walker.state, 'A')
         walker.calc()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C.1')
         walker.increase()
         walker.increase()
         walker.done()
         self.assertEqual(walker.state, 'A')
+        if 'C.finished' in walker.states:
+            self.fail()
 
     def test_wrong_nesting(self):
 

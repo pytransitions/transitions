@@ -125,7 +125,7 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
         # if 'process' has not been locked, it is still running
         # we have to wait to be sure it is done
         time.sleep(1)
-        self.assertEqual(self.stuff.state, "C_1")
+        self.assertEqual(self.stuff.state, "C")
 
     def test_pickle(self):
         import sys
@@ -153,7 +153,7 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
         # and also not share locks
         begin = time.time()
         # stuff should not be locked and execute fast
-        self.assertTrue(self.stuff.machine.is_state("C_1"))
+        self.assertTrue(self.stuff.machine.is_state("C"))
         fast = time.time()
         # stuff2 should be locked and take about 1 second
         # to be executed

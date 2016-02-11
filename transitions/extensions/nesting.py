@@ -45,7 +45,10 @@ class NestedState(State):
         super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
                                           ignore_invalid_triggers=ignore_invalid_triggers)
         self.children = children
-        self.level = self.parent.level + 1 if self.parent is not None else 0
+
+    @property
+    def level(self):
+        return self.parent.level + 1 if self.parent is not None else 0
 
     @property
     def name(self):
@@ -120,7 +123,6 @@ class NestedEvent(Event):
 class HierarchicalMachine(Machine):
 
     def __init__(self, *args, **kwargs):
-        self.blueprints = {'states': [], 'transitions': []}
         self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
@@ -129,6 +131,9 @@ class HierarchicalMachine(Machine):
     def _create_transition(*args, **kwargs):
         return NestedTransition(*args, **kwargs)
 
+
+    # TODO rework to_blueprint
+    # TODO solve Event Locked/Nested issue
     # The chosen approach for hierarchical state machines was 'flatten' which means that nested states
     # are converted into linked states with a naming scheme that concatenates the state name with
     # its parent's name. Substate Bar of Foo becomes Foo_Bar. An alternative approach would be to use actual nested
@@ -167,71 +172,47 @@ class HierarchicalMachine(Machine):
                 else:
                     tmp_states.insert(0, NestedState(**state))
             elif isinstance(state, HierarchicalMachine):
-                tmp_states.extend(self.traverse(state.blueprints['states'], on_enter=on_enter, on_exit=on_exit,
-                                                ignore_invalid_triggers=ignore,
-                                                parent=parent, remap=remap))
-                for trans in state.blueprints['transitions']:
-                    source = trans['source']
-                    dest = trans['dest'] if trans['dest'] not in remap else remap[trans['dest']]
-                    self._buffered_transitions.append((trans['trigger'], source, dest, trans.get('conditions', None),
-                                                       trans.get('unless', None), trans.get('before', None),
-                                                       trans.get('after', None)))
+                new_states = [s for s in state.states.values() if s.level == 0 and s.name not in remap]
+                for s in new_states:
+                    s.parent = parent
+                tmp_states.extend(new_states)
+                for trigger, event in state.events.items():
+                    if trigger.startswith('to_'):
+                        path = trigger[3:].split(NestedState.separator)
+                        ppath = parent.name.split(NestedState.separator)
+                        path = ['to_'+ppath[0]] + ppath[1:] + path
+                        trigger = '.'.join(path)
+                    for transitions in event.transitions.values():
+                        for transition in transitions:
+                            src = transition.source
+                            dst = parent.name + NestedState.separator + transition.dest\
+                                if transition.dest not in remap else remap[transition.dest]
+                            self._buffered_transitions.append({'trigger': trigger,
+                                                               'source': parent.name + NestedState.separator + src,
+                                                               'dest': dst,
+                                                               'conditions': transition.conditions,
+                                                               'before': transition.before,
+                                                               'after': transition.after})
+
             elif isinstance(state, NestedState):
                 tmp_states.append(state)
 
             new_states.extend(tmp_states)
         return new_states
 
-    def _to_blueprint(self, states):
-        states = listify(states)
-        blueprints = []
-        for state in states:
-            if isinstance(state, string_types):
-                bp = state
-            elif isinstance(state, dict):
-                bp = copy.deepcopy(state)
-                bp.pop('parent', None)
-                if 'children' in state:
-                    bp['children'] = self._to_blueprint(state['children'])
-            elif isinstance(state, NestedState):
-                bp = {'name': state.name, 'on_enter': state.on_enter, 'on_exit': state.on_exit,
-                      'ignore_invalid_triggers': state.ignore_invalid_triggers}
-                if state.children is not None:
-                    bp['children'] = self._to_blueprint(state.children)
-            elif isinstance(state, Machine):
-                # this happens if there
-                if len(states) > 1:
-                    raise ValueError("States arrays and nested machines cannot be mixed!")
-                return state.blueprints['states']
-            else:
-                raise ValueError('Do not know state of type %s' % type(state))
-
-            blueprints.append(bp)
-        return blueprints
-
     def add_states(self, states, *args, **kwargs):
-        self.blueprints['states'].extend(self._to_blueprint(states))
-
         # preprocess states to flatten the configuration and resolve nesting
         new_states = self.traverse(states, *args, **kwargs)
         super(HierarchicalMachine, self).add_states(new_states, *args, **kwargs)
 
+        # for t in self._buffered_transitions:
+        #     print(t['trigger'])
         while len(self._buffered_transitions) > 0:
             args = self._buffered_transitions.pop()
-            self.add_transition(*args)
+            self.add_transition(**args)
 
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None):
-        if not (trigger.startswith('to_') and source == '*'):
-            bp_before = None
-            bp_after = None
-            if self.before_state_change:
-                bp_before = listify(before) + listify(self.before_state_change)
-            if self.after_state_change:
-                bp_after = listify(after) + listify(self.after_state_change)
-            self.blueprints['transitions'].append({'trigger': trigger, 'source': source, 'dest': dest,
-                                                   'conditions': conditions, 'unless': unless, 'before': bp_before,
-                                                   'after': bp_after})
         if isinstance(source, string_types):
             source = [x.name for x in self.states.values()] if source == '*' else [source]
 
