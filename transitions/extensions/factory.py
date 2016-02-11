@@ -1,7 +1,7 @@
 from ..core import Machine
 
-from .nesting import HierarchicalMachine, NestedTransition
-from .locking import LockedMachine
+from .nesting import HierarchicalMachine, NestedTransition, NestedEvent
+from .locking import LockedMachine, LockedEvent
 from .diagrams import MachineGraphSupport, TransitionGraphSupport
 
 
@@ -32,6 +32,10 @@ class NestedGraphTransition(TransitionGraphSupport, NestedTransition):
     pass
 
 
+class LockedNestedEvent(LockedEvent, NestedEvent):
+    pass
+
+
 class HierarchicalGraphMachine(MachineGraphSupport, HierarchicalMachine):
 
     @staticmethod
@@ -44,7 +48,10 @@ class LockedHierarchicalGraphMachine(LockedMachine, HierarchicalGraphMachine):
 
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
-    pass
+
+    @staticmethod
+    def _create_event(*args, **kwargs):
+        return LockedNestedEvent(*args, **kwargs);
 
 
 class LockedGraphMachine(MachineGraphSupport, LockedMachine):

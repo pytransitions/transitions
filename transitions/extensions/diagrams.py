@@ -114,7 +114,7 @@ class AAGraph(AGraph):
         for state in states:
             if state.name in self.seen:
                 continue
-            elif hasattr(state, 'children') and state.children is not None:
+            elif hasattr(state, 'children') and len(state.children) > 0:
                 self.seen.append(state.name)
                 sub = container.add_subgraph(name="cluster_" + state.name, label=state.name)
                 self._add_nodes(state.children, sub)
@@ -161,7 +161,7 @@ class MachineGraphSupport(Machine):
         super(MachineGraphSupport, self).__init__(*args, **kwargs)
 
         # Create graph at beginnning
-        self.graph = self.get_graph(title=title)
+        self.graph = self.get_graph(title=title, diagram_class=AAGraph)
         self.title = title
 
         # Set initial node as active

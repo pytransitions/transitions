@@ -1,7 +1,6 @@
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
 
 from six import string_types
-from os.path import commonprefix
 import copy
 
 import logging
@@ -39,12 +38,14 @@ class FunctionWrapper(object):
 class NestedState(State):
     separator = '.'
 
-    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, children=None, parent=None):
+    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, parent=None):
         self._name = name
         self.parent = parent
         super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
                                           ignore_invalid_triggers=ignore_invalid_triggers)
-        self.children = children
+        if self.parent:
+            self.parent.children.append(self)
+        self.children = []
 
     @property
     def level(self):
@@ -131,6 +132,9 @@ class HierarchicalMachine(Machine):
     def _create_transition(*args, **kwargs):
         return NestedTransition(*args, **kwargs)
 
+    @staticmethod
+    def _create_event(*args, **kwargs):
+        return NestedEvent(*args, **kwargs)
 
     # TODO rework to_blueprint
     # TODO solve Event Locked/Nested issue
@@ -164,18 +168,18 @@ class HierarchicalMachine(Machine):
                     # previous parents. Call _flatten again to check for more nested states.
                     p = NestedState(state['name'], on_enter=on_enter, on_exit=on_exit,
                                     ignore_invalid_triggers=ignore, parent=parent)
-                    p.children = self.traverse(state['children'], on_enter=on_enter, on_exit=on_exit,
+                    nested = self.traverse(state['children'], on_enter=on_enter, on_exit=on_exit,
                                                ignore_invalid_triggers=ignore,
                                                parent=p, remap=state.get('remap', {}))
                     tmp_states.append(p)
-                    tmp_states.extend(p.children)
+                    tmp_states.extend(nested)
                 else:
                     tmp_states.insert(0, NestedState(**state))
             elif isinstance(state, HierarchicalMachine):
-                new_states = [s for s in state.states.values() if s.level == 0 and s.name not in remap]
-                for s in new_states:
+                inner_states = [s for s in state.states.values() if s.level == 0 and s.name not in remap]
+                for s in inner_states:
                     s.parent = parent
-                tmp_states.extend(new_states)
+                tmp_states.extend(state.states.values())
                 for trigger, event in state.events.items():
                     if trigger.startswith('to_'):
                         path = trigger[3:].split(NestedState.separator)
@@ -196,8 +200,16 @@ class HierarchicalMachine(Machine):
 
             elif isinstance(state, NestedState):
                 tmp_states.append(state)
-
+            else:
+                raise ValueError
             new_states.extend(tmp_states)
+
+        duplicate_check = []
+        for s in new_states:
+            if s.name in duplicate_check:
+                raise ValueError
+            else:
+                duplicate_check.append(s.name)
         return new_states
 
     def add_states(self, states, *args, **kwargs):
@@ -217,7 +229,7 @@ class HierarchicalMachine(Machine):
             source = [x.name for x in self.states.values()] if source == '*' else [source]
 
         if trigger not in self.events:
-            self.events[trigger] = NestedEvent(trigger, self)
+            self.events[trigger] = self._create_event(trigger, self)
             if trigger.startswith('to_'):
                 path = trigger[3:].split(NestedState.separator)
                 if hasattr(self.model, 'to_' + path[0]):

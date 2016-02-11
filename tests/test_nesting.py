@@ -194,6 +194,7 @@ class TestTransitions(TestsCore):
         s.to_A()
         self.assertEquals(s.state, 'A')
         self.assertEquals(s.level, 1)
+        lol = s.to_C
         s.to_C._3.a()
         self.assertEquals(s.state, 'C.3.a')
         self.assertEquals(s.level, 3)

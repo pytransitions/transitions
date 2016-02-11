@@ -322,6 +322,10 @@ class Machine(object):
     def _create_transition(*args, **kwargs):
         return Transition(*args, **kwargs)
 
+    @staticmethod
+    def _create_event(*args, **kwargs):
+        return Event(*args, **kwargs)
+
     @property
     def initial(self):
         """ Return the initial state. """
@@ -426,7 +430,7 @@ class Machine(object):
 
         """
         if trigger not in self.events:
-            self.events[trigger] = Event(trigger, self)
+            self.events[trigger] = self._create_event(trigger, self)
             setattr(self.model, trigger, self.events[trigger].trigger)
 
         if isinstance(source, string_types):

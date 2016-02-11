@@ -43,8 +43,6 @@ class LockedMachine(Machine):
         except AttributeError:
             return super(LockedMachine, self).__getattr__(item)
 
-    def add_transition(self, trigger, source, dest, **kwargs):
-        if trigger not in self.events:
-             self.events[trigger] = LockedEvent(trigger, self)
-             setattr(self.model, trigger, self.events[trigger].trigger)
-        super(LockedMachine, self).add_transition(trigger, source, dest, **kwargs)
+    @staticmethod
+    def _create_event(*args, **kwargs):
+        return LockedEvent(*args, **kwargs)

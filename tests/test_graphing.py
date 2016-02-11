@@ -51,9 +51,9 @@ class TestDiagrams(TestCase):
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},   # 1 edge
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},    # + 1 edge
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 3 edges
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 1 edges
              'conditions': 'is_fast'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 3 edges = 8 edges
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 1 edges = 4 edges
         ]
 
         hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
@@ -71,7 +71,7 @@ class TestDiagrams(TestCase):
         for t in triggers:
             self.assertIsNotNone(getattr(m, t))
 
-        self.assertEqual(len(graph.edges()), 8)  # see above
+        self.assertEqual(len(graph.edges()), 4)  # see above
 
         m.walk()
         m.run()
@@ -90,9 +90,9 @@ class TestDiagrams(TestCase):
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},   # 1 edge
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},    # + 1 edge
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 3 edges
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 1 edges
              'conditions': 'is_fast'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 3 edges = 8 edges
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 1 edges = 4 edges
         ]
 
         hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
@@ -110,7 +110,7 @@ class TestDiagrams(TestCase):
         for t in triggers:
             self.assertIsNotNone(getattr(m, t))
 
-        self.assertEqual(len(graph.edges()), 8)  # see above
+        self.assertEqual(len(graph.edges()), 4)  # see above
 
         # Force a new
         graph2 = m.get_graph(title="Second Graph", force_new=True)
