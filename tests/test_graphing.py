@@ -65,7 +65,7 @@ class TestDiagrams(TestCase):
         # Test that graph properties match the Machine
         # print((set(m.states.keys()), )
         node_names = set([n.name for n in graph.nodes()])
-        self.assertEqual(set(m.states.keys()), node_names)
+        self.assertEqual(set(m.states.keys()) - set('C'), node_names)
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
@@ -104,7 +104,7 @@ class TestDiagrams(TestCase):
         # Test that graph properties match the Machine
         # print((set(m.states.keys()), )
         node_names = set([n.name for n in graph.nodes()])
-        self.assertEqual(set(m.states.keys()), node_names)
+        self.assertEqual(set(m.states.keys()) - set('C'), node_names)
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
