@@ -80,7 +80,7 @@ class AGraph(Diagram):
                     container.add_edge(src, dst, label=lbl)
 
     def _transition_label(self, edge_label, tran):
-        if tran.conditions:
+        if self.machine.show_conditions and tran.conditions:
             return edge_label + AGraph.trigger_condition_sep + '&'.join(
                 c.func if c.target else '!' + c.func
                 for c in tran.conditions
@@ -168,13 +168,15 @@ class MachineGraphSupport(Machine):
         self.set_node_style(self.graph.get_node(self.current_state.name), 'active')
 
     def __init__(self, *args, **kwargs):
-        # remove title from keywords
+        # remove graph config from keywords
         title = kwargs.pop('title', 'State Machine')
+        show_conditions = kwargs.pop('show_conditions', False)
         super(MachineGraphSupport, self).__init__(*args, **kwargs)
 
         # Create graph at beginnning
-        self.graph = self.get_graph(title=title)
+        self.show_conditions = show_conditions
         self.title = title
+        self.graph = self.get_graph(title=title)
 
         # Set initial node as active
         self.set_node_style(self.graph.get_node(self.initial), 'active')
