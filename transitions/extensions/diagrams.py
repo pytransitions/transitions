@@ -18,8 +18,6 @@ class Diagram(object):
 
 class AGraph(Diagram):
 
-    trigger_condition_sep = ' / '
-
     machine_attributes = {
         'directed': True,
         'strict': False,
@@ -79,11 +77,18 @@ class AGraph(Diagram):
                     lbl = self._transition_label(label, t)
                     container.add_edge(src, dst, label=lbl)
 
+    @staticmethod
+    def edge_label_from_transition_label(label):
+        return label.split(' [')[0]  # if no condition, label is returned
+
     def _transition_label(self, edge_label, tran):
         if self.machine.show_conditions and tran.conditions:
-            return edge_label + AGraph.trigger_condition_sep + '&'.join(
-                c.func if c.target else '!' + c.func
-                for c in tran.conditions
+            return '{edge_label} [{conditions}]'.format(
+                edge_label=edge_label,
+                conditions='&'.join(
+                    c.func if c.target else '!' + c.func
+                    for c in tran.conditions
+                ),
             )
         return edge_label
 
