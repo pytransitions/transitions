@@ -4,6 +4,7 @@ except ImportError:
     pass
 
 from transitions import Machine, State, MachineError
+from transitions.core import listify
 from unittest import TestCase
 from .utils import Stuff, InheritedStuff
 
@@ -40,6 +41,12 @@ class TestTransitions(TestCase):
         m = Machine(model=s, states=states, transitions=transitions, initial='State2')
         s.advance()
         self.assertEquals(s.message, 'Hello World!')
+
+    def test_listify(self):
+        self.assertEquals(listify(4), [4])
+        self.assertEquals(listify(None), [])
+        self.assertEquals(listify((4, 5)), (4, 5))
+        self.assertEquals(listify([1, 3]), [1, 3])
 
     def test_property_initial(self):
         states = ['A', 'B', 'C', 'D']
