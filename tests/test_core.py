@@ -504,3 +504,13 @@ class TestTransitions(TestCase):
         with self.assertRaises(MachineError):
                 m.model.on_exit_A()
 
+    def test_logger(self):
+        logger = MagicMock()
+        m = Machine(states=['A', 'B'],
+                    transitions=[
+                        {'trigger': 'e0', 'source': 'A', 'dest': 'B'},
+                    ],
+                    initial='A',
+                    specific_logger=logger)
+        m.e0()  # trigger transition, which will trigger some logging
+        self.assertTrue(logger.info.called)
