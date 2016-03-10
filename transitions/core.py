@@ -46,13 +46,13 @@ class State(object):
         """ Triggered when a state is entered. """
         for oe in self.on_enter:
             event_data.machine.callback(oe, event_data)
-        logger.info("Entered state %s" % self.name)
+        event_data.machine.logger.info("Entered state %s", self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
             event_data.machine.callback(oe, event_data)
-        logger.info("Exited state %s" % self.name)
+        event_data.machine.logger.info("Exited state %s", self.name)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -128,13 +128,14 @@ class Transition(object):
         Returns: boolean indicating whether or not the transition was
             successfully executed (True if successful, False if not).
         """
+        machine = event_data.machine
+        logger = machine.logger
         logger.info("Initiating transition from state %s to state %s...",
                     self.source, self.dest)
-        machine = event_data.machine
 
         for func in self.prepare:
             machine.callback(getattr(event_data.model, func), event_data)
-            logger.info("Executing callback '%s' before conditions." % func)
+            logger.info("Executing callback '%s' before conditions.", func)
 
         for c in self.conditions:
             if not c.check(event_data):
@@ -143,13 +144,13 @@ class Transition(object):
                 return False
         for func in self.before:
             machine.callback(func, event_data)
-            logger.info("Executing callback '%s' before transition." % func)
+            logger.info("Executing callback '%s' before transition.", func)
 
         self._change_state(event_data)
 
         for func in self.after:
             machine.callback(func, event_data)
-            logger.info("Executed callback '%s' after transition." % func)
+            logger.info("Executed callback '%s' after transition.", func)
         return True
 
     def _change_state(self, event_data):
@@ -232,7 +233,7 @@ class Event(object):
             msg = "Can't trigger event %s from state %s!" % (self.name,
                                                              state_name)
             if self.machine.current_state.ignore_invalid_triggers:
-                logger.warning(msg)
+                self.machine.logger.warning(msg)
             else:
                 raise MachineError(msg)
         event = EventData(self.machine.current_state, self, self.machine,
@@ -263,7 +264,8 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
-                 before_state_change=None, after_state_change=None):
+                 before_state_change=None, after_state_change=None,
+                 specific_logger=None):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -297,6 +299,8 @@ class Machine(object):
             after_state_change: A callable called on every change state after
                 the transition happened. It receives the very same args as normal
                 callbacks
+            specific_logger (Logger): A specific logger for this machine. If
+                not set, the global module logger instance is used.
         """
         self.model = self if model is None else model
         self.states = OrderedDict()
@@ -307,6 +311,7 @@ class Machine(object):
         self.ignore_invalid_triggers = ignore_invalid_triggers
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
+        self.logger = specific_logger if specific_logger else logger
 
         if initial is None:
             self.add_states('initial')
@@ -328,6 +333,15 @@ class Machine(object):
 
         if ordered_transitions:
             self.add_ordered_transitions()
+
+    def __getstate__(self):
+        return {k: v
+                for k, v in self.__dict__.items()
+                if k != 'logger'}
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.logger = logger  # original logger is lost
 
     @staticmethod
     def _create_transition(*args, **kwargs):

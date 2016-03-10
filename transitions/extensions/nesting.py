@@ -94,6 +94,19 @@ class HierarchicalMachine(Machine):
             self.set_state(initial)
             self._last_state = initial
 
+    def __deepcopy__(self, memo):
+        # Machine logger attribute cannot be deepcopied but shallow copy has
+        # desired effect.
+        cls = type(self)
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == 'logger':
+                setattr(result, k, copy.copy(v))
+            else:
+                setattr(result, k, copy.deepcopy(v, memo))
+        return result
+
     # Instead of creating transitions directly, Machine now use a factory method which can be overridden
     @staticmethod
     def _create_transition(*args, **kwargs):
