@@ -1,5 +1,5 @@
 """
-When instanciating multiple Machine, it can be useful to set different
+When instantiating multiple Machine, it can be useful to set different
 logger per machine. This example show how to add a specific log prefix
 for each machine log entry.
 """
