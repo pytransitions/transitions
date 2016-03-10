@@ -148,10 +148,12 @@ class MachineGraphSupport(Machine):
     _pickle_blacklist = ['graph']
 
     def __getstate__(self):
-        return {k: v for k, v in self.__dict__.items() if k not in self._pickle_blacklist}
+        return {k: v
+                for k, v in super(MachineGraphSupport, self).__getstate__().items()
+                if k not in self._pickle_blacklist}
 
     def __setstate__(self, state):
-        self.__dict__.update(state)
+        super(MachineGraphSupport, self).__setstate__(state)
         self.graph = self.get_graph(title=self.title)
         self.set_node_style(self.graph.get_node(self.current_state.name), 'active')
 

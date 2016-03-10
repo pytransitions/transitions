@@ -334,6 +334,15 @@ class Machine(object):
         if ordered_transitions:
             self.add_ordered_transitions()
 
+    def __getstate__(self):
+        return {k: v
+                for k, v in self.__dict__.items()
+                if k != 'logger'}
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.logger = logger  # original logger is lost
+
     @staticmethod
     def _create_transition(*args, **kwargs):
         return Transition(*args, **kwargs)
