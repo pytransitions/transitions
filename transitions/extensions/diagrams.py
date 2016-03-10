@@ -74,7 +74,19 @@ class AGraph(Diagram):
                 src = transitions[0]
                 for t in transitions[1]:
                     dst = t.dest
-                    container.add_edge(src, dst, label=label)
+                    lbl = self._transition_label(label, t)
+                    container.add_edge(src, dst, label=lbl)
+
+    def _transition_label(self, edge_label, tran):
+        if self.machine.show_conditions and tran.conditions:
+            return '{edge_label} [{conditions}]'.format(
+                edge_label=edge_label,
+                conditions=' & '.join(
+                    c.func if c.target else '!' + c.func
+                    for c in tran.conditions
+                ),
+            )
+        return edge_label
 
     def get_graph(self, title=None):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object
@@ -141,7 +153,8 @@ class AAGraph(AGraph):
                         dst = dst.get_initial().name
                     else:
                         dst = dst.name
-                    sub.add_edge(src, dst, label=label)
+                    lbl = self._transition_label(label, t)
+                    sub.add_edge(src, dst, label=lbl)
 
 
 class MachineGraphSupport(Machine):
@@ -156,13 +169,15 @@ class MachineGraphSupport(Machine):
         self.set_node_style(self.graph.get_node(self.current_state.name), 'active')
 
     def __init__(self, *args, **kwargs):
-        # remove title from keywords
+        # remove graph config from keywords
         title = kwargs.pop('title', 'State Machine')
+        show_conditions = kwargs.pop('show_conditions', False)
         super(MachineGraphSupport, self).__init__(*args, **kwargs)
 
         # Create graph at beginnning
-        self.graph = self.get_graph(title=title)
+        self.show_conditions = show_conditions
         self.title = title
+        self.graph = self.get_graph(title=title)
 
         # Set initial node as active
         self.set_node_style(self.graph.get_node(self.initial), 'active')
