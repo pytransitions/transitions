@@ -4,7 +4,7 @@ except ImportError:
     # python2
     pass
 from functools import partial
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, deque, OrderedDict
 from six import string_types
 import inspect
 import logging
@@ -227,21 +227,23 @@ class Event(object):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        state_name = self.machine.current_state.name
-        if state_name not in self.transitions:
-            msg = "Can't trigger event %s from state %s!" % (self.name,
-                                                             state_name)
-            if self.machine.current_state.ignore_invalid_triggers:
-                logger.warning(msg)
-            else:
-                raise MachineError(msg)
-        event = EventData(self.machine.current_state, self, self.machine,
-                          self.machine.model, args=args, kwargs=kwargs)
-        for t in self.transitions[state_name]:
-            event.transition = t
-            if t.execute(event):
-                return True
-        return False
+        def _trigger():
+            state_name = self.machine.current_state.name
+            if state_name not in self.transitions:
+                msg = "Can't trigger event %s from state %s!" % (self.name,
+                                                                 state_name)
+                if self.machine.current_state.ignore_invalid_triggers:
+                    logger.warning(msg)
+                else:
+                    raise MachineError(msg)
+            event = EventData(self.machine.current_state, self, self.machine,
+                              self.machine.model, args=args, kwargs=kwargs)
+            for t in self.transitions[state_name]:
+                event.transition = t
+                if t.execute(event):
+                    return True
+            return False
+        self.machine.trigger(_trigger)
 
     def add_callback(self, trigger, func):
         """ Add a new before or after callback to all available transitions.
@@ -308,6 +310,8 @@ class Machine(object):
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
 
+        self._triggering = deque()
+
         if initial is None:
             self.add_states('initial')
             initial = 'initial'
@@ -337,6 +341,28 @@ class Machine(object):
     def initial(self):
         """ Return the initial state. """
         return self._initial
+
+    def trigger(self, transition_trigger):
+        """ Run current trigger or queue behind currently active trigger. """
+        self._triggering.append(transition_trigger)
+        
+        if len(self._triggering) > 1:
+            # a trigger is already ongoing, newly appended trigger will be
+            # executed later.
+            return
+
+        while self._triggering:
+            try:
+                self._triggering[0]()
+            except Exception:
+                # if machine raise exception (e.g. bad transition) or any
+                # callback raise exception, event is done and all queued events
+                # cancelled.
+                self._triggering.clear()
+                raise
+            else:
+                # trigger is done
+                self._triggering.popleft()
 
     def is_state(self, state):
         """ Check whether the current state matches the named state. """
