@@ -620,7 +620,7 @@ Even though the core of transitions is kept lightweight, there are a variety of 
 - **Hierarchical State Machines** for nesting and reuse
 - **Threadsafe Locks** for parallel execution
 
-There are two mechanisms to retrieve a state machine instance with the desired features enabled. The first approach makes use of the convenience `factory` with the three parameters `graoh`, `nested` and `locked` set to `True` if the certain feature is required:
+There are two mechanisms to retrieve a state machine instance with the desired features enabled. The first approach makes use of the convenience `factory` with the three parameters `graph`, `nested` and `locked` set to `True` if the certain feature is required:
 
 ```python
 from transitions.extensions import MachineFactory
@@ -674,7 +674,7 @@ This produces something like this:
 
 ![state diagram example](https://cloud.githubusercontent.com/assets/19777/11530591/1a0c08a6-98f6-11e5-88a7-756585aafbbb.png)
 
-Also, have a look at our [example]('./examples') IPython/Jupyter notebooks for a more detailled example.
+Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailled example.
 
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
