@@ -31,7 +31,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
     - [Passing data](#passing-data)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
-    - Extensions
+    - [Extensions](#extensions)
         - [Diagrams](#diagrams)
         - [Hierarchical State Machine](#hsm)
         - [Threading](#threading)
@@ -612,7 +612,7 @@ machine = Machine(states=states, transitions=transitions, initial='solid')
 ...
 ```
 
-### Extensions
+### <a name="extensions"></a> Extensions
 
 Even though the core of transitions is kept lightweight, there are a variety of MixIns to extend its functionality. Currently supported are:
 
@@ -657,7 +657,7 @@ from transitions.extensions import LockedHierarchicalGraphMachine as Machine
 machine = Machine(model, states, transitions)
 ```
 
-#### <a name="hsm"></a> Diagrams
+#### <a name="diagrams"></a> Diagrams
 
 Additional Keyword: `title` (optional): Sets the title of the generated image.
 
@@ -712,7 +712,7 @@ machine.state # phew, what a ride
 
 Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`. Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine. This means a substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be refered to as `foo_bar_baz` and so on. When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates. Third, nested states can overwrite transition behaviour of their parents. If a transition is not known to the current state it will be delegated to its parent.
 
-In some cases underscore as a separator is not sufficient. For instance if state names consists of more than one word and a concatenated naming such as `state_A_name_state_C` would be confusing. Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks) as seen below:
+In some cases underscore as a separator is not sufficient. For instance if state names consists of more than one word and a concatenated naming such as `state_A_name_state_C` would be confusing. Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks). You can even use unicode characters if you use python 3:
 
 ```python
 from transitions.extensions.nesting import NestedState
@@ -749,7 +749,7 @@ Instead of `to_C_3_a()` auto transition is called as `to_C.s3.a()`. If interacti
 
 #### Reuse of previously created HSMs
 
-Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
+Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them. Be aware that this will *embed* the passed machine's states. This means if your states had been altered *before*, this change will be persistent.
 
 ```python
 count_states = ['1', '2', '3', 'done']

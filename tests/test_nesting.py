@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
+
 try:
     from builtins import object
 except ImportError:
     pass
 
+import sys
 
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState as State
@@ -287,7 +290,7 @@ class TestTransitions(TestsCore):
         self.setUp()
         self.test_state_change_listeners()
         self.test_nested_auto_transitions()
-        State.separator = '→'
+        State.separator = '.' if sys.version_info[0] < 3 else u'↦'
         self.setUp()
         self.test_enter_exit_nested()
         self.setUp()
@@ -331,7 +334,7 @@ class TestTransitions(TestsCore):
         machine.on_enter_caffeinated_running('callback_method')
 
     def test_example_two(self):
-        State.separator = '↦'
+        State.separator = '.' if sys.version_info[0] < 3 else u'↦'
         states = ['A', 'B',
           {'name': 'C', 'children':['1', '2',
             {'name': '3', 'children': ['a', 'b', 'c']}
@@ -340,7 +343,7 @@ class TestTransitions(TestsCore):
 
         transitions = [
             ['reset', 'C', 'A'],
-            ['reset', 'C↦2', 'C']  # overwriting parent reset
+            ['reset', 'C%s2' % State.separator, 'C']  # overwriting parent reset
         ]
 
         # we rely on auto transitions
@@ -349,7 +352,7 @@ class TestTransitions(TestsCore):
         machine.to_B()  # exit state A, enter state B
         machine.to_C()  # exit B, enter C
         machine.to_C.s3.a()  # enter C↦a; enter C↦3↦a;
-        self.assertEqual(machine.state, 'C↦3↦a')
+        self.assertEqual(machine.state, 'C{0}3{0}a'.format(State.separator))
         machine.to_C.s2()  # exit C↦3↦a, exit C↦3, enter C↦2
         machine.reset()  # exit C↦2; reset C has been overwritten by C↦3
         self.assertEqual(machine.state, 'C')
