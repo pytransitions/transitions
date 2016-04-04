@@ -233,6 +233,7 @@ class Event(object):
                                                              state_name)
             if self.machine.current_state.ignore_invalid_triggers:
                 logger.warning(msg)
+                return False
             else:
                 raise MachineError(msg)
         event = EventData(self.machine.current_state, self, self.machine,
