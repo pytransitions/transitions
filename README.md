@@ -29,10 +29,10 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Conditional transitions](#conditional-transitions)
         - [Callbacks](#transition-callbacks)
     - [Passing data](#passing-data)
-    - [Diagrams](#diagrams)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
     - Extensions
+        - [Diagrams](#diagrams)
         - [Hierarchical State Machine](#hsm)
         - [Threading](#threading)
     - [Bug reports etc.](#bug-reports)
@@ -555,19 +555,6 @@ lump.print_pressure()
 
 ```
 
-### Diagrams
-
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). Generating a state diagram for any machine is as simple as calling its `get_graph()` method, which returns a PyGraphviz `AGraph` instance. For example:
-
-```python
-graph = machine.get_graph()
-graph.draw('my_state_diagram.png', prog='dot')
-```
-
-This produces something like this:
-
-![state diagram example](https://cloud.githubusercontent.com/assets/19777/11530591/1a0c08a6-98f6-11e5-88a7-756585aafbbb.png)
-
 ### Alternative initialization patterns
 
 In all of the examples so far, we've attached a new `Machine` instance to a separate model (`lump`, an instance of class `Matter`). While this separation keeps things tidy (because you don't have to monkey patch a whole bunch of new methods into the `Matter` class), it can also get annoying, since it requires you to keep track of which methods are called on the state machine, and which ones are called on the model that the state machine is bound to (e.g., `lump.on_enter_StateA()` vs. `machine.add_transition()`). 
@@ -625,13 +612,76 @@ machine = Machine(states=states, transitions=transitions, initial='solid')
 ...
 ```
 
-### Extension: <a name="hsm"></a>Hierarchical State Machine (HSM)
+### Extensions
+
+Even though the core of transitions is kept lightweight, there are a variety of MixIns to extend its functionality. Currently supported are:
+
+- **Diagrams** to visualize the current state of a machine
+- **Hierarchical State Machines** for nesting and reuse
+- **Threadsafe Locks** for parallel execution
+
+There are two mechanisms to retrieve a state machine instance with the desired features enabled. The first approach makes use of the convenience `factory` with the three parameters `graoh`, `nested` and `locked` set to `True` if the certain feature is required:
+
+```python
+from transitions.extensions import MachineFactory
+
+# create a machine with mixins
+diagram_cls = MachineFactory.get_predefined(graph=True)
+nested_locked_cls = MachineFactory.get_predefined(nested=True, locked=True)
+
+# create instances from these classes
+# instances can be used like simple machines
+machine1 = diagram_cls(model, state, transitions...)
+machine2 = nested_locked_cls(model, state, transitions)
+```
+
+This approach targets experimental use since in this case the underlying classes do not have to be known. However, classes can also be directly imported from `transitions.extensions`. The naming scheme is as follows:
+
+|                                | Diagrams | Nested | Locked |
+| -----------------------------: | :------: | :----: | :----: |
+| Machine                        | ✘        | ✘      | ✘      |
+| MachineGraphSupport            | ✓        | ✘      | ✘      |
+| HierarchicalMachine            | ✘        | ✓      | ✘      |
+| LockedMachine                  | ✘        | ✘      | ✓      |
+| HierarchicalGraphMachine       | ✓        | ✓      | ✘      |
+| LockedGraphMachine             | ✓        | ✘      | ✓      |
+| LockedHierarchicalMachine      | ✘        | ✓      | ✓      |
+| LockedHierarchicalGraphMachine | ✓        | ✓      | ✓      |
+
+To use a full featured state machine, one could write:
+
+```python
+from transitions.extensions import LockedHierarchicalGraphMachine as Machine
+
+#enable ALL the features!
+machine = Machine(model, states, transitions)
+```
+
+#### <a name="hsm"></a> Diagrams
+
+Additional Keyword: `title` (optional): Sets the title of the generated image.
+
+Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). With
+ `MachineGraphSupport` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
+
+```python
+from transitions.extensions import MachineGraphSupport as Machine
+machine = Machine(...)
+machine.graph.draw('my_state_diagram.png', prog='dot')
+```
+
+This produces something like this:
+
+![state diagram example](https://cloud.githubusercontent.com/assets/19777/11530591/1a0c08a6-98f6-11e5-88a7-756585aafbbb.png)
+
+Also, have a look at our [example]('./examples') IPython/Jupyter notebooks for a more detailled example.
+
+### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
 Transitions includes an extension module which allows to nest states. This allows to create contexts and to model cases where states are related to certain subtasks in the state machine. To create a nested state, either import `NestedState` from transitions or use a dictionary with initialization arguments.
 
 ```python
-from transitions import HierarchicalMachine as Machine
-from transitions import NestedState as State
+from transitions.extensions import HierarchicalMachine as Machine
 
 states = ['standing', 'walking', {'name': 'caffeinated', 'children':['dithering', 'running']}]
 transitions = [
@@ -647,7 +697,7 @@ machine.walk() # Walking now
 machine.stop() # let's stop for a moment
 machine.drink() # coffee time
 machine.state
->>> 'caffeinated_dithering'
+>>> 'caffeinated'
 machine.walk() # we have to go faster
 machine.state
 >>> 'caffeinated_running'
@@ -657,37 +707,49 @@ machine.state
 machine.relax() # leave nested state
 machine.state # phew, what a ride
 >>> 'standing'
+# machine.on_enter_caffeinated_running('callback_method')
 ```
 
-Some things that have to be considered when working with nested states: State *names are concatenated*. A substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be refered to as `foo_bar_baz` and so on. When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates. If you transit into a state with nested states and do not specify a child, the *first declared child will be entered*. Third, a transition specified for a parent state will be resolved and *added to all substates*.
+Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`. Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine. This means a substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be refered to as `foo_bar_baz` and so on. When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates. Third, nested states can overwrite transition behaviour of their parents. If a transition is not known to the current state it will be delegated to its parent.
+
+In some cases underscore as a separator is not sufficient. For instance if state names consists of more than one word and a concatenated naming such as `state_A_name_state_C` would be confusing. Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks) as seen below:
 
 ```python
-states = ['A', 'B', 
-  {'name': 'C', 'children':['1', '2', 
+from transitions.extensions.nesting import NestedState
+NestedState.separator = '↦'
+states = ['A', 'B',
+  {'name': 'C', 'children':['1', '2',
     {'name': '3', 'children': ['a', 'b', 'c']}
   ]}
 ]
 
 transitions = [
-    ['reset', 'C', 'A']
+    ['reset', 'C', 'A'],
+    ['reset', 'C↦2', 'C']  # overwriting parent reset
 ]
 
 # we rely on auto transitions
 machine = Machine(states=states, transitions=transitions, initial='A')
-
-machine.to_B() # exit state A, enter state B
-machine.to_C() # exit B, enter C, enter C_1
-machine.to_C_3() # exit C_1, enter C_3, enter C_3_a
+machine.to_B()  # exit state A, enter state B
+machine.to_C()  # exit B, enter C
+machine.to_C.s3.a()  # enter C↦a; enter C↦3↦a;
+machine.state,
+>>> 'C↦3↦a'
+machine.to('C↦s2')  # not interactive; exit C↦3↦a, exit C↦3, enter C↦2
+machine.reset()  # exit C↦2; reset C has been overwritten by C↦3
 machine.state
->>> 'C_3_a'
-machine.to_C_2() # exit C_3_a, exit C_3, enter C_2
-machine.reset() # exit C_2, exit C, enter A
-machine.to_C_3_a() # exit A, enter C, enter C_3, enter C_3_a
+>>> 'C'
+machine.reset()  # exit C, enter A
+machine.state
+>>> 'A'
+# s.on_enter('C↦3↦a', 'callback_method')
 ```
 
-### Extension: Reuse of previously created HSMs
+Instead of `to_C_3_a()` auto transition is called as `to_C.s3.a()`. If interactive completion is not required, `to('C↦3↦a')` can be called directly. Additionally, `on_enter/exit_<<state name>>` is replaced with `on_enter/exit(state_name, callback).
 
-Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them. Transitions offers two ways to achieve this: You can either *pass a state machine* as an argument or retrieve the machine's *blueprint*, store this as plain text somewhere and pass this to a new machine.
+#### Reuse of previously created HSMs
+
+Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
 
 ```python
 count_states = ['1', '2', '3', 'done']
@@ -703,43 +765,40 @@ count_trans = [
 counter = Machine(states=count_states, transitions=count_trans, initial='1')
 
 counter.increase() # love my counter
-counter.blueprints
->>> {'states': ['1', '2', '3', 'done'], 'transitions': [{'unless': None, 'dest': '2', 'after': None, 'source': '1', 'trigger': 'increase', 'conditions': None, 'before': None}, ...]}
-...
-states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
-# states = ['waiting', 'collecting', {'name': 'counting', children: counter.blueprints}]
+states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
+# states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
 
 transitions = [
     ['collect', '*', 'collecting'],
     ['wait', '*', 'waiting'],
-    ['count', 'wait', 'counting']
+    ['count', 'wait', 'counting_1']
 ]
 
 collector = Machine(states=states, transitions=transitions, initial='waiting')
-collector.collect() # collecting
-collector.count() # let's see what we got
-collector.increase() # counting_2
-collector.increase() # counting_3
-collector.done() # counting_done
-collector.wait() # go back to waiting
+collector.collect()  # collecting
+collector.count()  # let's see what we got
+collector.increase()  # counting_2
+collector.increase()  # counting_3
+collector.done()  # collector.state == counting_done
+collector.wait()  # collector.state == waiting
 ```
 
 Sometimes you want such an embedded state collection to 'return' which means after it is done it should exit and transit to one of your states. To achieve this behaviour you can remap state transitions. In the example above we would like the counter to return if the state `done` was reached. This is done as follows:
 
 ```python
-states = ['waiting', 'collecting', {'name': 'counting', children: counter, 'remap': {'done': 'waiting'}}]
+states = ['waiting', 'collecting', {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}]
 
 ... # same as above
 
 collector.increase() # counting_3
 collector.done()
 collector.state
->>> 'waiting' # be aware that 'finish' will entirely be removed from the state machine
+>>> 'waiting' # be aware that 'counting_done' will be removed from the state machine
 ```
 
-If a reused state machine does not have a final state, you can of course add the transitions manually. If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'A']` to achieve the same behaviour.
+If a reused state machine does not have a final state, you can of course add the transitions manually. If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'waiting']` to achieve the same behaviour.
 
-### <a name="threading"></a>Extension: Threadsafe(-ish) State Machine
+#### <a name="threading"></a> Threadsafe(-ish) State Machine
 
 In cases where event dispatching is done in threads, one can use either `LockedMachine` or `LockedHierarchicalMachine` where **function access** (!sic) is secured with reentrant locks. This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
 
@@ -752,12 +811,12 @@ states = ['A', 'B', 'C']
 machine = Machine(states=states, initial='A')
 
 # let us assume that entering B will take some time
-thread = Thread(target=self.stuff.to_B)
+thread = Thread(target=machine.to_B)
 thread.start()
 time.sleep(0.01) # thread requires some time to start
 machine.to_C() # synchronized access; won't execute before thread is done
 # accessing attributes directly
-thread = Thread(target=self.stuff.to_B)
+thread = Thread(target=machine.to_B)
 thread.start()
 machine.new_attrib = 42 # not synchronized! will mess with execution order
 ```

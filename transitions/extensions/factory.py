@@ -4,7 +4,6 @@ from .nesting import HierarchicalMachine, NestedTransition, NestedEvent
 from .locking import LockedMachine, LockedEvent
 from .diagrams import MachineGraphSupport, TransitionGraphSupport
 
-
 class MachineFactory(object):
 
     # get one of the predefined classes which fulfill the criteria

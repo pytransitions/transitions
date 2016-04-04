@@ -20,7 +20,7 @@ class FunctionWrapper(object):
         if len(path) > 0:
             name = path[0]
             if name[0].isdigit():
-                name = '_' + name
+                name = 's' + name
             if hasattr(self, name):
                 getattr(self, name).add(func, path[1:])
             else:
@@ -36,7 +36,7 @@ class FunctionWrapper(object):
 # Added parent and children parameter children is a list of NestedStates
 # and parent is the full name of the parent e.g. Foo_Bar_Baz.
 class NestedState(State):
-    separator = '.'
+    separator = '_'
 
     def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, parent=None):
         self._name = name
@@ -60,32 +60,35 @@ class NestedState(State):
         self._name = value
 
     def exit_nested(self, event_data, target_state=None):
-        if target_state and target_state.level > 0 and self.level > 0:
+        if target_state:
             if self.level > target_state.level:
                 self.exit(event_data)
                 return self.parent.exit_nested(event_data, target_state)
             elif self.level <= target_state.level:
                 tmp_state = target_state
                 while self.level != tmp_state.level:
-                    tmp_state = target_state.parent
+                    tmp_state = tmp_state.parent
                 tmp_self = self
                 while tmp_self.level > 0 and tmp_state.parent.name != tmp_self.parent.name:
                     tmp_self.exit(event_data)
                     tmp_self = tmp_self.parent
                     tmp_state = tmp_state.parent
-                tmp_self.exit(event_data)
-                return tmp_self.level
+                if tmp_self != tmp_state:
+                    tmp_self.exit(event_data)
+                    return tmp_self.level
+                else:
+                    return tmp_self.level + 1
         else:
             self.exit(event_data)
             if self.parent:
-                return self.parent.exit_nested(event_data, None)
+                return self.parent.exit_nested(event_data, Nonelevel is not None and level < self.level)
         return 0
 
     def enter_nested(self, event_data, level=None):
-        if level is not None and level != self.level:
-            self.parent.enter_nested(event_data, level)
-        self.enter(event_data)
-
+        if level is not None and level <= self.level:
+            if level != self.level:
+                self.parent.enter_nested(event_data, level)
+            self.enter(event_data)
 
 class NestedTransition(Transition):
     # The actual state change method 'execute' in Transition was restructured to allow overriding
@@ -126,6 +129,10 @@ class HierarchicalMachine(Machine):
     def __init__(self, *args, **kwargs):
         self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
+        if hasattr(self.model, 'to'):
+            logger.warn("Model already has a 'to'-method. It will NOT be overwritten by NestedMachine")
+        else:
+            setattr(self.model, 'to', self.to)
 
     # Instead of creating transitions directly, Machine now use a factory method which can be overridden
     @staticmethod
@@ -136,12 +143,6 @@ class HierarchicalMachine(Machine):
     def _create_event(*args, **kwargs):
         return NestedEvent(*args, **kwargs)
 
-    # TODO rework to_blueprint
-    # TODO solve Event Locked/Nested issue
-    # The chosen approach for hierarchical state machines was 'flatten' which means that nested states
-    # are converted into linked states with a naming scheme that concatenates the state name with
-    # its parent's name. Substate Bar of Foo becomes Foo_Bar. An alternative approach would be to use actual nested
-    # state machines.
     def traverse(self, states, on_enter=None, on_exit=None,
                  ignore_invalid_triggers=None, parent=None, remap={}):
         states = listify(states)
@@ -228,7 +229,8 @@ class HierarchicalMachine(Machine):
         if isinstance(source, string_types):
             source = [x.name for x in self.states.values()] if source == '*' else [source]
 
-        if trigger not in self.events:
+        # FunctionWrappers are only necessary if a custom separator is used
+        if trigger not in self.events and NestedState.separator not in '_':
             self.events[trigger] = self._create_event(trigger, self)
             if trigger.startswith('to_'):
                 path = trigger[3:].split(NestedState.separator)
@@ -248,3 +250,9 @@ class HierarchicalMachine(Machine):
 
     def on_exit(self, state_name, callback):
         self.get_state(state_name).add_callback('exit', callback)
+
+    def to(self, state_name, *args, **kwargs):
+        event = EventData(self.current_state, None, self,
+                          self.model, args=args, kwargs=kwargs)
+        NestedTransition(self.current_state.name, state_name).execute(event)
+
