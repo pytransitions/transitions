@@ -8,7 +8,7 @@ class Stuff(object):
         self.state = None
         self.message = None
         states = ['A', 'B', 'C', 'D', 'E', 'F'] if states is None else states
-        self.machine = machine_cls(self, states=states, initial='A')
+        self.machine = machine_cls(self, states=states, initial='A', name='Test Machine')
         self.level = 1
         self.machine_cls = machine_cls
 

@@ -111,8 +111,8 @@ class NestedEvent(Event):
         while tmp.parent and tmp.name not in self.transitions:
             tmp = tmp.parent
         if tmp.name not in self.transitions:
-            msg = "Can't trigger event %s from state %s!" % (self.name,
-                                                             self.machine.current_state.name)
+            msg = "%sCan't trigger event %s from state %s!" % (self.machine.id, self.name,
+                                                               self.machine.current_state.name)
             if self.machine.current_state.ignore_invalid_triggers:
                 logger.warning(msg)
             else:
@@ -132,7 +132,7 @@ class HierarchicalMachine(Machine):
         self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
         if hasattr(self.model, 'to'):
-            logger.warn("Model already has a 'to'-method. It will NOT be overwritten by NestedMachine")
+            logger.warn("%sModel already has a 'to'-method. It will NOT be overwritten by NestedMachine", self.id)
         else:
             setattr(self.model, 'to', self.to)
 

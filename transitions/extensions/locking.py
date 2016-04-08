@@ -2,9 +2,6 @@ from ..core import Machine, Transition, Event
 
 from threading import RLock
 import inspect
-import logging
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 class LockedMethod:
 

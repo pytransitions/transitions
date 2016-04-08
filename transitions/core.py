@@ -46,13 +46,13 @@ class State(object):
         """ Triggered when a state is entered. """
         for oe in self.on_enter:
             event_data.machine.callback(oe, event_data)
-        logger.info("Entered state %s" % self.name)
+        logger.info("%sEntered state %s", event_data.machine.id, self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
             event_data.machine.callback(oe, event_data)
-        logger.info("Exited state %s" % self.name)
+        logger.info("%sExited state %s", event_data.machine.id, self.name)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -126,23 +126,23 @@ class Transition(object):
         Returns: boolean indicating whether or not the transition was
             successfully executed (True if successful, False if not).
         """
-        logger.info("Initiating transition from state %s to state %s...",
-                    self.source, self.dest)
+        logger.info("%sInitiating transition from state %s to state %s...",
+                    event_data.machine.id, self.source, self.dest)
         machine = event_data.machine
         for c in self.conditions:
             if not c.check(event_data):
-                logger.info("Transition condition failed: %s() does not " +
-                            "return %s. Transition halted.", c.func, c.target)
+                logger.info("%sTransition condition failed: %s() does not " +
+                            "return %s. Transition halted.", event_data.machine.id, c.func, c.target)
                 return False
         for func in self.before:
             machine.callback(func, event_data)
-            logger.info("Executing callback '%s' before transition." % func)
+            logger.info("%sExecuting callback '%s' before transition.", event_data.machine.id, func)
 
         self._change_state(event_data)
 
         for func in self.after:
             machine.callback(func, event_data)
-            logger.info("Executed callback '%s' after transition." % func)
+            logger.info("%sExecuted callback '%s' after transition.", event_data.machine.id, func)
         return True
 
     def _change_state(self, event_data):
@@ -222,8 +222,8 @@ class Event(object):
         """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
-            msg = "Can't trigger event %s from state %s!" % (self.name,
-                                                             state_name)
+            msg = "%sCan't trigger event %s from state %s!" % (self.machine.id, self.name,
+                                                               state_name)
             if self.machine.current_state.ignore_invalid_triggers:
                 logger.warning(msg)
             else:
@@ -252,7 +252,7 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
-                 before_state_change=None, after_state_change=None):
+                 before_state_change=None, after_state_change=None, name=None):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -296,6 +296,7 @@ class Machine(object):
         self.ignore_invalid_triggers = ignore_invalid_triggers
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
+        self.id = name + ": " if name is not None else ""
 
         if initial is None:
             self.add_states('initial')

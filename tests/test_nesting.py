@@ -315,7 +315,7 @@ class TestTransitions(TestsCore):
           ['walk', 'caffeinated', 'caffeinated_running'],
           ['relax', 'caffeinated', 'standing']]
         machine = self.stuff.machine_cls(states=states, transitions=transitions, initial='standing',
-                                         ignore_invalid_triggers=True)
+                                         ignore_invalid_triggers=True, name='Machine 1')
 
         machine.walk() # Walking now
         machine.stop() # let's stop for a moment
