@@ -4,9 +4,14 @@ except ImportError:
     pass
 
 from transitions.extensions import MachineFactory
+from transitions.extensions.diagrams import AGraph
 from unittest import TestCase
 import tempfile
 import os
+
+
+def edge_label_from_transition_label(label):
+    return label.split(' [')[0]  # if no condition, label is returned
 
 
 class TestDiagrams(TestCase):
@@ -31,6 +36,7 @@ class TestDiagrams(TestCase):
             set(m.states.keys()), set([n.name for n in graph.nodes()]))
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
+            t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
         self.assertEqual(len(graph.edges()), len(transitions))
@@ -69,6 +75,7 @@ class TestDiagrams(TestCase):
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
+            t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
         self.assertEqual(len(graph.edges()), 4)  # see above
@@ -108,6 +115,7 @@ class TestDiagrams(TestCase):
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
+            t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
         self.assertEqual(len(graph.edges()), 4)  # see above

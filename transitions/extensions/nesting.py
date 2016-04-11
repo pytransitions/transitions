@@ -227,7 +227,7 @@ class HierarchicalMachine(Machine):
             self.add_transition(**args)
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before=None, after=None):
+                       unless=None, before=None, after=None, prepare=None):
         if isinstance(source, string_types):
             source = [x.name for x in self.states.values()] if source == '*' else [source]
 
@@ -245,7 +245,7 @@ class HierarchicalMachine(Machine):
             else:
                 setattr(self.model, trigger, self.events[trigger].trigger)
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
-                                                        unless=unless, before=before, after=after)
+                                                        unless=unless, prepare=prepare, before=before, after=after)
 
     def on_enter(self, state_name, callback):
         self.get_state(state_name).add_callback('enter', callback)
@@ -257,4 +257,3 @@ class HierarchicalMachine(Machine):
         event = EventData(self.current_state, None, self,
                           self.model, args=args, kwargs=kwargs)
         NestedTransition(self.current_state.name, state_name).execute(event)
-

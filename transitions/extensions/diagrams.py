@@ -80,7 +80,7 @@ class AGraph(Diagram):
                 self.seen.append(state.name)
                 container.add_node(n=state.name, shape=shape)
 
-    def _add_edges(self, events, sub):
+    def _add_edges(self, events, container):
         for event in events.items():
             event = event[1]
             label = str(event.name)
@@ -96,15 +96,28 @@ class AGraph(Diagram):
 
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
+                    lbl = self._transition_label(label, t)
                     lhead = ''
+
                     if hasattr(dst, 'children') and len(dst.children) > 0:
                         lhead = 'cluster_' + dst.name
                         dst = dst.children[0]
                         while len(dst.children) > 0:
                             dst = src.children
 
-                    if sub.has_edge(src.name, dst.name) is False:
-                        sub.add_edge(src.name, dst.name, label=label, ltail=ltail, lhead=lhead)
+                    if container.has_edge(src.name, dst.name) is False:
+                        container.add_edge(src.name, dst.name, label=label, ltail=ltail, lhead=lhead)
+
+    def _transition_label(self, edge_label, tran):
+        if self.machine.show_conditions and tran.conditions:
+            return '{edge_label} [{conditions}]'.format(
+                edge_label=edge_label,
+                conditions=' & '.join(
+                    c.func if c.target else '!' + c.func
+                    for c in tran.conditions
+                ),
+            )
+        return edge_label
 
     def get_graph(self, title=None):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object
@@ -144,13 +157,15 @@ class MachineGraphSupport(Machine):
         self.set_node_style(self.graph.get_node(self.current_state.name), 'active')
 
     def __init__(self, *args, **kwargs):
-        # remove title from keywords
+        # remove graph config from keywords
         title = kwargs.pop('title', 'State Machine')
+        show_conditions = kwargs.pop('show_conditions', False)
         super(MachineGraphSupport, self).__init__(*args, **kwargs)
 
         # Create graph at beginnning
-        self.graph = self.get_graph(title=title)
+        self.show_conditions = show_conditions
         self.title = title
+        self.graph = self.get_graph(title=title)
 
         # Set initial node as active
         self.set_node_state(self.initial, 'active')
