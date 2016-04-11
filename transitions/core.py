@@ -201,7 +201,6 @@ class Event(object):
         self.name = name
         self.machine = machine
         self.transitions = defaultdict(list)
-        self.trigger = self._trigger_async if machine.async else self._trigger_sync
 
     def add_transition(self, transition):
         """ Add a transition to the list of potential transitions.
@@ -211,11 +210,14 @@ class Event(object):
         """
         self.transitions[transition.source].append(transition)
 
-    def _trigger_async(self, *args, **kwargs):
-        f = partial(self._trigger_sync, *args, **kwargs)
-        self.machine.process_async(f)
+    def trigger(self, *args, **kwargs):
+        f = partial(self._trigger, *args, **kwargs)
+        if self.machine.async:
+            self.machine.process_async(f)
+        else:
+            f()
 
-    def _trigger_sync(self, *args, **kwargs):
+    def _trigger(self, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes.
         Args:

@@ -106,7 +106,7 @@ class NestedTransition(Transition):
 
 class NestedEvent(Event):
 
-    def trigger(self, *args, **kwargs):
+    def _trigger(self, *args, **kwargs):
         tmp = self.machine.current_state
         while tmp.parent and tmp.name not in self.transitions:
             tmp = tmp.parent
