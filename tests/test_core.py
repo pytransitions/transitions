@@ -340,3 +340,29 @@ class TestTransitions(TestCase):
         m2 = pickle.loads(dump)
         self.assertEqual(m.state, m2.state)
         m2.run()
+
+    def test_async(self):
+        states = ['A', 'B', 'C', 'D']
+        # Define with list of dictionaries
+
+        def change_state(machine):
+            self.assertEqual(machine.current_state.name, 'A')
+            if machine.async:
+                machine.run(machine=machine)
+                self.assertEqual(machine.current_state.name, 'A')
+            else:
+                with self.assertRaises(MachineError):
+                    machine.run(machine=machine)
+
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B', 'before': change_state},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+
+        m = Machine(states=states, transitions=transitions, initial='A')
+        m.walk(machine=m)
+        self.assertEqual(m.current_state.name, 'B')
+        m = Machine(states=states, transitions=transitions, initial='A', async=True)
+        m.walk(machine=m)
+        self.assertEqual(m.current_state.name, 'C')

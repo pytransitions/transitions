@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 (April, 2016)
+Release 0.4 includes several new features:
+- New `name` Machine keyword customizes transitions logger output for easier debugging while running multiple instances
+- New `prepare` Transition keyword for callbacks before any 'conditions' are checked  (thanks to @TheMysteriousX)
+- New `async` Machine keyword allows queueing of transitions (thanks to @khigia)
+- Nesting now supports custom (unicode) substate separators
+- Factory for convenient extension mixins
+
 ## 0.3.1 (January 3, 2016)
 Mostly a bug fix release. Changes include:
 - Fixes graphing bug introduced in 0.3.0 (thanks to @wtgee)

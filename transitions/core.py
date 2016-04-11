@@ -4,7 +4,7 @@ except ImportError:
     # python2
     pass
 from functools import partial
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, deque, OrderedDict
 from six import string_types
 import inspect
 import logging
@@ -201,6 +201,7 @@ class Event(object):
         self.name = name
         self.machine = machine
         self.transitions = defaultdict(list)
+        self.trigger = self._trigger_async if machine.async else self._trigger_sync
 
     def add_transition(self, transition):
         """ Add a transition to the list of potential transitions.
@@ -210,7 +211,11 @@ class Event(object):
         """
         self.transitions[transition.source].append(transition)
 
-    def trigger(self, *args, **kwargs):
+    def _trigger_async(self, *args, **kwargs):
+        f = partial(self._trigger_sync, *args, **kwargs)
+        self.machine.process_async(f)
+
+    def _trigger_sync(self, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes.
         Args:
@@ -252,7 +257,7 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
-                 before_state_change=None, after_state_change=None, name=None):
+                 before_state_change=None, after_state_change=None, name=None, async=False):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -286,6 +291,11 @@ class Machine(object):
             after_state_change: A callable called on every change state after
                 the transition happened. It receives the very same args as normal
                 callbacks
+            name: If a name is set, it will be used as a prefix for logger output
+            async (boolean): When True, processes transitions sequentially. A trigger
+                executed in a state callback function will be queued and executed later.
+                Due to the nature of the asynchronous processing, all transitions will
+                _always_ return True since conditional checks cannot be conducted at queueing time.
         """
         self.model = self if model is None else model
         self.states = OrderedDict()
@@ -297,6 +307,10 @@ class Machine(object):
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
         self.id = name + ": " if name is not None else ""
+        self.async = async
+        if async:
+            self._transition_queue = deque()
+            self.process_async = self._process_async
 
         if initial is None:
             self.add_states('initial')
@@ -491,6 +505,24 @@ class Machine(object):
             func(event_data)
         else:
             func(*event_data.args, **event_data.kwargs)
+
+    def _process_async(self, trigger):
+        self._transition_queue.append(trigger)
+
+        # another entry in the queue implies a running transition; skip immediate execution
+        if len(self._transition_queue) > 1:
+            return True
+
+        # execute as long as tranition queue is not empty
+        while self._transition_queue:
+            try:
+                self._transition_queue[0]()
+                self._transition_queue.popleft()
+            except Exception:
+                # if a transition raises an exception, clear queue and delegate exception handling
+                self._transition_queue.clear()
+                raise
+        return True
 
     def __getattr__(self, name):
         if name.startswith('__'):
