@@ -758,7 +758,9 @@ machine = Machine(model, states, transitions)
 
 #### <a name="diagrams"></a> Diagrams
 
-Additional Keyword: `title` (optional): Sets the title of the generated image.
+Additional Keywords:
+* `title` (optional): Sets the title of the generated image.
+* `show_conditions` (default False): Shows conditions at transition edges
 
 Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). With
  `MachineGraphSupport` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:

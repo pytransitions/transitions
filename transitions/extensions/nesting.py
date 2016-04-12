@@ -59,30 +59,24 @@ class NestedState(State):
     def name(self, value):
         self._name = value
 
-    def exit_nested(self, event_data, target_state=None):
-        if target_state:
-            if self.level > target_state.level:
-                self.exit(event_data)
-                return self.parent.exit_nested(event_data, target_state)
-            elif self.level <= target_state.level:
-                tmp_state = target_state
-                while self.level != tmp_state.level:
-                    tmp_state = tmp_state.parent
-                tmp_self = self
-                while tmp_self.level > 0 and tmp_state.parent.name != tmp_self.parent.name:
-                    tmp_self.exit(event_data)
-                    tmp_self = tmp_self.parent
-                    tmp_state = tmp_state.parent
-                if tmp_self != tmp_state:
-                    tmp_self.exit(event_data)
-                    return tmp_self.level
-                else:
-                    return tmp_self.level + 1
-        else:
+    def exit_nested(self, event_data, target_state):
+        if self.level > target_state.level:
             self.exit(event_data)
-            if self.parent:
-                return self.parent.exit_nested(event_data, Nonelevel is not None and level < self.level)
-        return 0
+            return self.parent.exit_nested(event_data, target_state)
+        elif self.level <= target_state.level:
+            tmp_state = target_state
+            while self.level != tmp_state.level:
+                tmp_state = tmp_state.parent
+            tmp_self = self
+            while tmp_self.level > 0 and tmp_state.parent.name != tmp_self.parent.name:
+                tmp_self.exit(event_data)
+                tmp_self = tmp_self.parent
+                tmp_state = tmp_state.parent
+            if tmp_self != tmp_state:
+                tmp_self.exit(event_data)
+                return tmp_self.level
+            else:
+                return tmp_self.level + 1
 
     def enter_nested(self, event_data, level=None):
         if level is not None and level <= self.level:
@@ -92,6 +86,7 @@ class NestedState(State):
 
 
 class NestedTransition(Transition):
+
     # The actual state change method 'execute' in Transition was restructured to allow overriding
     def _change_state(self, event_data):
         machine = event_data.machine

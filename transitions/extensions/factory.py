@@ -4,6 +4,7 @@ from .nesting import HierarchicalMachine, NestedTransition, NestedEvent
 from .locking import LockedMachine, LockedEvent
 from .diagrams import MachineGraphSupport, TransitionGraphSupport
 
+
 class MachineFactory(object):
 
     # get one of the predefined classes which fulfill the criteria
@@ -53,5 +54,12 @@ class LockedGraphMachine(MachineGraphSupport, LockedMachine):
     pass
 
 
-class LockedHierarchicalGraphMachine(MachineGraphSupport, LockedHierarchicalMachine):
-    pass
+class LockedHierarchicalGraphMachine(MachineGraphSupport, LockedMachine, HierarchicalMachine):
+
+    @staticmethod
+    def _create_transition(*args, **kwargs):
+        return NestedGraphTransition(*args, **kwargs)
+
+    @staticmethod
+    def _create_event(*args, **kwargs):
+        return LockedNestedEvent(*args, **kwargs)

@@ -62,7 +62,8 @@ class TestDiagrams(TestCase):
         ]
 
         hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
-        m = hsm_graph_cls(states=states, transitions=transitions, initial='A', auto_transitions=False, title='A test')
+        m = hsm_graph_cls(states=states, transitions=transitions, initial='A', auto_transitions=False,
+                          title='A test', show_conditions=True)
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue("digraph" in str(graph))

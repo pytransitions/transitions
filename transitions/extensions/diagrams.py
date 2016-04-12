@@ -6,6 +6,10 @@ try:
 except:
     pgv = None
 
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 
 class Diagram(object):
 
@@ -81,8 +85,7 @@ class AGraph(Diagram):
                 container.add_node(n=state.name, shape=shape)
 
     def _add_edges(self, events, container):
-        for event in events.items():
-            event = event[1]
+        for event in events.values():
             label = str(event.name)
 
             for transitions in event.transitions.items():
@@ -96,7 +99,7 @@ class AGraph(Diagram):
 
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
-                    lbl = self._transition_label(label, t)
+                    label = self._transition_label(label, t)
                     lhead = ''
 
                     if hasattr(dst, 'children') and len(dst.children) > 0:
@@ -162,7 +165,7 @@ class MachineGraphSupport(Machine):
         self.show_conditions = kwargs.pop('show_conditions', False)
         super(MachineGraphSupport, self).__init__(*args, **kwargs)
 
-        # Create graph at beginnning
+        # Create graph at beginning
         self.title = title
         self.graph = self.get_graph(title=title)
 

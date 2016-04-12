@@ -141,6 +141,14 @@ class TestTransitions(TestsCore):
         m.move()
         self.assertEquals(m.state, 'B')
 
+    def test_add_custom_state(self):
+        s = self.stuff
+        s.machine.add_states([{'name': 'E', 'children': ['1', '2', '3']}])
+        s.machine.add_transition('go', '*', 'E%s1' % State.separator)
+        s.machine.add_transition('run', 'E', 'C{0}3{0}a'.format(State.separator))
+        s.go()
+        s.run()
+
     def test_state_change_listeners(self):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'C%s1' % State.separator)
@@ -248,8 +256,8 @@ class TestTransitions(TestsCore):
         else:
             import pickle
 
-        states = ['A', 'B', 'C', 'D']
-        # Define with list of dictionaries
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
+          'D', 'E', 'F']
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
@@ -262,6 +270,12 @@ class TestTransitions(TestsCore):
         m2 = pickle.loads(dump)
         self.assertEqual(m.state, m2.state)
         m2.run()
+        if State.separator in '_':
+            m2.to_C_3_a()
+            m2.to_C_3_b()
+        else:
+            m2.to_C.s3.a()
+            m2.to_C.s3.b()
 
     def test_callbacks_duplicate(self):
 

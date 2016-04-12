@@ -15,6 +15,7 @@ try:
 except ImportError:
     from mock import MagicMock
 
+nested_separator = State.separator
 
 class TestTransitions(TestCase):
 
@@ -123,8 +124,7 @@ class TestTransitions(TestCase):
         walker.increase()
         walker.done()
         self.assertEqual(walker.state, 'A')
-        if 'C.finished' in walker.states:
-            self.fail()
+        self.assertFalse('C.finished' in walker.states)
 
     def test_wrong_nesting(self):
 
@@ -137,7 +137,7 @@ class TestTransitions(TestCase):
         if State.separator in '_':
              m.to_B_C_3_a()
         else:
-            m.to_B.C._3.a()
+            m.to_B.C.s3.a()
 
         with self.assertRaises(ValueError):
             m = Machine(None, states=wrong_type)
@@ -150,8 +150,14 @@ class TestTransitions(TestCase):
             m.to_B_1()
             m.to_B_A()
         else:
-            m.to_B._1()
+            m.to_B.s1()
             m.to_B.A()
+
+    def test_custom_separator(self):
+        State.separator = '.'
+        self.tearDown()
+        self.setUp()
+        self.test_wrong_nesting()
 
     def test_example_reuse(self):
         count_states = ['1', '2', '3', 'done']
@@ -161,7 +167,6 @@ class TestTransitions(TestCase):
             ['decrease', '3', '2'],
             ['decrease', '2', '1'],
             ['done', '3', 'done'],
-            ['reset', '*', '1']
         ]
 
         counter = self.stuff.machine_cls(states=count_states, transitions=count_trans, initial='1')
@@ -186,6 +191,7 @@ class TestTransitions(TestCase):
         collector.wait()  # go back to waiting
         self.assertEqual(collector.state, 'waiting')
 
+        # reuse counter instance with remap
         collector = self.stuff.machine_cls(states=states_remap, transitions=transitions, initial='waiting')
         collector.collect()  # collecting
         collector.count()  # let's see what we got
@@ -193,3 +199,22 @@ class TestTransitions(TestCase):
         collector.increase()  # counting_3
         collector.done()  # counting_done
         self.assertEqual(collector.state, 'waiting')
+
+        # # same as above but with states and therefore stateless embedding
+        states_remap[2]['children'] = count_states
+        transitions.append(['increase', 'counting%s1' % State.separator, 'counting%s2' % State.separator])
+        transitions.append(['increase', 'counting%s2' % State.separator, 'counting%s3' % State.separator])
+        transitions.append(['done', 'counting%s3' % State.separator, 'waiting'])
+
+        collector = self.stuff.machine_cls(states=states_remap, transitions=transitions, initial='waiting')
+        collector.collect()  # collecting
+        collector.count()  # let's see what we got
+        collector.increase()  # counting_2
+        collector.increase()  # counting_3
+        collector.done()  # counting_done
+        self.assertEqual(collector.state, 'waiting')
+
+        # check if counting_done was correctly omitted
+        collector.add_transition('fail', '*', 'counting%sdone' % State.separator)
+        with self.assertRaises(ValueError):
+            collector.fail()
