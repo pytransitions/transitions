@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
 
 from six import string_types

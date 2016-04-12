@@ -219,10 +219,7 @@ class Event(object):
 
     def trigger(self, *args, **kwargs):
         f = partial(self._trigger, *args, **kwargs)
-        if self.machine.async:
-            self.machine.process_async(f)
-        else:
-            f()
+        return self.machine.process(f)
 
     def _trigger(self, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
@@ -322,9 +319,7 @@ class Machine(object):
         self.after_state_change = after_state_change
         self.id = name + ": " if name is not None else ""
         self.async = async
-        if async:
-            self._transition_queue = deque()
-            self.process_async = self._process_async
+        self._transition_queue = deque()
 
         if initial is None:
             self.add_states('initial')
@@ -520,9 +515,18 @@ class Machine(object):
         else:
             func(*event_data.args, **event_data.kwargs)
 
-    def _process_async(self, trigger):
-        self._transition_queue.append(trigger)
+    def process(self, trigger):
 
+        # default (not async) processing
+        if not self.async:
+            if not self._transition_queue:
+                # if trigger raises an Error, it has to be handled by the Machine.process caller
+                return trigger()
+            else:
+                raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
+
+        # process async events
+        self._transition_queue.append(trigger)
         # another entry in the queue implies a running transition; skip immediate execution
         if len(self._transition_queue) > 1:
             return True
