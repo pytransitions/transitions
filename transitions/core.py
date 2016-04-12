@@ -431,7 +431,7 @@ class Machine(object):
                 self.add_transition('to_%s' % s, '*', s)
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before=None, after=None, prepare=None):
+                       unless=None, before=None, after=None, prepare=None, **kwargs):
         """ Create a new Transition instance and add it to the internal list.
         Args:
             trigger (string): The name of the method that will trigger the
@@ -452,6 +452,8 @@ class Machine(object):
             before (string or list): Callables to call before the transition.
             after (string or list): Callables to call after the transition.
             prepare (string or list): Callables to call when the trigger is activated
+            **kwargs: Additional arguments which can be passed to the created transition.
+                This is useful if you plan to extend Machine.Transition and require more parameters.
         """
         if trigger not in self.events:
             self.events[trigger] = self._create_event(trigger, self)
@@ -467,7 +469,7 @@ class Machine(object):
             after = listify(after) + listify(self.after_state_change)
 
         for s in source:
-            t = self._create_transition(s, dest, conditions, unless, before, after, prepare)
+            t = self._create_transition(s, dest, conditions, unless, before, after, prepare, **kwargs)
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
@@ -531,7 +533,7 @@ class Machine(object):
         if len(self._transition_queue) > 1:
             return True
 
-        # execute as long as tranition queue is not empty
+        # execute as long as transition queue is not empty
         while self._transition_queue:
             try:
                 self._transition_queue[0]()

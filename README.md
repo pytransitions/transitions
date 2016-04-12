@@ -26,8 +26,8 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Automatic transitions](#automatic-transitions-for-all-states)
         - [Transitioning from multiple states](#transitioning-from-multiple-states)
         - [Ordered transitions](#ordered-transitions)
-        - [Conditional transitions](#conditional-transitions)
         - [Queued transitions](#queued-transitions)
+        - [Conditional transitions](#conditional-transitions)
         - [Callbacks](#transition-callbacks)
     - [Passing data](#passing-data)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
@@ -460,6 +460,7 @@ def entering_C():
 
 states = ['A', 'B', 'C']
 machine = Machine(states=states)
+
 # we want a message when state transition to B has been completed
 machine.add_transition('advance', 'A', 'B', after=after_advance)
 
@@ -489,7 +490,7 @@ machine.advance()
 
 This results in
 ```
-prepare -> before -> on_enter_B -> queue(to_C) -> after  -> on_enter_C.`
+prepare -> before -> on_enter_B -> queue(to_C) -> after  -> on_enter_C.
 ```
 However, when processing event asynchronously, the trigger call will _always_ return True since at queuing time it cannot be
 verified if a transition is valid or not. This is intentional even if just one event is processed.

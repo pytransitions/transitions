@@ -3,6 +3,7 @@ from ..core import Machine, Transition, Event
 from threading import RLock
 import inspect
 
+
 class LockedMethod:
 
     def __init__(self, lock, func):

@@ -50,7 +50,7 @@ class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
 
     @staticmethod
     def _create_event(*args, **kwargs):
-        return LockedNestedEvent(*args, **kwargs);
+        return LockedNestedEvent(*args, **kwargs)
 
 
 class LockedGraphMachine(MachineGraphSupport, LockedMachine):

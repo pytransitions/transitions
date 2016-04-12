@@ -90,6 +90,7 @@ class NestedState(State):
                 self.parent.enter_nested(event_data, level)
             self.enter(event_data)
 
+
 class NestedTransition(Transition):
     # The actual state change method 'execute' in Transition was restructured to allow overriding
     def _change_state(self, event_data):
@@ -143,6 +144,10 @@ class HierarchicalMachine(Machine):
     def _create_event(*args, **kwargs):
         return NestedEvent(*args, **kwargs)
 
+    @staticmethod
+    def _create_state(*args, **kwargs):
+        return NestedState(*args, **kwargs)
+
     def traverse(self, states, on_enter=None, on_exit=None,
                  ignore_invalid_triggers=None, parent=None, remap={}):
         states = listify(states)
@@ -156,7 +161,7 @@ class HierarchicalMachine(Machine):
             if isinstance(state, string_types):
                 if state in remap:
                     continue
-                tmp_states.append(NestedState(state, on_enter=on_enter, on_exit=on_exit, parent=parent,
+                tmp_states.append(self._create_state(state, on_enter=on_enter, on_exit=on_exit, parent=parent,
                                               ignore_invalid_triggers=ignore))
             elif isinstance(state, dict):
                 state = copy.deepcopy(state)
@@ -167,15 +172,15 @@ class HierarchicalMachine(Machine):
                 if 'children' in state:
                     # Concat the state names with the current scope. The scope is the concatenation of all
                     # previous parents. Call _flatten again to check for more nested states.
-                    p = NestedState(state['name'], on_enter=on_enter, on_exit=on_exit,
-                                    ignore_invalid_triggers=ignore, parent=parent)
+                    p = self._create_state(state['name'], on_enter=on_enter, on_exit=on_exit,
+                                           ignore_invalid_triggers=ignore, parent=parent)
                     nested = self.traverse(state['children'], on_enter=on_enter, on_exit=on_exit,
                                                ignore_invalid_triggers=ignore,
                                                parent=p, remap=state.get('remap', {}))
                     tmp_states.append(p)
                     tmp_states.extend(nested)
                 else:
-                    tmp_states.insert(0, NestedState(**state))
+                    tmp_states.insert(0, self._create_state(**state))
             elif isinstance(state, HierarchicalMachine):
                 inner_states = [s for s in state.states.values() if s.level == 0 and s.name not in remap]
                 for s in inner_states:
@@ -225,7 +230,7 @@ class HierarchicalMachine(Machine):
             self.add_transition(**args)
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before=None, after=None, prepare=None):
+                       unless=None, before=None, after=None, prepare=None, **kwargs):
         if isinstance(source, string_types):
             source = [x.name for x in self.states.values()] if source == '*' else [source]
 
@@ -242,8 +247,8 @@ class HierarchicalMachine(Machine):
                     setattr(self.model, 'to_' + path[0], t)
             else:
                 setattr(self.model, trigger, self.events[trigger].trigger)
-        super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions,
-                                                        unless=unless, prepare=prepare, before=before, after=after)
+        super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
+                                                        prepare=prepare, before=before, after=after, **kwargs)
 
     def on_enter(self, state_name, callback):
         self.get_state(state_name).add_callback('enter', callback)
@@ -254,4 +259,4 @@ class HierarchicalMachine(Machine):
     def to(self, state_name, *args, **kwargs):
         event = EventData(self.current_state, None, self,
                           self.model, args=args, kwargs=kwargs)
-        NestedTransition(self.current_state.name, state_name).execute(event)
+        self._create_transition(self.current_state.name, state_name).execute(event)

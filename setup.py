@@ -1,5 +1,5 @@
 import sys
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open('transitions/version.py') as f:
     exec(f.read())
@@ -25,7 +25,7 @@ setup(
     author='Tal Yarkoni',
     author_email='tyarkoni@gmail.com',
     url='http://github.com/tyarkoni/transitions',
-    packages=["transitions"],
+    packages=find_packages(exclude=['tests', 'test_*']),
     package_data={'transitions': ['data/*'],
                   'transitions.tests': ['data/*']
                   },
