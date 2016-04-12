@@ -27,6 +27,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Transitioning from multiple states](#transitioning-from-multiple-states)
         - [Ordered transitions](#ordered-transitions)
         - [Conditional transitions](#conditional-transitions)
+        - [Queued transitions](#queued-transitions)
         - [Callbacks](#transition-callbacks)
     - [Passing data](#passing-data)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
@@ -216,7 +217,7 @@ lump.state
 
 Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. You don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`).
 
-### States
+### <a name="states"></a>States
 
 The soul of any good state machine (and of many bad ones, no doubt) is a set of states. Above, we defined the valid model states by passing a list of strings to the `Machine` initializer. But internally, states are actually represented as `State` objects. 
 
@@ -322,7 +323,7 @@ machine.get_state(lump.state).name
 >>> 'solid'
 ```
 
-### Transitions
+### <a name="transitions"></a>Transitions
 Some of the above examples already illustrate the use of transitions in passing, but here we'll explore them in more detail. 
 
 As with states, each transition is represented internally as its own object--an instance of class `Transition`. The quickest way to initialize a set of transitions is to pass a dictionary, or list of dictionaries, to the `Machine` initializer. We already saw this above:
@@ -387,7 +388,7 @@ This behavior is generally desirable, since it helps alert you to problems in yo
 >>> m = Machine(lump, states)
 ```
 
-#### Automatic transitions for all states
+#### <a name="automatic-transitions-for-all-states"></a>Automatic transitions for all states
 In addition to any transitions added explicitly, a `to_«state»()` method is created automatically whenever a state is added to a `Machine` instance. This method transitions to the target state no matter which state the machine is currently in:
 
 ```python
@@ -401,7 +402,7 @@ lump.state
 
 If you desire, you can disable this behavior by setting `auto_transitions=False` in the `Machine` initializer.
 
-#### Transitioning from multiple states
+#### <a name="transitioning-from-multiple-states"></a>Transitioning from multiple states
 A given trigger can be attached to multiple transitions, some of which can potentially begin or end in the same state. For example:
 
 ```python
@@ -421,7 +422,7 @@ machine.add_transition('to_liquid', '*', 'liquid')
 
 Note that wildcard transitions will only apply to states that exist at the time of the add_transition() call. Calling a wildcard-based transition when the model is in a state added after the transition was defined will elicit an invalid transition message, and will not transition to the target state.
 
-#### Ordered transitions
+#### <a name="ordered-transitions"></a> Ordered transitions
 A common desire is for state transitions to follow a strict linear sequence. For instance, given states `['A', 'B', 'C']`, you might want valid transitions for `A` → `B`, `B` → `C`, and `C` → `A` (but no other pairs). 
 
 To facilitate this behavior, Transitions provides an `add_ordered_transitions()` method in the `Machine` class:
@@ -442,7 +443,69 @@ print(machine.state)
 >>> 'C'
 ```
 
-#### Conditional transitions
+#### <a name="queued-transitions"></a>Queued transitions
+
+Transitions default behaviour is to processes events instantly. This means it will process an event within an `on_enter` method _before_ callbacks bound to `after` will be called.
+
+```python
+def go_to_C():
+    global machine
+    machine.to_C()
+
+def after_advance():
+    print("I am in state B now!")
+
+def entering_C():
+    print("I am in state C now!")
+
+states = ['A', 'B', 'C']
+machine = Machine(states=states)
+# we want a message when state transition to B has been completed
+machine.add_transition('advance', 'A', 'B', after=after_advance)
+
+# call transition from state B to state C
+machine.on_enter_B(go_to_C)
+
+# we also want a message when entering state C
+machine.on_enter_C(entering_C)
+machine.advance()
+>>> 'I am in state C now!'
+>>> 'I am in state B now!' # what?
+```
+
+The execution order of this example is
+```
+prepare -> before -> on_enter_B -> on_enter_C -> after.
+```
+If queued processing is enabled, a transition will be finished before the next transition is triggered:
+
+```python
+machine = Machine(states=states, async=True)
+...
+machine.advance()
+>>> 'I am in state B now!'
+>>> 'I am in state C now!' # That's better!
+```
+
+This results in
+```
+prepare -> before -> on_enter_B -> queue(to_C) -> after  -> on_enter_C.`
+```
+However, when processing event asynchronously, the trigger call will _always_ return True since at queuing time it cannot be
+verified if a transition is valid or not. This is intentional even if just one event is processed.
+
+```python
+machine.add_transition('jump', 'A', 'C', conditions='will_fail')
+...
+# async=False
+machine.jump()
+>>> False
+# async=True
+machine.jump()
+>>> True
+```
+
+#### <a name="conditional-transitions"></a>Conditional transitions
 Sometimes you only want a particular transition to execute if a specific condition occurs. You can do this by passing a method, or list of methods, in the `conditions` argument:
 
 ```python
@@ -529,7 +592,7 @@ In summary, callbacks on transitions are executed in the following order:
 * `'before'` (executed while the model is still in the source state)
 * `'after'` (executed while the model is in the destination state)
 
-### Passing data
+### <a name="passing-data"></a>Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways. 
 
 First (the default), you can pass any positional or keyword arguments directly to the trigger methods (created when you call `add_transition()`):
@@ -590,7 +653,7 @@ lump.print_pressure()
 
 ```
 
-### Alternative initialization patterns
+### <a name="alternative-initialization-patterns"></a>Alternative initialization patterns
 
 In all of the examples so far, we've attached a new `Machine` instance to a separate model (`lump`, an instance of class `Matter`). While this separation keeps things tidy (because you don't have to monkey patch a whole bunch of new methods into the `Matter` class), it can also get annoying, since it requires you to keep track of which methods are called on the state machine, and which ones are called on the model that the state machine is bound to (e.g., `lump.on_enter_StateA()` vs. `machine.add_transition()`). 
 
