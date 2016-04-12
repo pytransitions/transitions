@@ -42,10 +42,6 @@ class HierarchicalGraphMachine(MachineGraphSupport, HierarchicalMachine):
         return NestedGraphTransition(*args, **kwargs)
 
 
-class LockedHierarchicalGraphMachine(LockedMachine, HierarchicalGraphMachine):
-    pass
-
-
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
 
     @staticmethod
@@ -57,3 +53,5 @@ class LockedGraphMachine(MachineGraphSupport, LockedMachine):
     pass
 
 
+class LockedHierarchicalGraphMachine(MachineGraphSupport, LockedHierarchicalMachine):
+    pass

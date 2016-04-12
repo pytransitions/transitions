@@ -4,7 +4,6 @@ except ImportError:
     pass
 
 from transitions.extensions import MachineFactory
-from transitions.extensions.diagrams import AGraph
 from unittest import TestCase
 import tempfile
 import os
@@ -134,3 +133,18 @@ class TestDiagrams(TestCase):
 
         # cleanup temp file
         target.close()
+
+    def test_add_custom_state(self):
+        states = ['A', 'B', 'C', 'D']
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D', 'conditions': 'is_fast'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
+        ]
+
+        machine_cls = MachineFactory.get_predefined(graph=True)
+        m = machine_cls(states=states, transitions=transitions, initial='A', auto_transitions=False, title='a test')
+        m.add_state('X')
+        m.add_transition('foo', '*', 'X')
+        m.foo()

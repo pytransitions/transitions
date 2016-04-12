@@ -159,11 +159,10 @@ class MachineGraphSupport(Machine):
     def __init__(self, *args, **kwargs):
         # remove graph config from keywords
         title = kwargs.pop('title', 'State Machine')
-        show_conditions = kwargs.pop('show_conditions', False)
+        self.show_conditions = kwargs.pop('show_conditions', False)
         super(MachineGraphSupport, self).__init__(*args, **kwargs)
 
         # Create graph at beginnning
-        self.show_conditions = show_conditions
         self.title = title
         self.graph = self.get_graph(title=title)
 
@@ -190,6 +189,14 @@ class MachineGraphSupport(Machine):
             self.set_edge_style(edge, state)
         except KeyError:
             self.set_edge_style(edge, 'default')
+
+    def add_states(self, *args, **kwargs):
+        super(MachineGraphSupport, self).add_states(*args, **kwargs)
+        self.graph = self.get_graph(force_new=True)
+
+    def add_transition(self, *args, **kwargs):
+        super(MachineGraphSupport, self).add_transition(*args, **kwargs)
+        self.graph = self.get_graph(force_new=True)
 
     def set_node_state(self, node_name=None, state='default', reset=False):
         assert hasattr(self, 'graph')
@@ -250,7 +257,5 @@ class TransitionGraphSupport(Transition):
                     source = source.children[0]
                 while len(dest.children) > 0:
                     dest = dest.children[0]
-            print(source.name, dest.name)
             event_data.machine.set_edge_state(source.name, dest.name, state='previous')
-
         super(TransitionGraphSupport, self)._change_state(event_data)
