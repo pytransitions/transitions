@@ -5,7 +5,7 @@ except ImportError:
 
 from transitions import MachineError
 from transitions.extensions import HierarchicalMachine as Machine
-from transitions.extensions import NestedState
+from transitions.extensions.nesting import NestedState as State
 from .utils import Stuff
 
 from unittest import TestCase
@@ -15,6 +15,7 @@ try:
 except ImportError:
     from mock import MagicMock
 
+nested_separator = State.separator
 
 class TestTransitions(TestCase):
 
@@ -26,60 +27,6 @@ class TestTransitions(TestCase):
 
     def tearDown(self):
         pass
-
-    def test_blueprint_simple(self):
-        states = ['A', 'B', 'C', 'D']
-        # Define with list of dictionaries
-        transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
-        m = Machine(states=states, transitions=transitions, before_state_change='before_state_change',
-                    after_state_change='after_state_change', initial='A')
-
-        self.assertEqual(len(m.blueprints['states']), 4)
-        self.assertEqual(m.blueprints['states'][3], 'D')
-        self.assertEqual(len(m.blueprints['transitions']), 3)
-        self.assertEqual(m.blueprints['transitions'][2]['trigger'], 'sprint')
-
-        m.add_transition('fly', 'D', 'A')
-        self.assertEqual(len(m.blueprints['transitions']), 4)
-        self.assertEqual(m.blueprints['transitions'][3]['source'], 'D')
-
-    def test_blueprint_nested(self):
-        c1 = NestedState('C_1', parent='C')
-        c2 = NestedState('C_2', parent='C')
-        c3 = NestedState('C_3', parent='C')
-        c = NestedState('C', children=[c1, c2, c3])
-
-        states = ['A', {'name': 'B', 'on_enter': 'chirp', 'children': ['1', '2', '3']},
-                  c, 'D']
-        # Define with list of dictionaries
-        transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B','before': 'before_state_change',
-             'after': 'after_state_change' },
-            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
-        m = Machine(states=states, transitions=transitions, before_state_change='before_state_change',
-                    after_state_change='after_state_change', initial='A')
-
-        m.before_state_change = MagicMock()
-        m.after_state_change = MagicMock()
-
-        self.assertEqual(len(m.blueprints['states']), 4)
-        self.assertEqual(m.blueprints['states'][3], 'D')
-        self.assertEqual(len(m.blueprints['transitions']), 3)
-        # transition 'walk' before should contain two calls of the same method
-        self.assertEqual(len(m.blueprints['transitions'][0]['before']), 2)
-        self.assertEqual(len(m.blueprints['transitions'][0]['after']), 2)
-        self.assertEqual(len(m.blueprints['transitions'][1]['before']), 1)
-        self.assertEqual(m.blueprints['transitions'][2]['trigger'], 'sprint')
-
-        m.add_transition('fly', 'D', 'A')
-        self.assertEqual(len(m.blueprints['transitions']), 4)
-        self.assertEqual(m.blueprints['transitions'][3]['source'], 'D')
 
     def test_blueprint_reuse(self):
         states = ['1', '2', '3']
@@ -97,7 +44,7 @@ class TestTransitions(TestCase):
         new_states = ['A', 'B', {'name':'C', 'children': counter}]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'forward', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'forward', 'source': 'B', 'dest': 'C%s1' % State.separator},
             {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
             {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
             {'trigger': 'calc', 'source': '*', 'dest': 'C'},
@@ -116,15 +63,15 @@ class TestTransitions(TestCase):
         self.assertEqual(walker.state, 'A')
         walker.forward()
         walker.forward()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C%s1' % State.separator)
         walker.increase()
-        self.assertEqual(walker.state, 'C_2')
+        self.assertEqual(walker.state, 'C%s2' % State.separator)
         walker.reset()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C%s1' % State.separator)
         walker.to_A()
         self.assertEqual(walker.state, 'A')
         walker.calc()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C')
 
     def test_blueprint_remap(self):
         states = ['1', '2', '3', 'finished']
@@ -142,10 +89,10 @@ class TestTransitions(TestCase):
         new_states = ['A', 'B', {'name': 'C', 'children': counter, 'remap': {'finished': 'A'}}]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'forward', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'forward', 'source': 'B', 'dest': 'C%s1' % State.separator},
             {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
             {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
-            {'trigger': 'calc', 'source': '*', 'dest': 'C'},
+            {'trigger': 'calc', 'source': '*', 'dest': 'C%s1' % State.separator},
         ]
 
         walker = Machine(states=new_states, transitions=new_transitions, before_state_change='watch',
@@ -164,30 +111,110 @@ class TestTransitions(TestCase):
         self.assertEqual(walker.state, 'A')
         walker.forward()
         walker.forward()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C%s1' % State.separator)
         walker.increase()
-        self.assertEqual(walker.state, 'C_2')
+        self.assertEqual(walker.state, 'C%s2' % State.separator)
         walker.reset()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C%s1' % State.separator)
         walker.to_A()
         self.assertEqual(walker.state, 'A')
         walker.calc()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C%s1' % State.separator)
         walker.increase()
         walker.increase()
         walker.done()
         self.assertEqual(walker.state, 'A')
+        self.assertFalse('C.finished' in walker.states)
 
     def test_wrong_nesting(self):
 
         correct = ['A', {'name': 'B', 'children': self.stuff.machine}]
         wrong_type = ['A', {'name': 'B', 'children': self.stuff}]
         siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}]
+        collision = ['A', {'name': 'B', 'children': ['A', self.stuff.machine]}]
 
         m = Machine(None, states=correct)
+        if State.separator in '_':
+             m.to_B_C_3_a()
+        else:
+            m.to_B.C.s3.a()
 
         with self.assertRaises(ValueError):
             m = Machine(None, states=wrong_type)
 
         with self.assertRaises(ValueError):
-            m = Machine(None, states=siblings)
+            m = Machine(None, states=collision)
+
+        m = Machine(None, states=siblings)
+        if State.separator in '_':
+            m.to_B_1()
+            m.to_B_A()
+        else:
+            m.to_B.s1()
+            m.to_B.A()
+
+    def test_custom_separator(self):
+        State.separator = '.'
+        self.tearDown()
+        self.setUp()
+        self.test_wrong_nesting()
+
+    def test_example_reuse(self):
+        count_states = ['1', '2', '3', 'done']
+        count_trans = [
+            ['increase', '1', '2'],
+            ['increase', '2', '3'],
+            ['decrease', '3', '2'],
+            ['decrease', '2', '1'],
+            ['done', '3', 'done'],
+        ]
+
+        counter = self.stuff.machine_cls(states=count_states, transitions=count_trans, initial='1')
+
+        counter.increase() # love my counter
+        states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
+        states_remap = ['waiting', 'collecting', {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}]
+
+        transitions = [
+            ['collect', '*', 'collecting'],
+            ['wait', '*', 'waiting'],
+            ['count', '*', 'counting%s1' % State.separator]
+        ]
+
+        collector = self.stuff.machine_cls(states=states, transitions=transitions, initial='waiting')
+        collector.collect()  # collecting
+        collector.count()  # let's see what we got
+        collector.increase()  # counting_2
+        collector.increase()  # counting_3
+        collector.done()  # counting_done
+        self.assertEqual(collector.state, 'counting{0}done'.format(State.separator))
+        collector.wait()  # go back to waiting
+        self.assertEqual(collector.state, 'waiting')
+
+        # reuse counter instance with remap
+        collector = self.stuff.machine_cls(states=states_remap, transitions=transitions, initial='waiting')
+        collector.collect()  # collecting
+        collector.count()  # let's see what we got
+        collector.increase()  # counting_2
+        collector.increase()  # counting_3
+        collector.done()  # counting_done
+        self.assertEqual(collector.state, 'waiting')
+
+        # # same as above but with states and therefore stateless embedding
+        states_remap[2]['children'] = count_states
+        transitions.append(['increase', 'counting%s1' % State.separator, 'counting%s2' % State.separator])
+        transitions.append(['increase', 'counting%s2' % State.separator, 'counting%s3' % State.separator])
+        transitions.append(['done', 'counting%s3' % State.separator, 'waiting'])
+
+        collector = self.stuff.machine_cls(states=states_remap, transitions=transitions, initial='waiting')
+        collector.collect()  # collecting
+        collector.count()  # let's see what we got
+        collector.increase()  # counting_2
+        collector.increase()  # counting_3
+        collector.done()  # counting_done
+        self.assertEqual(collector.state, 'waiting')
+
+        # check if counting_done was correctly omitted
+        collector.add_transition('fail', '*', 'counting%sdone' % State.separator)
+        with self.assertRaises(ValueError):
+            collector.fail()

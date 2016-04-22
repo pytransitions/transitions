@@ -4,7 +4,6 @@ except ImportError:
     pass
 
 from transitions.extensions import MachineFactory
-from transitions.extensions.diagrams import AGraph
 from unittest import TestCase
 import tempfile
 import os
@@ -57,13 +56,14 @@ class TestDiagrams(TestCase):
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},   # 1 edge
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},    # + 1 edge
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 3 edges
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 1 edges
              'conditions': 'is_fast'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 3 edges = 8 edges
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 1 edges = 4 edges
         ]
 
         hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
-        m = hsm_graph_cls(states=states, transitions=transitions, initial='A', auto_transitions=False, title='A test')
+        m = hsm_graph_cls(states=states, transitions=transitions, initial='A', auto_transitions=False,
+                          title='A test', show_conditions=True)
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue("digraph" in str(graph))
@@ -78,7 +78,7 @@ class TestDiagrams(TestCase):
             t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
-        self.assertEqual(len(graph.edges()), 8)  # see above
+        self.assertEqual(len(graph.edges()), 4)  # see above
 
         m.walk()
         m.run()
@@ -97,9 +97,9 @@ class TestDiagrams(TestCase):
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},   # 1 edge
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},    # + 1 edge
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 3 edges
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 1 edges
              'conditions': 'is_fast'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 3 edges = 8 edges
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 1 edges = 4 edges
         ]
 
         hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
@@ -118,7 +118,7 @@ class TestDiagrams(TestCase):
             t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
-        self.assertEqual(len(graph.edges()), 8)  # see above
+        self.assertEqual(len(graph.edges()), 4)  # see above
 
         # Force a new
         graph2 = m.get_graph(title="Second Graph", force_new=True)
@@ -134,3 +134,18 @@ class TestDiagrams(TestCase):
 
         # cleanup temp file
         target.close()
+
+    def test_add_custom_state(self):
+        states = ['A', 'B', 'C', 'D']
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D', 'conditions': 'is_fast'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
+        ]
+
+        machine_cls = MachineFactory.get_predefined(graph=True)
+        m = machine_cls(states=states, transitions=transitions, initial='A', auto_transitions=False, title='a test')
+        m.add_state('X')
+        m.add_transition('foo', '*', 'X')
+        m.foo()

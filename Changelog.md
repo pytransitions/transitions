@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 (April, 2016)
+Release 0.4 includes several new features:
+- New `async` Machine keyword allows queueing of transitions (thanks to @khigia)
+- New `name` Machine keyword customizes transitions logger output for easier debugging of multiple running instances
+- New `prepare` Transition keyword for callbacks before any 'conditions' are checked (thanks to @TheMysteriousX)
+- New `show_conditions` GraphSupport keyword adds condition checks to dot graph edges (thanks to @khigia)
+- Nesting now supports custom (unicode) substate separators
+- Nesting no longer requires a leaf state (e.g. to_C() does not enter C_1 automatically)
+- Factory for convenient extension mixins
+
 ## 0.3.1 (January 3, 2016)
 Mostly a bug fix release. Changes include:
 - Fixes graphing bug introduced in 0.3.0 (thanks to @wtgee)

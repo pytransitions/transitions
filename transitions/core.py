@@ -4,7 +4,7 @@ except ImportError:
     # python2
     pass
 from functools import partial
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, deque, OrderedDict
 from six import string_types
 import inspect
 import logging
@@ -46,13 +46,13 @@ class State(object):
         """ Triggered when a state is entered. """
         for oe in self.on_enter:
             event_data.machine.callback(oe, event_data)
-        logger.info("Entered state %s" % self.name)
+        logger.info("%sEntered state %s", event_data.machine.id, self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
             event_data.machine.callback(oe, event_data)
-        logger.info("Exited state %s" % self.name)
+        logger.info("%sExited state %s", event_data.machine.id, self.name)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -128,8 +128,8 @@ class Transition(object):
         Returns: boolean indicating whether or not the transition was
             successfully executed (True if successful, False if not).
         """
-        logger.info("Initiating transition from state %s to state %s...",
-                    self.source, self.dest)
+        logger.info("%sInitiating transition from state %s to state %s...",
+                    event_data.machine.id, self.source, self.dest)
         machine = event_data.machine
 
         for func in self.prepare:
@@ -138,18 +138,18 @@ class Transition(object):
 
         for c in self.conditions:
             if not c.check(event_data):
-                logger.info("Transition condition failed: %s() does not " +
-                            "return %s. Transition halted.", c.func, c.target)
+                logger.info("%sTransition condition failed: %s() does not " +
+                            "return %s. Transition halted.", event_data.machine.id, c.func, c.target)
                 return False
         for func in self.before:
             machine.callback(func, event_data)
-            logger.info("Executing callback '%s' before transition." % func)
+            logger.info("%sExecuting callback '%s' before transition.", event_data.machine.id, func)
 
         self._change_state(event_data)
 
         for func in self.after:
             machine.callback(func, event_data)
-            logger.info("Executed callback '%s' after transition." % func)
+            logger.info("%sExecuted callback '%s' after transition.", event_data.machine.id, func)
         return True
 
     def _change_state(self, event_data):
@@ -218,6 +218,10 @@ class Event(object):
         self.transitions[transition.source].append(transition)
 
     def trigger(self, *args, **kwargs):
+        f = partial(self._trigger, *args, **kwargs)
+        return self.machine.process(f)
+
+    def _trigger(self, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes.
         Args:
@@ -229,8 +233,8 @@ class Event(object):
         """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
-            msg = "Can't trigger event %s from state %s!" % (self.name,
-                                                             state_name)
+            msg = "%sCan't trigger event %s from state %s!" % (self.machine.id, self.name,
+                                                               state_name)
             if self.machine.current_state.ignore_invalid_triggers:
                 logger.warning(msg)
                 return False
@@ -264,7 +268,7 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
-                 before_state_change=None, after_state_change=None):
+                 before_state_change=None, after_state_change=None, name=None, async=False):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -298,6 +302,11 @@ class Machine(object):
             after_state_change: A callable called on every change state after
                 the transition happened. It receives the very same args as normal
                 callbacks
+            name: If a name is set, it will be used as a prefix for logger output
+            async (boolean): When True, processes transitions sequentially. A trigger
+                executed in a state callback function will be queued and executed later.
+                Due to the nature of the asynchronous processing, all transitions will
+                _always_ return True since conditional checks cannot be conducted at queueing time.
         """
         self.model = self if model is None else model
         self.states = OrderedDict()
@@ -308,6 +317,9 @@ class Machine(object):
         self.ignore_invalid_triggers = ignore_invalid_triggers
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
+        self.id = name + ": " if name is not None else ""
+        self.async = async
+        self._transition_queue = deque()
 
         if initial is None:
             self.add_states('initial')
@@ -333,6 +345,10 @@ class Machine(object):
     @staticmethod
     def _create_transition(*args, **kwargs):
         return Transition(*args, **kwargs)
+
+    @staticmethod
+    def _create_event(*args, **kwargs):
+        return Event(*args, **kwargs)
 
     @property
     def initial(self):
@@ -415,7 +431,7 @@ class Machine(object):
                 self.add_transition('to_%s' % s, '*', s)
 
     def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before=None, after=None, prepare=None):
+                       unless=None, before=None, after=None, prepare=None, **kwargs):
         """ Create a new Transition instance and add it to the internal list.
         Args:
             trigger (string): The name of the method that will trigger the
@@ -436,9 +452,11 @@ class Machine(object):
             before (string or list): Callables to call before the transition.
             after (string or list): Callables to call after the transition.
             prepare (string or list): Callables to call when the trigger is activated
+            **kwargs: Additional arguments which can be passed to the created transition.
+                This is useful if you plan to extend Machine.Transition and require more parameters.
         """
         if trigger not in self.events:
-            self.events[trigger] = Event(trigger, self)
+            self.events[trigger] = self._create_event(trigger, self)
             setattr(self.model, trigger, self.events[trigger].trigger)
 
         if isinstance(source, string_types):
@@ -451,7 +469,7 @@ class Machine(object):
             after = listify(after) + listify(self.after_state_change)
 
         for s in source:
-            t = self._create_transition(s, dest, conditions, unless, before, after, prepare)
+            t = self._create_transition(s, dest, conditions, unless, before, after, prepare, **kwargs)
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
@@ -498,6 +516,33 @@ class Machine(object):
             func(event_data)
         else:
             func(*event_data.args, **event_data.kwargs)
+
+    def process(self, trigger):
+
+        # default (not async) processing
+        if not self.async:
+            if not self._transition_queue:
+                # if trigger raises an Error, it has to be handled by the Machine.process caller
+                return trigger()
+            else:
+                raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
+
+        # process async events
+        self._transition_queue.append(trigger)
+        # another entry in the queue implies a running transition; skip immediate execution
+        if len(self._transition_queue) > 1:
+            return True
+
+        # execute as long as transition queue is not empty
+        while self._transition_queue:
+            try:
+                self._transition_queue[0]()
+                self._transition_queue.popleft()
+            except Exception:
+                # if a transition raises an exception, clear queue and delegate exception handling
+                self._transition_queue.clear()
+                raise
+        return True
 
     @classmethod
     def _identify_callback(cls, name):

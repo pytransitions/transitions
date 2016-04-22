@@ -2,9 +2,7 @@ from ..core import Machine, Transition, Event
 
 from threading import RLock
 import inspect
-import logging
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+
 
 class LockedMethod:
 
@@ -20,21 +18,21 @@ class LockedMethod:
 class LockedEvent(Event):
 
     def trigger(self, *args, **kwargs):
-        with self.machine.lock:
+        with self.machine.rlock:
             super(LockedEvent, self).trigger(*args, **kwargs)
 
 
 class LockedMachine(Machine):
 
     def __init__(self, *args, **kwargs):
-        self.lock = RLock()
+        self.rlock = RLock()
         super(LockedMachine, self).__init__(*args, **kwargs)
 
     def __getattribute__(self, item):
         f = super(LockedMachine, self).__getattribute__
         tmp = f(item)
         if inspect.ismethod(tmp) and item not in "__getattribute__":
-            return LockedMethod(f('lock'), tmp)
+            return LockedMethod(f('rlock'), tmp)
         return tmp
 
     def __getattr__(self, item):
@@ -43,8 +41,6 @@ class LockedMachine(Machine):
         except AttributeError:
             return super(LockedMachine, self).__getattr__(item)
 
-    def add_transition(self, trigger, source, dest, **kwargs):
-        if trigger not in self.events:
-             self.events[trigger] = LockedEvent(trigger, self)
-             setattr(self.model, trigger, self.events[trigger].trigger)
-        super(LockedMachine, self).add_transition(trigger, source, dest, **kwargs)
+    @staticmethod
+    def _create_event(*args, **kwargs):
+        return LockedEvent(*args, **kwargs)
