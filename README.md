@@ -406,7 +406,7 @@ If you desire, you can disable this behavior by setting `auto_transitions=False`
 A given trigger can be attached to multiple transitions, some of which can potentially begin or end in the same state. For example:
 
 ```python
-machine.add_transition('transmogrify', ['solid','liquid', 'gas'], 'plasma')
+machine.add_transition('transmogrify', ['solid', 'liquid', 'gas'], 'plasma')
 machine.add_transition('transmogrify', 'plasma', 'solid')
 # This next transition will never execute
 machine.add_transition('transmogrify', 'plasma', 'gas')
@@ -445,7 +445,7 @@ print(machine.state)
 
 #### <a name="queued-transitions"></a>Queued transitions
 
-Transitions default behaviour is to processes events instantly. This means it will process an event within an `on_enter` method _before_ callbacks bound to `after` will be called.
+The default behaviour in Transitions is to process events instantly. This means events within an `on_enter` method will be processed _before_ callbacks bound to `after` are called.
 
 ```python
 def go_to_C():
@@ -492,8 +492,7 @@ This results in
 ```
 prepare -> before -> on_enter_B -> queue(to_C) -> after  -> on_enter_C.
 ```
-However, when processing event asynchronously, the trigger call will _always_ return True since at queuing time it cannot be
-verified if a transition is valid or not. This is intentional even if just one event is processed.
+**Important note:** when processing events asynchronously, the trigger call will _always_ return `True`, since there is no way to determine at queuing time whether a transition involving queued calls will ultimately complete successfully. This is true even when only a single event is processed.
 
 ```python
 machine.add_transition('jump', 'A', 'C', conditions='will_fail')
@@ -584,7 +583,7 @@ lump.melt()
 >>> "It took you 4 attempts to melt the lump!"
 ```
 
-Note that if the transition is not valid from the current state, or there are multiple transitions sharing a trigger, `'prepare'` will only be called on the ones that are actually executed.
+Note that `prepare` will not be called unless the current state is a valid source for the named transition.
 
 In summary, callbacks on transitions are executed in the following order:
 
