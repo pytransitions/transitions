@@ -738,7 +738,7 @@ This approach targets experimental use since in this case the underlying classes
 |                                | Diagrams | Nested | Locked |
 | -----------------------------: | :------: | :----: | :----: |
 | Machine                        | ✘        | ✘      | ✘      |
-| MachineGraphSupport            | ✓        | ✘      | ✘      |
+| GraphMachine                   | ✓        | ✘      | ✘      |
 | HierarchicalMachine            | ✘        | ✓      | ✘      |
 | LockedMachine                  | ✘        | ✘      | ✓      |
 | HierarchicalGraphMachine       | ✓        | ✓      | ✘      |
@@ -762,10 +762,10 @@ Additional Keywords:
 * `show_conditions` (default False): Shows conditions at transition edges
 
 Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). With
- `MachineGraphSupport` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
+ `GraphMachine` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
 
 ```python
-from transitions.extensions import MachineGraphSupport as Machine
+from transitions.extensions import GraphMachine as Machine
 machine = Machine(...)
 machine.graph.draw('my_state_diagram.png', prog='dot')
 ```
