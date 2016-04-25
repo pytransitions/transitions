@@ -1,4 +1,4 @@
-from .diagrams import MachineGraphSupport
+from .diagrams import GraphMachine
 from .nesting import HierarchicalMachine
 from .locking import LockedMachine
 

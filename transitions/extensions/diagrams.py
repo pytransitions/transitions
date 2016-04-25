@@ -148,7 +148,7 @@ class AGraph(Diagram):
         return fsm_graph
 
 
-class MachineGraphSupport(Machine):
+class GraphMachine(Machine):
     _pickle_blacklist = ['graph']
 
     def __getstate__(self):
@@ -163,7 +163,7 @@ class MachineGraphSupport(Machine):
         # remove graph config from keywords
         title = kwargs.pop('title', 'State Machine')
         self.show_conditions = kwargs.pop('show_conditions', False)
-        super(MachineGraphSupport, self).__init__(*args, **kwargs)
+        super(GraphMachine, self).__init__(*args, **kwargs)
 
         # Create graph at beginning
         self.title = title
@@ -194,11 +194,11 @@ class MachineGraphSupport(Machine):
             self.set_edge_style(edge, 'default')
 
     def add_states(self, *args, **kwargs):
-        super(MachineGraphSupport, self).add_states(*args, **kwargs)
+        super(GraphMachine, self).add_states(*args, **kwargs)
         self.graph = self.get_graph(force_new=True)
 
     def add_transition(self, *args, **kwargs):
-        super(MachineGraphSupport, self).add_transition(*args, **kwargs)
+        super(GraphMachine, self).add_transition(*args, **kwargs)
         self.graph = self.get_graph(force_new=True)
 
     def set_node_state(self, node_name=None, state='default', reset=False):
