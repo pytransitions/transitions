@@ -161,18 +161,19 @@ class GraphMachine(Machine):
 
     def __init__(self, *args, **kwargs):
         # remove graph config from keywords
-        title = kwargs.pop('title', 'State Machine')
+        self.title = kwargs.pop('title', 'State Machine')
         self.show_conditions = kwargs.pop('show_conditions', False)
         super(GraphMachine, self).__init__(*args, **kwargs)
 
         # Create graph at beginning
-        self.title = title
-        self.graph = self.get_graph(title=title)
+        self.graph = self.get_graph(title=self.title)
 
         # Set initial node as active
         self.set_node_state(self.initial, 'active')
 
     def get_graph(self, title=None, force_new=False):
+        if title is None:
+            title = self.title
         if not hasattr(self, 'graph') or force_new:
             self.graph = AGraph(self).get_graph(title)
 
