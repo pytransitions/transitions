@@ -108,8 +108,7 @@ class AGraph(Diagram):
                         while len(dst.children) > 0:
                             dst = src.children
 
-                    if container.has_edge(src.name, dst.name) is False:
-                        container.add_edge(src.name, dst.name, label=label, ltail=ltail, lhead=lhead)
+                    container.add_edge(src.name, dst.name, label=label, ltail=ltail, lhead=lhead)
 
     def _transition_label(self, edge_label, tran):
         if self.machine.show_conditions and tran.conditions:
