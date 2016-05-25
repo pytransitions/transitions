@@ -9,4 +9,5 @@ dist/*
 .idea
 .coverage
 .ipynb_checkpoints
+.tox/
 examples/state.png
