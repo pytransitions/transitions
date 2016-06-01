@@ -10,7 +10,7 @@ import os
 
 
 def edge_label_from_transition_label(label):
-    return label.split(' [')[0]  # if no condition, label is returned
+    return label.split(' || ')[0].split(' [')[0]  # if no condition, label is returned; returns first event only
 
 
 class TestDiagrams(TestCase):
@@ -93,17 +93,18 @@ class TestDiagrams(TestCase):
 
     def test_store_nested_agraph_diagram(self):
         ''' Same as above, but with nested states. '''
-        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
+        states = ['standing', 'walking', {'name': 'caffeinated', 'children':['dithering', 'running']}]
         transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},   # 1 edge
-            {'trigger': 'run', 'source': 'B', 'dest': 'C'},    # + 1 edge
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D',  # + 1 edges
-             'conditions': 'is_fast'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}  # + 1 edges = 4 edges
+          ['walk', 'standing', 'walking'],                          #   1 edge
+          ['go', 'standing', 'walking'],                            # (edge will be merged with previous edge)
+          ['stop', 'walking', 'standing'],                          # + 1 edge
+          ['drink', '*', 'caffeinated_dithering'],                  # + 4 edges
+          ['walk', 'caffeinated_dithering', 'caffeinated_running'], # + 1 edge
+          ['relax', 'caffeinated', 'standing']                      # + 1 edge = 8 edges
         ]
 
         hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
-        m = hsm_graph_cls(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        m = hsm_graph_cls(states=states, transitions=transitions, initial='standing', auto_transitions=False)
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue("digraph" in str(graph))
@@ -111,14 +112,15 @@ class TestDiagrams(TestCase):
         # Test that graph properties match the Machine
         # print((set(m.states.keys()), )
         node_names = set([n.name for n in graph.nodes()])
-        self.assertEqual(set(m.states.keys()) - set('C'), node_names)
+        node_names.add('caffeinated')
+        self.assertEqual(set(m.states.keys()), node_names)
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
             t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
-        self.assertEqual(len(graph.edges()), 4)  # see above
+        self.assertEqual(len(graph.edges()), 8)  # see above
 
         # Force a new
         graph2 = m.get_graph(title="Second Graph", force_new=True)

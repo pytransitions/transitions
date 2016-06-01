@@ -99,7 +99,7 @@ class AGraph(Diagram):
 
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
-                    label = self._transition_label(label, t)
+                    edge_label = self._transition_label(label, t)
                     lhead = ''
 
                     if hasattr(dst, 'children') and len(dst.children) > 0:
@@ -108,8 +108,16 @@ class AGraph(Diagram):
                         while len(dst.children) > 0:
                             dst = src.children
 
-                    if container.has_edge(src.name, dst.name) is False:
-                        container.add_edge(src.name, dst.name, label=label, ltail=ltail, lhead=lhead)
+                    # special case in which parent to first child edge is resolved to a self reference.
+                    # will be omitted for now. I have not found a solution for how to fix this yet since having
+                    # cluster to node edges is a bit messy with dot.
+                    if dst.name == src.name and transitions[0] != t.dest:
+                        continue
+                    elif container.has_edge(src.name, dst.name):
+                        edge = container.get_edge(src.name, dst.name)
+                        edge.attr['label'] = edge.attr['label'] + ' || ' + edge_label
+                    else:
+                        container.add_edge(src.name, dst.name, label=edge_label, ltail=ltail, lhead=lhead)
 
     def _transition_label(self, edge_label, tran):
         if self.machine.show_conditions and tran.conditions:
