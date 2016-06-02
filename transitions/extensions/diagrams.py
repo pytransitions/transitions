@@ -115,7 +115,7 @@ class AGraph(Diagram):
                         continue
                     elif container.has_edge(src.name, dst.name):
                         edge = container.get_edge(src.name, dst.name)
-                        edge.attr['label'] = edge.attr['label'] + ' || ' + edge_label
+                        edge.attr['label'] = edge.attr['label'] + ' | ' + edge_label
                     else:
                         container.add_edge(src.name, dst.name, label=edge_label, ltail=ltail, lhead=lhead)
 

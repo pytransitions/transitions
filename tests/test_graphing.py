@@ -10,7 +10,7 @@ import os
 
 
 def edge_label_from_transition_label(label):
-    return label.split(' || ')[0].split(' [')[0]  # if no condition, label is returned; returns first event only
+    return label.split(' | ')[0].split(' [')[0]  # if no condition, label is returned; returns first event only
 
 
 class TestDiagrams(TestCase):
