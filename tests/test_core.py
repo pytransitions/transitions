@@ -3,10 +3,13 @@ try:
 except ImportError:
     pass
 
-from transitions import Machine, State, MachineError
+from .utils import InheritedStuff
+from .utils import Stuff
+from transitions import Machine
+from transitions import MachineError
+from transitions import State
 from transitions.core import listify
 from unittest import TestCase
-from .utils import Stuff, InheritedStuff
 
 try:
     from unittest.mock import MagicMock
@@ -377,13 +380,13 @@ class TestTransitions(TestCase):
         self.assertEqual(m.state, m2.state)
         m2.run()
 
-    def test_async(self):
+    def test_queued(self):
         states = ['A', 'B', 'C', 'D']
         # Define with list of dictionaries
 
         def change_state(machine):
             self.assertEqual(machine.current_state.name, 'A')
-            if machine.async:
+            if machine.has_queue:
                 machine.run(machine=machine)
                 self.assertEqual(machine.current_state.name, 'A')
             else:
@@ -399,7 +402,7 @@ class TestTransitions(TestCase):
         m = Machine(states=states, transitions=transitions, initial='A')
         m.walk(machine=m)
         self.assertEqual(m.current_state.name, 'B')
-        m = Machine(states=states, transitions=transitions, initial='A', async=True)
+        m = Machine(states=states, transitions=transitions, initial='A', queued=True)
         m.walk(machine=m)
         self.assertEqual(m.current_state.name, 'C')
 

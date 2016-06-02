@@ -1,6 +1,8 @@
-from ..core import Transition, Machine
-from .nesting import NestedState
 import abc
+
+from ..core import Machine
+from ..core import Transition
+from .nesting import NestedState
 try:
     import pygraphviz as pgv
 except:
@@ -99,7 +101,8 @@ class AGraph(Diagram):
 
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
-                    label = self._transition_label(label, t)
+                    # label = self._transition_label(label, t)
+                    edge_label = self._transition_label(label, t)
                     lhead = ''
 
                     if hasattr(dst, 'children') and len(dst.children) > 0:
@@ -108,8 +111,15 @@ class AGraph(Diagram):
                         while len(dst.children) > 0:
                             dst = src.children
 
-                    if container.has_edge(src.name, dst.name) is False:
-                        container.add_edge(src.name, dst.name, label=label, ltail=ltail, lhead=lhead)
+                    # if container.has_edge(src.name, dst.name) is False:
+                        # container.add_edge(src.name, dst.name, label=label, ltail=ltail, lhead=lhead)
+                    if dst.name == src.name and transitions[0] != t.dest:
+                        continue
+                    if container.has_edge(src.name, dst.name):
+                        edge = container.get_edge(src.name, dst.name)
+                        edge.attr['label'] = edge.attr['label'] + ' || ' + edge_label
+                    else:
+                        container.add_edge(src.name, dst.name, label=edge_label, ltail=ltail, lhead=lhead)
 
     def _transition_label(self, edge_label, tran):
         if self.machine.show_conditions and tran.conditions:
@@ -218,7 +228,7 @@ class GraphMachine(Machine):
             path = node_name.split(NestedState.separator)
             node = self.graph
             while len(path) > 0:
-                node = node.get_subgraph('cluster_'+ path.pop(0))
+                node = node.get_subgraph('cluster_' + path.pop(0))
             func = self.set_graph_style
         try:
             func(node, state)
