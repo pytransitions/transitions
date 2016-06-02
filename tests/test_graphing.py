@@ -151,3 +151,27 @@ class TestDiagrams(TestCase):
         m.add_state('X')
         m.add_transition('foo', '*', 'X')
         m.foo()
+
+    def test_if_multiple_edges_are_supported(self):
+        transitions = [
+            ['event_0', 'a', 'b'],
+            ['event_1', 'a', 'b'],
+            ['event_2', 'a', 'b'],
+            ['event_3', 'a', 'b'],
+        ]
+
+        machine_cls = MachineFactory.get_predefined(graph=True)
+        m = machine_cls(
+            states=['a', 'b'],
+            transitions=transitions,
+            initial='a',
+            auto_transitions=False,
+        )
+
+        graph = m.get_graph()
+        self.assertIsNotNone(graph)
+        self.assertTrue("digraph" in str(graph))
+
+        triggers = [transition[0] for transition in transitions]
+        for trigger in triggers:
+            self.assertTrue(trigger in str(graph))
