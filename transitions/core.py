@@ -308,7 +308,7 @@ class Machine(object):
             name: If a name is set, it will be used as a prefix for logger output
             queued (boolean): When True, processes transitions sequentially. A trigger
                 executed in a state callback function will be queued and executed later.
-                Due to the nature of the queed processing, all transitions will
+                Due to the nature of the queued processing, all transitions will
                 _always_ return True since conditional checks cannot be conducted at queueing time.
         """
         self.model = self if model is None else model

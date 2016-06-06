@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 (June, 2016)
+Release 0.4.1 is a minor release containing bug fixes and community feedback:
+- `async` is renamed to `queued` since it describes the mechanism better
+- Fixes problems with conditions shown multiple times in graphs
+- Fixes bug which omitted transitions with same source and destination in diagrams (thanks to @aisbaa)
+
 ## 0.4.0 (April, 2016)
 Release 0.4 is a major release that includes several new features:
 - New `async` Machine keyword allows queueing of transitions (thanks to @khigia)
