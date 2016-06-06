@@ -3,12 +3,15 @@ try:
 except ImportError:
     # python2
     pass
-from functools import partial
-from collections import defaultdict, deque, OrderedDict
-from six import string_types
 import inspect
-import logging
 import itertools
+import logging
+
+from collections import OrderedDict
+from collections import defaultdict
+from collections import deque
+from functools import partial
+from six import string_types
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -268,7 +271,7 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
-                 before_state_change=None, after_state_change=None, name=None, async=False):
+                 before_state_change=None, after_state_change=None, name=None, queued=False):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -303,9 +306,9 @@ class Machine(object):
                 the transition happened. It receives the very same args as normal
                 callbacks
             name: If a name is set, it will be used as a prefix for logger output
-            async (boolean): When True, processes transitions sequentially. A trigger
+            queued (boolean): When True, processes transitions sequentially. A trigger
                 executed in a state callback function will be queued and executed later.
-                Due to the nature of the asynchronous processing, all transitions will
+                Due to the nature of the queed processing, all transitions will
                 _always_ return True since conditional checks cannot be conducted at queueing time.
         """
         self.model = self if model is None else model
@@ -318,7 +321,7 @@ class Machine(object):
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
         self.id = name + ": " if name is not None else ""
-        self.async = async
+        self._queued = queued
         self._transition_queue = deque()
 
         if initial is None:
@@ -354,6 +357,11 @@ class Machine(object):
     def initial(self):
         """ Return the initial state. """
         return self._initial
+
+    @property
+    def has_queue(self):
+        """ Return boolean indicating if machine has queue or not """
+        return self._queued
 
     def is_state(self, state):
         """ Check whether the current state matches the named state. """
@@ -519,15 +527,15 @@ class Machine(object):
 
     def process(self, trigger):
 
-        # default (not async) processing
-        if not self.async:
+        # default processing
+        if not self.has_queue:
             if not self._transition_queue:
                 # if trigger raises an Error, it has to be handled by the Machine.process caller
                 return trigger()
             else:
                 raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
 
-        # process async events
+        # process queued events
         self._transition_queue.append(trigger)
         # another entry in the queue implies a running transition; skip immediate execution
         if len(self._transition_queue) > 1:

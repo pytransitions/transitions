@@ -1,6 +1,8 @@
-from ..core import Transition, Machine
-from .nesting import NestedState
 import abc
+
+from ..core import Machine
+from ..core import Transition
+from .nesting import NestedState
 try:
     import pygraphviz as pgv
 except:
@@ -226,7 +228,7 @@ class GraphMachine(Machine):
             path = node_name.split(NestedState.separator)
             node = self.graph
             while len(path) > 0:
-                node = node.get_subgraph('cluster_'+ path.pop(0))
+                node = node.get_subgraph('cluster_' + path.pop(0))
             func = self.set_graph_style
         try:
             func(node, state)
