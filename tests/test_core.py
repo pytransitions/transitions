@@ -532,3 +532,10 @@ class TestTransitions(TestCase):
         # An invalid transition shouldn't execute the callback
         with self.assertRaises(MachineError):
                 m.model.on_exit_A()
+
+    def test_process_trigger(self):
+        m = Machine(states=['raw', 'processed'], initial='raw')
+        m.add_transition('process', 'raw', 'processed')
+
+        m.process()
+        self.assertEqual(m.state, 'processed')

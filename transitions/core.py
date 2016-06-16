@@ -222,7 +222,7 @@ class Event(object):
 
     def trigger(self, *args, **kwargs):
         f = partial(self._trigger, *args, **kwargs)
-        return self.machine.process(f)
+        return self.machine._process(f)
 
     def _trigger(self, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
@@ -525,7 +525,7 @@ class Machine(object):
         else:
             func(*event_data.args, **event_data.kwargs)
 
-    def process(self, trigger):
+    def _process(self, trigger):
 
         # default processing
         if not self.has_queue:
