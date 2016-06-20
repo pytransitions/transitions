@@ -48,13 +48,13 @@ class State(object):
     def enter(self, event_data):
         """ Triggered when a state is entered. """
         for oe in self.on_enter:
-            event_data.machine.callback(oe, event_data)
+            event_data.machine._callback(oe, event_data)
         logger.info("%sEntered state %s", event_data.machine.id, self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         for oe in self.on_exit:
-            event_data.machine.callback(oe, event_data)
+            event_data.machine._callback(oe, event_data)
         logger.info("%sExited state %s", event_data.machine.id, self.name)
 
     def add_callback(self, trigger, func):
@@ -136,7 +136,7 @@ class Transition(object):
         machine = event_data.machine
 
         for func in self.prepare:
-            machine.callback(getattr(event_data.model, func), event_data)
+            machine._callback(getattr(event_data.model, func), event_data)
             logger.info("Executing callback '%s' before conditions." % func)
 
         for c in self.conditions:
@@ -145,13 +145,13 @@ class Transition(object):
                             "return %s. Transition halted.", event_data.machine.id, c.func, c.target)
                 return False
         for func in self.before:
-            machine.callback(func, event_data)
+            machine._callback(func, event_data)
             logger.info("%sExecuting callback '%s' before transition.", event_data.machine.id, func)
 
         self._change_state(event_data)
 
         for func in self.after:
-            machine.callback(func, event_data)
+            machine._callback(func, event_data)
             logger.info("%sExecuted callback '%s' after transition.", event_data.machine.id, func)
         return True
 
@@ -508,7 +508,7 @@ class Machine(object):
                 states.remove(self._initial)
             self.add_transition(trigger, states[-1], states[0])
 
-    def callback(self, func, event_data):
+    def _callback(self, func, event_data):
         """ Trigger a callback function, possibly wrapping it in an EventData
         instance.
         Args:
