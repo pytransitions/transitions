@@ -132,6 +132,8 @@ class TestTransitions(TestsCore):
         self.assertEquals(s.state, 'C')
         s.advance()
         self.assertEquals(s.state, 'C%s2' % State.separator)
+        self.assertFalse(s.is_C())
+        self.assertTrue(s.is_C(allow_substates=True))
 
     def test_use_machine_as_model(self):
         states = ['A', 'B', 'C', 'D']

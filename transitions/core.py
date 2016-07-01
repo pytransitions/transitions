@@ -271,7 +271,7 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
-                 before_state_change=None, after_state_change=None, name=None, queued=False):
+                 before_state_change=None, after_state_change=None, name=None, queued=False, **kwargs):
         """
         Args:
             model (object): The object whose states we want to manage. If None,
@@ -310,7 +310,15 @@ class Machine(object):
                 executed in a state callback function will be queued and executed later.
                 Due to the nature of the queued processing, all transitions will
                 _always_ return True since conditional checks cannot be conducted at queueing time.
+
+            **kwargs additional arguments passed to next class in MRO. This can be ignored in most cases.
         """
+
+        try:
+            super(Machine, self).__init__(**kwargs)
+        except TypeError as e:
+            raise MachineError('Passing arguments {0} caused an inheritance error: {1}'.format(kwargs.keys(), e))
+
         self.model = self if model is None else model
         self.states = OrderedDict()
         self.events = {}

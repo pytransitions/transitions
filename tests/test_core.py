@@ -539,3 +539,15 @@ class TestTransitions(TestCase):
 
         m.process()
         self.assertEqual(m.state, 'processed')
+
+    def test_inheritance(self):
+        class NewMachine(Machine):
+            def __init__(self, *args, **kwargs):
+                super(NewMachine, self).__init__(*args, **kwargs)
+
+        n = NewMachine(states=['A','B'], transitions=[['advance','A','B']], initial='A')
+        self.assertTrue(n.is_A())
+        n.advance()
+        self.assertTrue(n.is_B())
+        with self.assertRaises(MachineError):
+            m = NewMachine(state=['A', 'B'])
