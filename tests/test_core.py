@@ -217,6 +217,18 @@ class TestTransitions(TestCase):
         s.advance()
         self.assertEquals(s.state, 'C')
 
+        class NewMachine(Machine):
+            def __init__(self, *args, **kwargs):
+                super(NewMachine, self).__init__(*args, **kwargs)
+
+        n = NewMachine(states=states, transitions=[['advance','A','B']], initial='A')
+        self.assertTrue(n.is_A())
+        n.advance()
+        self.assertTrue(n.is_B())
+        with self.assertRaises(MachineError):
+            m = NewMachine(state=['A', 'B'])
+
+
     def test_send_event_data_callbacks(self):
         states = ['A', 'B', 'C', 'D', 'E']
         s = Stuff()
@@ -540,14 +552,3 @@ class TestTransitions(TestCase):
         m.process()
         self.assertEqual(m.state, 'processed')
 
-    def test_inheritance(self):
-        class NewMachine(Machine):
-            def __init__(self, *args, **kwargs):
-                super(NewMachine, self).__init__(*args, **kwargs)
-
-        n = NewMachine(states=['A','B'], transitions=[['advance','A','B']], initial='A')
-        self.assertTrue(n.is_A())
-        n.advance()
-        self.assertTrue(n.is_B())
-        with self.assertRaises(MachineError):
-            m = NewMachine(state=['A', 'B'])
