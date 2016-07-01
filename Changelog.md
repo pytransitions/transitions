@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 (... 2016)
+Release 0.4.2 contain minor API changes:
+- HierarchicalStateMachine.is_state now provides `allow_substates` as an optional argument(thanks to @jonathanunderwood)
+- Machine can now be used in scenarios where multiple inheritance is required (thanks to @jonathanunderwood)
+
 ## 0.4.1 (June, 2016)
 Release 0.4.1 is a minor release containing bug fixes and community feedback:
 - `async` is renamed to `queued` since it describes the mechanism better
