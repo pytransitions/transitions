@@ -192,10 +192,15 @@ class HierarchicalMachine(Machine):
                             src = transition.source
                             dst = parent.name + NestedState.separator + transition.dest\
                                 if transition.dest not in remap else remap[transition.dest]
+                            conditions = []
+                            unless = []
+                            for c in transition.conditions:
+                                conditions.append(c.func) if c.target else unless.append(c.func)
                             self._buffered_transitions.append({'trigger': trigger,
                                                                'source': parent.name + NestedState.separator + src,
                                                                'dest': dst,
-                                                               'conditions': transition.conditions,
+                                                               'conditions': conditions,
+                                                               'unless': unless,
                                                                'before': transition.before,
                                                                'after': transition.after})
 

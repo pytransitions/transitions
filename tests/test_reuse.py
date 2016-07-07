@@ -166,12 +166,11 @@ class TestTransitions(TestCase):
             ['increase', '2', '3'],
             ['decrease', '3', '2'],
             ['decrease', '2', '1'],
-            ['done', '3', 'done'],
+            {'trigger': 'done', 'source': '3', 'dest': 'done', 'conditions': 'this_passes'},
         ]
 
         counter = self.stuff.machine_cls(states=count_states, transitions=count_trans, initial='1')
-
-        counter.increase() # love my counter
+        counter.increase()  # love my counter
         states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
         states_remap = ['waiting', 'collecting', {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}]
 
@@ -182,6 +181,7 @@ class TestTransitions(TestCase):
         ]
 
         collector = self.stuff.machine_cls(states=states, transitions=transitions, initial='waiting')
+        collector.this_passes = self.stuff.this_passes
         collector.collect()  # collecting
         collector.count()  # let's see what we got
         collector.increase()  # counting_2
@@ -193,6 +193,7 @@ class TestTransitions(TestCase):
 
         # reuse counter instance with remap
         collector = self.stuff.machine_cls(states=states_remap, transitions=transitions, initial='waiting')
+        collector.this_passes = self.stuff.this_passes
         collector.collect()  # collecting
         collector.count()  # let's see what we got
         collector.increase()  # counting_2
