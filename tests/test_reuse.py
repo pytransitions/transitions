@@ -237,6 +237,6 @@ class TestTransitions(TestCase):
 
         m_model = Model()
         m = Machine(m_model,states=["A","B",{"name":"NEST","children":ms}])
-        m_model.to_NEST_C()
+        m_model.to('NEST%sC' % State.separator)
         m_model.go()
         self.assertTrue(m_model.prepared)
