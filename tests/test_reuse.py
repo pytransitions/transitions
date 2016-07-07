@@ -219,3 +219,24 @@ class TestTransitions(TestCase):
         collector.add_transition('fail', '*', 'counting%sdone' % State.separator)
         with self.assertRaises(ValueError):
             collector.fail()
+
+    def test_reuse_prepare(self):
+        class Model:
+            def __init__(self):
+                self.prepared = False
+
+            def preparation(self):
+                self.prepared = True
+
+        ms_model = Model()
+
+        ms = Machine(ms_model, states=["C","D"],
+                     transitions={"trigger":"go","source":"*", "dest":"D","prepare":"preparation"},initial="C")
+        ms_model.go()
+        self.assertTrue(ms_model.prepared)
+
+        m_model = Model()
+        m = Machine(m_model,states=["A","B",{"name":"NEST","children":ms}])
+        m_model.to_NEST_C()
+        m_model.go()
+        self.assertTrue(m_model.prepared)

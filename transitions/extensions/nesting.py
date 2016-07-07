@@ -201,6 +201,7 @@ class HierarchicalMachine(Machine):
                                                                'dest': dst,
                                                                'conditions': conditions,
                                                                'unless': unless,
+                                                               'prepare': transition.prepare,
                                                                'before': transition.before,
                                                                'after': transition.after})
 
