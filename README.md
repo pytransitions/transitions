@@ -592,6 +592,23 @@ In summary, callbacks on transitions are executed in the following order:
 * `'before'` (executed while the model is still in the source state)
 * `'after'` (executed while the model is in the destination state)
 
+Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
+`before_state_change` and `after_state_change` respectively:
+
+```python
+class Matter(object):
+    def make_hissing_noises(self): print("HISSSSSSSSSSSSSSSS")
+    def disappear(self): print("where'd all the liquid go?")
+
+states=['solid', 'liquid', 'gas', 'plasma']
+
+lump = Matter()
+m = Machine(lump, states, before_state_change='make_hissing_noises', after_state_change='disappear')
+lump.to_gas()
+>>> "HISSSSSSSSSSSSSSSS"
+>>> "where'd all the liquid go?"
+```
+
 ### <a name="passing-data"></a>Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways.
 
