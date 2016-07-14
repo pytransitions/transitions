@@ -863,7 +863,18 @@ machine.state
 ```
 
 Instead of `to_C_3_a()` auto transition is called as `to_C.s3.a()`. If your substate starts with a digit, transitions adds a prefix 's' ('3' becomes 's3') to the auto transition `FunctionWrapper` to comply with the attribute naming scheme of python.
-If interactive completion is not required, `to('C↦3↦a')` can be called directly. Additionally, `on_enter/exit_<<state name>>` is replaced with `on_enter/exit(state_name, callback).
+If interactive completion is not required, `to('C↦3↦a')` can be called directly. Additionally, `on_enter/exit_<<state name>>` is replaced with `on_enter/exit(state_name, callback)`.
+
+To check whether the current state is a substate of a specific state `is_state` supports the keyword `allow_substates`:
+
+```python
+machine.state
+>>> 'C.2.a'
+machine.is_C() # checks for specific states
+>>> False
+machine.is_C(allow_substates=True)
+>>> True
+```
 
 #### Reuse of previously created HSMs
 

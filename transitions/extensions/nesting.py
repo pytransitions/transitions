@@ -143,6 +143,16 @@ class HierarchicalMachine(Machine):
     def _create_state(*args, **kwargs):
         return NestedState(*args, **kwargs)
 
+    def is_state(self, state_name, allow_substates=False):
+        if not allow_substates:
+            return self.current_state.name == state_name
+
+        temp_state = self.current_state
+        while not temp_state.name == state_name and temp_state.level > 0:
+            temp_state = temp_state.parent
+
+        return temp_state.name == state_name
+
     def traverse(self, states, on_enter=None, on_exit=None,
                  ignore_invalid_triggers=None, parent=None, remap={}):
         states = listify(states)
