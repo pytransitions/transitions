@@ -1,9 +1,10 @@
 # Changelog
 
 ## 0.4.2 (... 2016)
-Release 0.4.2 contain minor API changes:
+Release 0.4.2 contain minor API changes and bug fixes:
 - HierarchicalStateMachine.is_state now provides `allow_substates` as an optional argument(thanks to @jonathanunderwood)
 - Machine can now be used in scenarios where multiple inheritance is required (thanks to @jonathanunderwood)
+- Fixes two bugs in HierarchicalStateMachine (thanks to @ajax2leet)
 
 ## 0.4.1 (June, 2016)
 Release 0.4.1 is a minor release containing bug fixes and community feedback:
