@@ -68,11 +68,21 @@ class State(object):
         callback_list.append(func)
 
 
-class Transition(object):
-
-    class Condition(object):
+class Condition(object):
 
         def __init__(self, func, target=True):
+            """
+            Args:
+                func (string): Name of the condition-checking callable
+                target (bool): Indicates the target state--i.e., when True,
+                    the condition-checking callback should return True to pass,
+                    and when False, the callback should return False to pass.
+            Notes:
+                This class should not be initialized or called from outside a
+                Transition instance, and exists at module level (rather than
+                nesting under the ransition class) only because of a bug in
+                dill that prevents serialization under Python 2.7.
+            """
             self.func = func
             self.target = target
 
@@ -91,6 +101,9 @@ class Transition(object):
             else:
                 return predicate(
                     *event_data.args, **event_data.kwargs) == self.target
+
+
+class Transition(object):
 
     def __init__(self, source, dest, conditions=None, unless=None, before=None,
                  after=None, prepare=None):
@@ -119,10 +132,10 @@ class Transition(object):
         self.conditions = []
         if conditions is not None:
             for c in listify(conditions):
-                self.conditions.append(self.Condition(c))
+                self.conditions.append(Condition(c))
         if unless is not None:
             for u in listify(unless):
-                self.conditions.append(self.Condition(u, target=False))
+                self.conditions.append(Condition(u, target=False))
 
     def execute(self, event_data):
         """ Execute the transition.
