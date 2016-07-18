@@ -932,7 +932,7 @@ If a reused state machine does not have a final state, you can of course add the
 In cases where event dispatching is done in threads, one can use either `LockedMachine` or `LockedHierarchicalMachine` where **function access** (!sic) is secured with reentrant locks. This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
 
 ```python
-from transitions import LockedMachine as Machine
+from transitions.extensions import LockedMachine as Machine
 from threading import Thread
 import time
 
