@@ -1,16 +1,21 @@
 # Changelog
 
-## 0.4.2 (... 2016)
-Release 0.4.2 contain minor API changes and bug fixes:
+## 0.4.1 (July, 2016)
+Release 0.4.1 is a minor release containing bug fixes, minor API changes, and community feedback:
+- `async` is renamed to `queued` since it describes the mechanism better
 - HierarchicalStateMachine.is_state now provides `allow_substates` as an optional argument(thanks to @jonathanunderwood)
 - Machine can now be used in scenarios where multiple inheritance is required (thanks to @jonathanunderwood)
-- Fixes two bugs in HierarchicalStateMachine (thanks to @ajax2leet)
+- Adds support for tox (thanks to @medecau and @aisbaa)
+- Bug fixes:
+    - Problems with conditions shown multiple times in graphs
+    - Bug which omitted transitions with same source and destination in diagrams (thanks to @aisbaa)
+    - Conditions passed incorrectly when HSMs are used as a nested state
+    - Class nesting issue that prevented pickling with dill
+    - Two bugs in HierarchicalStateMachine (thanks to @ajax2leet)
+    - Avoided recursion error when naming a transition 'process' (thanks to @dceresuela)
 
-## 0.4.1 (June, 2016)
-Release 0.4.1 is a minor release containing bug fixes and community feedback:
-- `async` is renamed to `queued` since it describes the mechanism better
-- Fixes problems with conditions shown multiple times in graphs
-- Fixes bug which omitted transitions with same source and destination in diagrams (thanks to @aisbaa)
+
+- Minor PEP8 fixes (thanks to @medecau)
 
 ## 0.4.0 (April, 2016)
 Release 0.4 is a major release that includes several new features:
