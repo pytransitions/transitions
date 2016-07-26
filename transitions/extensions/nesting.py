@@ -167,7 +167,7 @@ class HierarchicalMachine(Machine):
                 if state in remap:
                     continue
                 tmp_states.append(self._create_state(state, on_enter=on_enter, on_exit=on_exit, parent=parent,
-                                              ignore_invalid_triggers=ignore))
+                                  ignore_invalid_triggers=ignore))
             elif isinstance(state, dict):
                 state = copy.deepcopy(state)
                 if 'ignore_invalid_triggers' not in state:
@@ -180,8 +180,8 @@ class HierarchicalMachine(Machine):
                     p = self._create_state(state['name'], on_enter=on_enter, on_exit=on_exit,
                                            ignore_invalid_triggers=ignore, parent=parent)
                     nested = self.traverse(state['children'], on_enter=on_enter, on_exit=on_exit,
-                                               ignore_invalid_triggers=ignore,
-                                               parent=p, remap=state.get('remap', {}))
+                                           ignore_invalid_triggers=ignore,
+                                           parent=p, remap=state.get('remap', {}))
                     tmp_states.append(p)
                     tmp_states.extend(nested)
                 else:
@@ -195,7 +195,7 @@ class HierarchicalMachine(Machine):
                     if trigger.startswith('to_'):
                         path = trigger[3:].split(NestedState.separator)
                         ppath = parent.name.split(NestedState.separator)
-                        path = ['to_'+ppath[0]] + ppath[1:] + path
+                        path = ['to_' + ppath[0]] + ppath[1:] + path
                         trigger = '.'.join(path)
                     for transitions in event.transitions.values():
                         for transition in transitions:
