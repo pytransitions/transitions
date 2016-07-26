@@ -1,3 +1,5 @@
+nose
+mock
 dill
 pygraphviz
 pycodestyle
