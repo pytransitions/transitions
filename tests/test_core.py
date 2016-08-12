@@ -550,3 +550,13 @@ class TestTransitions(TestCase):
         m.process()
         self.assertEqual(m.state, 'processed')
 
+    def test_multiple_models(self):
+        s1, s2 = Stuff(), Stuff()
+        m = Machine(model=[s1, s2], states=['A', 'B', 'C'],
+                    initial='A')
+        self.assertEquals(len(m.models), 2)
+        m.add_transition('advance', 'A', 'B')
+        s1.advance()
+        self.assertEquals(s1.state, 'B')
+        self.assertEquals(s2.state, 'A')
+
