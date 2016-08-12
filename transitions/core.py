@@ -171,7 +171,7 @@ class Transition(object):
     def _change_state(self, event_data):
         event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest)
-        event_data.update()
+        event_data.update(event_data.model)
         event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
@@ -206,9 +206,9 @@ class EventData(object):
         self.args = args
         self.kwargs = kwargs
 
-    def update(self):
+    def update(self, model):
         """ Updates the current State to accurately reflect the Machine. """
-        self.state = self.machine.current_state
+        self.state = self.machine.get_state(model.state)
 
 
 class Event(object):
@@ -233,11 +233,11 @@ class Event(object):
         """
         self.transitions[transition.source].append(transition)
 
-    def trigger(self, *args, **kwargs):
-        f = partial(self._trigger, *args, **kwargs)
+    def trigger(self, model, *args, **kwargs):
+        f = partial(self._trigger, model, *args, **kwargs)
         return self.machine._process(f)
 
-    def _trigger(self, *args, **kwargs):
+    def _trigger(self, model, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes.
         Args:
@@ -247,18 +247,18 @@ class Event(object):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        state_name = self.machine.current_state.name
-        if state_name not in self.transitions:
+        state = self.machine.get_state(model.state)
+        if state.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.id, self.name,
-                                                               state_name)
-            if self.machine.current_state.ignore_invalid_triggers:
+                                                               state.name)
+            if state.ignore_invalid_triggers:
                 logger.warning(msg)
                 return False
             else:
                 raise MachineError(msg)
-        event = EventData(self.machine.current_state, self, self.machine,
-                          self.machine.model, args=args, kwargs=kwargs)
-        for t in self.transitions[state_name]:
+        event = EventData(state, self, self.machine, model,
+                          args=args, kwargs=kwargs)
+        for t in self.transitions[state.name]:
             event.transition = t
             if t.execute(event):
                 return True
@@ -284,10 +284,11 @@ class Machine(object):
     def __init__(self, model=None, states=None, initial=None, transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
-                 before_state_change=None, after_state_change=None, name=None, queued=False, **kwargs):
+                 before_state_change=None, after_state_change=None, name=None,
+                 queued=False, **kwargs):
         """
         Args:
-            model (object): The object whose states we want to manage. If None,
+            model (object): The object(s) whose states we want to manage. If None,
                 the current Machine instance will be used the model (i.e., all
                 triggering events will be attached to the Machine itself).
             states (list): A list of valid states. Each element can be either a
@@ -332,10 +333,9 @@ class Machine(object):
         except TypeError as e:
             raise MachineError('Passing arguments {0} caused an inheritance error: {1}'.format(kwargs.keys(), e))
 
-        self.model = self if model is None else model
+        self.models = listify(self if model is None else model)
         self.states = OrderedDict()
         self.events = {}
-        self.current_state = None
         self.send_event = send_event
         self.auto_transitions = auto_transitions
         self.ignore_invalid_triggers = ignore_invalid_triggers
@@ -384,9 +384,17 @@ class Machine(object):
         """ Return boolean indicating if machine has queue or not """
         return self._queued
 
-    def is_state(self, state):
+    @property
+    def model(self):
+        if len(self.models) == 1:
+            return self.models[0]
+        elif not self.models:
+            return None
+        return self.models
+
+    def is_state(self, state, model):
         """ Check whether the current state matches the named state. """
-        return self.current_state.name == state
+        return model.state == state
 
     def get_state(self, state):
         """ Return the State instance with the passed name. """
@@ -394,12 +402,13 @@ class Machine(object):
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state]
 
-    def set_state(self, state):
+    def set_state(self, state, model=None):
         """ Set the current state. """
         if isinstance(state, string_types):
             state = self.get_state(state)
-        self.current_state = state
-        self.model.state = self.current_state.name
+        models = self.models if model is None else listify(model)
+        for m in models:
+            m.state = state.name
 
     def add_state(self, *args, **kwargs):
         """ Alias for add_states. """
@@ -432,28 +441,29 @@ class Machine(object):
             ignore = self.ignore_invalid_triggers
 
         states = listify(states)
-        for state in states:
-            if isinstance(state, string_types):
-                state = State(
-                    state, on_enter=on_enter, on_exit=on_exit,
-                    ignore_invalid_triggers=ignore)
-            elif isinstance(state, dict):
-                if 'ignore_invalid_triggers' not in state:
-                    state['ignore_invalid_triggers'] = ignore
-                state = State(**state)
-            self.states[state.name] = state
-            setattr(self.model, 'is_%s' %
-                    state.name, partial(self.is_state, state.name))
-            state_name = state.name
-            #  Add enter/exit callbacks if there are existing bound methods
-            enter_callback = 'on_enter_' + state_name
-            if hasattr(self.model, enter_callback) and \
-                    inspect.ismethod(getattr(self.model, enter_callback)):
-                state.add_callback('enter', enter_callback)
-            exit_callback = 'on_exit_' + state_name
-            if hasattr(self.model, exit_callback) and \
-                    inspect.ismethod(getattr(self.model, exit_callback)):
-                state.add_callback('exit', exit_callback)
+        for model in self.models:
+            for state in states:
+                if isinstance(state, string_types):
+                    state = State(
+                        state, on_enter=on_enter, on_exit=on_exit,
+                        ignore_invalid_triggers=ignore)
+                elif isinstance(state, dict):
+                    if 'ignore_invalid_triggers' not in state:
+                        state['ignore_invalid_triggers'] = ignore
+                    state = State(**state)
+                self.states[state.name] = state
+                setattr(model, 'is_%s' % state.name,
+                        partial(self.is_state, state.name, model))
+
+                #  Add enter/exit callbacks if there are existing bound methods
+                enter_callback = 'on_enter_' + state.name
+                if hasattr(model, enter_callback) and \
+                        inspect.ismethod(getattr(model, enter_callback)):
+                    state.add_callback('enter', enter_callback)
+                exit_callback = 'on_exit_' + state.name
+                if hasattr(model, exit_callback) and \
+                        inspect.ismethod(getattr(model, exit_callback)):
+                    state.add_callback('exit', exit_callback)
         # Add automatic transitions after all states have been created
         if self.auto_transitions:
             for s in self.states.keys():
@@ -486,7 +496,9 @@ class Machine(object):
         """
         if trigger not in self.events:
             self.events[trigger] = self._create_event(trigger, self)
-            setattr(self.model, trigger, self.events[trigger].trigger)
+            for model in self.models:
+                trig_func = partial(self.events[trigger].trigger, model=model)
+                setattr(model, trigger, trig_func)
 
         if isinstance(source, string_types):
             source = list(self.states.keys()) if source == '*' else [source]
@@ -498,7 +510,8 @@ class Machine(object):
             after = listify(after) + listify(self.after_state_change)
 
         for s in source:
-            t = self._create_transition(s, dest, conditions, unless, before, after, prepare, **kwargs)
+            t = self._create_transition(s, dest, conditions, unless, before,
+                                        after, prepare, **kwargs)
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',

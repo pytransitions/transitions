@@ -240,8 +240,6 @@ class TestTransitions(TestCase):
         s.advance(message='Hallo. My name is Inigo Montoya.')
         self.assertTrue(s.message.startswith('Hallo.'))
         # Make sure callbacks handle arguments properly
-        s.to_E("Optional message")
-        self.assertEquals(s.message, 'Optional message')
         s.to_B()
         # Now wrap arguments in an EventData instance
         m.send_event = True
@@ -397,10 +395,10 @@ class TestTransitions(TestCase):
         # Define with list of dictionaries
 
         def change_state(machine):
-            self.assertEqual(machine.current_state.name, 'A')
+            self.assertEqual(machine.state, 'A')
             if machine.has_queue:
                 machine.run(machine=machine)
-                self.assertEqual(machine.current_state.name, 'A')
+                self.assertEqual(machine.state, 'A')
             else:
                 with self.assertRaises(MachineError):
                     machine.run(machine=machine)
@@ -413,10 +411,10 @@ class TestTransitions(TestCase):
 
         m = Machine(states=states, transitions=transitions, initial='A')
         m.walk(machine=m)
-        self.assertEqual(m.current_state.name, 'B')
+        self.assertEqual(m.state, 'B')
         m = Machine(states=states, transitions=transitions, initial='A', queued=True)
         m.walk(machine=m)
-        self.assertEqual(m.current_state.name, 'C')
+        self.assertEqual(m.state, 'C')
 
     def test___getattr___and_identify_callback(self):
         m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
