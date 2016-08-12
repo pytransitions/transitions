@@ -441,20 +441,19 @@ class Machine(object):
             ignore = self.ignore_invalid_triggers
 
         states = listify(states)
-        for model in self.models:
-            for state in states:
-                if isinstance(state, string_types):
-                    state = State(
-                        state, on_enter=on_enter, on_exit=on_exit,
-                        ignore_invalid_triggers=ignore)
-                elif isinstance(state, dict):
-                    if 'ignore_invalid_triggers' not in state:
-                        state['ignore_invalid_triggers'] = ignore
-                    state = State(**state)
-                self.states[state.name] = state
+        for state in states:
+            if isinstance(state, string_types):
+                state = State(
+                    state, on_enter=on_enter, on_exit=on_exit,
+                    ignore_invalid_triggers=ignore)
+            elif isinstance(state, dict):
+                if 'ignore_invalid_triggers' not in state:
+                    state['ignore_invalid_triggers'] = ignore
+                state = State(**state)
+            self.states[state.name] = state
+            for model in self.models:
                 setattr(model, 'is_%s' % state.name,
                         partial(self.is_state, state.name, model))
-
                 #  Add enter/exit callbacks if there are existing bound methods
                 enter_callback = 'on_enter_' + state.name
                 if hasattr(model, enter_callback) and \
