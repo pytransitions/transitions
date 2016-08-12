@@ -167,7 +167,8 @@ class GraphMachine(Machine):
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.graph = self.get_graph(title=self.title)
-        self.set_node_style(self.graph.get_node(self.current_state.name), 'active')
+        for model in self.models:
+            self.set_node_style(self.graph.get_node(model.state), 'active')
 
     def __init__(self, *args, **kwargs):
         # remove graph config from keywords

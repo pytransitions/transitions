@@ -550,3 +550,22 @@ class TestTransitions(TestCase):
         m.process()
         self.assertEqual(m.state, 'processed')
 
+    def test_multiple_models(self):
+        states = ['A', 'B', 'C', 'D']
+        # Define with list of dictionaries
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+
+        class Model(object):
+            pass
+
+        m1 = Model()
+        m2 = Model()
+        m = Machine(model=[m1, m2], states=states, transitions=transitions, initial='A')
+        m1.walk()
+        self.assertTrue(m1.is_B())
+        self.assertTrue(m2.is_A())
+

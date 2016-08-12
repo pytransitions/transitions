@@ -47,7 +47,7 @@ class TestLockedTransitions(TestCore):
         thread.start()
         # give thread some time to start
         time.sleep(0.01)
-        self.assertTrue(self.stuff.machine.is_state("B"))
+        self.assertTrue(self.stuff.is_B())
 
     def test_parallel_access(self):
         thread = Thread(target=self.stuff.forward)
@@ -69,7 +69,7 @@ class TestLockedTransitions(TestCore):
         time.sleep(0.1)
         logger.info('Check if state transition done...')
         # Thread will release lock before Transition is finished
-        self.assertTrue(self.stuff.machine.is_state('D'))
+        self.assertTrue(self.stuff.is_D())
 
     def test_pickle(self):
         import sys
@@ -84,11 +84,11 @@ class TestLockedTransitions(TestCore):
         dump = pickle.dumps(self.stuff)
         self.assertIsNotNone(dump)
         stuff2 = pickle.loads(dump)
-        self.assertTrue(stuff2.machine.is_state("B"))
+        self.assertTrue(stuff2.is_B())
         # check if machines of stuff and stuff2 are truly separated
         stuff2.to_A()
         self.stuff.to_C()
-        self.assertTrue(stuff2.machine.is_state("A"))
+        self.assertTrue(stuff2.is_A())
         thread = Thread(target=stuff2.forward)
         thread.start()
         # give thread some time to start
@@ -97,11 +97,11 @@ class TestLockedTransitions(TestCore):
         # and also not share locks
         begin = time.time()
         # stuff should not be locked and execute fast
-        self.assertTrue(self.stuff.machine.is_state("C"))
+        self.assertTrue(self.stuff.is_C())
         fast = time.time()
         # stuff2 should be locked and take about 1 second
         # to be executed
-        self.assertTrue(stuff2.machine.is_state("B"))
+        self.assertTrue(stuff2.is_B())
         blocked = time.time()
         self.assertAlmostEqual(fast-begin, 0, delta=0.1)
         self.assertAlmostEqual(blocked-begin, 1, delta=0.1)
@@ -153,13 +153,13 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
         dump = pickle.dumps(m)
         self.assertIsNotNone(dump)
         m2 = pickle.loads(dump)
-        self.assertTrue(m2.is_state("B"))
+        self.assertTrue(m2.is_B())
         m2.to_C_3_a()
         m2.to_C_3_b()
         # check if machines of stuff and stuff2 are truly separated
         m2.to_A()
         m.to_C()
-        self.assertTrue(m2.is_state("A"))
+        self.assertTrue(m2.is_A())
         thread = Thread(target=m2.forward)
         thread.start()
         # give thread some time to start
@@ -168,11 +168,11 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
         # and also not share locks
         begin = time.time()
         # stuff should not be locked and execute fast
-        self.assertTrue(m.is_state("C"))
+        self.assertTrue(m.is_C())
         fast = time.time()
         # stuff2 should be locked and take about 1 second
         # to be executed
-        self.assertTrue(m2.is_state("B"))
+        self.assertTrue(m2.is_B())
         blocked = time.time()
         self.assertAlmostEqual(fast-begin, 0, delta=0.1)
         self.assertAlmostEqual(blocked-begin, 1, delta=0.1)

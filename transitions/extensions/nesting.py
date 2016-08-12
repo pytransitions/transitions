@@ -2,6 +2,7 @@ from ..core import Machine, Transition, State, Event, listify, MachineError, Eve
 
 from six import string_types
 import copy
+from functools import partial
 
 import logging
 logger = logging.getLogger(__name__)
@@ -90,28 +91,29 @@ class NestedTransition(Transition):
     # The actual state change method 'execute' in Transition was restructured to allow overriding
     def _change_state(self, event_data):
         machine = event_data.machine
+        model = event_data.model
         dest_state = machine.get_state(self.dest)
-        source_state = machine.current_state
+        source_state = machine.get_state(model.state)
         lvl = source_state.exit_nested(event_data, dest_state)
         event_data.machine.set_state(self.dest)
-        event_data.update()
+        event_data.update(model)
         dest_state.enter_nested(event_data, lvl)
 
 
 class NestedEvent(Event):
 
-    def _trigger(self, *args, **kwargs):
-        tmp = self.machine.current_state
+    def _trigger(self, model, *args, **kwargs):
+        tmp = self.machine.get_state(model.state)
         while tmp.parent and tmp.name not in self.transitions:
             tmp = tmp.parent
         if tmp.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.id, self.name,
-                                                               self.machine.current_state.name)
-            if self.machine.current_state.ignore_invalid_triggers:
+                                                               model.state)
+            if self.machine.get_state(model.state).ignore_invalid_triggers:
                 logger.warning(msg)
             else:
                 raise MachineError(msg)
-        event = EventData(self.machine.current_state, self, self.machine,
+        event = EventData(self.machine.get_state(model.state), self, self.machine,
                           self.machine.model, args=args, kwargs=kwargs)
         for t in self.transitions[tmp.name]:
             event.transition = t
@@ -125,10 +127,12 @@ class HierarchicalMachine(Machine):
     def __init__(self, *args, **kwargs):
         self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
-        if hasattr(self.model, 'to'):
-            logger.warn("%sModel already has a 'to'-method. It will NOT be overwritten by NestedMachine", self.id)
-        else:
-            setattr(self.model, 'to', self.to)
+        for model in self.models:
+            if hasattr(model, 'to'):
+                logger.warn("%sModel already has a 'to'-method. It will NOT be overwritten by NestedMachine", self.id)
+            else:
+                to_func = partial(self.to, model)
+                setattr(model, 'to', to_func)
 
     # Instead of creating transitions directly, Machine now use a factory method which can be overridden
     @staticmethod
@@ -143,11 +147,11 @@ class HierarchicalMachine(Machine):
     def _create_state(*args, **kwargs):
         return NestedState(*args, **kwargs)
 
-    def is_state(self, state_name, allow_substates=False):
+    def is_state(self, state_name, model, allow_substates=False):
         if not allow_substates:
-            return self.current_state.name == state_name
+            return model.state == state_name
 
-        temp_state = self.current_state
+        temp_state = self.get_state(model.state)
         while not temp_state.name == state_name and temp_state.level > 0:
             temp_state = temp_state.parent
 
@@ -250,14 +254,18 @@ class HierarchicalMachine(Machine):
             self.events[trigger] = self._create_event(trigger, self)
             if trigger.startswith('to_'):
                 path = trigger[3:].split(NestedState.separator)
-                if hasattr(self.model, 'to_' + path[0]):
-                    t = getattr(self.model, 'to_' + path[0])
-                    t.add(self.events[trigger].trigger, path[1:])
-                else:
-                    t = FunctionWrapper(self.events[trigger].trigger, path[1:])
-                    setattr(self.model, 'to_' + path[0], t)
+                for model in self.models:
+                    trig_func = partial(self.events[trigger].trigger, model=model)
+                    if hasattr(model, 'to_' + path[0]):
+                        t = getattr(model, 'to_' + path[0])
+                        t.add(trig_func, path[1:])
+                    else:
+                        t = FunctionWrapper(trig_func, path[1:])
+                        setattr(model, 'to_' + path[0], t)
             else:
-                setattr(self.model, trigger, self.events[trigger].trigger)
+                for model in self.models:
+                    trig_func = partial(self.events[trigger].trigger, model=model)
+                    setattr(model, trigger, trig_func)
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
                                                         prepare=prepare, before=before, after=after, **kwargs)
 
@@ -267,7 +275,7 @@ class HierarchicalMachine(Machine):
     def on_exit(self, state_name, callback):
         self.get_state(state_name).add_callback('exit', callback)
 
-    def to(self, state_name, *args, **kwargs):
-        event = EventData(self.current_state, None, self,
-                          self.model, args=args, kwargs=kwargs)
-        self._create_transition(self.current_state.name, state_name).execute(event)
+    def to(self, model, state_name, *args, **kwargs):
+        event = EventData(self.get_state(model.state), None, self,
+                          model, args=args, kwargs=kwargs)
+        self._create_transition(model.state, state_name).execute(event)
