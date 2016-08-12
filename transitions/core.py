@@ -170,7 +170,7 @@ class Transition(object):
 
     def _change_state(self, event_data):
         event_data.machine.get_state(self.source).exit(event_data)
-        event_data.machine.set_state(self.dest)
+        event_data.machine.set_state(self.dest, event_data.model)
         event_data.update(event_data.model)
         event_data.machine.get_state(self.dest).enter(event_data)
 
