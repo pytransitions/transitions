@@ -20,6 +20,7 @@ except ImportError:
 
 state_separator = State.separator
 
+
 class TestTransitions(TestsCore):
 
     def setUp(self):
@@ -259,7 +260,7 @@ class TestTransitions(TestsCore):
             import pickle
 
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
-          'D', 'E', 'F']
+                  'D', 'E', 'F']
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
@@ -288,9 +289,9 @@ class TestTransitions(TestsCore):
         ]
 
         m = self.stuff.machine_cls(None, states=['A', 'B', 'C'], transitions=transitions,
-                    before_state_change='before_state_change',
-                    after_state_change='after_state_change', send_event=True,
-                    initial='A', auto_transitions=True)
+                                   before_state_change='before_state_change',
+                                   after_state_change='after_state_change', send_event=True,
+                                   initial='A', auto_transitions=True)
 
         m.before_state_change = MagicMock()
         m.after_state_change = MagicMock()
@@ -323,39 +324,37 @@ class TestTransitions(TestsCore):
 
     def test_example_one(self):
         State.separator = '_'
-        states = ['standing', 'walking', {'name': 'caffeinated', 'children':['dithering', 'running']}]
-        transitions = [
-          ['walk', 'standing', 'walking'],
-          ['stop', 'walking', 'standing'],
-          ['drink', '*', 'caffeinated'],
-          ['walk', 'caffeinated', 'caffeinated_running'],
-          ['relax', 'caffeinated', 'standing']]
+        states = ['standing', 'walking', {'name': 'caffeinated', 'children': ['dithering', 'running']}]
+        transitions = [['walk', 'standing', 'walking'],
+                       ['stop', 'walking', 'standing'],
+                       ['drink', '*', 'caffeinated'],
+                       ['walk', 'caffeinated', 'caffeinated_running'],
+                       ['relax', 'caffeinated', 'standing']]
         machine = self.stuff.machine_cls(states=states, transitions=transitions, initial='standing',
                                          ignore_invalid_triggers=True, name='Machine 1')
 
-        machine.walk() # Walking now
-        machine.stop() # let's stop for a moment
-        machine.drink() # coffee time
+        machine.walk()   # Walking now
+        machine.stop()   # let's stop for a moment
+        machine.drink()  # coffee time
         machine.state
         self.assertEqual(machine.state, 'caffeinated')
-        machine.walk() # we have to go faster
+        machine.walk()   # we have to go faster
         self.assertEqual(machine.state, 'caffeinated_running')
-        machine.stop() # can't stop moving!
+        machine.stop()   # can't stop moving!
         machine.state
         self.assertEqual(machine.state, 'caffeinated_running')
-        machine.relax() # leave nested state
-        machine.state # phew, what a ride
+        machine.relax()  # leave nested state
+        machine.state    # phew, what a ride
         self.assertEqual(machine.state, 'standing')
-        machine.to_caffeinated_running() # auto transition fast track
+        machine.to_caffeinated_running()  # auto transition fast track
         machine.on_enter_caffeinated_running('callback_method')
 
     def test_example_two(self):
         State.separator = '.' if sys.version_info[0] < 3 else u'↦'
         states = ['A', 'B',
-          {'name': 'C', 'children':['1', '2',
-            {'name': '3', 'children': ['a', 'b', 'c']}
-          ]}
-        ]
+                  {'name': 'C', 'children': ['1', '2',
+                                             {'name': '3', 'children': ['a', 'b', 'c']}]
+                   }]
 
         transitions = [
             ['reset', 'C', 'A'],
@@ -374,6 +373,19 @@ class TestTransitions(TestsCore):
         self.assertEqual(machine.state, 'C')
         machine.reset()  # exit C, enter A
         self.assertEqual(machine.state, 'A')
+
+    def test_multiple_models(self):
+        class Model(object):
+            pass
+        s1, s2 = Model(), Model()
+        m = MachineFactory.get_predefined(nested=True)(model=[s1, s2], states=['A', 'B', 'C'],
+                                                       initial='A')
+        self.assertEquals(len(m.models), 2)
+        m.add_transition('advance', 'A', 'B')
+        self.assertNotEqual(s1.advance, s2.advance)
+        s1.advance()
+        self.assertEquals(s1.state, 'B')
+        self.assertEquals(s2.state, 'A')
 
 
 class TestWithGraphTransitions(TestTransitions):

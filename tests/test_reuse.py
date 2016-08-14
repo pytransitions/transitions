@@ -17,6 +17,7 @@ except ImportError:
 
 nested_separator = State.separator
 
+
 class TestTransitions(TestCase):
 
     def setUp(self):
@@ -41,7 +42,7 @@ class TestTransitions(TestCase):
         counter = Machine(states=states, transitions=transitions, before_state_change='check',
                           after_state_change='clear', initial='1')
 
-        new_states = ['A', 'B', {'name':'C', 'children': counter}]
+        new_states = ['A', 'B', {'name': 'C', 'children': counter}]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
             {'trigger': 'forward', 'source': 'B', 'dest': 'C%s1' % State.separator},
@@ -135,7 +136,7 @@ class TestTransitions(TestCase):
 
         m = Machine(None, states=correct)
         if State.separator in '_':
-             m.to_B_C_3_a()
+            m.to_B_C_3_a()
         else:
             m.to_B.C.s3.a()
 
@@ -229,14 +230,14 @@ class TestTransitions(TestCase):
                 self.prepared = True
 
         ms_model = Model()
-
-        ms = Machine(ms_model, states=["C","D"],
-                     transitions={"trigger":"go","source":"*", "dest":"D","prepare":"preparation"},initial="C")
+        ms = Machine(ms_model, states=["C", "D"],
+                     transitions={"trigger": "go", "source": "*", "dest": "D",
+                                  "prepare": "preparation"}, initial="C")
         ms_model.go()
         self.assertTrue(ms_model.prepared)
 
         m_model = Model()
-        m = Machine(m_model,states=["A","B",{"name":"NEST","children":ms}])
+        m = Machine(m_model, states=["A", "B", {"name": "NEST", "children": ms}])
         m_model.to('NEST%sC' % State.separator)
         m_model.go()
         self.assertTrue(m_model.prepared)

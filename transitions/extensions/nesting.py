@@ -95,7 +95,7 @@ class NestedTransition(Transition):
         dest_state = machine.get_state(self.dest)
         source_state = machine.get_state(model.state)
         lvl = source_state.exit_nested(event_data, dest_state)
-        event_data.machine.set_state(self.dest)
+        event_data.machine.set_state(self.dest, model)
         event_data.update(model)
         dest_state.enter_nested(event_data, lvl)
 
@@ -114,7 +114,7 @@ class NestedEvent(Event):
             else:
                 raise MachineError(msg)
         event = EventData(self.machine.get_state(model.state), self, self.machine,
-                          self.machine.model, args=args, kwargs=kwargs)
+                          model, args=args, kwargs=kwargs)
         for t in self.transitions[tmp.name]:
             event.transition = t
             if t.execute(event):

@@ -783,8 +783,9 @@ Transitions can generate basic state diagrams displaying all valid transitions b
 
 ```python
 from transitions.extensions import GraphMachine as Machine
-machine = Machine(...)
-machine.graph.draw('my_state_diagram.png', prog='dot')
+m = Model()
+machine = Machine(model=m, ...)
+m.graph.draw('my_state_diagram.png', prog='dot')
 ```
 
 This produces something like this:

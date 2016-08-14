@@ -221,13 +221,12 @@ class TestTransitions(TestCase):
             def __init__(self, *args, **kwargs):
                 super(NewMachine, self).__init__(*args, **kwargs)
 
-        n = NewMachine(states=states, transitions=[['advance','A','B']], initial='A')
+        n = NewMachine(states=states, transitions=[['advance', 'A', 'B']], initial='A')
         self.assertTrue(n.is_A())
         n.advance()
         self.assertTrue(n.is_B())
         with self.assertRaises(MachineError):
             m = NewMachine(state=['A', 'B'])
-
 
     def test_send_event_data_callbacks(self):
         states = ['A', 'B', 'C', 'D', 'E']

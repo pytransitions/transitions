@@ -3,7 +3,10 @@ try:
 except ImportError:
     pass
 
+from .utils import Stuff
+
 from transitions.extensions import MachineFactory
+from transitions.extensions.diagrams import AGraph
 from unittest import TestCase
 import tempfile
 import os
@@ -92,16 +95,14 @@ class TestDiagrams(TestCase):
         target.close()
 
     def test_store_nested_agraph_diagram(self):
-        ''' Same as above, but with nested states. '''
-        states = ['standing', 'walking', {'name': 'caffeinated', 'children':['dithering', 'running']}]
-        transitions = [
-          ['walk', 'standing', 'walking'],                          #   1 edge
-          ['go', 'standing', 'walking'],                            # (edge will be merged with previous edge)
-          ['stop', 'walking', 'standing'],                          # + 1 edge
-          ['drink', '*', 'caffeinated_dithering'],                  # + 4 edges
-          ['walk', 'caffeinated_dithering', 'caffeinated_running'], # + 1 edge
-          ['relax', 'caffeinated', 'standing']                      # + 1 edge = 8 edges
-        ]
+        """ Same as above, but with nested states. """
+        states = ['standing', 'walking', {'name': 'caffeinated', 'children': ['dithering', 'running']}]
+        transitions = [['walk', 'standing', 'walking'],                           # 1 edge
+                       ['go', 'standing', 'walking'],                             # (edge will be merged with above)
+                       ['stop', 'walking', 'standing'],                           # + 1 edge
+                       ['drink', '*', 'caffeinated_dithering'],                   # + 4 edges
+                       ['walk', 'caffeinated_dithering', 'caffeinated_running'],  # + 1 edge
+                       ['relax', 'caffeinated', 'standing']]                      # + 1 edge = 8 edges
 
         hsm_graph_cls = MachineFactory.get_predefined(graph=True, nested=True)
         m = hsm_graph_cls(states=states, transitions=transitions, initial='standing', auto_transitions=False)
@@ -175,3 +176,21 @@ class TestDiagrams(TestCase):
         triggers = [transition[0] for transition in transitions]
         for trigger in triggers:
             self.assertTrue(trigger in str(graph))
+
+    def test_multi_model_state(self):
+        states = ['A', 'B', 'C', 'D']
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D', 'conditions': 'is_fast'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
+        ]
+        machine_cls = MachineFactory.get_predefined(graph=True)
+        m1 = Stuff()
+        m2 = Stuff()
+        m = machine_cls(model=[m1, m2], states=states, transitions=transitions, initial='A')
+        m1.walk()
+        self.assertEqual(m1.graph.get_node(m1.state).attr['color'],
+                         AGraph.style_attributes['node']['active']['color'])
+        self.assertEqual(m2.graph.get_node(m1.state).attr['color'],
+                         AGraph.style_attributes['node']['default']['color'])
