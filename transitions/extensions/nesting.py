@@ -178,7 +178,7 @@ class HierarchicalMachine(Machine):
 
                 if 'children' in state:
                     # Concat the state names with the current scope. The scope is the concatenation of all
-                    # previous parents. Call _flatten again to check for more nested states.
+                    # previous parents. Call traverse again to check for more nested states.
                     p = self._create_state(state['name'], on_enter=on_enter, on_exit=on_exit,
                                            ignore_invalid_triggers=ignore, parent=parent)
                     nested = self.traverse(state['children'], on_enter=on_enter, on_exit=on_exit,
@@ -210,6 +210,10 @@ class HierarchicalMachine(Machine):
                     for transitions in event.transitions.values():
                         for transition in transitions:
                             src = transition.source
+                            # transitions from remapped states will be filtered to prevent
+                            # unexpected behaviour in the parent machine
+                            if src in remap:
+                                continue
                             dst = parent.name + NestedState.separator + transition.dest\
                                 if transition.dest not in remap else remap[transition.dest]
                             conditions = []
