@@ -169,6 +169,8 @@ class HierarchicalMachine(Machine):
                 tmp_states.append(self._create_state(state, on_enter=on_enter, on_exit=on_exit, parent=parent,
                                   ignore_invalid_triggers=ignore))
             elif isinstance(state, dict):
+                if state['name'] in remap:
+                    continue
                 state = copy.deepcopy(state)
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
@@ -187,13 +189,21 @@ class HierarchicalMachine(Machine):
                 else:
                     tmp_states.insert(0, self._create_state(**state))
             elif isinstance(state, HierarchicalMachine):
-                inner_states = [s for s in state.states.values() if s.level == 0 and s.name not in remap]
+                # copy only states not mentioned in remap
+                copied_states = [s for s in state.states.values() if s.name not in remap]
+                # inner_states are the root states of the passed machine
+                # which have be attached to the parent
+                inner_states = [s for s in copied_states if s.level == 0]
                 for s in inner_states:
                     s.parent = parent
-                tmp_states.extend(state.states.values())
+                tmp_states.extend(copied_states)
                 for trigger, event in state.events.items():
                     if trigger.startswith('to_'):
                         path = trigger[3:].split(NestedState.separator)
+                        # do not copy auto_transitions since they would not be valid anymore;
+                        # trigger and destination do not exist in the new environment
+                        if path[0] in remap:
+                            continue
                         ppath = parent.name.split(NestedState.separator)
                         path = ['to_' + ppath[0]] + ppath[1:] + path
                         trigger = '.'.join(path)
@@ -224,7 +234,8 @@ class HierarchicalMachine(Machine):
         duplicate_check = []
         for s in new_states:
             if s.name in duplicate_check:
-                raise ValueError("Duplicate of state %s detected in %s." % (s.name, new_states))
+                state_names = [s.name for s in new_states]
+                raise ValueError("State %s cannot be added since it is already in state list %s." % (s.name, state_names))
             else:
                 duplicate_check.append(s.name)
         return new_states
