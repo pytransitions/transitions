@@ -20,6 +20,7 @@ except ImportError:
 
 state_separator = State.separator
 
+
 class TestTransitions(TestsCore):
 
     def setUp(self):

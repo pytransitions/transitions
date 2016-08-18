@@ -218,13 +218,13 @@ class HierarchicalMachine(Machine):
             elif isinstance(state, NestedState):
                 tmp_states.append(state)
             else:
-                raise ValueError
+                raise ValueError("%s cannot be added to the machine since its type is not known." % state)
             new_states.extend(tmp_states)
 
         duplicate_check = []
         for s in new_states:
             if s.name in duplicate_check:
-                raise ValueError
+                raise ValueError("Duplicate of state %s detected in %s." % (s.name, new_states))
             else:
                 duplicate_check.append(s.name)
         return new_states
