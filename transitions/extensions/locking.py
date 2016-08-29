@@ -17,9 +17,9 @@ class LockedMethod:
 
 class LockedEvent(Event):
 
-    def trigger(self, *args, **kwargs):
+    def trigger(self, model, *args, **kwargs):
         with self.machine.rlock:
-            super(LockedEvent, self).trigger(*args, **kwargs)
+            super(LockedEvent, self).trigger(model, *args, **kwargs)
 
 
 class LockedMachine(Machine):

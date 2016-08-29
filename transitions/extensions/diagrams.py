@@ -1,6 +1,6 @@
 import abc
 
-from ..core import Machine
+from ..core import Machine, listify
 from ..core import Transition
 from .nesting import NestedState
 try:
@@ -9,6 +9,7 @@ except:
     pgv = None
 
 import logging
+from functools import partial
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -20,7 +21,7 @@ class Diagram(object):
 
     @abc.abstractmethod
     def get_graph(self):
-        return
+        raise Exception('Abstract base Diagram.get_graph called!')
 
 
 class AGraph(Diagram):
@@ -78,11 +79,7 @@ class AGraph(Diagram):
                 sub = container.add_subgraph(name="cluster_" + state._name, label=state.name, rank='same')
                 self._add_nodes(state.children, sub)
             else:
-                try:
-                    shape = self.style_attributes['node']['default']['shape']
-                except KeyError:
-                    shape = 'circle'
-
+                shape = self.style_attributes['node']['default']['shape']
                 self.seen.append(state.name)
                 container.add_node(n=state.name, shape=shape)
 
@@ -97,7 +94,7 @@ class AGraph(Diagram):
                     ltail = 'cluster_' + src.name
                     src = src.children[0]
                     while len(src.children) > 0:
-                        src = src.children
+                        src = src.children[0]
 
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
@@ -108,7 +105,7 @@ class AGraph(Diagram):
                         lhead = 'cluster_' + dst.name
                         dst = dst.children[0]
                         while len(dst.children) > 0:
-                            dst = src.children
+                            dst = dst.children[0]
 
                     # special case in which parent to first child edge is resolved to a self reference.
                     # will be omitted for now. I have not found a solution for how to fix this yet since having
@@ -140,9 +137,7 @@ class AGraph(Diagram):
         if not pgv:
             raise Exception('AGraph diagram requires pygraphviz')
 
-        if title is None:
-            title = self.__class__.__name__
-        elif title is False:
+        if title is False:
             title = ''
 
         fsm_graph = pgv.AGraph(label=title, compound=True, **self.machine_attributes)
@@ -166,85 +161,99 @@ class GraphMachine(Machine):
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.graph = self.get_graph(title=self.title)
-        self.set_node_style(self.graph.get_node(self.current_state.name), 'active')
+        for model in self.models:
+            graph = self._get_graph(model, title=self.title)
+            self.set_node_style(graph, model.state, 'active')
 
     def __init__(self, *args, **kwargs):
         # remove graph config from keywords
         self.title = kwargs.pop('title', 'State Machine')
         self.show_conditions = kwargs.pop('show_conditions', False)
+
+        # temporally disable overwrites since graphing cannot
+        # be initialized before base machine
+        add_states = self.add_states
+        add_transition = self.add_transition
+        self.add_states = super(GraphMachine, self).add_states
+        self.add_transition = super(GraphMachine, self).add_transition
+
         super(GraphMachine, self).__init__(*args, **kwargs)
+        self.add_states = add_states
+        self.add_transition = add_transition
 
         # Create graph at beginning
-        self.graph = self.get_graph(title=self.title)
+        for model in self.models:
+            if hasattr(model, 'get_graph'):
+                raise AttributeError('Model already has a get_graph attribute. Graph retrieval cannot be bound.')
+            setattr(model, 'get_graph', partial(self._get_graph, model))
+            model.get_graph()
+            self.set_node_state(model.graph, self.initial, 'active')
 
-        # Set initial node as active
-        self.set_node_state(self.initial, 'active')
+        # for backwards compatibility assign get_combined_graph to get_graph
+        # if model is not the machine
+        if not hasattr(self, 'get_graph'):
+            setattr(self, 'get_graph', self.get_combined_graph)
 
-    def get_graph(self, title=None, force_new=False):
+    def _get_graph(self, model, title=None, force_new=False):
         if title is None:
             title = self.title
-        if not hasattr(self, 'graph') or force_new:
-            self.graph = AGraph(self).get_graph(title)
+        if not hasattr(model, 'graph') or force_new:
+            model.graph = AGraph(self).get_graph(title)
+        return model.graph
 
-        return self.graph
+    def get_combined_graph(self, title=None, force_new=False):
+        logger.info('Returning graph of the first model. In future releases, this ' +
+                    'method will return a combined graph of all models.')
+        return self._get_graph(self.models[0], title, force_new)
 
-    def set_edge_state(self, edge_from, edge_to, state='default'):
+    def set_edge_state(self, graph, edge_from, edge_to, state='default'):
         """ Mark a node as active by changing the attributes """
-        assert hasattr(self, 'graph')
-
-        edge = self.graph.get_edge(edge_from, edge_to)
+        edge = graph.get_edge(edge_from, edge_to)
 
         # Reset all the edges
-        for e in self.graph.edges_iter():
-            self.set_edge_style(e, 'default')
-
-        try:
-            self.set_edge_style(edge, state)
-        except KeyError:
-            self.set_edge_style(edge, 'default')
+        for e in graph.edges_iter():
+            self.set_edge_style(graph, e, 'default')
+        self.set_edge_style(graph, edge, state)
 
     def add_states(self, *args, **kwargs):
         super(GraphMachine, self).add_states(*args, **kwargs)
-        self.graph = self.get_graph(force_new=True)
+        for model in self.models:
+            model.get_graph(force_new=True)
 
     def add_transition(self, *args, **kwargs):
         super(GraphMachine, self).add_transition(*args, **kwargs)
-        self.graph = self.get_graph(force_new=True)
+        for model in self.models:
+            model.get_graph(force_new=True)
 
-    def set_node_state(self, node_name=None, state='default', reset=False):
-        assert hasattr(self, 'graph')
-
-        if node_name is None:
-            node_name = self.state
-
+    def set_node_state(self, graph, node_name, state='default', reset=False):
         if reset:
-            for n in self.graph.nodes_iter():
-                self.set_node_style(n, 'default')
-        if self.graph.has_node(node_name):
-            node = self.graph.get_node(node_name)
+            for n in graph.nodes_iter():
+                self.set_node_style(graph, n, 'default')
+        if graph.has_node(node_name):
+            node = graph.get_node(node_name)
             func = self.set_node_style
         else:
+            node = graph
             path = node_name.split(NestedState.separator)
-            node = self.graph
             while len(path) > 0:
                 node = node.get_subgraph('cluster_' + path.pop(0))
             func = self.set_graph_style
-        try:
-            func(node, state)
-        except KeyError:
-            func(node, 'default')
+        func(graph, node, state)
 
-    def set_node_style(self, item, style='default'):
-        style_attr = self.graph.style_attributes.get('node', {}).get(style)
-        item.attr.update(style_attr)
+    @staticmethod
+    def set_node_style(graph, node_name, style='default'):
+        node = graph.get_node(node_name)
+        style_attr = graph.style_attributes.get('node', {}).get(style)
+        node.attr.update(style_attr)
 
-    def set_edge_style(self, item, style='default'):
-        style_attr = self.graph.style_attributes.get('edge', {}).get(style)
-        item.attr.update(style_attr)
+    @staticmethod
+    def set_edge_style(graph, edge, style='default'):
+        style_attr = graph.style_attributes.get('edge', {}).get(style)
+        edge.attr.update(style_attr)
 
-    def set_graph_style(self, item, style='default'):
-        style_attr = self.graph.style_attributes.get('node', {}).get(style)
+    @staticmethod
+    def set_graph_style(graph, item, style='default'):
+        style_attr = graph.style_attributes.get('node', {}).get(style)
         item.graph_attr.update(style_attr)
 
     @staticmethod
@@ -255,21 +264,26 @@ class GraphMachine(Machine):
 class TransitionGraphSupport(Transition):
 
     def _change_state(self, event_data):
-
-        # Mark the active node
-        dest = event_data.machine.get_state(self.dest)
-        event_data.machine.set_node_state(dest.name, state='active', reset=True)
+        machine = event_data.machine
+        model = event_data.model
+        dest = machine.get_state(self.dest)
 
         # Mark the previous node and path used
         if self.source is not None:
-            source = event_data.machine.get_state(self.source)
-
-            event_data.machine.set_node_state(source.name, state='previous')
+            source = machine.get_state(self.source)
+            machine.set_node_state(model.graph, source.name,
+                                   state='previous')
 
             if hasattr(source, 'children'):
                 while len(source.children) > 0:
                     source = source.children[0]
                 while len(dest.children) > 0:
                     dest = dest.children[0]
-            event_data.machine.set_edge_state(source.name, dest.name, state='previous')
+            machine.set_edge_state(model.graph, source.name,
+                                   dest.name, state='previous')
+
+        # Mark the active node
+        machine.set_node_state(model.graph, dest.name,
+                               state='active', reset=True)
+
         super(TransitionGraphSupport, self)._change_state(event_data)

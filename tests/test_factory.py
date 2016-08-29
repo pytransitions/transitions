@@ -42,6 +42,3 @@ class TestFactory(TestCase):
 
         locked_nested_graph_cls = self.factory.get_predefined(nested=True, locked=True, graph=True)
         self.assertNotEqual(locked_nested_graph_cls._create_event, graph_cls._create_event)
-
-
-
