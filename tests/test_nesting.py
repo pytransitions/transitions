@@ -32,6 +32,15 @@ class TestTransitions(TestsCore):
     def tearDown(self):
         pass
 
+    def test_function_wrapper(self):
+        from transitions.extensions.nesting import FunctionWrapper
+        mo = MagicMock
+        f = FunctionWrapper(mo, ['a', 'long', 'path', 'to', 'walk'])
+        f.a.long.path.to.walk()
+        self.assertTrue(mo.called)
+        with self.assertRaises(Exception):
+            f.a.long.path()
+
     def test_init_machine_with_hella_arguments(self):
         states = [
             State('State1'),
@@ -386,6 +395,14 @@ class TestTransitions(TestsCore):
         s1.advance()
         self.assertEquals(s1.state, 'B')
         self.assertEquals(s2.state, 'A')
+
+    def test_excessive_nesting(self):
+        states = [{'name': 'A', 'children': []}]
+        curr = states[0]
+        for i in range(10):
+            curr['children'].append({'name': str(i), 'children': []})
+            curr = curr['children'][0]
+        m = self.stuff.machine_cls(states=states, initial='A')
 
 
 class TestWithGraphTransitions(TestTransitions):

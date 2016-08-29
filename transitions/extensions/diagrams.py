@@ -21,7 +21,7 @@ class Diagram(object):
 
     @abc.abstractmethod
     def get_graph(self):
-        return
+        raise Exception('Abstract base Diagram.get_graph called!')
 
 
 class AGraph(Diagram):
@@ -79,11 +79,7 @@ class AGraph(Diagram):
                 sub = container.add_subgraph(name="cluster_" + state._name, label=state.name, rank='same')
                 self._add_nodes(state.children, sub)
             else:
-                try:
-                    shape = self.style_attributes['node']['default']['shape']
-                except KeyError:
-                    shape = 'circle'
-
+                shape = self.style_attributes['node']['default']['shape']
                 self.seen.append(state.name)
                 container.add_node(n=state.name, shape=shape)
 
@@ -98,7 +94,7 @@ class AGraph(Diagram):
                     ltail = 'cluster_' + src.name
                     src = src.children[0]
                     while len(src.children) > 0:
-                        src = src.children
+                        src = src.children[0]
 
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
@@ -109,7 +105,7 @@ class AGraph(Diagram):
                         lhead = 'cluster_' + dst.name
                         dst = dst.children[0]
                         while len(dst.children) > 0:
-                            dst = src.children
+                            dst = dst.children[0]
 
                     # special case in which parent to first child edge is resolved to a self reference.
                     # will be omitted for now. I have not found a solution for how to fix this yet since having
@@ -141,9 +137,7 @@ class AGraph(Diagram):
         if not pgv:
             raise Exception('AGraph diagram requires pygraphviz')
 
-        if title is None:
-            title = self.__class__.__name__
-        elif title is False:
+        if title is False:
             title = ''
 
         fsm_graph = pgv.AGraph(label=title, compound=True, **self.machine_attributes)
@@ -219,10 +213,7 @@ class GraphMachine(Machine):
         # Reset all the edges
         for e in graph.edges_iter():
             self.set_edge_style(graph, e, 'default')
-        try:
-            self.set_edge_style(graph, edge, state)
-        except KeyError:
-            self.set_edge_style(graph, edge, 'default')
+        self.set_edge_style(graph, edge, state)
 
     def add_states(self, *args, **kwargs):
         super(GraphMachine, self).add_states(*args, **kwargs)
@@ -247,10 +238,7 @@ class GraphMachine(Machine):
             while len(path) > 0:
                 node = node.get_subgraph('cluster_' + path.pop(0))
             func = self.set_graph_style
-        try:
-            func(graph, node, state)
-        except KeyError:
-            func(graph, node, 'default')
+        func(graph, node, state)
 
     @staticmethod
     def set_node_style(graph, node_name, style='default'):

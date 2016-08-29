@@ -135,10 +135,7 @@ class TestTransitions(TestCase):
         collision = ['A', {'name': 'B', 'children': ['A', self.stuff.machine]}]
 
         m = Machine(None, states=correct)
-        if State.separator in '_':
-            m.to_B_C_3_a()
-        else:
-            m.to_B.C.s3.a()
+        m.to_B.C.s3.a()
 
         with self.assertRaises(ValueError):
             m = Machine(None, states=wrong_type)
@@ -147,12 +144,8 @@ class TestTransitions(TestCase):
             m = Machine(None, states=collision)
 
         m = Machine(None, states=siblings)
-        if State.separator in '_':
-            m.to_B_1()
-            m.to_B_A()
-        else:
-            m.to_B.s1()
-            m.to_B.A()
+        m.to_B.s1()
+        m.to_B.A()
 
     def test_custom_separator(self):
         State.separator = '.'

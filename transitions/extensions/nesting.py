@@ -18,17 +18,14 @@ class FunctionWrapper(object):
             self._func = func
 
     def add(self, func, path):
-        if len(path) > 0:
-            name = path[0]
-            if name[0].isdigit():
-                name = 's' + name
-            if hasattr(self, name):
-                getattr(self, name).add(func, path[1:])
-            else:
-                x = FunctionWrapper(func, path[1:])
-                setattr(self, name, x)
+        name = path[0]
+        if name[0].isdigit():
+            name = 's' + name
+        if hasattr(self, name):
+            getattr(self, name).add(func, path[1:])
         else:
-            self._func = func
+            x = FunctionWrapper(func, path[1:])
+            setattr(self, name, x)
 
     def __call__(self, *args, **kwargs):
         return self._func(*args, **kwargs)

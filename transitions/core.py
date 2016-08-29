@@ -388,9 +388,8 @@ class Machine(object):
     def model(self):
         if len(self.models) == 1:
             return self.models[0]
-        elif not self.models:
-            return None
-        return self.models
+        else:
+            return self.models
 
     def is_state(self, state, model):
         """ Check whether the current state matches the named state. """
@@ -603,11 +602,10 @@ class Machine(object):
         return callback_type, target
 
     def __getattr__(self, name):
+        # Machine.__dict__ does not contain double underscore variables.
+        # Class variables will be mangled.
         if name.startswith('__'):
-            if name in self.__dict__:
-                return self.__dict__[name]
-            else:
-                raise AttributeError("{} does not exist".format(name))
+            raise AttributeError("{} does not exist".format(name))
 
         # Could be a callback
         callback_type, target = self._identify_callback(name)
