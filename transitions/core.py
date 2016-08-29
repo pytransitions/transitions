@@ -23,6 +23,13 @@ def listify(obj):
         return obj if isinstance(obj, (list, tuple, type(None))) else [obj]
 
 
+def get_trigger(model, trigger_name, *args, **kwargs):
+    func = getattr(model, trigger_name, None)
+    if func:
+        return func(*args, **kwargs)
+    raise AttributeError("Model has no trigger named %s" % trigger_name)
+
+
 class State(object):
 
     def __init__(self, name, on_enter=None, on_exit=None,
@@ -97,7 +104,8 @@ class Condition(object):
                 model attached to the current machine which is used to invoke
                 the condition.
             """
-            predicate = getattr(event_data.model, self.func)
+            predicate = getattr(event_data.model, self.func) if isinstance(self.func, string_types) else self.func
+
             if event_data.machine.send_event:
                 return predicate(event_data) == self.target
             else:
@@ -368,6 +376,9 @@ class Machine(object):
         if ordered_transitions:
             self.add_ordered_transitions()
 
+        for model in self.models:
+            model.trigger = partial(get_trigger, model)
+
     @staticmethod
     def _create_transition(*args, **kwargs):
         return Transition(*args, **kwargs)
@@ -497,7 +508,7 @@ class Machine(object):
         if trigger not in self.events:
             self.events[trigger] = self._create_event(trigger, self)
             for model in self.models:
-                trig_func = partial(self.events[trigger].trigger, model=model)
+                trig_func = partial(self.events[trigger].trigger, model)
                 setattr(model, trigger, trig_func)
 
         if isinstance(source, string_types):

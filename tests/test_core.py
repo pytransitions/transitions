@@ -240,8 +240,9 @@ class TestTransitions(TestCase):
             trigger='advance', source='A', dest='B', before='set_message')
         s.advance(message='Hallo. My name is Inigo Montoya.')
         self.assertTrue(s.message.startswith('Hallo.'))
-        # Make sure callbacks handle arguments properly
-        s.to_B()
+        s.to_A()
+        s.advance('Test as positional argument')
+        self.assertTrue(s.message.startswith('Test as'))
         # Now wrap arguments in an EventData instance
         m.send_event = True
         m.add_transition(
@@ -599,3 +600,17 @@ class TestTransitions(TestCase):
         # for backwards compatibility model should return a model instance
         # rather than a list
         self.assertNotIsInstance(m.model, list)
+
+    def test_string_trigger(self):
+        def return_value(value):
+            return value
+
+        self.stuff.machine.add_transition('do', '*', 'C')
+        self.stuff.trigger('do')
+        self.assertTrue(self.stuff.is_C())
+        self.stuff.machine.add_transition('maybe', 'C', 'A', conditions=return_value)
+        self.assertFalse(self.stuff.trigger('maybe', value=False))
+        self.assertTrue(self.stuff.trigger('maybe', value=True))
+        self.assertTrue(self.stuff.is_A())
+        with self.assertRaises(AttributeError):
+            self.stuff.trigger('not_available')

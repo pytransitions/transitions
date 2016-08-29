@@ -89,7 +89,7 @@ class TestTransitions(TestCase):
 
         new_states = ['A', 'B', {'name': 'C', 'children':
                       [counter, {'name': 'X', 'children': ['will', 'be', 'filtered', 'out']}],
-                       'remap': {'finished': 'A', 'X': 'A'}}]
+                      'remap': {'finished': 'A', 'X': 'A'}}]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
             {'trigger': 'forward', 'source': 'B', 'dest': 'C%s1' % State.separator},

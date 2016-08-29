@@ -19,7 +19,7 @@ class LockedEvent(Event):
 
     def trigger(self, model, *args, **kwargs):
         with self.machine.rlock:
-            super(LockedEvent, self).trigger(model, *args, **kwargs)
+            return super(LockedEvent, self).trigger(model, *args, **kwargs)
 
 
 class LockedMachine(Machine):

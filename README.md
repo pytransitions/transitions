@@ -210,12 +210,14 @@ lump.state
 lump.evaporate()
 lump.state
 >>> 'gas'
-lump.ionize()
+lump.trigger('ionize')
 lump.state
 >>> 'plasma'
 ```
 
 Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. You don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`).
+Additionally, there is a method called `trigger` now attached to your model.
+This method lets you execute transitions by name in case dynamic triggering is required.
 
 ### <a name="states"></a>States
 
@@ -532,6 +534,7 @@ Note that condition-checking methods will passively receive optional arguments a
 
 ```python
 lump.heat(temp=74)
+# equivalent to lump.trigger('heat', temp=74)
 ```
 
 ... would pass the `temp=74` optional kwarg to the `is_flammable()` check (possibly wrapped in an `EventData` instance). For more on this, see the [Passing data](#passing-data) section below.
@@ -627,7 +630,8 @@ lump = Matter()
 machine = Machine(lump, ['solid', 'liquid'], initial='solid')
 machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
 
-lump.melt(45)  # positional arg
+lump.melt(45)  # positional arg; 
+# equivalent to lump.trigger('melt', 45)
 lump.print_temperature()
 >>> 'Current temperature is 45 degrees celsius.'
 
