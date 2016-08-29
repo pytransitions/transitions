@@ -47,12 +47,14 @@ class State(object):
 
     def enter(self, event_data):
         """ Triggered when a state is entered. """
+        logger.info("%sEntering state %s. Processing callbacks...", event_data.machine.id, self.name)
         for oe in self.on_enter:
             event_data.machine._callback(oe, event_data)
         logger.info("%sEntered state %s", event_data.machine.id, self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
+        logger.info("%Leaving state %s. Processing callbacks...", event_data.machine.id, self.name)
         for oe in self.on_exit:
             event_data.machine._callback(oe, event_data)
         logger.info("%sExited state %s", event_data.machine.id, self.name)
