@@ -91,7 +91,7 @@ class AGraph(Diagram):
                 src = self.machine.get_state(transitions[0])
                 ltail = ''
                 if hasattr(src, 'children') and len(src.children) > 0:
-                    ltail = 'cluster_' + src.name
+                    ltail = 'cluster_' + src._name
                     src = src.children[0]
                     while len(src.children) > 0:
                         src = src.children[0]

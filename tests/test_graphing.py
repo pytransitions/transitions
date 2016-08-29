@@ -158,6 +158,7 @@ class TestDiagramsNested(TestDiagrams):
 
         # write diagram to temp file
         target = tempfile.NamedTemporaryFile()
+        self.assertIsNotNone(graph.get_subgraph('cluster_C').get_subgraph('cluster_1'))
         graph.draw(target.name, prog='dot')
         self.assertTrue(os.path.getsize(target.name) > 0)
 
