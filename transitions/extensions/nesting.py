@@ -36,14 +36,19 @@ class FunctionWrapper(object):
 class NestedState(State):
     separator = '_'
 
-    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, parent=None):
+    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, parent=None, initial=None):
         self._name = name
+        self._initial = initial
         self.parent = parent
         super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
                                           ignore_invalid_triggers=ignore_invalid_triggers)
         if self.parent:
             self.parent.children.append(self)
         self.children = []
+
+    @property
+    def initial(self):
+        return self.name + NestedState.separator + self._initial if self._initial else None
 
     @property
     def level(self):
@@ -84,6 +89,13 @@ class NestedState(State):
 
 
 class NestedTransition(Transition):
+
+    def execute(self, event_data):
+        dest_state = event_data.machine.get_state(self.dest)
+        while dest_state.initial:
+            dest_state = event_data.machine.get_state(dest_state.initial)
+        self.dest = dest_state.name
+        return super(NestedTransition, self).execute(event_data)
 
     # The actual state change method 'execute' in Transition was restructured to allow overriding
     def _change_state(self, event_data):
@@ -181,7 +193,8 @@ class HierarchicalMachine(Machine):
                     # Concat the state names with the current scope. The scope is the concatenation of all
                     # previous parents. Call traverse again to check for more nested states.
                     p = self._create_state(state['name'], on_enter=on_enter, on_exit=on_exit,
-                                           ignore_invalid_triggers=ignore, parent=parent)
+                                           ignore_invalid_triggers=ignore, parent=parent,
+                                           initial=state.get('initial', None))
                     nested = self.traverse(state['children'], on_enter=on_enter, on_exit=on_exit,
                                            ignore_invalid_triggers=ignore,
                                            parent=p, remap=state.get('remap', {}))
@@ -208,6 +221,7 @@ class HierarchicalMachine(Machine):
                         ppath = parent.name.split(NestedState.separator)
                         path = ['to_' + ppath[0]] + ppath[1:] + path
                         trigger = '.'.join(path)
+                    # adjust all transition start and end points to new state names
                     for transitions in event.transitions.values():
                         for transition in transitions:
                             src = transition.source

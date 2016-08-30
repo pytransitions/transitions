@@ -30,6 +30,7 @@ class TestTransitions(TestsCore):
         self.stuff = Stuff(states, machine_cls)
 
     def tearDown(self):
+        State.separator = state_separator
         pass
 
     def test_function_wrapper(self):
@@ -403,6 +404,20 @@ class TestTransitions(TestsCore):
             curr['children'].append({'name': str(i), 'children': []})
             curr = curr['children'][0]
         m = self.stuff.machine_cls(states=states, initial='A')
+
+    def test_intial_state(self):
+        states = ['A', {'name': 'B', 'initial': '2',
+                        'children': ['1', {'name': '2', 'initial': 'a',
+                                           'children': ['a', 'b']}]}]
+        transitions = [['do', 'A', 'B'],
+                       ['do', 'B{0}2'.format(state_separator),
+                        'B{0}1'.format(state_separator)]]
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
+        m.do()
+        self.assertEqual(m.state, 'B{0}2{0}a'.format(state_separator))
+        self.assertTrue(m.is_B(allow_substates=True))
+        m.do()
+        self.assertEqual(m.state, 'B{0}1'.format(state_separator))
 
 
 class TestWithGraphTransitions(TestTransitions):

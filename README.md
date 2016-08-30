@@ -800,7 +800,8 @@ Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a m
 
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
-Transitions includes an extension module which allows to nest states. This allows to create contexts and to model cases where states are related to certain subtasks in the state machine. To create a nested state, either import `NestedState` from transitions or use a dictionary with initialization arguments.
+Transitions includes an extension module which allows to nest states. This allows to create contexts and to model cases where states are related to certain subtasks in the state machine. To create a nested state, either import `NestedState` from transitions or use a dictionary with the initialization arguments `name` and `children`. Optionally, `initial` can be used to define a sub state to transit to, when the nested state
+ is entered.
 
 ```python
 from transitions.extensions import HierarchicalMachine as Machine
@@ -810,9 +811,10 @@ transitions = [
   ['walk', 'standing', 'walking'],
   ['stop', 'walking', 'standing'],
   ['drink', '*', 'caffeinated'],
-  ['walk', 'caffeinated_dithering', 'caffeinated_running'],
+  ['walk', ['caffeinated', 'caffeinated_dithering'], 'caffeinated_running'],
   ['relax', 'caffeinated', 'standing']
 ]
+
 machine = Machine(states=states, transitions=transitions, initial='standing', ignore_invalid_triggers=True)
 
 machine.walk() # Walking now
@@ -832,7 +834,24 @@ machine.state # phew, what a ride
 # machine.on_enter_caffeinated_running('callback_method')
 ```
 
-Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`. Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine. This means a substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be refered to as `foo_bar_baz` and so on. When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates. Third, nested states can overwrite transition behaviour of their parents. If a transition is not known to the current state it will be delegated to its parent.
+A configuration making use of  `initial` could look like this:
+
+```python
+# ...
+states = ['standing', 'walking', {'name': 'caffeinated', 'initial': 'dithering' 'children':['dithering', 'running']}]
+transitions = [
+  ['walk', 'standing', 'walking'],
+  ['stop', 'walking', 'standing'],
+  # this transition will end in 'caffeinated_dithering'...
+  ['drink', '*', 'caffeinated'], 
+  # ... that is why we do not need do specify 'caffeinated' here anymore
+  ['walk', 'caffeinated_dithering', 'caffeinated_running'], 
+  ['relax', 'caffeinated', 'standing']
+]
+# ...
+```
+
+Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`. Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine. This means a substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be referred to as `foo_bar_baz` and so on. When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates. Third, nested states can overwrite transition behaviour of their parents. If a transition is not known to the current state it will be delegated to its parent.
 
 In some cases underscore as a separator is not sufficient. For instance if state names consists of more than one word and a concatenated naming such as `state_A_name_state_C` would be confusing. Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks). You can even use unicode characters if you use python 3:
 
