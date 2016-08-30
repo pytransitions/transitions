@@ -283,12 +283,8 @@ class TestTransitions(TestsCore):
         m2 = pickle.loads(dump)
         self.assertEqual(m.state, m2.state)
         m2.run()
-        if State.separator in '_':
-            m2.to_C_3_a()
-            m2.to_C_3_b()
-        else:
-            m2.to_C.s3.a()
-            m2.to_C.s3.b()
+        m2.to_C_3_a()
+        m2.to_C_3_b()
 
     def test_callbacks_duplicate(self):
 
