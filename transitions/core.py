@@ -377,7 +377,15 @@ class Machine(object):
             self.add_ordered_transitions()
 
         for model in self.models:
-            model.trigger = partial(get_trigger, model)
+            if hasattr(model, 'trigger'):
+                logger.info("%sModel has a attribute called trigger already. Use '_trigger' instead...", self.id)
+                if hasattr(model, '_trigger'):
+                    logger.warn("%sModel already contains attributes 'trigger' and '_trigger'. Skip method binding.",
+                                self.id)
+                else:
+                    model._trigger = partial(get_trigger, model)
+            else:
+                model.trigger = partial(get_trigger, model)
 
     @staticmethod
     def _create_transition(*args, **kwargs):
