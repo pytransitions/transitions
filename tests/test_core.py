@@ -606,8 +606,8 @@ class TestTransitions(TestCase):
             return value
 
         class Model:
-            def trigger(self):
-                pass
+            def trigger(self, value):
+                return value
 
         self.stuff.machine.add_transition('do', '*', 'C')
         self.stuff.trigger('do')
@@ -622,6 +622,7 @@ class TestTransitions(TestCase):
         model = Model()
         m = Machine(model=model)
         self.assertTrue(hasattr(model, '_trigger'))
+        self.assertEqual(model.trigger(5), 5)
         model._trigger = lambda x: x
         m = Machine(model=model)
         self.assertEqual(model._trigger(5), 5)
