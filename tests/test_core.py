@@ -605,6 +605,10 @@ class TestTransitions(TestCase):
         def return_value(value):
             return value
 
+        class Model:
+            def trigger(self, value):
+                return value
+
         self.stuff.machine.add_transition('do', '*', 'C')
         self.stuff.trigger('do')
         self.assertTrue(self.stuff.is_C())
@@ -614,3 +618,10 @@ class TestTransitions(TestCase):
         self.assertTrue(self.stuff.is_A())
         with self.assertRaises(AttributeError):
             self.stuff.trigger('not_available')
+
+        model = Model()
+        m = Machine(model=model)
+        self.assertEqual(model.trigger(5), 5)
+
+
+
