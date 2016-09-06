@@ -529,7 +529,7 @@ class Machine(object):
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
-                                loop=True, loop_includes_initial=True):
+                                loop=True, loop_includes_initial=True, conditions=None):
         """ Add a set of transitions that move linearly from state to state.
         Args:
             states (list): A list of state names defining the order of the
@@ -543,14 +543,20 @@ class Machine(object):
             loop_includes_initial (boolean): If no initial state was defined in
                 the machine, setting this to True will cause the _initial state
                 placeholder to be included in the added transitions.
+            conditions (None or list): A optional list of conditions that guard
+                in front of each corresponding ordered transition
         """
         if states is None:
             states = list(self.states.keys())  # need to listify for Python3
         if len(states) < 2:
             raise MachineError("Can't create ordered transitions on a Machine "
                                "with fewer than 2 states.")
+        if conditions is not None and len(conditions) != len(states):
+            raise MachineError("Can't create ordered transitions with mismatched "
+                               "conditions.")
         for i in range(1, len(states)):
-            self.add_transition(trigger, states[i - 1], states[i])
+            self.add_transition(trigger, states[i - 1], states[i],
+                                conditions=conditions[i - 1] if conditions else None)
         if loop:
             if not loop_includes_initial:
                 states.remove(self._initial)
