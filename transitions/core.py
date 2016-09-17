@@ -155,7 +155,7 @@ class Transition(object):
             successfully executed (True if successful, False if not).
         """
         logger.debug("%sInitiating transition from state %s to state %s...",
-                    event_data.machine.id, self.source, self.dest)
+                     event_data.machine.id, self.source, self.dest)
         machine = event_data.machine
 
         for func in self.prepare:
@@ -165,7 +165,7 @@ class Transition(object):
         for c in self.conditions:
             if not c.check(event_data):
                 logger.debug("%sTransition condition failed: %s() does not " +
-                            "return %s. Transition halted.", event_data.machine.id, c.func, c.target)
+                             "return %s. Transition halted.", event_data.machine.id, c.func, c.target)
                 return False
         for func in self.before:
             machine._callback(func, event_data)
@@ -378,7 +378,8 @@ class Machine(object):
 
         for model in self.models:
             if hasattr(model, 'trigger'):
-                logger.warning("%sModel already contains an attribute 'trigger'. Skip method binding ", self.id)
+                logger.warning("%sModel already contains an attribute 'trigger'. Skip method binding ",
+                               self.id)
             else:
                 model.trigger = partial(get_trigger, model)
 
