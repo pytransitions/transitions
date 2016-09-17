@@ -622,6 +622,3 @@ class TestTransitions(TestCase):
         model = Model()
         m = Machine(model=model)
         self.assertEqual(model.trigger(5), 5)
-
-
-
