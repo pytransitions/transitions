@@ -61,7 +61,7 @@ class State(object):
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
-        logger.info("%sLeaving state %s. Processing callbacks...", event_data.machine.id, self.name)
+        logger.debug("%sExiting state %s. Processing callbacks...", event_data.machine.id, self.name)
         for oe in self.on_exit:
             event_data.machine._callback(oe, event_data)
         logger.info("%sExited state %s", event_data.machine.id, self.name)
