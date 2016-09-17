@@ -378,7 +378,7 @@ class Machine(object):
 
         for model in self.models:
             if hasattr(model, 'trigger'):
-                logger.info("%sModel already contains an attribute 'trigger'. Skip method binding ", self.id)
+                logger.warning("%sModel already contains an attribute 'trigger'. Skip method binding ", self.id)
             else:
                 model.trigger = partial(get_trigger, model)
 
