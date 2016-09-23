@@ -415,6 +415,24 @@ class TestTransitions(TestsCore):
         m.do()
         self.assertEqual(m.state, 'B{0}1'.format(state_separator))
 
+    def test_get_triggers(self):
+        states = ['standing', 'walking', {'name': 'caffeinated', 'children': ['dithering', 'running']}]
+        transitions = [
+            ['walk', 'standing', 'walking'],
+            ['go', 'standing', 'walking'],
+            ['stop', 'walking', 'standing'],
+            {'trigger': 'drink', 'source': '*', 'dest': 'caffeinated_dithering',
+             'conditions': 'is_hot', 'unless': 'is_too_hot'},
+            ['walk', 'caffeinated_dithering', 'caffeinated_running'],
+            ['relax', 'caffeinated', 'standing']
+        ]
+
+        machine = self.stuff.machine_cls(states=states, transitions=transitions, auto_transitions=False)
+        trans = machine.get_triggers('caffeinated{0}dithering'.format(state_separator))
+        print(trans)
+        self.assertEqual(len(trans), 3)
+        self.assertTrue('relax' in trans)
+
 
 class TestWithGraphTransitions(TestTransitions):
 

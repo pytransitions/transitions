@@ -484,6 +484,10 @@ class Machine(object):
             for s in self.states.keys():
                 self.add_transition('to_%s' % s, '*', s)
 
+    def get_triggers(self, *args):
+        states = set(args)
+        return [t for (t, ev) in self.events.items() if any(state in ev.transitions for state in states)]
+
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None, **kwargs):
         """ Create a new Transition instance and add it to the internal list.

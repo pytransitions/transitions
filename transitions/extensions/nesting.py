@@ -270,6 +270,17 @@ class HierarchicalMachine(Machine):
             args = self._buffered_transitions.pop()
             self.add_transition(**args)
 
+    def get_triggers(self, *args):
+        # add parents to state set
+        states = []
+        for state in args:
+            s = self.get_state(state)
+            while s.parent:
+                states.append(s.parent.name)
+                s = s.parent
+        states.extend(args)
+        return super(HierarchicalMachine, self).get_triggers(*states)
+
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None, **kwargs):
         if isinstance(source, string_types):

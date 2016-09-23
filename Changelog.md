@@ -7,6 +7,7 @@ Release 0.4.2 contains several new features and bugfixes:
 - New `Machine.trigger` method to trigger events by name (thanks to @IwanLD)
 - Bug fixes related to remapping in nested (thanks to @imbaczek)
 - Log messages in `Transition.execute` and `Machine.__init__` have been reassigned to DEBUG log level (thanks to @ankostis)
+- New `Machine.get_triggers` method to return all valid transitions from (a) certain state(s) (thanks to @limdauto and @guilhermecgs)
 
 ## 0.4.1 (July, 2016)
 Release 0.4.1 is a minor release containing bug fixes, minor API changes, and community feedback:

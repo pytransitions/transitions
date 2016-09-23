@@ -622,3 +622,15 @@ class TestTransitions(TestCase):
         model = Model()
         m = Machine(model=model)
         self.assertEqual(model.trigger(5), 5)
+
+    def test_get_triggers(self):
+        states = ['A', 'B', 'C']
+        transitions = [['a2b', 'A', 'B'],
+                       ['a2c', 'A', 'C'],
+                       ['c2b', 'C', 'B']]
+        machine = Machine(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        self.assertEqual(len(machine.get_triggers('A')), 2)
+        self.assertEqual(len(machine.get_triggers('B')), 0)
+        self.assertEqual(len(machine.get_triggers('C')), 1)
+        # self stuff machine should have to-transitions to every state
+        self.assertEqual(len(self.stuff.machine.get_triggers('B')), len(self.stuff.machine.states))
