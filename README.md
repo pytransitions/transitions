@@ -390,6 +390,20 @@ This behavior is generally desirable, since it helps alert you to problems in yo
 >>> m = Machine(lump, states)
 ```
 
+If you need to know which transitions are valid from a certain state, you can use `get_triggers`:
+
+```
+m.get_triggers('solid')
+>>> ['melt', 'sublimate']
+m.get_triggers('liquid')
+>>> ['evaporate']
+m.get_triggers('plasma')
+>>> []
+# you can also query several states at once 
+m.get_triggers('solid', 'liquid', 'gas', 'plasma')
+>>> ['melt', 'evaporate', 'sublimate', 'ionize']
+```
+
 #### <a name="automatic-transitions-for-all-states"></a>Automatic transitions for all states
 In addition to any transitions added explicitly, a `to_«state»()` method is created automatically whenever a state is added to a `Machine` instance. This method transitions to the target state no matter which state the machine is currently in:
 
