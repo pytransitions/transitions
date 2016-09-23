@@ -37,7 +37,7 @@ class TestLockedTransitions(TestCore):
     def setUp(self):
         self.stuff = Stuff(machine_cls=MachineFactory.get_predefined(locked=True))
         self.stuff.heavy_processing = heavy_processing
-        self.stuff.machine.add_transition('forward', '*', 'B', before='heavy_processing')
+        self.stuff.machine.add_transition('forward', 'A', 'B', before='heavy_processing')
 
     def tearDown(self):
         pass
