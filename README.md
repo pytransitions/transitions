@@ -803,7 +803,7 @@ Transitions can generate basic state diagrams displaying all valid transitions b
 from transitions.extensions import GraphMachine as Machine
 m = Model()
 machine = Machine(model=m, ...)
-m.graph.draw('my_state_diagram.png', prog='dot')
+machine.graph.draw('my_state_diagram.png', prog='dot')
 ```
 
 This produces something like this:
