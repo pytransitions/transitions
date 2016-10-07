@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.2 (September, 2016)
+## 0.4.2 (October, 2016)
 Release 0.4.2 contains several new features and bugfixes:
 - Machines can work with multiple models now (thanks to @gemerden)
 - New `initial` keyword for nested states to automatically enter a child
