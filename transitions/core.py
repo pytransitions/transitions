@@ -159,7 +159,7 @@ class Transition(object):
         machine = event_data.machine
 
         for func in self.prepare:
-            machine._callback(getattr(event_data.model, func), event_data)
+            machine._callback(func, event_data)
             logger.debug("Executed callback '%s' before conditions." % func)
 
         for c in self.conditions:
