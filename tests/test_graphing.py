@@ -131,8 +131,7 @@ class TestDiagrams(TestCase):
         self.assertEqual(m2.get_graph().get_edge('A', 'B').attr['label'], 'to_B')
 
     def test_roi(self):
-        m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A',
-                             show_auto_transitions=True)
+        m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A')
         m.add_transition('to_state_A', 'B', 'A')
         m.add_transition('to_state_C', 'B', 'C')
         m.add_transition('to_state_F', 'B', 'F')
@@ -140,9 +139,9 @@ class TestDiagrams(TestCase):
         self.assertEqual(len(g1.edges()), 0)
         self.assertEqual(len(g1.nodes()), 1)
         m.to_B()
-        g2 = m.get_graph()
-        g2.draw('foo.png', prog='dot')
-        self.fail()
+        g2 = m.get_graph(show_roi=True)
+        self.assertEqual(len(g2.edges()), 4)
+        self.assertEqual(len(g2.nodes()), 4)
 
 
 class TestDiagramsNested(TestDiagrams):

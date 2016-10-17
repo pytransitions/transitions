@@ -203,6 +203,8 @@ class GraphMachine(Machine):
             title = self.title
         if not hasattr(model, 'graph') or force_new:
             model.graph = AGraph(self).get_graph(title)
+            self.set_node_state(model.graph, model.state, state='active')
+
         return model.graph if not show_roi else self._graph_roi(model, title)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
@@ -231,10 +233,11 @@ class GraphMachine(Machine):
         for model in self.models:
             model.get_graph(force_new=True)
 
-    def set_node_state(self, graph, node_name, state='default', reset=False):
-        if reset:
-            for n in graph.nodes_iter():
-                self.set_node_style(graph, n, 'default')
+    def reset_nodes(self, graph):
+        for n in graph.nodes_iter():
+            self.set_node_style(graph, n, 'default')
+
+    def set_node_state(self, graph, node_name, state='default'):
         if graph.has_node(node_name):
             node = graph.get_node(node_name)
             func = self.set_node_style
@@ -249,20 +252,20 @@ class GraphMachine(Machine):
     def _graph_roi(self, model, title):
         g = model.graph
         filtered = pgv.AGraph(label=title, compound=True, **AGraph.machine_attributes)
+        filtered.node_attr.update(AGraph.style_attributes['node']['default'])
         active = g.get_node(model.state)
-        filtered.add_node(active)
+        filtered.add_node(active, **active.attr)
         for t in g.edges_iter(active):
-            # if t[0] == active:
-            #     filtered.add_node(t[1])
-            #     filtered.add_edge(t)
-            print(t)
-            print(t[0].attr['fillcolor'])
-            if t[0].attr['fillcolor'] ==\
+            if t[0] == active:
+                new_node = t[1]
+            elif t[0].attr['fillcolor'] ==\
                     AGraph.style_attributes['node']['previous']['fillcolor']:
-                print(t[1])
-                filtered.add_node(t[0])
-                filtered.add_edge(t)
-                print('foooo1')
+                new_node = t[0]
+                #filtered.add_edge(active, t[0], style='invis')
+            else:
+                continue
+            filtered.add_node(new_node, **new_node.attr)
+            filtered.add_edge(t, **t.attr)
         return filtered
 
     @staticmethod
@@ -293,6 +296,9 @@ class TransitionGraphSupport(Transition):
         model = event_data.model
         dest = machine.get_state(self.dest)
 
+        # Mark the active node
+        machine.reset_nodes(model.graph)
+
         # Mark the previous node and path used
         if self.source is not None:
             source = machine.get_state(self.source)
@@ -307,8 +313,5 @@ class TransitionGraphSupport(Transition):
             machine.set_edge_state(model.graph, source.name, dest.name,
                                    state='previous', label=event_data.event.name)
 
-        # Mark the active node
-        machine.set_node_state(model.graph, dest.name,
-                               state='active', reset=True)
-
+        machine.set_node_state(model.graph, dest.name, state='active')
         super(TransitionGraphSupport, self)._change_state(event_data)
