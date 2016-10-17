@@ -258,14 +258,16 @@ class GraphMachine(Machine):
         for t in g.edges_iter(active):
             if t[0] == active:
                 new_node = t[1]
-            elif t[0].attr['fillcolor'] ==\
-                    AGraph.style_attributes['node']['previous']['fillcolor']:
+            elif t.attr['color'] ==\
+                    AGraph.style_attributes['edge']['previous']['color']:
                 new_node = t[0]
-                #filtered.add_edge(active, t[0], style='invis')
             else:
                 continue
+
+            t_attrs = {k: v for (k, v) in t.attr.items() if k not in ['ltail', 'rtail']}
+
             filtered.add_node(new_node, **new_node.attr)
-            filtered.add_edge(t, **t.attr)
+            filtered.add_edge(t, **t_attrs)
         return filtered
 
     @staticmethod
@@ -310,6 +312,8 @@ class TransitionGraphSupport(Transition):
                     source = source.children[0]
                 while len(dest.children) > 0:
                     dest = dest.children[0]
+                machine.set_node_state(model.graph, source.name,
+                                       state='previous')
             machine.set_edge_state(model.graph, source.name, dest.name,
                                    state='previous', label=event_data.event.name)
 

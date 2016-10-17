@@ -188,3 +188,17 @@ class TestDiagramsNested(TestDiagrams):
 
         # cleanup temp file
         target.close()
+
+    def test_roi(self):
+        class Model:
+            def is_fast(self, *args, **kwargs):
+                return True
+        model = Model()
+        m = self.machine_cls(model, states=self.states, transitions=self.transitions,
+                             initial='A', title='A test', show_conditions=True)
+        model.walk()
+        model.run()
+        model.sprint()
+        g1 = model.get_graph(show_roi=True)
+        self.assertEqual(len(g1.edges()), 2)
+        self.assertEqual(len(g1.nodes()), 3)
