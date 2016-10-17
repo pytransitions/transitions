@@ -98,7 +98,6 @@ class AGraph(Diagram):
                     src = src.children[0]
                     while len(src.children) > 0:
                         src = src.children[0]
-
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
                     edge_label = self._transition_label(label, t)
@@ -111,7 +110,7 @@ class AGraph(Diagram):
                             dst = dst.children[0]
 
                     # special case in which parent to first child edge is resolved to a self reference.
-                    # will be omitted for now. I have not found a solution for how to fix this yet since having
+                    # will be omitted for now. I have not found a fix for this yet since having
                     # cluster to node edges is a bit messy with dot.
                     if dst.name == src.name and transitions[0] != t.dest:
                         continue
@@ -136,6 +135,7 @@ class AGraph(Diagram):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object
         Args:
             title (string): Optional title for the graph.
+            show_roi (boolean): Show only the active region if a graph
         """
         if not pgv:
             raise Exception('AGraph diagram requires pygraphviz')
@@ -198,20 +198,22 @@ class GraphMachine(Machine):
         if not hasattr(self, 'get_graph'):
             setattr(self, 'get_graph', self.get_combined_graph)
 
-    def _get_graph(self, model, title=None, force_new=False):
+    def _get_graph(self, model, title=None, force_new=False, show_roi=False):
         if title is None:
             title = self.title
         if not hasattr(model, 'graph') or force_new:
             model.graph = AGraph(self).get_graph(title)
-        return model.graph
+        return model.graph if not show_roi else self._graph_roi(model, title)
 
-    def get_combined_graph(self, title=None, force_new=False):
+    def get_combined_graph(self, title=None, force_new=False, show_roi=False):
         logger.info('Returning graph of the first model. In future releases, this ' +
                     'method will return a combined graph of all models.')
-        return self._get_graph(self.models[0], title, force_new)
+        return self._get_graph(self.models[0], title, force_new, show_roi)
 
-    def set_edge_state(self, graph, edge_from, edge_to, state='default'):
+    def set_edge_state(self, graph, edge_from, edge_to, state='default', label=None):
         """ Mark a node as active by changing the attributes """
+        if not self.show_auto_transitions and not graph.has_edge(edge_from, edge_to):
+            graph.add_edge(edge_from, edge_to, label)
         edge = graph.get_edge(edge_from, edge_to)
 
         # Reset all the edges
@@ -243,6 +245,25 @@ class GraphMachine(Machine):
                 node = node.get_subgraph('cluster_' + path.pop(0))
             func = self.set_graph_style
         func(graph, node, state)
+
+    def _graph_roi(self, model, title):
+        g = model.graph
+        filtered = pgv.AGraph(label=title, compound=True, **AGraph.machine_attributes)
+        active = g.get_node(model.state)
+        filtered.add_node(active)
+        for t in g.edges_iter(active):
+            # if t[0] == active:
+            #     filtered.add_node(t[1])
+            #     filtered.add_edge(t)
+            print(t)
+            print(t[0].attr['fillcolor'])
+            if t[0].attr['fillcolor'] ==\
+                    AGraph.style_attributes['node']['previous']['fillcolor']:
+                print(t[1])
+                filtered.add_node(t[0])
+                filtered.add_edge(t)
+                print('foooo1')
+        return filtered
 
     @staticmethod
     def set_node_style(graph, node_name, style='default'):
@@ -283,8 +304,8 @@ class TransitionGraphSupport(Transition):
                     source = source.children[0]
                 while len(dest.children) > 0:
                     dest = dest.children[0]
-            machine.set_edge_state(model.graph, source.name,
-                                   dest.name, state='previous')
+            machine.set_edge_state(model.graph, source.name, dest.name,
+                                   state='previous', label=event_data.event.name)
 
         # Mark the active node
         machine.set_node_state(model.graph, dest.name,
