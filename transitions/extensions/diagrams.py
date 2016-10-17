@@ -86,6 +86,9 @@ class AGraph(Diagram):
     def _add_edges(self, events, container):
         for event in events.values():
             label = str(event.name)
+            if not self.machine.show_auto_transitions and label.startswith('to_')\
+                    and len(event.transitions) == len(self.machine.states):
+                continue
 
             for transitions in event.transitions.items():
                 src = self.machine.get_state(transitions[0])
@@ -169,6 +172,7 @@ class GraphMachine(Machine):
         # remove graph config from keywords
         self.title = kwargs.pop('title', 'State Machine')
         self.show_conditions = kwargs.pop('show_conditions', False)
+        self.show_auto_transitions = kwargs.pop('show_auto_transitions', False)
 
         # temporally disable overwrites since graphing cannot
         # be initialized before base machine

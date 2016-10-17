@@ -119,6 +119,17 @@ class TestDiagrams(TestCase):
             m = self.machine_cls(model=model)
         self.assertEqual(model.get_graph(), "This method already exists")
 
+    def test_to_method_filtering(self):
+        m = self.machine_cls(states=['A', 'B'], initial='A')
+        m.add_transition('to_state_A', 'B', 'A')
+        e = m.get_graph().get_edge('B', 'A')
+        self.assertEqual(e.attr['label'], 'to_state_A')
+        with self.assertRaises(KeyError):
+            m.get_graph().get_edge('A', 'B')
+        m2 = self.machine_cls(states=['A', 'B'], initial='A', show_auto_transitions=True)
+        self.assertEqual(len(m2.get_graph().get_edge('B', 'A')), 2)
+        self.assertEqual(m2.get_graph().get_edge('A', 'B').attr['label'], 'to_B')
+
 
 class TestDiagramsNested(TestDiagrams):
 
