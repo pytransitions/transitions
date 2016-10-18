@@ -157,7 +157,7 @@ class TestDiagramsNested(TestDiagrams):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D',    # + 1 edge
              'conditions': 'is_fast'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'},   # + 1 edge
-            {'trigger': 'reset', 'source': '*', 'dest': 'A'}]    # + 8 edges = 12
+            {'trigger': 'reset', 'source': '*', 'dest': 'A'}]    # + 10 (8 nodes; 2 cluster) edges = 14
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
@@ -168,14 +168,16 @@ class TestDiagramsNested(TestDiagrams):
 
         # Test that graph properties match the Machine
         node_names = set([n.name for n in graph.nodes()])
-        self.assertEqual(set(m.states.keys()) - set(['C', 'C%s1' % NestedState.separator]), node_names)
+        self.assertEqual(set(m.states.keys()) - set(['C', 'C%s1' % NestedState.separator]),
+                         node_names - set(['cluster_C_anchor', 'cluster_1_anchor']))
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
             t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
-        self.assertEqual(len(graph.edges()), 12)  # see above
+        print(graph.edges())
+        self.assertEqual(len(graph.edges()), 14)  # see above
 
         m.walk()
         m.run()
