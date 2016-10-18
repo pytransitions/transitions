@@ -30,7 +30,8 @@ class AGraph(Diagram):
         'directed': True,
         'strict': False,
         'rankdir': 'LR',
-        'ratio': '0.3'
+        'ratio': '0.3',
+        'clusterrank': 'local'
     }
 
     style_attributes = {
@@ -61,6 +62,22 @@ class AGraph(Diagram):
                 'color': 'blue',
 
             }
+        },
+        'graph': {
+            'default': {
+                'color': 'black',
+                'fillcolor': 'white'
+            },
+            'previous': {
+                'color': 'blue',
+                'fillcolor': 'azure2',
+                'style': 'filled'
+            },
+            'active': {
+                'color': 'red',
+                'fillcolor': 'darksalmon',
+                'style': 'filled'
+            },
         }
     }
 
@@ -76,7 +93,10 @@ class AGraph(Diagram):
                 continue
             elif hasattr(state, 'children') and len(state.children) > 0:
                 self.seen.append(state.name)
-                sub = container.add_subgraph(name="cluster_" + state._name, label=state.name, rank='same')
+                sub = container.add_subgraph(name="cluster_" + state._name, label=state.name,
+                                             **AGraph.style_attributes['graph']['default'])
+                anchor_name = "cluster_" + state._name + "_anchor"
+                sub.add_node(anchor_name, shape='point', fillcolor='black', width='0.1')
                 self._add_nodes(state.children, sub)
             else:
                 shape = self.style_attributes['node']['default']['shape']
@@ -92,33 +112,26 @@ class AGraph(Diagram):
 
             for transitions in event.transitions.items():
                 src = self.machine.get_state(transitions[0])
-                ltail = ''
+                edge_attr = {}
                 if hasattr(src, 'children') and len(src.children) > 0:
-                    ltail = 'cluster_' + src._name
-                    src = src.children[0]
-                    while len(src.children) > 0:
-                        src = src.children[0]
+                    #edge_attr['ltail'] = 'cluster_' + src._name
+                    src = 'cluster_' + src._name + "_anchor"
+                else:
+                    src = src.name
                 for t in transitions[1]:
                     dst = self.machine.get_state(t.dest)
-                    edge_label = self._transition_label(label, t)
-                    lhead = ''
-
+                    edge_attr['label'] = self._transition_label(label, t)
                     if hasattr(dst, 'children') and len(dst.children) > 0:
-                        lhead = 'cluster_' + dst.name
-                        dst = dst.children[0]
-                        while len(dst.children) > 0:
-                            dst = dst.children[0]
-
-                    # special case in which parent to first child edge is resolved to a self reference.
-                    # will be omitted for now. I have not found a fix for this yet since having
-                    # cluster to node edges is a bit messy with dot.
-                    if dst.name == src.name and transitions[0] != t.dest:
-                        continue
-                    elif container.has_edge(src.name, dst.name):
-                        edge = container.get_edge(src.name, dst.name)
-                        edge.attr['label'] = edge.attr['label'] + ' | ' + edge_label
+                        #edge_attr['lhead'] = 'cluster_' + dst.name
+                        dst = 'cluster_' + dst.name + "_anchor"
                     else:
-                        container.add_edge(src.name, dst.name, label=edge_label, ltail=ltail, lhead=lhead)
+                        dst = dst.name
+
+                    if container.has_edge(src, dst):
+                        edge = container.get_edge(src, dst)
+                        edge.attr['label'] = edge.attr['label'] + ' | ' + edge_attr['label']
+                    else:
+                        container.add_edge(src, dst, **edge_attr)
 
     def _transition_label(self, edge_label, tran):
         if self.machine.show_conditions and tran.conditions:
@@ -135,7 +148,7 @@ class AGraph(Diagram):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object
         Args:
             title (string): Optional title for the graph.
-            show_roi (boolean): Show only the active region if a graph
+            show_roi (boolean): Show only the active region in a graph
         """
         if not pgv:
             raise Exception('AGraph diagram requires pygraphviz')
@@ -205,7 +218,7 @@ class GraphMachine(Machine):
             model.graph = AGraph(self).get_graph(title)
             self.set_node_state(model.graph, model.state, state='active')
 
-        return model.graph if not show_roi else self._graph_roi(model, title)
+        return model.graph if not show_roi else self._graph_roi(model)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
         logger.info('Returning graph of the first model. In future releases, this ' +
@@ -217,10 +230,6 @@ class GraphMachine(Machine):
         if not self.show_auto_transitions and not graph.has_edge(edge_from, edge_to):
             graph.add_edge(edge_from, edge_to, label)
         edge = graph.get_edge(edge_from, edge_to)
-
-        # Reset all the edges
-        for e in graph.edges_iter():
-            self.set_edge_style(graph, e, 'default')
         self.set_edge_style(graph, edge, state)
 
     def add_states(self, *args, **kwargs):
@@ -233,9 +242,15 @@ class GraphMachine(Machine):
         for model in self.models:
             model.get_graph(force_new=True)
 
-    def reset_nodes(self, graph):
+    def reset_graph(self, graph):
+        # Reset all the edges
+        for e in graph.edges_iter():
+            self.set_edge_style(graph, e, 'default')
         for n in graph.nodes_iter():
-            self.set_node_style(graph, n, 'default')
+            if 'point' not in n.attr['shape']:
+                self.set_node_style(graph, n, 'default')
+        for g in graph.subgraphs_iter():
+            self.set_graph_style(graph, g, 'default')
 
     def set_node_state(self, graph, node_name, state='default'):
         if graph.has_node(node_name):
@@ -249,25 +264,35 @@ class GraphMachine(Machine):
             func = self.set_graph_style
         func(graph, node, state)
 
-    def _graph_roi(self, model, title):
+    @staticmethod
+    def _graph_roi(model):
         g = model.graph
-        filtered = pgv.AGraph(label=title, compound=True, **AGraph.machine_attributes)
-        filtered.node_attr.update(AGraph.style_attributes['node']['default'])
-        active = g.get_node(model.state)
-        filtered.add_node(active, **active.attr)
-        for t in g.edges_iter(active):
-            if t[0] == active:
-                new_node = t[1]
-            elif t.attr['color'] ==\
-                    AGraph.style_attributes['edge']['previous']['color']:
-                new_node = t[0]
+        filtered = g.copy()
+
+        kept_nodes = set()
+        active_state = model.state if g.has_node(model.state) else 'cluster_' + model.state + '_anchor'
+        kept_nodes.add(active_state)
+
+        # remove all edges that have no connection to the currently active state
+        for e in filtered.edges():
+            if active_state not in e:
+                filtered.delete_edge(e)
+
+        # find the ingoing edge by color; remove the rest
+        for e in filtered.in_edges(active_state):
+            if e.attr['color'] == AGraph.style_attributes['edge']['previous']['color']:
+                kept_nodes.add(e[0])
             else:
-                continue
+                filtered.delete_edge(e)
 
-            t_attrs = {k: v for (k, v) in t.attr.items() if k not in ['ltail', 'rtail']}
+        # remove outgoing edges from children
+        for e in filtered.out_edges_iter(active_state):
+            kept_nodes.add(e[1])
 
-            filtered.add_node(new_node, **new_node.attr)
-            filtered.add_edge(t, **t_attrs)
+        for n in filtered.nodes():
+            if n not in kept_nodes:
+                filtered.delete_node(n)
+
         return filtered
 
     @staticmethod
@@ -283,7 +308,7 @@ class GraphMachine(Machine):
 
     @staticmethod
     def set_graph_style(graph, item, style='default'):
-        style_attr = graph.style_attributes.get('node', {}).get(style)
+        style_attr = graph.style_attributes.get('graph', {}).get(style)
         item.graph_attr.update(style_attr)
 
     @staticmethod
@@ -299,23 +324,24 @@ class TransitionGraphSupport(Transition):
         dest = machine.get_state(self.dest)
 
         # Mark the active node
-        machine.reset_nodes(model.graph)
+        machine.reset_graph(model.graph)
 
         # Mark the previous node and path used
         if self.source is not None:
             source = machine.get_state(self.source)
             machine.set_node_state(model.graph, source.name,
                                    state='previous')
+            machine.set_node_state(model.graph, dest.name, state='active')
 
-            if hasattr(source, 'children'):
-                while len(source.children) > 0:
-                    source = source.children[0]
-                while len(dest.children) > 0:
-                    dest = dest.children[0]
-                machine.set_node_state(model.graph, source.name,
-                                       state='previous')
-            machine.set_edge_state(model.graph, source.name, dest.name,
+            if hasattr(source, 'children') and len(source.children) > 0:
+                source = 'cluster_' + source.name + '_anchor'
+            else:
+                source = source.name
+            if hasattr(dest, 'children') and len(dest.children) > 0:
+                dest = 'cluster_' + dest.name + '_anchor'
+            else:
+                dest = dest.name
+            machine.set_edge_state(model.graph, source, dest,
                                    state='previous', label=event_data.event.name)
 
-        machine.set_node_state(model.graph, dest.name, state='active')
         super(TransitionGraphSupport, self)._change_state(event_data)

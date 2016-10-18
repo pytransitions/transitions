@@ -803,11 +803,12 @@ Transitions can generate basic state diagrams displaying all valid transitions b
 from transitions.extensions import GraphMachine as Machine
 m = Model()
 machine = Machine(model=m, ...)
+# in cases where auto transitions should be visible
 # Machine(model=m, show_auto_transitions=True, ...)
 
-# draw the whole graph...
+# draw the whole graph ...
 m.get_graph().draw('my_state_diagram.png', prog='dot')
-# ...or just the region of interest
+# ... or just the region of interest
 # (previous state, active state and all reachable states)
 m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
 ```
