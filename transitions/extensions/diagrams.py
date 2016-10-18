@@ -114,7 +114,7 @@ class AGraph(Diagram):
                 src = self.machine.get_state(transitions[0])
                 edge_attr = {}
                 if hasattr(src, 'children') and len(src.children) > 0:
-                    #edge_attr['ltail'] = 'cluster_' + src._name
+                    # edge_attr['ltail'] = 'cluster_' + src._name
                     src = 'cluster_' + src._name + "_anchor"
                 else:
                     src = src.name
@@ -122,7 +122,7 @@ class AGraph(Diagram):
                     dst = self.machine.get_state(t.dest)
                     edge_attr['label'] = self._transition_label(label, t)
                     if hasattr(dst, 'children') and len(dst.children) > 0:
-                        #edge_attr['lhead'] = 'cluster_' + dst.name
+                        # edge_attr['lhead'] = 'cluster_' + dst.name
                         dst = 'cluster_' + dst.name + "_anchor"
                     else:
                         dst = dst.name
