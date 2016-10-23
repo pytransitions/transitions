@@ -6,7 +6,7 @@ except ImportError:
 from .utils import Stuff
 
 from transitions.extensions import MachineFactory
-from transitions.extensions.diagrams import AGraph, Diagram
+from transitions.extensions.diagrams import Diagram
 from transitions.extensions.nesting import NestedState
 from unittest import TestCase
 import tempfile
@@ -103,9 +103,9 @@ class TestDiagrams(TestCase):
         m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A')
         m1.walk()
         self.assertEqual(m1.graph.get_node(m1.state).attr['color'],
-                         AGraph.style_attributes['node']['active']['color'])
+                         m1.graph.style_attributes['node']['active']['color'])
         self.assertEqual(m2.graph.get_node(m1.state).attr['color'],
-                         AGraph.style_attributes['node']['default']['color'])
+                         m2.graph.style_attributes['node']['default']['color'])
         # backwards compatibility test
         self.assertEqual(m.get_graph(), m1.get_graph())
 
@@ -169,14 +169,13 @@ class TestDiagramsNested(TestDiagrams):
         # Test that graph properties match the Machine
         node_names = set([n.name for n in graph.nodes()])
         self.assertEqual(set(m.states.keys()) - set(['C', 'C%s1' % NestedState.separator]),
-                         node_names - set(['cluster_C_anchor', 'cluster_1_anchor']))
+                         node_names - set(['C_anchor', 'C_1_anchor']))
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
             t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
-        print(graph.edges())
         self.assertEqual(len(graph.edges()), 14)  # see above
 
         m.walk()
@@ -184,7 +183,8 @@ class TestDiagramsNested(TestDiagrams):
 
         # write diagram to temp file
         target = tempfile.NamedTemporaryFile()
-        self.assertIsNotNone(graph.get_subgraph('cluster_C').get_subgraph('cluster_1'))
+        self.assertIsNotNone(graph.get_subgraph('cluster_C').get_subgraph('cluster_C_child').get_subgraph('cluster_C_1'))
+        print(graph.string())
         graph.draw(target.name, prog='dot')
         self.assertTrue(os.path.getsize(target.name) > 0)
 

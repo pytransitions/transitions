@@ -31,7 +31,7 @@ class FunctionWrapper(object):
         return self._func(*args, **kwargs)
 
 
-# Added parent and children parameter children is a list of NestedStates
+# Added parent and children parameter. Children is a list of NestedStates
 # and parent is the full name of the parent e.g. Foo_Bar_Baz.
 class NestedState(State):
     separator = '_'
