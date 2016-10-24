@@ -31,7 +31,7 @@ class FunctionWrapper(object):
         return self._func(*args, **kwargs)
 
 
-# Added parent and children parameter children is a list of NestedStates
+# Added parent and children parameter. Children is a list of NestedStates
 # and parent is the full name of the parent e.g. Foo_Bar_Baz.
 class NestedState(State):
     separator = '_'
@@ -313,6 +313,6 @@ class HierarchicalMachine(Machine):
         self.get_state(state_name).add_callback('exit', callback)
 
     def to(self, model, state_name, *args, **kwargs):
-        event = EventData(self.get_state(model.state), None, self,
-                          model, args=args, kwargs=kwargs)
-        self._create_transition(model.state, state_name).execute(event)
+        event_data = EventData(self.get_state(model.state), Event('to_%s' % state_name, self), self,
+                               model, args=args, kwargs=kwargs)
+        self._create_transition(model.state, state_name).execute(event_data)
