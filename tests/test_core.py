@@ -100,6 +100,16 @@ class TestTransitions(TestCase):
         s.advance()
         self.assertEquals(s.state, 'C')
 
+    def test_pass_state_instances_instead_of_names(self):
+        state_A = State('A')
+        state_B = State('B')
+        states = [state_A, state_B]
+        m = Machine(states=states, initial=state_A)
+        assert m.state == 'A'
+        m.add_transition('advance', state_A, state_B)
+        m.advance()
+        assert m.state == 'B'
+
     def test_conditions(self):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'B', conditions='this_passes')
