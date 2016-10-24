@@ -521,7 +521,8 @@ class Machine(object):
 
         if isinstance(source, string_types):
             source = list(self.states.keys()) if source == '*' else [source]
-        source = [s.name if isinstance(s, State) else s for s in listify(source)]
+        else:
+            source = [s.name if isinstance(s, State) else s for s in listify(source)]
 
         if self.before_state_change:
             before = listify(before) + listify(self.before_state_change)
