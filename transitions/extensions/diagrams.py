@@ -76,7 +76,8 @@ class AGraph(Diagram):
                 continue
             elif hasattr(state, 'children') and len(state.children) > 0:
                 self.seen.append(state.name)
-                sub = container.add_subgraph(name="cluster_" + state._name, label=state.name, rank='same')
+                sub = container.add_subgraph(name="cluster_" + state.name,
+                                             label=state.name, rank='same', color='black')
                 self._add_nodes(state.children, sub)
             else:
                 shape = self.style_attributes['node']['default']['shape']
@@ -91,7 +92,7 @@ class AGraph(Diagram):
                 src = self.machine.get_state(transitions[0])
                 ltail = ''
                 if hasattr(src, 'children') and len(src.children) > 0:
-                    ltail = 'cluster_' + src._name
+                    ltail = 'cluster_' + src.name
                     src = src.children[0]
                     while len(src.children) > 0:
                         src = src.children[0]
@@ -235,8 +236,14 @@ class GraphMachine(Machine):
         else:
             node = graph
             path = node_name.split(NestedState.separator)
+            # A subgraph cannot be retrieved from another nested subgraph.
+            # We have to traverse through the whole tree.
+            # From cluster_parent to cluster_parent_child1 to cluster_parent_child1_child2 and so on
+            current_path = 'cluster_' + path.pop(0)
+            node = node.get_subgraph(current_path)
             while len(path) > 0:
-                node = node.get_subgraph('cluster_' + path.pop(0))
+                current_path += NestedState.separator + path.pop(0)
+                node = node.get_subgraph(current_path)
             func = self.set_graph_style
         func(graph, node, state)
 
@@ -279,8 +286,9 @@ class TransitionGraphSupport(Transition):
                     source = source.children[0]
                 while len(dest.children) > 0:
                     dest = dest.children[0]
-            machine.set_edge_state(model.graph, source.name,
-                                   dest.name, state='previous')
+            if model.graph.has_edge(source.name, dest.name):
+                machine.set_edge_state(model.graph, source.name,
+                                       dest.name, state='previous')
 
         # Mark the active node
         machine.set_node_state(model.graph, dest.name,

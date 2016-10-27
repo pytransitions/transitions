@@ -6,6 +6,8 @@ except ImportError:
     pass
 
 import sys
+import tempfile
+from os.path import getsize
 
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState as State
@@ -229,38 +231,46 @@ class TestTransitions(TestsCore):
         self.assertEquals(s.level, 3)
 
     def test_ordered_transitions(self):
-        states = ['beginning', 'middle', 'end']
-        m = self.stuff.machine_cls(None, states)
+        states = [{'name': 'first', 'children': ['second', 'third', {'name': 'fourth', 'children': ['fifth', 'sixth']},
+                                                 'seventh']}, 'eighth', 'ninth']
+        m = self.stuff.machine_cls(states=states)
         m.add_ordered_transitions()
         self.assertEquals(m.state, 'initial')
         m.next_state()
-        self.assertEquals(m.state, 'beginning')
+        self.assertEquals(m.state, 'first')
         m.next_state()
         m.next_state()
-        self.assertEquals(m.state, 'end')
+        self.assertEquals(m.state, 'first{0}third'.format(State.separator))
         m.next_state()
-        self.assertEquals(m.state, 'initial')
+        m.next_state()
+        self.assertEquals(m.state, 'first{0}fourth{0}fifth'.format(State.separator))
+        m.next_state()
+        m.next_state()
+        self.assertEquals(m.state, 'first{0}seventh'.format(State.separator))
+        m.next_state()
+        m.next_state()
+        self.assertEquals(m.state, 'ninth')
 
         # Include initial state in loop
         m = self.stuff.machine_cls(None, states)
         m.add_ordered_transitions(loop_includes_initial=False)
-        m.to_end()
+        m.to_ninth()
         m.next_state()
-        self.assertEquals(m.state, 'beginning')
+        self.assertEquals(m.state, 'first')
 
         # Test user-determined sequence and trigger name
-        m = self.stuff.machine_cls(None, states, initial='beginning')
-        m.add_ordered_transitions(['end', 'beginning'], trigger='advance')
+        m = self.stuff.machine_cls(None, states, initial='first')
+        m.add_ordered_transitions(['first', 'ninth'], trigger='advance')
         m.advance()
-        self.assertEquals(m.state, 'end')
+        self.assertEquals(m.state, 'ninth')
         m.advance()
-        self.assertEquals(m.state, 'beginning')
+        self.assertEquals(m.state, 'first')
 
         # Via init argument
         m = self.stuff.machine_cls(
-            None, states, initial='beginning', ordered_transitions=True)
+            None, states, initial='first', ordered_transitions=True)
         m.next_state()
-        self.assertEquals(m.state, 'middle')
+        self.assertEquals(m.state, 'first{0}second'.format(State.separator))
 
     def test_pickle(self):
         import sys
@@ -319,6 +329,16 @@ class TestTransitions(TestsCore):
         self.setUp()
         self.test_state_change_listeners()
         self.test_nested_auto_transitions()
+
+    def test_with_slash_separator(self):
+        State.separator = '/'
+        self.setUp()
+        self.test_enter_exit_nested()
+        self.setUp()
+        self.test_state_change_listeners()
+        self.test_nested_auto_transitions()
+        self.setUp()
+        self.test_ordered_transitions()
 
     def test_nested_auto_transitions(self):
         s = self.stuff
@@ -443,3 +463,22 @@ class TestWithGraphTransitions(TestTransitions):
 
         machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
         self.stuff = Stuff(states, machine_cls)
+
+    def test_ordered_with_graph(self):
+        GraphMachine = MachineFactory.get_predefined(graph=True, nested=True)
+
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2',
+                                                       {'name': '3', 'children': ['a', 'b', 'c']}]}, 'D', 'E', 'F']
+
+        State.separator = '/'
+        machine = GraphMachine(None, states, initial='A',
+                               auto_transitions=False,
+                               ignore_invalid_triggers=True,
+                               )
+        machine.add_ordered_transitions(trigger='next_state')
+        machine.next_state()
+        self.assertEqual(machine.state, 'B')
+        target = tempfile.NamedTemporaryFile()
+        machine.get_graph().draw(target.name, prog='dot')
+        self.assertTrue(getsize(target.name) > 0)
+        target.close()
