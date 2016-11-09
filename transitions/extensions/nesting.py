@@ -292,7 +292,7 @@ class HierarchicalMachine(Machine):
             if trigger.startswith('to_'):
                 path = trigger[3:].split(NestedState.separator)
                 for model in self.models:
-                    trig_func = partial(self.events[trigger].trigger, model=model)
+                    trig_func = partial(self.events[trigger].trigger, model)
                     if hasattr(model, 'to_' + path[0]):
                         t = getattr(model, 'to_' + path[0])
                         t.add(trig_func, path[1:])
@@ -301,7 +301,7 @@ class HierarchicalMachine(Machine):
                         setattr(model, 'to_' + path[0], t)
             else:
                 for model in self.models:
-                    trig_func = partial(self.events[trigger].trigger, model=model)
+                    trig_func = partial(self.events[trigger].trigger, model)
                     setattr(model, trigger, trig_func)
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
                                                         prepare=prepare, before=before, after=after, **kwargs)
