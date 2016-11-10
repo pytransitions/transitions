@@ -1,15 +1,17 @@
 # <a name="transitions-module"></a> transitions
 
-A lightweight, object-oriented state machine implementation in Python. Compatible with Python 2.7+ and 3.0+.
+A lightweight, object-oriented state machine implementation in Python. Build for python 2.6
 
-## Status
-* [![Build Status](https://travis-ci.org/tyarkoni/transitions.png?branch=master)](https://travis-ci.org/tyarkoni/transitions)
-* [![Coverage Status](https://coveralls.io/repos/tyarkoni/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/tyarkoni/transitions?branch=master)
+## WARNING: This is just an experimental backport branch and is not actively maintained.
+We highly recommend to use official versions written for python 2.7+ and 3.0+.
 
 ## Installation
 
-    pip install transitions
+For Python 2.6 you probably need:
 
+    pip install six mock pycode ordereddict
+    pip install transitions
+    
 ... or clone the repo from GitHub and then:
 
     python setup.py install

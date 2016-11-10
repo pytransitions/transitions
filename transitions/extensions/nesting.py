@@ -5,8 +5,14 @@ import copy
 from functools import partial
 
 import logging
+import sys
+if sys.version_info < (2, 7):
+    from ..core import NullHandler
+else:
+    from logging import NullHandler
+
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+logger.addHandler(NullHandler())
 
 
 class FunctionWrapper(object):

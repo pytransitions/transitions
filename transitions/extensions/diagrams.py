@@ -8,10 +8,16 @@ try:
 except:
     pgv = None
 
-import logging
 from functools import partial
+import logging
+import sys
+if sys.version_info < (2, 7):
+    from ..core import NullHandler
+else:
+    from logging import NullHandler
+
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+logger.addHandler(NullHandler())
 
 
 class Diagram(object):
@@ -158,7 +164,7 @@ class GraphMachine(Machine):
     _pickle_blacklist = ['graph']
 
     def __getstate__(self):
-        return {k: v for k, v in self.__dict__.items() if k not in self._pickle_blacklist}
+        return dict((k, v) for k, v in self.__dict__.items() if k not in self._pickle_blacklist)
 
     def __setstate__(self, state):
         self.__dict__.update(state)

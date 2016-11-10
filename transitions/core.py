@@ -6,14 +6,25 @@ except ImportError:
 import inspect
 import itertools
 import logging
-
-from collections import OrderedDict
+import sys
 from collections import defaultdict
 from collections import deque
 from functools import partial
 from six import string_types
+
+if sys.version_info < (2, 7):
+    from ordereddict import OrderedDict
+
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
+else:
+    from collections import OrderedDict
+    from logging import NullHandler
+
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+logger.addHandler(NullHandler())
 
 
 def listify(obj):

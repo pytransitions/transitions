@@ -5,7 +5,6 @@ except ImportError:
 
 import time
 from threading import Thread
-import logging
 
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState
@@ -18,9 +17,15 @@ try:
 except ImportError:
     from mock import MagicMock
 
+import logging
+import sys
+if sys.version_info < (2, 7):
+    from transitions.core import NullHandler
+else:
+    from logging import NullHandler
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+logger.addHandler(NullHandler())
 
 
 def heavy_processing():
