@@ -170,17 +170,7 @@ class GraphMachine(Machine):
         # remove graph config from keywords
         self.title = kwargs.pop('title', 'State Machine')
         self.show_conditions = kwargs.pop('show_conditions', False)
-
-        # temporally disable overwrites since graphing cannot
-        # be initialized before base machine
-        add_states = self.add_states
-        add_transition = self.add_transition
-        self.add_states = super(GraphMachine, self).add_states
-        self.add_transition = super(GraphMachine, self).add_transition
-
         super(GraphMachine, self).__init__(*args, **kwargs)
-        self.add_states = add_states
-        self.add_transition = add_transition
 
         # Create graph at beginning
         for model in self.models:
@@ -219,12 +209,14 @@ class GraphMachine(Machine):
     def add_states(self, *args, **kwargs):
         super(GraphMachine, self).add_states(*args, **kwargs)
         for model in self.models:
-            model.get_graph(force_new=True)
+            if hasattr(model, 'graph'):
+                model.get_graph(force_new=True)
 
     def add_transition(self, *args, **kwargs):
         super(GraphMachine, self).add_transition(*args, **kwargs)
         for model in self.models:
-            model.get_graph(force_new=True)
+            if hasattr(model, 'graph'):
+                model.get_graph(force_new=True)
 
     def set_node_state(self, graph, node_name, state='default', reset=False):
         if reset:
