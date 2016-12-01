@@ -522,7 +522,7 @@ class Machine(object):
         if isinstance(source, string_types):
             source = list(self.states.keys()) if source == '*' else [source]
         else:
-            source = [s.name if isinstance(s, State) else s for s in listify(source)]
+            source = [s.name if self._has_state(s) else s for s in listify(source)]
 
         if self.before_state_change:
             before = listify(before) + listify(self.before_state_change)
@@ -531,7 +531,7 @@ class Machine(object):
             after = listify(after) + listify(self.after_state_change)
 
         for s in source:
-            if isinstance(dest, State):
+            if self._has_state(dest):
                 dest = dest.name
             t = self._create_transition(s, dest, conditions, unless, before,
                                         after, prepare, **kwargs)
@@ -581,6 +581,15 @@ class Machine(object):
             func(event_data)
         else:
             func(*event_data.args, **event_data.kwargs)
+
+    def _has_state(self, s):
+        if isinstance(s, State):
+            if s in self.states.values():
+                return True
+            else:
+                raise ValueError('State %s has not been added to the machine' % s.name)
+        else:
+            return False
 
     def _process(self, trigger):
 

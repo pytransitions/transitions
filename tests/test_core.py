@@ -109,6 +109,9 @@ class TestTransitions(TestCase):
         m.add_transition('advance', state_A, state_B)
         m.advance()
         assert m.state == 'B'
+        state_B2 = State('B', on_enter='this_passes')
+        with self.assertRaises(ValueError):
+            m.add_transition('advance2', state_A, state_B2)
 
     def test_conditions(self):
         s = self.stuff
