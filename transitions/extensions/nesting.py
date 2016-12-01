@@ -39,12 +39,21 @@ class NestedState(State):
     def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, parent=None, initial=None):
         self._name = name
         self._initial = initial
+        self._parent = None
         self.parent = parent
         super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
                                           ignore_invalid_triggers=ignore_invalid_triggers)
-        if self.parent:
-            self.parent.children.append(self)
         self.children = []
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, value):
+        if value is not None:
+            self._parent = value
+            self._parent.children.append(self)
 
     @property
     def initial(self):
