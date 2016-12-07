@@ -356,7 +356,7 @@ class Machine(object):
         self.id = name + ": " if name is not None else ""
         self._queued = queued
         self._transition_queue = deque()
-        self.models = []
+        self.models = set()
 
         if initial is None:
             self.add_states('initial')
@@ -379,30 +379,38 @@ class Machine(object):
         if ordered_transitions:
             self.add_ordered_transitions()
 
-        self.add_models(model)
+        if model:
+            self.add_models(model)
+        else:
+            self.add_models(self)
 
     def add_models(self, model):
-        models = listify(self if model is None else model)
+        models = listify(model)
 
         for model in models:
-            if hasattr(model, 'trigger'):
-                logger.warning("%sModel already contains an attribute 'trigger'. Skip method binding ",
-                               self.id)
-            else:
-                model.trigger = partial(get_trigger, model)
+            if model not in self.models:
 
-            for trigger, _ in self.events.items():
-                self._add_trigger_to_model(trigger, model)
+                if hasattr(model, 'trigger'):
+                    logger.warning("%sModel already contains an attribute 'trigger'. Skip method binding ",
+                                   self.id)
+                else:
+                    model.trigger = partial(get_trigger, model)
 
-            for _, state in self.states.items():
-                self._add_state_to_model(state, model)
+                for trigger, _ in self.events.items():
+                    self._add_trigger_to_model(trigger, model)
 
-            self.set_state(self._initial, model=model)
+                for _, state in self.states.items():
+                    self._add_state_to_model(state, model)
 
-        self.models.extend(models)
+                self.set_state(self._initial, model=model)
+                self.models.add(model)
 
     def remove_model(self, model):
-        pass
+        models = listify(model)
+
+        for model in models:
+            # TODO remove any callbacks from State to allow models to be GCed
+            self.models.remove(model)
 
     @staticmethod
     def _create_transition(*args, **kwargs):
@@ -425,7 +433,7 @@ class Machine(object):
     @property
     def model(self):
         if len(self.models) == 1:
-            return self.models[0]
+            return next(iter(self.models))
         else:
             return self.models
 
