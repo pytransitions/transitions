@@ -52,6 +52,9 @@ class State(object):
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
 
+    def __str__(self):
+        return self.name
+
     def enter(self, event_data):
         """ Triggered when a state is entered. """
         logger.debug("%sEntering state %s. Processing callbacks...", event_data.machine.id, self.name)
@@ -343,7 +346,6 @@ class Machine(object):
         except TypeError as e:
             raise MachineError('Passing arguments {0} caused an inheritance error: {1}'.format(kwargs.keys(), e))
 
-        self.models = listify(self if model is None else model)
         self.states = OrderedDict()
         self.events = {}
         self.send_event = send_event
@@ -354,6 +356,7 @@ class Machine(object):
         self.id = name + ": " if name is not None else ""
         self._queued = queued
         self._transition_queue = deque()
+        self.models = []
 
         if initial is None:
             self.add_states('initial')
@@ -376,12 +379,30 @@ class Machine(object):
         if ordered_transitions:
             self.add_ordered_transitions()
 
-        for model in self.models:
+        self.add_models(model)
+
+    def add_models(self, model):
+        models = listify(self if model is None else model)
+
+        for model in models:
             if hasattr(model, 'trigger'):
                 logger.warning("%sModel already contains an attribute 'trigger'. Skip method binding ",
                                self.id)
             else:
                 model.trigger = partial(get_trigger, model)
+
+            for trigger, _ in self.events.items():
+                self._add_trigger_to_model(trigger, model)
+
+            for _, state in self.states.items():
+                self._add_state_to_model(state, model)
+
+            self.set_state(self._initial, model=model)
+
+        self.models.extend(models)
+
+    def remove_model(self, model):
+        pass
 
     @staticmethod
     def _create_transition(*args, **kwargs):
@@ -468,21 +489,28 @@ class Machine(object):
                 state = State(**state)
             self.states[state.name] = state
             for model in self.models:
-                setattr(model, 'is_%s' % state.name,
-                        partial(self.is_state, state.name, model))
-                #  Add enter/exit callbacks if there are existing bound methods
-                enter_callback = 'on_enter_' + state.name
-                if hasattr(model, enter_callback) and \
-                        inspect.ismethod(getattr(model, enter_callback)):
-                    state.add_callback('enter', enter_callback)
-                exit_callback = 'on_exit_' + state.name
-                if hasattr(model, exit_callback) and \
-                        inspect.ismethod(getattr(model, exit_callback)):
-                    state.add_callback('exit', exit_callback)
+                self._add_state_to_model(state, model)
         # Add automatic transitions after all states have been created
         if self.auto_transitions:
             for s in self.states.keys():
                 self.add_transition('to_%s' % s, '*', s)
+
+    def _add_state_to_model(self, state, model):
+        setattr(model, 'is_%s' % state.name,
+                partial(self.is_state, state.name, model))
+        #  Add enter/exit callbacks if there are existing bound methods
+        enter_callback = 'on_enter_' + state.name
+        if hasattr(model, enter_callback) and \
+                inspect.ismethod(getattr(model, enter_callback)):
+            state.add_callback('enter', enter_callback)
+        exit_callback = 'on_exit_' + state.name
+        if hasattr(model, exit_callback) and \
+                inspect.ismethod(getattr(model, exit_callback)):
+            state.add_callback('exit', exit_callback)
+
+    def _add_trigger_to_model(self, trigger, model):
+        trig_func = partial(self.events[trigger].trigger, model)
+        setattr(model, trigger, trig_func)
 
     def get_triggers(self, *args):
         states = set(args)
@@ -516,8 +544,7 @@ class Machine(object):
         if trigger not in self.events:
             self.events[trigger] = self._create_event(trigger, self)
             for model in self.models:
-                trig_func = partial(self.events[trigger].trigger, model)
-                setattr(model, trigger, trig_func)
+                self._add_trigger_to_model(trigger, model)
 
         if isinstance(source, string_types):
             source = list(self.states.keys()) if source == '*' else [source]
