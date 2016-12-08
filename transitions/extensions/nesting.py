@@ -18,14 +18,17 @@ class FunctionWrapper(object):
             self._func = func
 
     def add(self, func, path):
-        name = path[0]
-        if name[0].isdigit():
-            name = 's' + name
-        if hasattr(self, name):
-            getattr(self, name).add(func, path[1:])
+        if len(path) > 0:
+            name = path[0]
+            if name[0].isdigit():
+                name = 's' + name
+            if hasattr(self, name):
+                getattr(self, name).add(func, path[1:])
+            else:
+                x = FunctionWrapper(func, path[1:])
+                setattr(self, name, x)
         else:
-            x = FunctionWrapper(func, path[1:])
-            setattr(self, name, x)
+            self._func = func
 
     def __call__(self, *args, **kwargs):
         return self._func(*args, **kwargs)
@@ -145,12 +148,16 @@ class HierarchicalMachine(Machine):
     def __init__(self, *args, **kwargs):
         self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
-        for model in self.models:
-            if hasattr(model, 'to'):
+
+    def add_model(self, model):
+        super(HierarchicalMachine, self).add_model(model)
+        models = listify(model)
+        for m in models:
+            if hasattr(m, 'to'):
                 logger.warn("%sModel already has a 'to'-method. It will NOT be overwritten by NestedMachine", self.id)
             else:
-                to_func = partial(self.to, model)
-                setattr(model, 'to', to_func)
+                to_func = partial(self.to, m)
+                setattr(m, 'to', to_func)
 
     # Instead of creating transitions directly, Machine now use a factory method which can be overridden
     @staticmethod
@@ -296,24 +303,26 @@ class HierarchicalMachine(Machine):
             source = [x.name for x in self.states.values()] if source == '*' else [source]
 
         # FunctionWrappers are only necessary if a custom separator is used
-        if trigger not in self.events and NestedState.separator not in '_':
+        if trigger not in self.events:
             self.events[trigger] = self._create_event(trigger, self)
-            if trigger.startswith('to_'):
-                path = trigger[3:].split(NestedState.separator)
-                for model in self.models:
-                    trig_func = partial(self.events[trigger].trigger, model)
-                    if hasattr(model, 'to_' + path[0]):
-                        t = getattr(model, 'to_' + path[0])
-                        t.add(trig_func, path[1:])
-                    else:
-                        t = FunctionWrapper(trig_func, path[1:])
-                        setattr(model, 'to_' + path[0], t)
-            else:
-                for model in self.models:
-                    trig_func = partial(self.events[trigger].trigger, model)
-                    setattr(model, trigger, trig_func)
+            for model in self.models:
+                self._add_trigger_to_model(trigger, model)
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
                                                         prepare=prepare, before=before, after=after, **kwargs)
+
+    def _add_trigger_to_model(self, trigger, model):
+        if trigger.startswith('to_') and NestedState.separator != '_':
+            path = trigger[3:].split(NestedState.separator)
+            print(path)
+            trig_func = partial(self.events[trigger].trigger, model)
+            if hasattr(model, 'to_' + path[0]):
+                t = getattr(model, 'to_' + path[0])
+                t.add(trig_func, path[1:])
+            else:
+                t = FunctionWrapper(trig_func, path[1:])
+                setattr(model, 'to_' + path[0], t)
+        else:
+            super(HierarchicalMachine, self)._add_trigger_to_model(trigger, model)
 
     def on_enter(self, state_name, callback):
         self.get_state(state_name).add_callback('enter', callback)
