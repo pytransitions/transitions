@@ -107,7 +107,7 @@ class TestDiagrams(TestCase):
         self.assertEqual(m2.graph.get_node(m1.state).attr['color'],
                          AGraph.style_attributes['node']['default']['color'])
         # backwards compatibility test
-        self.assertEqual(m.get_graph(), m1.get_graph())
+        self.assertTrue(m.get_graph() is m1.get_graph() or m.get_graph() is m2.get_graph())
 
     def test_model_method_collision(self):
         class GraphModel:

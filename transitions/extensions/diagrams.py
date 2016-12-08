@@ -205,7 +205,7 @@ class GraphMachine(Machine):
     def get_combined_graph(self, title=None, force_new=False):
         logger.info('Returning graph of the first model. In future releases, this ' +
                     'method will return a combined graph of all models.')
-        return self._get_graph(self.models[0], title, force_new)
+        return self._get_graph(next(iter(self.models)), title, force_new)
 
     def set_edge_state(self, graph, edge_from, edge_to, state='default'):
         """ Mark a node as active by changing the attributes """
