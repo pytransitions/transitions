@@ -140,8 +140,8 @@ class HierarchicalMachine(Machine):
         self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
-    def add_models(self, model):
-        super(HierarchicalMachine, self).add_models(model)
+    def add_model(self, model):
+        super(HierarchicalMachine, self).add_model(model)
         models = listify(model)
         for m in models:
             if hasattr(m, 'to'):

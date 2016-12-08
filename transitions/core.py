@@ -298,7 +298,7 @@ class Machine(object):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, **kwargs):
+                 queued=False, add_self=True, **kwargs):
         """
         Args:
             model (object): The object(s) whose states we want to manage. If None,
@@ -337,6 +337,7 @@ class Machine(object):
                 executed in a state callback function will be queued and executed later.
                 Due to the nature of the queued processing, all transitions will
                 _always_ return True since conditional checks cannot be conducted at queueing time.
+            add_self (boolean): If no model(s) provided, intialize state machine against self.
 
             **kwargs additional arguments passed to next class in MRO. This can be ignored in most cases.
         """
@@ -380,11 +381,11 @@ class Machine(object):
             self.add_ordered_transitions()
 
         if model:
-            self.add_models(model)
-        else:
-            self.add_models(self)
+            self.add_model(model)
+        elif add_self:
+            self.add_model(self)
 
-    def add_models(self, model):
+    def add_model(self, model):
         models = listify(model)
 
         for model in models:
@@ -400,7 +401,7 @@ class Machine(object):
                     self._add_trigger_to_model(trigger, model)
 
                 for _, state in self.states.items():
-                    self._add_state_to_model(state, model)
+                    self._add_model_to_state(state, model)
 
                 self.set_state(self._initial, model=model)
                 self.models.add(model)
@@ -409,7 +410,6 @@ class Machine(object):
         models = listify(model)
 
         for model in models:
-            # TODO remove any callbacks from State to allow models to be GCed
             self.models.remove(model)
 
     @staticmethod
@@ -497,24 +497,30 @@ class Machine(object):
                 state = State(**state)
             self.states[state.name] = state
             for model in self.models:
-                self._add_state_to_model(state, model)
+                self._add_model_to_state(state, model)
         # Add automatic transitions after all states have been created
         if self.auto_transitions:
             for s in self.states.keys():
                 self.add_transition('to_%s' % s, '*', s)
 
-    def _add_state_to_model(self, state, model):
+    def _add_model_to_state(self, state, model):
         setattr(model, 'is_%s' % state.name,
                 partial(self.is_state, state.name, model))
+
         #  Add enter/exit callbacks if there are existing bound methods
-        enter_callback = 'on_enter_' + state.name
-        if hasattr(model, enter_callback) and \
-                inspect.ismethod(getattr(model, enter_callback)):
-            state.add_callback('enter', enter_callback)
-        exit_callback = 'on_exit_' + state.name
-        if hasattr(model, exit_callback) and \
-                inspect.ismethod(getattr(model, exit_callback)):
-            state.add_callback('exit', exit_callback)
+        for trigger in ('enter', 'exit'):
+            try:
+                state.add_callback(trigger, self._lookup_callback(model, state, trigger))
+            except AttributeError:
+                pass
+
+    def _lookup_callback(self, model, state, trigger):
+        callback = 'on_{}_{}'.format(trigger, state.name)
+        if hasattr(model, callback) and \
+                inspect.ismethod(getattr(model, callback)):
+            return callback
+        else:
+            raise AttributeError
 
     def _add_trigger_to_model(self, trigger, model):
         trig_func = partial(self.events[trigger].trigger, model)
