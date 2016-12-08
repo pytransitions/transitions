@@ -399,7 +399,7 @@ m.get_triggers('liquid')
 >>> ['evaporate']
 m.get_triggers('plasma')
 >>> []
-# you can also query several states at once 
+# you can also query several states at once
 m.get_triggers('solid', 'liquid', 'gas', 'plasma')
 >>> ['melt', 'evaporate', 'sublimate', 'ionize']
 ```
@@ -644,7 +644,7 @@ lump = Matter()
 machine = Machine(lump, ['solid', 'liquid'], initial='solid')
 machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
 
-lump.melt(45)  # positional arg; 
+lump.melt(45)  # positional arg;
 # equivalent to lump.trigger('melt', 45)
 lump.print_temperature()
 >>> 'Current temperature is 45 degrees celsius.'
@@ -857,9 +857,9 @@ transitions = [
   ['walk', 'standing', 'walking'],
   ['stop', 'walking', 'standing'],
   # this transition will end in 'caffeinated_dithering'...
-  ['drink', '*', 'caffeinated'], 
+  ['drink', '*', 'caffeinated'],
   # ... that is why we do not need do specify 'caffeinated' here anymore
-  ['walk', 'caffeinated_dithering', 'caffeinated_running'], 
+  ['walk', 'caffeinated_dithering', 'caffeinated_running'],
   ['relax', 'caffeinated', 'standing']
 ]
 # ...
@@ -987,6 +987,23 @@ thread = Thread(target=machine.to_B)
 thread.start()
 machine.new_attrib = 42 # not synchronized! will mess with execution order
 ```
+
+Any python context manager can be passed in via the `context` keyword argument:
+
+```python
+from transitions.extensions import LockedMachine as Machine
+from threading import Thread, RLock
+
+states = ['A', 'B', 'C']
+
+lock1 = RLock()
+lock2 = RLock()
+
+machine = Machine(states=states, initial='A', context=[lock1, lock2])
+```
+
+It's important that any user-provided context managers are re-entrant since the state machine will call them multiple
+times, even in the context of a single trigger invocation.
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
 For bug reports and other issues, please open an issue on GitHub.
