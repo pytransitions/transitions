@@ -386,6 +386,7 @@ class Machine(object):
             self.add_model(self)
 
     def add_model(self, model):
+        """ Register a model with the state machine, initializing triggers and callbacks. """
         models = listify(model)
 
         for model in models:
@@ -407,6 +408,8 @@ class Machine(object):
                 self.models.append(model)
 
     def remove_model(self, model):
+        """ Deregister a model with the state machine. The model will still contain all previously added triggers
+        and callbacks, but will not receive updates when states or transitions are added to the Machine. """
         models = listify(model)
 
         for model in models:
