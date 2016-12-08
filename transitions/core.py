@@ -357,7 +357,7 @@ class Machine(object):
         self.id = name + ": " if name is not None else ""
         self._queued = queued
         self._transition_queue = deque()
-        self.models = set()
+        self.models = []
 
         if initial is None:
             self.add_states('initial')
@@ -404,7 +404,7 @@ class Machine(object):
                     self._add_model_to_state(state, model)
 
                 self.set_state(self._initial, model=model)
-                self.models.add(model)
+                self.models.append(model)
 
     def remove_model(self, model):
         models = listify(model)
@@ -433,7 +433,7 @@ class Machine(object):
     @property
     def model(self):
         if len(self.models) == 1:
-            return next(iter(self.models))
+            return self.models[0]
         else:
             return self.models
 
@@ -506,21 +506,15 @@ class Machine(object):
     def _add_model_to_state(self, state, model):
         setattr(model, 'is_%s' % state.name,
                 partial(self.is_state, state.name, model))
-
         #  Add enter/exit callbacks if there are existing bound methods
-        for trigger in ('enter', 'exit'):
-            try:
-                state.add_callback(trigger, self._lookup_callback(model, state, trigger))
-            except AttributeError:
-                pass
-
-    def _lookup_callback(self, model, state, trigger):
-        callback = 'on_{}_{}'.format(trigger, state.name)
-        if hasattr(model, callback) and \
-                inspect.ismethod(getattr(model, callback)):
-            return callback
-        else:
-            raise AttributeError
+        enter_callback = 'on_enter_' + state.name
+        if hasattr(model, enter_callback) and \
+                inspect.ismethod(getattr(model, enter_callback)):
+            state.add_callback('enter', enter_callback)
+        exit_callback = 'on_exit_' + state.name
+        if hasattr(model, exit_callback) and \
+                inspect.ismethod(getattr(model, exit_callback)):
+            state.add_callback('exit', exit_callback)
 
     def _add_trigger_to_model(self, trigger, model):
         trig_func = partial(self.events[trigger].trigger, model)
