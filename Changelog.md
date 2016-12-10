@@ -1,10 +1,13 @@
 # Changelog
 
-## 0.4.3 (Pending)
+## 0.4.3 (December, 2016)
 
-Release 0.4.3 is a minor release and contains bug fixes:
+Release 0.4.3 is a minor release and contains bug fixes and several new features:
+
+- Support dynamic model addition via `Machine.add_model` (thanks to @paulbovbel)
+- Allow user to explicitly pass a lock instance or context manager to LockedMachine (thanks to @paulbovbel)
 - Fixed issue related to parsing of HSMs (thanks to @steval and @user2154065 from SO)
-- When `State` is passed to `Machine.add_transition`, it will check if the state (and not just the name) is known to the machine.
+- When `State` is passed to `Machine.add_transition`, it will check if the state (and not just the name) is known to the machine
 
 ## 0.4.2 (October, 2016)
 Release 0.4.2 contains several new features and bugfixes:
