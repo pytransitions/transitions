@@ -119,12 +119,15 @@ class AGraph(Diagram):
                     else:
                         container.add_edge(src.name, dst.name, label=edge_label, ltail=ltail, lhead=lhead)
 
+    def rep(self, f):
+        return f.__name__ if callable(f) else f
+
     def _transition_label(self, edge_label, tran):
         if self.machine.show_conditions and tran.conditions:
             return '{edge_label} [{conditions}]'.format(
                 edge_label=edge_label,
                 conditions=' & '.join(
-                    c.func if c.target else '!' + c.func
+                    self.rep(c.func) if c.target else '!' + self.rep(c.func)
                     for c in tran.conditions
                 ),
             )
