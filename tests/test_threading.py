@@ -109,6 +109,9 @@ class TestLockedTransitions(TestCore):
 
 class TestMultipleContexts(TestCore):
 
+    class DummyModel(object):
+        pass
+
     class TestContext(object):
         def __init__(self, event_list):
             self._event_list = event_list
@@ -122,12 +125,17 @@ class TestMultipleContexts(TestCore):
     def setUp(self):
         self.event_list = []
 
+        self.s1 = self.DummyModel()
+
         self.c1 = self.TestContext(event_list=self.event_list)
         self.c2 = self.TestContext(event_list=self.event_list)
+        self.c3 = self.TestContext(event_list=self.event_list)
+        self.c4 = self.TestContext(event_list=self.event_list)
 
         self.stuff = Stuff(machine_cls=MachineFactory.get_predefined(locked=True), extra_kwargs={
-            'context': [self.c1, self.c2]
+            'machine_context': [self.c1, self.c2]
         })
+        self.stuff.machine.add_model(self.s1, model_context=[self.c3, self.c4])
         del self.event_list[:]
 
         self.stuff.machine.add_transition('forward', 'A', 'B')
@@ -138,10 +146,25 @@ class TestMultipleContexts(TestCore):
     def test_ordering(self):
         self.stuff.forward()
         # There are a lot of internal enter/exits, but the key is that the outermost are in the expected order
-        self.assertEqual(self.event_list[0], (self.c1, "enter"))
-        self.assertEqual(self.event_list[1], (self.c2, "enter"))
-        self.assertEqual(self.event_list[-2], (self.c2, "exit"))
-        self.assertEqual(self.event_list[-1], (self.c1, "exit"))
+        self.assertEqual((self.c1, "enter"), self.event_list[0])
+        self.assertEqual((self.c2, "enter"), self.event_list[1])
+        self.assertEqual((self.c2, "exit"), self.event_list[-2])
+        self.assertEqual((self.c1, "exit"), self.event_list[-1])
+
+    def test_model_context(self):
+        self.s1.forward()
+        self.assertEqual((self.c1, "enter"), self.event_list[0])
+        self.assertEqual((self.c2, "enter"), self.event_list[1])
+
+        # Since there are a lot of internal enter/exits, we don't actually know how deep in the stack
+        # to look for these. Should be able to correct when https://github.com/tyarkoni/transitions/issues/167
+        self.assertIn((self.c3, "enter"), self.event_list)
+        self.assertIn((self.c4, "enter"), self.event_list)
+        self.assertIn((self.c4, "exit"), self.event_list)
+        self.assertIn((self.c3, "exit"), self.event_list)
+
+        self.assertEqual((self.c2, "exit"), self.event_list[-2])
+        self.assertEqual((self.c1, "exit"), self.event_list[-1])
 
 
 # Same as TestLockedTransition but with LockedHierarchicalMachine
