@@ -359,15 +359,16 @@ class Machine(object):
         self._transition_queue = deque()
         self.models = []
 
-        if initial is None:
-            self.add_states('initial')
+        if model is None and add_self:  # TODO(pbovbel) reconsider API for next major release
+            model = self
+
+        if model and initial is None:
             initial = 'initial'
+            self.add_states(initial)
         self._initial = initial
 
         if states is not None:
             self.add_states(states)
-
-        self.set_state(self._initial)
 
         if transitions is not None:
             transitions = listify(transitions)
@@ -382,12 +383,16 @@ class Machine(object):
 
         if model:
             self.add_model(model)
-        elif add_self:
-            self.add_model(self)
 
-    def add_model(self, model):
+    def add_model(self, model, initial=None):
         """ Register a model with the state machine, initializing triggers and callbacks. """
         models = listify(model)
+
+        if initial is None:
+            if self._initial is None:
+                raise MachineError("No initial state configured for machine, must specify when adding model.")
+            else:
+                initial = self._initial
 
         for model in models:
             if model not in self.models:
@@ -404,7 +409,7 @@ class Machine(object):
                 for _, state in self.states.items():
                     self._add_model_to_state(state, model)
 
-                self.set_state(self._initial, model=model)
+                self.set_state(initial, model=model)
                 self.models.append(model)
 
     def remove_model(self, model):
