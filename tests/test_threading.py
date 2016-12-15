@@ -141,7 +141,7 @@ class TestMultipleContexts(TestCore):
         self.stuff.machine.add_transition('forward', 'A', 'B')
 
     def tearDown(self):
-        pass
+        self.stuff.machine.remove_model(self.s1)
 
     def test_ordering(self):
         self.stuff.forward()

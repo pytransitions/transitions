@@ -52,9 +52,6 @@ class State(object):
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
 
-    def __str__(self):
-        return self.name
-
     def enter(self, event_data):
         """ Triggered when a state is entered. """
         logger.debug("%sEntering state %s. Processing callbacks...", event_data.machine.id, self.name)

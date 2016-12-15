@@ -71,7 +71,7 @@ class LockedMachine(Machine):
 
         return output
 
-    def remove_model(self, model):
+    def remove_model(self, model, *args, **kwargs):
         models = listify(model)
 
         for model in models:
