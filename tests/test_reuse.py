@@ -136,16 +136,16 @@ class TestTransitions(TestCase):
         siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}]
         collision = ['A', {'name': 'B', 'children': ['A', self.stuff.machine]}]
 
-        m = Machine(None, states=correct)
+        m = Machine(states=correct)
         m.to_B.C.s3.a()
 
         with self.assertRaises(ValueError):
-            m = Machine(None, states=wrong_type)
+            m = Machine(states=wrong_type)
 
         with self.assertRaises(ValueError):
-            m = Machine(None, states=collision)
+            m = Machine(states=collision)
 
-        m = Machine(None, states=siblings)
+        m = Machine(states=siblings)
         m.to_B.s1()
         m.to_B.A()
 

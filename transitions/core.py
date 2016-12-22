@@ -12,6 +12,10 @@ from collections import defaultdict
 from collections import deque
 from functools import partial
 from six import string_types
+
+import warnings
+warnings.simplefilter('default')
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -291,14 +295,14 @@ class Machine(object):
     callbacks = ['before', 'after', 'prepare', 'on_enter', 'on_exit']
     separator = '_'
 
-    def __init__(self, model=None, states=None, initial=None, transitions=None,
+    def __init__(self, model='self', states=None, initial='initial', transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
                  queued=False, add_self=True, **kwargs):
         """
         Args:
-            model (object): The object(s) whose states we want to manage. If None,
+            model (object): The object(s) whose states we want to manage. If 'self',
                 the current Machine instance will be used the model (i.e., all
                 triggering events will be attached to the Machine itself).
             states (list): A list of valid states. Each element can be either a
@@ -356,16 +360,32 @@ class Machine(object):
         self._transition_queue = deque()
         self.models = []
 
-        if model is None and add_self:  # TODO(pbovbel) reconsider API for next major release
-            model = self
+        if model is None and add_self:
+            model = 'self'
+            warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
+                          "constructor will no longer add the machine instance as a model but add "
+                          "NO model at all. Consequently, add_self will be removed. To add the "
+                          "machine as a model (and also hide this warning) use the new default "
+                          "value model='self' instead.", PendingDeprecationWarning)
+
+        if add_self is not True:
+            warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
+                          "constructor will no longer add the machine instance as a model but add "
+                          "NO model at all. Consequently, add_self will be removed.", PendingDeprecationWarning)
 
         if model and initial is None:
             initial = 'initial'
-            self.add_states(initial)
-        self._initial = initial
+            warnings.warn("Starting from transitions version 0.5.0, passing initial=None to the constructor "
+                          "will no longer create and set the 'initial' state. If no initial"
+                          "state is provided but model is not None, an error will be raised.", PendingDeprecationWarning)
 
         if states is not None:
             self.add_states(states)
+
+        if initial is not None:
+            if initial not in self.states:
+                self.add_states(initial)
+        self._initial = initial
 
         if transitions is not None:
             transitions = listify(transitions)
@@ -392,8 +412,8 @@ class Machine(object):
                 initial = self._initial
 
         for model in models:
+            model = self if model == 'self' else model
             if model not in self.models:
-
                 if hasattr(model, 'trigger'):
                     logger.warning("%sModel already contains an attribute 'trigger'. Skip method binding ",
                                    self.id)
@@ -598,12 +618,15 @@ class Machine(object):
         if len(states) < 2:
             raise MachineError("Can't create ordered transitions on a Machine "
                                "with fewer than 2 states.")
+        states.remove(self._initial)
+        self.add_transition(trigger, self._initial, states[0])
         for i in range(1, len(states)):
             self.add_transition(trigger, states[i - 1], states[i])
         if loop:
-            if not loop_includes_initial:
-                states.remove(self._initial)
-            self.add_transition(trigger, states[-1], states[0])
+            if loop_includes_initial:
+                self.add_transition(trigger, states[-1], self._initial)
+            else:
+                self.add_transition(trigger, states[-1], states[0])
 
     def _callback(self, func, event_data):
         """ Trigger a callback function, possibly wrapping it in an EventData

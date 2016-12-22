@@ -3,7 +3,6 @@ from transitions.core import Machine, Transition, Event, listify
 from collections import defaultdict
 from threading import RLock
 import inspect
-import weakref
 
 try:
     from contextlib import nested  # Python 2
