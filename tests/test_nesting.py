@@ -11,6 +11,7 @@ from os.path import getsize
 
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState as State
+from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
 from .utils import Stuff
 
@@ -19,6 +20,11 @@ try:
 except ImportError:
     from mock import MagicMock
 
+try:
+    ## Just to skip tests if *pygraphviz8 not installed
+    import pygraphviz as pgv  # @UnresolvedImport
+except:
+    pgv = None
 
 state_separator = State.separator
 
@@ -453,6 +459,7 @@ class TestTransitions(TestsCore):
         self.assertTrue('relax' in trans)
 
 
+@skipIf(pgv is None, 'AGraph diagram requires pygraphviz')
 class TestWithGraphTransitions(TestTransitions):
 
     def setUp(self):
