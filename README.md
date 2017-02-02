@@ -606,17 +606,18 @@ Note that `prepare` will not be called unless the current state is a valid sourc
 ### <a name="execution-order"> Execution order
 In summary, callbacks on transitions are executed in the following order:
 
-|      Callback           | Current State |               Comments                        |
-|-------------------------|:-------------:|-----------------------------------------------|
-| `'prepare'`             | `source`      | executed as soon as the transition starts     |
-| `'conditions'/'unless'` | `source`      | conditions *may* fail and halt the transition |
-| `'before'`              | `source`      |                                               |
-| `'machine.before'`      | `source`      | default callbacks declared on model           |
-| `'state.exit'`          | `source`      | callbacks declared on the source state        |
-| `<STATE CHANGE>`        |               |                                               |
-| `'state.enter'`         | `destination` | callbacks declared on the destination state   |
-| `'after'`               | `destination` |                                               |
-| `'machine.after'`       | `destination` | default callbacks declared on model           |
+|      Callback             | Current State |               Comments                        |
+|---------------------------|:-------------:|-----------------------------------------------|
+| `'transition.prepare'`    | `source`      | executed as soon as the transition starts     |
+| `'transition.conditions'` | `source`      | conditions *may* fail and halt the transition |
+| `'transition.unless'`     | `source`      | conditions *may* fail and halt the transition |
+| `'transition.before'`     | `source`      |                                               |
+| `'machine.before'`        | `source`      | default callbacks declared on model           |
+| `'state.exit'`            | `source`      | callbacks declared on the source state        |
+| `<STATE CHANGE>`          |               |                                               |
+| `'state.enter'`           | `destination` | callbacks declared on the destination state   |
+| `'transition.after'`      | `destination` |                                               |
+| `'machine.after'`         | `destination` | default callbacks declared on model           |
 
 Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
 `before_state_change` and `after_state_change` respectively:
