@@ -20,7 +20,7 @@ class TestTransitionsAddRemove(TestCase):
     def test_garbage_collection(self):
 
         states = ['A', 'B', 'C', 'D', 'E', 'F']
-        machine = Machine(states=states, initial='A', name='Test Machine', add_self=False)
+        machine = Machine(model=[], states=states, initial='A', name='Test Machine')
         machine.add_transition('advance', 'A', 'B')
         machine.add_transition('advance', 'B', 'C')
         machine.add_transition('advance', 'C', 'D')
@@ -54,7 +54,7 @@ class TestTransitionsAddRemove(TestCase):
 
     def test_add_model_initial_state(self):
         states = ['A', 'B', 'C', 'D', 'E', 'F']
-        machine = Machine(states=states, initial='A', name='Test Machine', add_self=False)
+        machine = Machine(model=[], states=states, initial='A', name='Test Machine')
         machine.add_transition('advance', 'A', 'B')
         machine.add_transition('advance', 'B', 'C')
         machine.add_transition('advance', 'C', 'D')
@@ -77,7 +77,7 @@ class TestTransitionsAddRemove(TestCase):
 
     def test_add_model_no_initial_state(self):
         states = ['A', 'B', 'C', 'D', 'E', 'F']
-        machine = Machine(states=states, name='Test Machine', add_self=False)
+        machine = Machine(model=[], states=states, name='Test Machine', initial=None)
         machine.add_transition('advance', 'A', 'B')
         machine.add_transition('advance', 'B', 'C')
         machine.add_transition('advance', 'C', 'D')

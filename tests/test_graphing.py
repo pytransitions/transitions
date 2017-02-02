@@ -69,7 +69,8 @@ class TestDiagrams(TestCase):
         self.assertEqual("", graph.graph_attr['label'])
 
     def test_add_custom_state(self):
-        m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False, title='a test')
+        m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A',
+                             auto_transitions=False, title='a test')
         m.add_state('X')
         m.add_transition('foo', '*', 'X')
         m.foo()

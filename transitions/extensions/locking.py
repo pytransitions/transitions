@@ -3,10 +3,13 @@ from transitions.core import Machine, Transition, Event, listify
 from collections import defaultdict
 from threading import RLock
 import inspect
-import weakref
 
 try:
     from contextlib import nested  # Python 2
+    # with nested statements now raise a DeprecationWarning. Should be replaced with ExitStack-like approaches.
+    import warnings
+    warnings.simplefilter('ignore', DeprecationWarning)
+
 except ImportError:
     from contextlib import ExitStack, contextmanager
 

@@ -63,7 +63,7 @@ class TestTransitions(TestsCore):
         self.stuff.machine_cls(
             model=s, states=states, transitions=transitions, initial='State2')
         s.advance()
-        self.assertEquals(s.message, 'Hello World!')
+        self.assertEqual(s.message, 'Hello World!')
 
     def test_property_initial(self):
         # Define with list of dictionaries
@@ -75,11 +75,11 @@ class TestTransitions(TestsCore):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
-        self.assertEquals(m.initial, 'A')
+        self.assertEqual(m.initial, 'A')
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='C')
-        self.assertEquals(m.initial, 'C')
+        self.assertEqual(m.initial, 'C')
         m = self.stuff.machine_cls(states=states, transitions=transitions)
-        self.assertEquals(m.initial, 'initial')
+        self.assertEqual(m.initial, 'initial')
 
     def test_transition_definitions(self):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
@@ -92,11 +92,11 @@ class TestTransitions(TestsCore):
         ]
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.walk()
-        self.assertEquals(m.state, 'B')
+        self.assertEqual(m.state, 'B')
         m.run()
-        self.assertEquals(m.state, 'C')
+        self.assertEqual(m.state, 'C')
         m.run()
-        self.assertEquals(m.state, 'C%s1' % State.separator)
+        self.assertEqual(m.state, 'C%s1' % State.separator)
         # Define with list of lists
         transitions = [
             ['walk', 'A', 'B'],
@@ -106,7 +106,7 @@ class TestTransitions(TestsCore):
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.to_C()
         m.sprint()
-        self.assertEquals(m.state, 'D')
+        self.assertEqual(m.state, 'D')
 
     def test_transitioning(self):
         s = self.stuff
@@ -116,11 +116,11 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('reset', '*', 'A')
         self.assertEqual(len(s.machine.events['reset'].transitions['C%s1' % State.separator]), 1)
         s.advance()
-        self.assertEquals(s.state, 'B')
+        self.assertEqual(s.state, 'B')
         self.assertFalse(s.is_A())
         self.assertTrue(s.is_B())
         s.advance()
-        self.assertEquals(s.state, 'C')
+        self.assertEqual(s.state, 'C')
 
     def test_conditions(self):
         s = self.stuff
@@ -129,11 +129,11 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('advance', 'C', 'D', unless=['this_fails',
                                                               'this_passes'])
         s.advance()
-        self.assertEquals(s.state, 'B')
+        self.assertEqual(s.state, 'B')
         s.advance()
-        self.assertEquals(s.state, 'C')
+        self.assertEqual(s.state, 'C')
         s.advance()
-        self.assertEquals(s.state, 'C')
+        self.assertEqual(s.state, 'C')
 
     def test_multiple_add_transitions_from_state(self):
         s = self.stuff
@@ -142,9 +142,9 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('advance', 'A', 'C')
         s.machine.add_transition('advance', 'C', 'C%s2' % State.separator)
         s.advance()
-        self.assertEquals(s.state, 'C')
+        self.assertEqual(s.state, 'C')
         s.advance()
-        self.assertEquals(s.state, 'C%s2' % State.separator)
+        self.assertEqual(s.state, 'C%s2' % State.separator)
         self.assertFalse(s.is_C())
         self.assertTrue(s.is_C(allow_substates=True))
 
@@ -154,7 +154,7 @@ class TestTransitions(TestsCore):
         m.add_transition('move', 'A', 'B')
         m.add_transition('move_to_C', 'B', 'C')
         m.move()
-        self.assertEquals(m.state, 'B')
+        self.assertEqual(m.state, 'B')
 
     def test_add_custom_state(self):
         s = self.stuff
@@ -176,22 +176,22 @@ class TestTransitions(TestsCore):
         s.machine.on_enter('C{0}3{0}a'.format(State.separator), 'greet')
         s.machine.on_exit('C%s3' % State.separator, 'meet')
         s.advance()
-        self.assertEquals(s.state, 'C%s1' % State.separator)
-        self.assertEquals(s.message, 'Hello World!')
+        self.assertEqual(s.state, 'C%s1' % State.separator)
+        self.assertEqual(s.message, 'Hello World!')
         s.lower()
-        self.assertEquals(s.state, 'C{0}3{0}a'.format(State.separator))
-        self.assertEquals(s.message, 'Hi')
+        self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
+        self.assertEqual(s.message, 'Hi')
         s.rise()
-        self.assertEquals(s.state, 'C%s1' % State.separator)
+        self.assertEqual(s.state, 'C%s1' % State.separator)
         self.assertTrue(s.message.startswith('Nice to'))
         s.reverse()
-        self.assertEquals(s.state, 'A')
+        self.assertEqual(s.state, 'A')
         self.assertTrue(s.message.startswith('So long'))
         s.fast()
-        self.assertEquals(s.state, 'C{0}3{0}a'.format(State.separator))
-        self.assertEquals(s.message, 'Hi')
+        self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
+        self.assertEqual(s.message, 'Hi')
         s.to_A()
-        self.assertEquals(s.state, 'A')
+        self.assertEqual(s.state, 'A')
         self.assertTrue(s.message.startswith('So long'))
 
     def test_enter_exit_nested(self):
@@ -206,71 +206,70 @@ class TestTransitions(TestsCore):
             state.on_exit.append('decrease_level')
 
         s.advance()
-        self.assertEquals(s.state, 'C%s1' % State.separator)
-        self.assertEquals(s.level, 2)
+        self.assertEqual(s.state, 'C%s1' % State.separator)
+        self.assertEqual(s.level, 2)
         s.lower()
-        self.assertEquals(s.state, 'C{0}3{0}a'.format(State.separator))
-        self.assertEquals(s.level, 3)
+        self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
+        self.assertEqual(s.level, 3)
         s.rise()
-        self.assertEquals(s.state, 'C%s1' % State.separator)
-        self.assertEquals(s.level, 2)
+        self.assertEqual(s.state, 'C%s1' % State.separator)
+        self.assertEqual(s.level, 2)
         s.reverse()
-        self.assertEquals(s.state, 'A')
-        self.assertEquals(s.level, 1)
+        self.assertEqual(s.state, 'A')
+        self.assertEqual(s.level, 1)
         s.fast()
-        self.assertEquals(s.state, 'C{0}3{0}a'.format(State.separator))
-        self.assertEquals(s.level, 3)
+        self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
+        self.assertEqual(s.level, 3)
         s.to_A()
-        self.assertEquals(s.state, 'A')
-        self.assertEquals(s.level, 1)
+        self.assertEqual(s.state, 'A')
+        self.assertEqual(s.level, 1)
         if State.separator in '_':
             s.to_C_3_a()
         else:
             s.to_C.s3.a()
-        self.assertEquals(s.state, 'C{0}3{0}a'.format(State.separator))
-        self.assertEquals(s.level, 3)
+        self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
+        self.assertEqual(s.level, 3)
 
     def test_ordered_transitions(self):
         states = [{'name': 'first', 'children': ['second', 'third', {'name': 'fourth', 'children': ['fifth', 'sixth']},
                                                  'seventh']}, 'eighth', 'ninth']
         m = self.stuff.machine_cls(states=states)
         m.add_ordered_transitions()
-        self.assertEquals(m.state, 'initial')
+        self.assertEqual(m.state, 'initial')
         m.next_state()
-        self.assertEquals(m.state, 'first')
-        m.next_state()
-        m.next_state()
-        self.assertEquals(m.state, 'first{0}third'.format(State.separator))
+        self.assertEqual(m.state, 'first')
         m.next_state()
         m.next_state()
-        self.assertEquals(m.state, 'first{0}fourth{0}fifth'.format(State.separator))
+        self.assertEqual(m.state, 'first{0}third'.format(State.separator))
         m.next_state()
         m.next_state()
-        self.assertEquals(m.state, 'first{0}seventh'.format(State.separator))
+        self.assertEqual(m.state, 'first{0}fourth{0}fifth'.format(State.separator))
         m.next_state()
         m.next_state()
-        self.assertEquals(m.state, 'ninth')
+        self.assertEqual(m.state, 'first{0}seventh'.format(State.separator))
+        m.next_state()
+        m.next_state()
+        self.assertEqual(m.state, 'ninth')
 
         # Include initial state in loop
-        m = self.stuff.machine_cls(None, states)
+        m = self.stuff.machine_cls('self', states)
         m.add_ordered_transitions(loop_includes_initial=False)
         m.to_ninth()
         m.next_state()
-        self.assertEquals(m.state, 'first')
+        self.assertEqual(m.state, 'first')
 
         # Test user-determined sequence and trigger name
-        m = self.stuff.machine_cls(None, states, initial='first')
+        m = self.stuff.machine_cls('self', states, initial='first')
         m.add_ordered_transitions(['first', 'ninth'], trigger='advance')
         m.advance()
-        self.assertEquals(m.state, 'ninth')
+        self.assertEqual(m.state, 'ninth')
         m.advance()
-        self.assertEquals(m.state, 'first')
+        self.assertEqual(m.state, 'first')
 
         # Via init argument
-        m = self.stuff.machine_cls(
-            None, states, initial='first', ordered_transitions=True)
+        m = self.stuff.machine_cls('self', states, initial='first', ordered_transitions=True)
         m.next_state()
-        self.assertEquals(m.state, 'first{0}second'.format(State.separator))
+        self.assertEqual(m.state, 'first{0}second'.format(State.separator))
 
     def test_pickle(self):
         import sys
@@ -304,7 +303,7 @@ class TestTransitions(TestsCore):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'}
         ]
 
-        m = self.stuff.machine_cls(None, states=['A', 'B', 'C'], transitions=transitions,
+        m = self.stuff.machine_cls(states=['A', 'B', 'C'], transitions=transitions,
                                    before_state_change='before_state_change',
                                    after_state_change='after_state_change', send_event=True,
                                    initial='A', auto_transitions=True)
@@ -406,12 +405,12 @@ class TestTransitions(TestsCore):
         s1, s2 = Model(), Model()
         m = MachineFactory.get_predefined(nested=True)(model=[s1, s2], states=['A', 'B', 'C'],
                                                        initial='A')
-        self.assertEquals(len(m.models), 2)
+        self.assertEqual(len(m.models), 2)
         m.add_transition('advance', 'A', 'B')
         self.assertNotEqual(s1.advance, s2.advance)
         s1.advance()
-        self.assertEquals(s1.state, 'B')
-        self.assertEquals(s2.state, 'A')
+        self.assertEqual(s1.state, 'B')
+        self.assertEqual(s2.state, 'A')
 
     def test_excessive_nesting(self):
         states = [{'name': 'A', 'children': []}]
@@ -471,10 +470,9 @@ class TestWithGraphTransitions(TestTransitions):
                                                        {'name': '3', 'children': ['a', 'b', 'c']}]}, 'D', 'E', 'F']
 
         State.separator = '/'
-        machine = GraphMachine(None, states, initial='A',
+        machine = GraphMachine('self', states, initial='A',
                                auto_transitions=False,
-                               ignore_invalid_triggers=True,
-                               )
+                               ignore_invalid_triggers=True)
         machine.add_ordered_transitions(trigger='next_state')
         machine.next_state()
         self.assertEqual(machine.state, 'B')
