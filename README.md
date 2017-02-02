@@ -29,6 +29,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Queued transitions](#queued-transitions)
         - [Conditional transitions](#conditional-transitions)
         - [Callbacks](#transition-callbacks)
+    - [Execution order](#execution-order)
     - [Passing data](#passing-data)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
@@ -602,12 +603,21 @@ lump.melt()
 
 Note that `prepare` will not be called unless the current state is a valid source for the named transition.
 
+### <a name="execution-order"> Execution order
 In summary, callbacks on transitions are executed in the following order:
 
-* `'prepare'` (executed as soon as the transition starts)
-* `'conditions'` / `'unless'` (conditions *may* fail and halt the transition)
-* `'before'` (executed while the model is still in the source state)
-* `'after'` (executed while the model is in the destination state)
+|      Callback             | Current State |               Comments                        |
+|---------------------------|:-------------:|-----------------------------------------------|
+| `'transition.prepare'`    | `source`      | executed as soon as the transition starts     |
+| `'transition.conditions'` | `source`      | conditions *may* fail and halt the transition |
+| `'transition.unless'`     | `source`      | conditions *may* fail and halt the transition |
+| `'transition.before'`     | `source`      |                                               |
+| `'machine.before'`        | `source`      | default callbacks declared on model           |
+| `'state.exit'`            | `source`      | callbacks declared on the source state        |
+| `<STATE CHANGE>`          |               |                                               |
+| `'state.enter'`           | `destination` | callbacks declared on the destination state   |
+| `'transition.after'`      | `destination` |                                               |
+| `'machine.after'`         | `destination` | default callbacks declared on model           |
 
 Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
 `before_state_change` and `after_state_change` respectively:
@@ -728,6 +738,40 @@ lump.state
 ```
 
 Here you get to consolidate all state machine functionality into your existing model, which often feels more natural way than sticking all of the functionality we want in a separate standalone `Machine` instance.
+
+You can also create a standalone machine, and register models dynamically via `machine.add_model`. Remember to call `machine.remove_model` if machine is long-lasting while your models are temporary and should be garbage collected:
+
+```python
+class Matter():
+    pass
+
+lump1 = Matter()
+lump2 = Matter()
+
+machine = Machine(states=states, transitions=transitions, initial='solid', add_self=False)
+
+machine.add_model(lump1)
+machine.add_model(lump2, initial='liquid')
+
+lump1.state
+>>> 'solid'
+lump2.state
+>>> 'liquid'
+
+machine.remove_model([lump1, lump2])
+del lump1  # lump1 is garbage collected
+del lump2  # lump2 is garbage collected
+```
+
+If you don't provide an initial state in the state machine constructor, you must provide one every time you add a model:
+
+```python
+machine = Machine(states=states, transitions=transitions, add_self=False)
+
+machine.add_model(Matter())
+>>> "MachineError: No initial state configured for machine, must specify when adding model."
+machine.add_model(Matter(), initial='liquid')
+```
 
 ### Logging
 
@@ -988,7 +1032,7 @@ thread.start()
 machine.new_attrib = 42 # not synchronized! will mess with execution order
 ```
 
-Any python context manager can be passed in via the `context` keyword argument:
+Any python context manager can be passed in via the `machine_context` keyword argument:
 
 ```python
 from transitions.extensions import LockedMachine as Machine
@@ -999,7 +1043,16 @@ states = ['A', 'B', 'C']
 lock1 = RLock()
 lock2 = RLock()
 
-machine = Machine(states=states, initial='A', context=[lock1, lock2])
+machine = Machine(states=states, initial='A', machine_context=[lock1, lock2])
+```
+
+Any contexts via `machine_model` will be shared between all models registered with the `Machine`.
+Per-model contexts can be added as well:
+
+```
+lock3 = RLock()
+
+machine.add_model(model, model_context=lock3)
 ```
 
 It's important that any user-provided context managers are re-entrant since the state machine will call them multiple

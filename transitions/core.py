@@ -12,6 +12,10 @@ from collections import defaultdict
 from collections import deque
 from functools import partial
 from six import string_types
+
+import warnings
+warnings.simplefilter('default')
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -51,9 +55,6 @@ class State(object):
         self.ignore_invalid_triggers = ignore_invalid_triggers
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
-
-    def __str__(self):
-        return self.name
 
     def enter(self, event_data):
         """ Triggered when a state is entered. """
@@ -294,14 +295,14 @@ class Machine(object):
     callbacks = ['before', 'after', 'prepare', 'on_enter', 'on_exit']
     separator = '_'
 
-    def __init__(self, model=None, states=None, initial=None, transitions=None,
+    def __init__(self, model='self', states=None, initial='initial', transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
                  queued=False, add_self=True, **kwargs):
         """
         Args:
-            model (object): The object(s) whose states we want to manage. If None,
+            model (object): The object(s) whose states we want to manage. If 'self',
                 the current Machine instance will be used the model (i.e., all
                 triggering events will be attached to the Machine itself).
             states (list): A list of valid states. Each element can be either a
@@ -359,15 +360,32 @@ class Machine(object):
         self._transition_queue = deque()
         self.models = []
 
-        if initial is None:
-            self.add_states('initial')
+        if model is None and add_self:
+            model = 'self'
+            warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
+                          "constructor will no longer add the machine instance as a model but add "
+                          "NO model at all. Consequently, add_self will be removed. To add the "
+                          "machine as a model (and also hide this warning) use the new default "
+                          "value model='self' instead.", PendingDeprecationWarning)
+
+        if add_self is not True:
+            warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
+                          "constructor will no longer add the machine instance as a model but add "
+                          "NO model at all. Consequently, add_self will be removed.", PendingDeprecationWarning)
+
+        if model and initial is None:
             initial = 'initial'
-        self._initial = initial
+            warnings.warn("Starting from transitions version 0.5.0, passing initial=None to the constructor "
+                          "will no longer create and set the 'initial' state. If no initial"
+                          "state is provided but model is not None, an error will be raised.", PendingDeprecationWarning)
 
         if states is not None:
             self.add_states(states)
 
-        self.set_state(self._initial)
+        if initial is not None:
+            if initial not in self.states:
+                self.add_states(initial)
+        self._initial = initial
 
         if transitions is not None:
             transitions = listify(transitions)
@@ -382,16 +400,20 @@ class Machine(object):
 
         if model:
             self.add_model(model)
-        elif add_self:
-            self.add_model(self)
 
-    def add_model(self, model):
+    def add_model(self, model, initial=None):
         """ Register a model with the state machine, initializing triggers and callbacks. """
         models = listify(model)
 
-        for model in models:
-            if model not in self.models:
+        if initial is None:
+            if self._initial is None:
+                raise MachineError("No initial state configured for machine, must specify when adding model.")
+            else:
+                initial = self._initial
 
+        for model in models:
+            model = self if model == 'self' else model
+            if model not in self.models:
                 if hasattr(model, 'trigger'):
                     logger.warning("%sModel already contains an attribute 'trigger'. Skip method binding ",
                                    self.id)
@@ -404,7 +426,7 @@ class Machine(object):
                 for _, state in self.states.items():
                     self._add_model_to_state(state, model)
 
-                self.set_state(self._initial, model=model)
+                self.set_state(initial, model=model)
                 self.models.append(model)
 
     def remove_model(self, model):
@@ -596,12 +618,15 @@ class Machine(object):
         if len(states) < 2:
             raise MachineError("Can't create ordered transitions on a Machine "
                                "with fewer than 2 states.")
+        states.remove(self._initial)
+        self.add_transition(trigger, self._initial, states[0])
         for i in range(1, len(states)):
             self.add_transition(trigger, states[i - 1], states[i])
         if loop:
-            if not loop_includes_initial:
-                states.remove(self._initial)
-            self.add_transition(trigger, states[-1], states[0])
+            if loop_includes_initial:
+                self.add_transition(trigger, states[-1], self._initial)
+            else:
+                self.add_transition(trigger, states[-1], states[0])
 
     def _callback(self, func, event_data):
         """ Trigger a callback function, possibly wrapping it in an EventData

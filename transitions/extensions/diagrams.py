@@ -5,7 +5,7 @@ from ..core import Transition
 from .nesting import NestedState
 try:
     import pygraphviz as pgv
-except:
+except ImportError:
     pgv = None
 
 import logging
