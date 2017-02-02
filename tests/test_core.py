@@ -659,3 +659,6 @@ class TestTransitions(TestCase):
 
         with self.assertRaises(PendingDeprecationWarning):
             m = Machine(initial=None)
+
+        with self.assertRaises(PendingDeprecationWarning):
+            m = Machine(None, add_self=False)

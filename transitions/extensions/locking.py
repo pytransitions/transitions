@@ -6,6 +6,10 @@ import inspect
 
 try:
     from contextlib import nested  # Python 2
+    # with nested statements now raise a DeprecationWarning. Should be replaced with ExitStack-like approaches.
+    import warnings
+    warnings.simplefilter('ignore', DeprecationWarning)
+
 except ImportError:
     from contextlib import ExitStack, contextmanager
 
