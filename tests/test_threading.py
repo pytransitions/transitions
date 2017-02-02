@@ -166,6 +166,25 @@ class TestMultipleContexts(TestCore):
         self.assertEqual((self.c2, "exit"), self.event_list[-2])
         self.assertEqual((self.c1, "exit"), self.event_list[-1])
 
+    # def test_performance(self):
+    #     import timeit
+    #     states = ['A', 'B', 'C']
+    #     transitions = [['go', 'A', 'B'], ['go', 'B', 'C'], ['go', 'C', 'A']]
+    #
+    #     M1 = MachineFactory.get_predefined()
+    #     M2 = MachineFactory.get_predefined(locked=True)
+    #     m1 = M1(states=states, transitions=transitions, initial='A')
+    #     m2 = M2(states=states, transitions=transitions, initial='A')
+    #
+    #     def test_m1():
+    #         m1.get_triggers('A')
+    #
+    #     def test_m2():
+    #         m2.get_triggers('A')
+    #     t1 = timeit.timeit(test_m1, number=50000)
+    #     t2 = timeit.timeit(test_m2, number=50000)
+    #     self.assertAlmostEqual(t1, t2, delta=t1)
+
 
 # Same as TestLockedTransition but with LockedHierarchicalMachine
 class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):

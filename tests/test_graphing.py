@@ -6,7 +6,7 @@ except ImportError:
 from .utils import Stuff
 
 from transitions.extensions import MachineFactory
-from transitions.extensions.diagrams import AGraph, Diagram
+from transitions.extensions.diagrams import Diagram
 from transitions.extensions.nesting import NestedState
 from unittest import TestCase
 import tempfile
@@ -69,8 +69,7 @@ class TestDiagrams(TestCase):
         self.assertEqual("", graph.graph_attr['label'])
 
     def test_add_custom_state(self):
-        m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A',
-                             auto_transitions=False, title='a test')
+        m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False, title='a test')
         m.add_state('X')
         m.add_transition('foo', '*', 'X')
         m.foo()
@@ -104,11 +103,11 @@ class TestDiagrams(TestCase):
         m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A')
         m1.walk()
         self.assertEqual(m1.graph.get_node(m1.state).attr['color'],
-                         AGraph.style_attributes['node']['active']['color'])
+                         m1.graph.style_attributes['node']['active']['color'])
         self.assertEqual(m2.graph.get_node(m1.state).attr['color'],
-                         AGraph.style_attributes['node']['default']['color'])
+                         m2.graph.style_attributes['node']['default']['color'])
         # backwards compatibility test
-        self.assertTrue(m.get_graph() is m1.get_graph() or m.get_graph() is m2.get_graph())
+        self.assertEqual(m.get_graph(), m1.get_graph())
 
     def test_model_method_collision(self):
         class GraphModel:
@@ -119,6 +118,30 @@ class TestDiagrams(TestCase):
         with self.assertRaises(AttributeError):
             m = self.machine_cls(model=model)
         self.assertEqual(model.get_graph(), "This method already exists")
+
+    def test_to_method_filtering(self):
+        m = self.machine_cls(states=['A', 'B'], initial='A')
+        m.add_transition('to_state_A', 'B', 'A')
+        e = m.get_graph().get_edge('B', 'A')
+        self.assertEqual(e.attr['label'], 'to_state_A')
+        with self.assertRaises(KeyError):
+            m.get_graph().get_edge('A', 'B')
+        m2 = self.machine_cls(states=['A', 'B'], initial='A', show_auto_transitions=True)
+        self.assertEqual(len(m2.get_graph().get_edge('B', 'A')), 2)
+        self.assertEqual(m2.get_graph().get_edge('A', 'B').attr['label'], 'to_B')
+
+    def test_roi(self):
+        m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A')
+        m.add_transition('to_state_A', 'B', 'A')
+        m.add_transition('to_state_C', 'B', 'C')
+        m.add_transition('to_state_F', 'B', 'F')
+        g1 = m.get_graph(show_roi=True)
+        self.assertEqual(len(g1.edges()), 0)
+        self.assertEqual(len(g1.nodes()), 1)
+        m.to_B()
+        g2 = m.get_graph(show_roi=True)
+        self.assertEqual(len(g2.edges()), 4)
+        self.assertEqual(len(g2.nodes()), 4)
 
 
 class TestDiagramsNested(TestDiagrams):
@@ -134,7 +157,7 @@ class TestDiagramsNested(TestDiagrams):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D',    # + 1 edge
              'conditions': 'is_fast'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'},   # + 1 edge
-            {'trigger': 'reset', 'source': '*', 'dest': 'A'}]    # + 8 edges = 12
+            {'trigger': 'reset', 'source': '*', 'dest': 'A'}]    # + 10 (8 nodes; 2 cluster) edges = 14
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
@@ -145,23 +168,42 @@ class TestDiagramsNested(TestDiagrams):
 
         # Test that graph properties match the Machine
         node_names = set([n.name for n in graph.nodes()])
-        self.assertEqual(set(m.states.keys()) - set(['C', 'C%s1' % NestedState.separator]), node_names)
+        self.assertEqual(set(m.states.keys()) - set(['C', 'C%s1' % NestedState.separator]),
+                         node_names - set(['C_anchor', 'C_1_anchor']))
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
             t = edge_label_from_transition_label(t)
             self.assertIsNotNone(getattr(m, t))
 
-        self.assertEqual(len(graph.edges()), 12)  # see above
+        self.assertEqual(len(graph.edges()), 14)  # see above
 
         m.walk()
         m.run()
 
         # write diagram to temp file
         target = tempfile.NamedTemporaryFile()
-        self.assertIsNotNone(graph.get_subgraph('cluster_C').get_subgraph('cluster_C_1'))
+        self.assertIsNotNone(graph.get_subgraph('cluster_C').get_subgraph('cluster_C_child').get_subgraph('cluster_C_1'))
+        # print(graph.string())
         graph.draw(target.name, prog='dot')
         self.assertTrue(os.path.getsize(target.name) > 0)
 
         # cleanup temp file
         target.close()
+
+    def test_roi(self):
+        class Model:
+            def is_fast(self, *args, **kwargs):
+                return True
+        model = Model()
+        m = self.machine_cls(model, states=self.states, transitions=self.transitions,
+                             initial='A', title='A test', show_conditions=True)
+        model.walk()
+        model.run()
+        g1 = model.get_graph(show_roi=True)
+        self.assertEqual(len(g1.edges()), 4)
+        self.assertEqual(len(g1.nodes()), 4)
+        model.sprint()
+        g2 = model.get_graph(show_roi=True)
+        self.assertEqual(len(g2.edges()), 2)
+        self.assertEqual(len(g2.nodes()), 3)

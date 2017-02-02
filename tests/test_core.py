@@ -662,3 +662,19 @@ class TestTransitions(TestCase):
 
         with self.assertRaises(PendingDeprecationWarning):
             m = Machine(None, add_self=False)
+
+    def test_remove_transition(self):
+        self.stuff.machine.add_transition('go', ['A', 'B', 'C'], 'D')
+        self.stuff.machine.add_transition('walk', 'A', 'B')
+        self.stuff.go()
+        self.assertEqual(self.stuff.state, 'D')
+        self.stuff.to_A()
+        self.stuff.machine.remove_transition('go', source='A')
+        with self.assertRaises(MachineError):
+            self.stuff.go()
+        self.stuff.walk()
+        self.stuff.go()
+        self.assertEqual(self.stuff.state, 'D')
+        self.stuff.to_C()
+        self.stuff.machine.remove_transition('go', dest='D')
+        self.assertFalse(hasattr(self.stuff, 'go'))

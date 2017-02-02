@@ -332,6 +332,6 @@ class HierarchicalMachine(Machine):
         self.get_state(state_name).add_callback('exit', callback)
 
     def to(self, model, state_name, *args, **kwargs):
-        event = EventData(self.get_state(model.state), None, self,
+        event = EventData(self.get_state(model.state), Event('to', self), self,
                           model, args=args, kwargs=kwargs)
         self._create_transition(model.state, state_name).execute(event)
