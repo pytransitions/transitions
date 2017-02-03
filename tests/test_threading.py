@@ -128,10 +128,31 @@ class TestLockedTransitions(TestCore):
         M = MachineFactory.get_predefined(locked=True)
         c = CounterContext()
         m = M(states=['A', 'B', 'C', 'D'], transitions=[['reset', '*', 'A']], initial='A', machine_context=c)
-
         m.get_triggers('A')
-        self.assertEqual(c.max, 1)
-        self.assertEqual(c.counter, 4)
+        self.assertEqual(c.max, 1)  # was 3 before
+        self.assertEqual(c.counter, 4)  # was 72 (!) before
+
+    # This test has been used to quantify the changes made in locking in version 0.5.0.
+    # See https://github.com/tyarkoni/transitions/issues/167 for the results.
+    # def test_performance(self):
+    #     import timeit
+    #     states = ['A', 'B', 'C']
+    #     transitions = [['go', 'A', 'B'], ['go', 'B', 'C'], ['go', 'C', 'A']]
+    #
+    #     M1 = MachineFactory.get_predefined()
+    #     M2 = MachineFactory.get_predefined(locked=True)
+    #
+    #     def test_m1():
+    #         m1 = M1(states=states, transitions=transitions, initial='A')
+    #         m1.get_triggers('A')
+    #
+    #     def test_m2():
+    #         m2 = M2(states=states, transitions=transitions, initial='A')
+    #         m2.get_triggers('A')
+    #
+    #     t1 = timeit.timeit(test_m1, number=20000)
+    #     t2 = timeit.timeit(test_m2, number=20000)
+    #     self.assertAlmostEqual(t2/t1, 1, delta=0.5)
 
 
 class TestMultipleContexts(TestCore):
@@ -192,25 +213,6 @@ class TestMultipleContexts(TestCore):
 
         self.assertEqual((self.c2, "exit"), self.event_list[-2])
         self.assertEqual((self.c1, "exit"), self.event_list[-1])
-
-    # def test_performance(self):
-    #     import timeit
-    #     states = ['A', 'B', 'C']
-    #     transitions = [['go', 'A', 'B'], ['go', 'B', 'C'], ['go', 'C', 'A']]
-    #
-    #     M1 = MachineFactory.get_predefined()
-    #     M2 = MachineFactory.get_predefined(locked=True)
-    #     m1 = M1(states=states, transitions=transitions, initial='A')
-    #     m2 = M2(states=states, transitions=transitions, initial='A')
-    #
-    #     def test_m1():
-    #         m1.get_triggers('A')
-    #
-    #     def test_m2():
-    #         m2.get_triggers('A')
-    #     t1 = timeit.timeit(test_m1, number=50000)
-    #     t2 = timeit.timeit(test_m2, number=50000)
-    #     self.assertAlmostEqual(t1, t2, delta=t1)
 
 
 # Same as TestLockedTransition but with LockedHierarchicalMachine
