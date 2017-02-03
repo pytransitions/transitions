@@ -1,17 +1,25 @@
-from transitions.core import Machine, Transition, Event, listify
+from transitions.core import Machine, Event, listify
 
 from collections import defaultdict
+from functools import partial
 from threading import RLock
 import inspect
 
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
+
 try:
     from contextlib import nested  # Python 2
+    from thread import get_ident
     # with nested statements now raise a DeprecationWarning. Should be replaced with ExitStack-like approaches.
     import warnings
     warnings.simplefilter('ignore', DeprecationWarning)
 
 except ImportError:
     from contextlib import ExitStack, contextmanager
+    from threading import get_ident
 
     @contextmanager
     def nested(*contexts):
@@ -24,39 +32,30 @@ except ImportError:
             yield contexts
 
 
-class LockedMethod:
-
-    def __init__(self, context, func):
-        self.context = context
-        self.func = func
-
-    def __call__(self, *args, **kwargs):
-        with nested(*self.context):
-            return self.func(*args, **kwargs)
-
-
 class LockedEvent(Event):
 
     def trigger(self, model, *args, **kwargs):
-        with nested(*self.machine.model_context_map[model]):
+        if self.machine._locked != get_ident():
+            with nested(*self.machine.model_context_map[model]):
+                return super(LockedEvent, self).trigger(model, *args, **kwargs)
+        else:
             return super(LockedEvent, self).trigger(model, *args, **kwargs)
 
 
 class LockedMachine(Machine):
 
     def __init__(self, *args, **kwargs):
+        self._locked = 0
+
         try:
             self.machine_context = listify(kwargs.pop('machine_context'))
         except KeyError:
             self.machine_context = [RLock()]
 
+        self.machine_context.append(self)
         self.model_context_map = defaultdict(list)
 
         super(LockedMachine, self).__init__(*args, **kwargs)
-
-        if self.machine_context:
-            for model in self.models:
-                self.model_context_map[model].extend(self.machine_context)
 
     def add_model(self, model, *args, **kwargs):
         models = listify(model)
@@ -69,6 +68,7 @@ class LockedMachine(Machine):
         output = super(LockedMachine, self).add_model(models, *args, **kwargs)
 
         for model in models:
+            model = self if model == 'self' else model
             self.model_context_map[model].extend(self.machine_context)
             self.model_context_map[model].extend(model_context)
 
@@ -85,8 +85,8 @@ class LockedMachine(Machine):
     def __getattribute__(self, item):
         f = super(LockedMachine, self).__getattribute__
         tmp = f(item)
-        if inspect.ismethod(tmp) and item not in "__getattribute__":
-            return LockedMethod(f('machine_context'), tmp)
+        if not item.startswith('_') and inspect.ismethod(tmp):
+            return partial(f('_locked_method'), tmp)
         return tmp
 
     def __getattr__(self, item):
@@ -94,6 +94,19 @@ class LockedMachine(Machine):
             return super(LockedMachine, self).__getattribute__(item)
         except AttributeError:
             return super(LockedMachine, self).__getattr__(item)
+
+    def _locked_method(self, func, *args, **kwargs):
+        if self._locked != get_ident():
+            with nested(*self.machine_context):
+                return func(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)
+
+    def __enter__(self):
+        self._locked = get_ident()
+
+    def __exit__(self, *exc):
+        self._locked = 0
 
     @staticmethod
     def _create_event(*args, **kwargs):

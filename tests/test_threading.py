@@ -69,7 +69,9 @@ class TestLockedTransitions(TestCore):
         time.sleep(0.1)
         logger.info('Check if state transition done...')
         # Thread will release lock before Transition is finished
-        self.assertTrue(self.stuff.is_D())
+        res = self.stuff.is_D()
+        time.sleep(0.5)
+        self.assertTrue(res)
 
     def test_pickle(self):
         import sys
@@ -105,6 +107,31 @@ class TestLockedTransitions(TestCore):
         blocked = time.time()
         self.assertAlmostEqual(fast - begin, 0, delta=0.1)
         self.assertAlmostEqual(blocked - begin, 1, delta=0.1)
+
+    def test_context_managers(self):
+
+        class CounterContext(object):
+            def __init__(self):
+                self.counter = 0
+                self.level = 0
+                self.max = 0
+                super(CounterContext, self).__init__()
+
+            def __enter__(self):
+                self.counter += 1
+                self.level += 1
+                self.max = max(self.level, self.max)
+
+            def __exit__(self, *exc):
+                self.level -= 1
+
+        M = MachineFactory.get_predefined(locked=True)
+        c = CounterContext()
+        m = M(states=['A', 'B', 'C', 'D'], transitions=[['reset', '*', 'A']], initial='A', machine_context=c)
+
+        m.get_triggers('A')
+        self.assertEqual(c.max, 1)
+        self.assertEqual(c.counter, 4)
 
 
 class TestMultipleContexts(TestCore):
@@ -188,6 +215,7 @@ class TestMultipleContexts(TestCore):
 
 # Same as TestLockedTransition but with LockedHierarchicalMachine
 class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
+
     def setUp(self):
         NestedState.separator = '_'
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
