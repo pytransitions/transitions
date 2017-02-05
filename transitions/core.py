@@ -83,38 +83,38 @@ class State(object):
 
 class Condition(object):
 
-        def __init__(self, func, target=True):
-            """
-            Args:
-                func (string): Name of the condition-checking callable
-                target (bool): Indicates the target state--i.e., when True,
-                    the condition-checking callback should return True to pass,
-                    and when False, the callback should return False to pass.
-            Notes:
-                This class should not be initialized or called from outside a
-                Transition instance, and exists at module level (rather than
-                nesting under the ransition class) only because of a bug in
-                dill that prevents serialization under Python 2.7.
-            """
-            self.func = func
-            self.target = target
+    def __init__(self, func, target=True):
+        """
+        Args:
+            func (string): Name of the condition-checking callable
+            target (bool): Indicates the target state--i.e., when True,
+                the condition-checking callback should return True to pass,
+                and when False, the callback should return False to pass.
+        Notes:
+            This class should not be initialized or called from outside a
+            Transition instance, and exists at module level (rather than
+            nesting under the ransition class) only because of a bug in
+            dill that prevents serialization under Python 2.7.
+        """
+        self.func = func
+        self.target = target
 
-        def check(self, event_data):
-            """ Check whether the condition passes.
-            Args:
-                event_data (EventData): An EventData instance to pass to the
-                condition (if event sending is enabled) or to extract arguments
-                from (if event sending is disabled). Also contains the data
-                model attached to the current machine which is used to invoke
-                the condition.
-            """
-            predicate = getattr(event_data.model, self.func) if isinstance(self.func, string_types) else self.func
+    def check(self, event_data):
+        """ Check whether the condition passes.
+        Args:
+            event_data (EventData): An EventData instance to pass to the
+            condition (if event sending is enabled) or to extract arguments
+            from (if event sending is disabled). Also contains the data
+            model attached to the current machine which is used to invoke
+            the condition.
+        """
+        predicate = getattr(event_data.model, self.func) if isinstance(self.func, string_types) else self.func
 
-            if event_data.machine.send_event:
-                return predicate(event_data) == self.target
-            else:
-                return predicate(
-                    *event_data.args, **event_data.kwargs) == self.target
+        if event_data.machine.send_event:
+            return predicate(event_data) == self.target
+        else:
+            return predicate(
+                *event_data.args, **event_data.kwargs) == self.target
 
 
 class Transition(object):
