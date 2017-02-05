@@ -649,6 +649,31 @@ class TestTransitions(TestCase):
         # self stuff machine should have to-transitions to every state
         self.assertEqual(len(self.stuff.machine.get_triggers('B')), len(self.stuff.machine.states))
 
+    def test_repr(self):
+        def a_condition(event_data):
+            self.assertRegex(
+                str(event_data.transition.conditions),
+                r"\[<Condition\(<function TestTransitions.test_repr.<locals>"
+                ".a_condition at [^>]+>\)@\d+>\]")
+
+            return True
+
+        def check_repr(event_data):
+            self.assertRegex(
+                str(event_data),
+                r"<EventData\('<State\('A'\)@\d+>', "
+                "<Transition\('A', 'B'\)@\d+>\)@\d+>")
+
+            m.checked = True
+
+        m = Machine(states=['A', 'B'],
+                    before_state_change=check_repr, send_event=True,
+                    initial='A')
+        m.add_transition('do_strcheck', 'A', 'B', conditions=a_condition)
+
+        self.assertTrue(m.do_strcheck())
+        self.assertIn('checked', vars(m))
+
     def test_warning(self):
         import sys
         # does not work with python 3.3. However, the warning is shown when Machine is initialized manually.
