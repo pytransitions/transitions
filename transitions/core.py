@@ -719,7 +719,8 @@ class Machine(object):
         # Machine.__dict__ does not contain double underscore variables.
         # Class variables will be mangled.
         if name.startswith('__'):
-            raise AttributeError("'{}' does not exist".format(name))
+            raise AttributeError("'{}' does not exist on <Machine@{}>"
+                                 .format(name, id(self)))
 
         # Could be a callback
         callback_type, target = self._identify_callback(name)
@@ -727,7 +728,8 @@ class Machine(object):
         if callback_type is not None:
             if callback_type in ['before', 'after', 'prepare']:
                 if target not in self.events:
-                    raise MachineError('Event "%s" is not registered.' % target)
+                    raise MachineError("event '{}' is not registered on <Machine@{}>"
+                                       .format(target, id(self)))
                 return partial(self.events[target].add_callback, callback_type)
 
             elif callback_type in ['on_enter', 'on_exit']:
@@ -735,7 +737,7 @@ class Machine(object):
                 return partial(state.add_callback, callback_type[3:])
 
         # Nothing matched
-        raise AttributeError("'{}' does not exist on '{}'".format(name, id(self)))
+        raise AttributeError("'{}' does not exist on <Machine@{}>".format(name, id(self)))
 
 
 class MachineError(Exception):
