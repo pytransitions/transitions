@@ -80,6 +80,9 @@ class State(object):
         callback_list = getattr(self, 'on_' + trigger)
         callback_list.append(func)
 
+    def __repr__(self):
+        return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
+
 
 class Condition(object):
 
@@ -115,6 +118,9 @@ class Condition(object):
         else:
             return predicate(
                 *event_data.args, **event_data.kwargs) == self.target
+
+    def __repr__(self):
+        return "<%s(%s)@%s>" % (type(self).__name__, self.func, id(self))
 
 
 class Transition(object):
@@ -198,6 +204,10 @@ class Transition(object):
         callback_list = getattr(self, trigger)
         callback_list.append(func)
 
+    def __repr__(self):
+        return "<%s('%s', '%s')@%s>" % (type(self).__name__,
+                                        self.source, self.dest, id(self))
+
 
 class EventData(object):
 
@@ -223,6 +233,10 @@ class EventData(object):
     def update(self, model):
         """ Updates the current State to accurately reflect the Machine. """
         self.state = self.machine.get_state(model.state)
+
+    def __repr__(self):
+        return "<%s('%s', %s)@%s>" % (type(self).__name__, self.state,
+                                      getattr(self, 'transition'), id(self))
 
 
 class Event(object):
@@ -277,6 +291,9 @@ class Event(object):
             if t.execute(event):
                 return True
         return False
+
+    def __repr__(self):
+        return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
 
     def add_callback(self, trigger, func):
         """ Add a new before or after callback to all available transitions.
@@ -702,7 +719,7 @@ class Machine(object):
         # Machine.__dict__ does not contain double underscore variables.
         # Class variables will be mangled.
         if name.startswith('__'):
-            raise AttributeError("{} does not exist".format(name))
+            raise AttributeError("'{}' does not exist".format(name))
 
         # Could be a callback
         callback_type, target = self._identify_callback(name)
@@ -718,7 +735,7 @@ class Machine(object):
                 return partial(state.add_callback, callback_type[3:])
 
         # Nothing matched
-        raise AttributeError("{} does not exist".format(name))
+        raise AttributeError("'{}' does not exist on '{}'".format(name, id(self)))
 
 
 class MachineError(Exception):
