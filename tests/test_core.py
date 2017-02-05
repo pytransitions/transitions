@@ -5,11 +5,12 @@ except ImportError:
 
 from .utils import InheritedStuff
 from .utils import Stuff
+import sys
 from transitions import Machine
 from transitions import MachineError
 from transitions import State
 from transitions.core import listify
-from unittest import TestCase
+from unittest import TestCase, skipIf
 import warnings
 warnings.filterwarnings('error', category=PendingDeprecationWarning, message=".*0\.5\.0.*")
 
@@ -649,6 +650,8 @@ class TestTransitions(TestCase):
         # self stuff machine should have to-transitions to every state
         self.assertEqual(len(self.stuff.machine.get_triggers('B')), len(self.stuff.machine.states))
 
+    @skipIf(sys.version_info < (3, ),
+            "String-checking disabled on PY-2 because is different")
     def test_repr(self):
         def a_condition(event_data):
             self.assertRegex(
