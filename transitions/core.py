@@ -80,41 +80,47 @@ class State(object):
         callback_list = getattr(self, 'on_' + trigger)
         callback_list.append(func)
 
+    def __repr__(self):
+        return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
+
 
 class Condition(object):
 
-        def __init__(self, func, target=True):
-            """
-            Args:
-                func (string): Name of the condition-checking callable
-                target (bool): Indicates the target state--i.e., when True,
-                    the condition-checking callback should return True to pass,
-                    and when False, the callback should return False to pass.
-            Notes:
-                This class should not be initialized or called from outside a
-                Transition instance, and exists at module level (rather than
-                nesting under the ransition class) only because of a bug in
-                dill that prevents serialization under Python 2.7.
-            """
-            self.func = func
-            self.target = target
+    def __init__(self, func, target=True):
+        """
+        Args:
+            func (string): Name of the condition-checking callable
+            target (bool): Indicates the target state--i.e., when True,
+                the condition-checking callback should return True to pass,
+                and when False, the callback should return False to pass.
+        Notes:
+            This class should not be initialized or called from outside a
+            Transition instance, and exists at module level (rather than
+            nesting under the ransition class) only because of a bug in
+            dill that prevents serialization under Python 2.7.
+        """
+        self.func = func
+        self.target = target
 
-        def check(self, event_data):
-            """ Check whether the condition passes.
-            Args:
-                event_data (EventData): An EventData instance to pass to the
-                condition (if event sending is enabled) or to extract arguments
-                from (if event sending is disabled). Also contains the data
-                model attached to the current machine which is used to invoke
-                the condition.
-            """
-            predicate = getattr(event_data.model, self.func) if isinstance(self.func, string_types) else self.func
+    def check(self, event_data):
+        """ Check whether the condition passes.
+        Args:
+            event_data (EventData): An EventData instance to pass to the
+            condition (if event sending is enabled) or to extract arguments
+            from (if event sending is disabled). Also contains the data
+            model attached to the current machine which is used to invoke
+            the condition.
+        """
+        predicate = getattr(event_data.model, self.func) if isinstance(self.func, string_types) else self.func
 
-            if event_data.machine.send_event:
-                return predicate(event_data) == self.target
-            else:
-                return predicate(
-                    *event_data.args, **event_data.kwargs) == self.target
+        if event_data.machine.send_event:
+            return predicate(event_data) == self.target
+        else:
+            return predicate(
+                *event_data.args, **event_data.kwargs) == self.target
+
+    def __repr__(self):
+        return "<%s(%s)@%s>" % (type(self).__name__, self.func, id(self))
 
 
 class Transition(object):
@@ -198,6 +204,10 @@ class Transition(object):
         callback_list = getattr(self, trigger)
         callback_list.append(func)
 
+    def __repr__(self):
+        return "<%s('%s', '%s')@%s>" % (type(self).__name__,
+                                        self.source, self.dest, id(self))
+
 
 class EventData(object):
 
@@ -223,6 +233,10 @@ class EventData(object):
     def update(self, model):
         """ Updates the current State to accurately reflect the Machine. """
         self.state = self.machine.get_state(model.state)
+
+    def __repr__(self):
+        return "<%s('%s', %s)@%s>" % (type(self).__name__, self.state,
+                                      getattr(self, 'transition'), id(self))
 
 
 class Event(object):
@@ -277,6 +291,9 @@ class Event(object):
             if t.execute(event):
                 return True
         return False
+
+    def __repr__(self):
+        return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
 
     def add_callback(self, trigger, func):
         """ Add a new before or after callback to all available transitions.
@@ -702,7 +719,8 @@ class Machine(object):
         # Machine.__dict__ does not contain double underscore variables.
         # Class variables will be mangled.
         if name.startswith('__'):
-            raise AttributeError("{} does not exist".format(name))
+            raise AttributeError("'{}' does not exist on <Machine@{}>"
+                                 .format(name, id(self)))
 
         # Could be a callback
         callback_type, target = self._identify_callback(name)
@@ -710,7 +728,8 @@ class Machine(object):
         if callback_type is not None:
             if callback_type in ['before', 'after', 'prepare']:
                 if target not in self.events:
-                    raise MachineError('Event "%s" is not registered.' % target)
+                    raise MachineError("event '{}' is not registered on <Machine@{}>"
+                                       .format(target, id(self)))
                 return partial(self.events[target].add_callback, callback_type)
 
             elif callback_type in ['on_enter', 'on_exit']:
@@ -718,7 +737,7 @@ class Machine(object):
                 return partial(state.add_callback, callback_type[3:])
 
         # Nothing matched
-        raise AttributeError("{} does not exist".format(name))
+        raise AttributeError("'{}' does not exist on <Machine@{}>".format(name, id(self)))
 
 
 class MachineError(Exception):
