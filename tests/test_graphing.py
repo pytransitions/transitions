@@ -8,15 +8,22 @@ from .utils import Stuff
 from transitions.extensions import MachineFactory
 from transitions.extensions.diagrams import AGraph, Diagram
 from transitions.extensions.nesting import NestedState
-from unittest import TestCase
+from unittest import TestCase, skipIf
 import tempfile
 import os
+
+try:
+    ## Just to skip tests if *pygraphviz8 not installed
+    import pygraphviz as pgv  # @UnresolvedImport
+except:  # pragma: no cover
+    pgv = None
 
 
 def edge_label_from_transition_label(label):
     return label.split(' | ')[0].split(' [')[0]  # if no condition, label is returned; returns first event only
 
 
+@skipIf(pgv is None, 'AGraph diagram requires pygraphviz')
 class TestDiagrams(TestCase):
 
     def setUp(self):

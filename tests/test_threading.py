@@ -173,7 +173,7 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
         NestedState.separator = '_'
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
-        self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, graph=True, nested=True))
+        self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, nested=True))
         self.stuff.heavy_processing = heavy_processing
         self.stuff.machine.add_transition('forward', '*', 'B', before='heavy_processing')
 
