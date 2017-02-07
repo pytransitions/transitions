@@ -9,7 +9,6 @@ import logging
 
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState
-from unittest import skipIf
 from .test_nesting import TestTransitions as TestsNested
 from .test_core import TestTransitions as TestCore
 from .utils import Stuff
@@ -18,12 +17,6 @@ try:
     from unittest.mock import MagicMock
 except ImportError:
     from mock import MagicMock
-
-try:
-    ## Just to skip tests if *pygraphviz8 not installed
-    import pygraphviz as pgv  # @UnresolvedImport
-except:  # pragma: no cover
-    pgv = None
 
 
 logger = logging.getLogger(__name__)
@@ -175,13 +168,12 @@ class TestMultipleContexts(TestCore):
 
 
 # Same as TestLockedTransition but with LockedHierarchicalMachine
-@skipIf(pgv is None, 'AGraph diagram requires pygraphviz')
 class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
     def setUp(self):
         NestedState.separator = '_'
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
-        self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, graph=True, nested=True))
+        self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, nested=True))
         self.stuff.heavy_processing = heavy_processing
         self.stuff.machine.add_transition('forward', '*', 'B', before='heavy_processing')
 
