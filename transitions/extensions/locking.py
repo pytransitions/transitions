@@ -80,7 +80,7 @@ class LockedMachine(Machine):
         for model in models:
             del self.model_context_map[model]
 
-        return super(LockedMachine, self).add_model(models, *args, **kwargs)
+        return super(LockedMachine, self).remove_model(models, *args, **kwargs)
 
     def __getattribute__(self, item):
         f = super(LockedMachine, self).__getattribute__
