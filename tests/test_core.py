@@ -691,3 +691,32 @@ class TestTransitions(TestCase):
 
         with self.assertRaises(PendingDeprecationWarning):
             m = Machine(None, add_self=False)
+
+    def test_machine_prepare(self):
+
+        global_mock = MagicMock()
+        local_mock = MagicMock()
+
+        def global_callback():
+            global_mock()
+
+        def local_callback():
+            local_mock()
+
+        def always_fails():
+            return False
+
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'prepare': local_callback},
+
+        ]
+        m = Machine(states=['A', 'B'], transitions=transitions,
+                    prepare_conditions_check=global_callback, initial='A')
+
+        m.go()
+        self.assertEqual(global_mock.call_count, 1)
+        self.assertEqual(local_mock.call_count, len(transitions))
