@@ -379,8 +379,8 @@ class TestTransitions(TestCase):
         m.after_state_change = MagicMock()
 
         m.to_B()
-        self.assertTrue(m.before_state_change.called)
-        self.assertTrue(m.after_state_change.called)
+        self.assertTrue(m.before_state_change[0].called)
+        self.assertTrue(m.after_state_change[0].called)
 
     def test_function_callbacks(self):
         before_state_change = MagicMock()
@@ -392,8 +392,8 @@ class TestTransitions(TestCase):
                     initial='A', auto_transitions=True)
 
         m.to_B()
-        self.assertTrue(m.before_state_change.called)
-        self.assertTrue(m.after_state_change.called)
+        self.assertTrue(m.before_state_change[0].called)
+        self.assertTrue(m.after_state_change[0].called)
 
     def test_pickle(self):
         import sys
@@ -445,13 +445,14 @@ class TestTransitions(TestCase):
 
     def test_queued_errors(self):
         def before_change(machine):
-            machine.to_A()
+            if machine.has_queue:
+                machine.to_A(machine)
             machine._queued = False
 
         def after_change(machine):
-            machine.to_C()
+            machine.to_C(machine)
 
-        def failed_transition():
+        def failed_transition(machine):
             raise ValueError('Something was wrong')
 
         states = ['A', 'B', 'C']
@@ -462,7 +463,7 @@ class TestTransitions(TestCase):
             m.to_B(machine=m)
 
         with self.assertRaises(ValueError):
-            m.do()
+            m.do(machine=m)
 
     def test___getattr___and_identify_callback(self):
         m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
