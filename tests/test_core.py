@@ -243,7 +243,7 @@ class TestTransitions(TestCase):
         self.assertTrue(n.is_A())
         n.advance()
         self.assertTrue(n.is_B())
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m = NewMachine(state=['A', 'B'])
 
     def test_send_event_data_callbacks(self):
@@ -333,12 +333,12 @@ class TestTransitions(TestCase):
 
     def test_ordered_transition_error(self):
         m = Machine(states=['A'], initial='A')
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m.add_ordered_transitions()
         m.add_state('B')
         m.add_ordered_transitions()
         m.add_state('C')
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m.add_ordered_transitions(['C'])
 
     def test_ignore_invalid_triggers(self):
@@ -472,10 +472,10 @@ class TestTransitions(TestCase):
         callback = m.__getattr__('before_move')
         self.assertTrue(callable(callback))
 
-        with self.assertRaises(MachineError):
+        with self.assertRaises(AttributeError):
             m.__getattr__('before_no_such_transition')
 
-        with self.assertRaises(MachineError):
+        with self.assertRaises(AttributeError):
             m.__getattr__('before_no_such_transition')
 
         with self.assertRaises(AttributeError):
