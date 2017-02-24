@@ -286,14 +286,22 @@ class Event(object):
                 raise MachineError(msg)
         event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
 
-        for func in self.machine.prepare_conditions_check:
+        for func in self.machine.prepare_transition:
             self.machine._callback(func, event_data)
             logger.debug("Executed machine preparation callback '%s' before conditions." % func)
-        for t in self.transitions[state.name]:
-            event_data.transition = t
-            if t.execute(event_data):
-                return True
-        return False
+
+        result = False
+        try:
+            for t in self.transitions[state.name]:
+                event_data.transition = t
+                if t.execute(event_data):
+                    result = True
+                    break
+        finally:
+            for func in self.machine.finalize_event:
+                self.machine._callback(func, event_data)
+                logger.debug("Executed machine finalize callback '%s'." % func)
+        return result
 
     def __repr__(self):
         return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
@@ -317,9 +325,9 @@ class Machine(object):
 
     def __init__(self, model='self', states=None, initial='initial', transitions=None,
                  send_event=False, auto_transitions=True,
-                 ordered_transitions=False, ignore_invalid_triggers=None, prepare_conditions_check=None,
+                 ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, add_self=True, **kwargs):
+                 queued=False, add_self=True, prepare_transition=None, finalize_event=None, **kwargs):
         """
         Args:
             model (object): The object(s) whose states we want to manage. If 'self',
@@ -347,8 +355,6 @@ class Machine(object):
                 that are not valid for the present state (e.g., calling an
                 a_to_b() trigger when the current state is c) will be silently
                 ignored rather than raising an invalid transition exception.
-            prepare_conditions_check: A callable called on for each triggered event before
-                conditions are checked. It receives the very same args as normal callbacks.
             before_state_change: A callable called on every change state before
                 the transition happened. It receives the very same args as normal
                 callbacks.
@@ -361,6 +367,10 @@ class Machine(object):
                 Due to the nature of the queued processing, all transitions will
                 _always_ return True since conditional checks cannot be conducted at queueing time.
             add_self (boolean): If no model(s) provided, intialize state machine against self.
+            prepare_transition: A callable called on for before possible transitions will be processed.
+                It receives the very same args as normal callbacks.
+            finalize_event: A callable called on for each triggered event after transitions have been processed.
+                This is also called when a transition raises an exception.
 
             **kwargs additional arguments passed to next class in MRO. This can be ignored in most cases.
         """
@@ -375,16 +385,18 @@ class Machine(object):
         self._transition_queue = deque()
         self._before_state_change = []
         self._after_state_change = []
-        self._prepare_conditions_check = []
+        self._prepare_transition = []
+        self._finalize_event = []
 
         self.states = OrderedDict()
         self.events = {}
         self.send_event = send_event
         self.auto_transitions = auto_transitions
         self.ignore_invalid_triggers = ignore_invalid_triggers
-        self.prepare_conditions_check = prepare_conditions_check
+        self.prepare_transition = prepare_transition
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
+        self.finalize_event = finalize_event
         self.id = name + ": " if name is not None else ""
 
         self.models = []
@@ -510,13 +522,22 @@ class Machine(object):
         self._after_state_change = listify(value)
 
     @property
-    def prepare_conditions_check(self):
-        return self._prepare_conditions_check
+    def prepare_transition(self):
+        return self._prepare_transition
 
-    # this should make sure that prepare_conditions_check is always a list
-    @prepare_conditions_check.setter
-    def prepare_conditions_check(self, value):
-        self._prepare_conditions_check = listify(value)
+    # this should make sure that prepare_transition is always a list
+    @prepare_transition.setter
+    def prepare_transition(self, value):
+        self._prepare_transition = listify(value)
+
+    @property
+    def finalize_event(self):
+        return self._finalize_event
+
+    # this should make sure that finalize_event is always a list
+    @finalize_event.setter
+    def finalize_event(self, value):
+        self._finalize_event = listify(value)
 
     def is_state(self, state, model):
         """ Check whether the current state matches the named state. """

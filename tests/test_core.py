@@ -715,8 +715,34 @@ class TestTransitions(TestCase):
 
         ]
         m = Machine(states=['A', 'B'], transitions=transitions,
-                    prepare_conditions_check=global_callback, initial='A')
+                    prepare_transition=global_callback, initial='A')
 
         m.go()
         self.assertEqual(global_mock.call_count, 1)
         self.assertEqual(local_mock.call_count, len(transitions))
+
+    def test_machine_finalize(self):
+
+        finalize_mock = MagicMock()
+
+        def always_fails():
+            return False
+
+        def always_raises():
+            raise Exception()
+
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'planA', 'source': 'B', 'dest': 'C', 'conditions': always_fails},
+            {'trigger': 'planB', 'source': 'B', 'dest': 'C', 'conditions': always_raises}
+        ]
+        m = Machine(states=['A', 'B'], transitions=transitions,
+                    finalize_event=finalize_mock, initial='A')
+
+        m.go()
+        self.assertEqual(finalize_mock.call_count, 1)
+        m.planA()
+        self.assertEqual(finalize_mock.call_count, 2)
+        with self.assertRaises(Exception):
+            m.planB()
+        self.assertEqual(finalize_mock.call_count, 3)
