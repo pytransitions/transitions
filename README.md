@@ -977,12 +977,11 @@ counter = Machine(states=count_states, transitions=count_trans, initial='1')
 
 counter.increase() # love my counter
 states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
-# states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
 
 transitions = [
     ['collect', '*', 'collecting'],
     ['wait', '*', 'waiting'],
-    ['count', 'wait', 'counting_1']
+    ['count', 'collecting', 'counting_1']
 ]
 
 collector = Machine(states=states, transitions=transitions, initial='waiting')

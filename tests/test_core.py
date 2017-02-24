@@ -12,7 +12,7 @@ from transitions import State
 from transitions.core import listify
 from unittest import TestCase, skipIf
 import warnings
-warnings.filterwarnings('error', category=PendingDeprecationWarning, message=".*0\.5\.0.*")
+warnings.filterwarnings('error', category=PendingDeprecationWarning, message=r".*0\.5\.0.*")
 
 try:
     from unittest.mock import MagicMock
@@ -243,7 +243,7 @@ class TestTransitions(TestCase):
         self.assertTrue(n.is_A())
         n.advance()
         self.assertTrue(n.is_B())
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m = NewMachine(state=['A', 'B'])
 
     def test_send_event_data_callbacks(self):
@@ -333,12 +333,12 @@ class TestTransitions(TestCase):
 
     def test_ordered_transition_error(self):
         m = Machine(states=['A'], initial='A')
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m.add_ordered_transitions()
         m.add_state('B')
         m.add_ordered_transitions()
         m.add_state('C')
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m.add_ordered_transitions(['C'])
 
     def test_ignore_invalid_triggers(self):
@@ -473,10 +473,10 @@ class TestTransitions(TestCase):
         callback = m.__getattr__('before_move')
         self.assertTrue(callable(callback))
 
-        with self.assertRaises(MachineError):
+        with self.assertRaises(AttributeError):
             m.__getattr__('before_no_such_transition')
 
-        with self.assertRaises(MachineError):
+        with self.assertRaises(AttributeError):
             m.__getattr__('before_no_such_transition')
 
         with self.assertRaises(AttributeError):
@@ -658,7 +658,7 @@ class TestTransitions(TestCase):
             self.assertRegex(
                 str(event_data.transition.conditions),
                 r"\[<Condition\(<function TestTransitions.test_repr.<locals>"
-                ".a_condition at [^>]+>\)@\d+>\]")
+                r".a_condition at [^>]+>\)@\d+>\]")
 
             return True
 
@@ -666,7 +666,7 @@ class TestTransitions(TestCase):
             self.assertRegex(
                 str(event_data),
                 r"<EventData\('<State\('A'\)@\d+>', "
-                "<Transition\('A', 'B'\)@\d+>\)@\d+>")
+                r"<Transition\('A', 'B'\)@\d+>\)@\d+>")
 
             m.checked = True
 

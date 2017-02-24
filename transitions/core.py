@@ -31,7 +31,7 @@ def get_trigger(model, trigger_name, *args, **kwargs):
     func = getattr(model, trigger_name, None)
     if func:
         return func(*args, **kwargs)
-    raise AttributeError("Model has no trigger named %s" % trigger_name)
+    raise AttributeError("Model has no trigger named '%s'" % trigger_name)
 
 
 class State(object):
@@ -382,7 +382,7 @@ class Machine(object):
         try:
             super(Machine, self).__init__(**kwargs)
         except TypeError as e:
-            raise MachineError('Passing arguments {0} caused an inheritance error: {1}'.format(kwargs.keys(), e))
+            raise ValueError('Passing arguments {0} caused an inheritance error: {1}'.format(kwargs.keys(), e))
 
         # initialize protected attributes first
         self._queued = queued
@@ -416,13 +416,15 @@ class Machine(object):
         if add_self is not True:
             warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
                           "constructor will no longer add the machine instance as a model but add "
-                          "NO model at all. Consequently, add_self will be removed.", PendingDeprecationWarning)
+                          "NO model at all. Consequently, add_self will be removed.",
+                          PendingDeprecationWarning)
 
         if model and initial is None:
             initial = 'initial'
             warnings.warn("Starting from transitions version 0.5.0, passing initial=None to the constructor "
                           "will no longer create and set the 'initial' state. If no initial"
-                          "state is provided but model is not None, an error will be raised.", PendingDeprecationWarning)
+                          "state is provided but model is not None, an error will be raised.",
+                          PendingDeprecationWarning)
 
         if states is not None:
             self.add_states(states)
@@ -452,7 +454,7 @@ class Machine(object):
 
         if initial is None:
             if self._initial is None:
-                raise MachineError("No initial state configured for machine, must specify when adding model.")
+                raise ValueError("No initial state configured for machine, must specify when adding model.")
             else:
                 initial = self._initial
 
@@ -691,8 +693,8 @@ class Machine(object):
         if states is None:
             states = list(self.states.keys())  # need to listify for Python3
         if len(states) < 2:
-            raise MachineError("Can't create ordered transitions on a Machine "
-                               "with fewer than 2 states.")
+            raise ValueError("Can't create ordered transitions on a Machine "
+                             "with fewer than 2 states.")
         states.remove(self._initial)
         self.add_transition(trigger, self._initial, states[0])
         for i in range(1, len(states)):
@@ -786,8 +788,8 @@ class Machine(object):
         if callback_type is not None:
             if callback_type in ['before', 'after', 'prepare']:
                 if target not in self.events:
-                    raise MachineError("event '{}' is not registered on <Machine@{}>"
-                                       .format(target, id(self)))
+                    raise AttributeError("event '{}' is not registered on <Machine@{}>"
+                                         .format(target, id(self)))
                 return partial(self.events[target].add_callback, callback_type)
 
             elif callback_type in ['on_enter', 'on_exit']:
