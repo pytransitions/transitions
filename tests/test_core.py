@@ -749,9 +749,9 @@ class TestTransitions(TestCase):
 
     def test_machine_finalize_exception(self):
 
-        exception = Exception()
+        exception = ZeroDivisionError()
 
-        def always_raises():
+        def always_raises(event):
             raise exception
 
         def finalize_callback(event):
@@ -761,5 +761,5 @@ class TestTransitions(TestCase):
                     before_state_change=always_raises,
                     finalize_event=finalize_callback)
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(ZeroDivisionError):
             m.to_B()
