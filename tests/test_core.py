@@ -12,7 +12,7 @@ from transitions import State
 from transitions.core import listify
 from unittest import TestCase, skipIf
 import warnings
-warnings.filterwarnings('error', category=PendingDeprecationWarning, message=".*0\.5\.0.*")
+warnings.filterwarnings('error', category=PendingDeprecationWarning, message=r".*0\.5\.0.*")
 
 try:
     from unittest.mock import MagicMock
@@ -657,7 +657,7 @@ class TestTransitions(TestCase):
             self.assertRegex(
                 str(event_data.transition.conditions),
                 r"\[<Condition\(<function TestTransitions.test_repr.<locals>"
-                ".a_condition at [^>]+>\)@\d+>\]")
+                r".a_condition at [^>]+>\)@\d+>\]")
 
             return True
 
@@ -665,7 +665,7 @@ class TestTransitions(TestCase):
             self.assertRegex(
                 str(event_data),
                 r"<EventData\('<State\('A'\)@\d+>', "
-                "<Transition\('A', 'B'\)@\d+>\)@\d+>")
+                r"<Transition\('A', 'B'\)@\d+>\)@\d+>")
 
             m.checked = True
 
