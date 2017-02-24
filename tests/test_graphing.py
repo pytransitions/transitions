@@ -13,9 +13,9 @@ import tempfile
 import os
 
 try:
-    ## Just to skip tests if *pygraphviz8 not installed
+    # Just to skip tests if *pygraphviz8 not installed
     import pygraphviz as pgv  # @UnresolvedImport
-except:  # pragma: no cover
+except ImportError:  # pragma: no cover
     pgv = None
 
 
