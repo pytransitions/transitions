@@ -746,3 +746,20 @@ class TestTransitions(TestCase):
         with self.assertRaises(Exception):
             m.planB()
         self.assertEqual(finalize_mock.call_count, 3)
+
+    def test_machine_finalize_exception(self):
+
+        exception = Exception()
+
+        def always_raises():
+            raise exception
+
+        def finalize_callback(event):
+            self.assertEqual(event.error, exception)
+
+        m = Machine(states=['A', 'B'], send_event=True, initial='A',
+                    before_state_change=always_raises,
+                    finalize_event=finalize_callback)
+
+        with self.assertRaises(Exception):
+            m.to_B()

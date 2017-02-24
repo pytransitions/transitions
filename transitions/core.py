@@ -229,6 +229,7 @@ class EventData(object):
         self.model = model
         self.args = args
         self.kwargs = kwargs
+        self.error = None
 
     def update(self, model):
         """ Updates the current State to accurately reflect the Machine. """
@@ -297,6 +298,9 @@ class Event(object):
                 if t.execute(event_data):
                     result = True
                     break
+        except Exception as e:
+            event_data.error = e
+            raise
         finally:
             for func in self.machine.finalize_event:
                 self.machine._callback(func, event_data)
