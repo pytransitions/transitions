@@ -715,7 +715,7 @@ class TestTransitions(TestCase):
 
         ]
         m = Machine(states=['A', 'B'], transitions=transitions,
-                    prepare_transition=global_callback, initial='A')
+                    prepare_event=global_callback, initial='A')
 
         m.go()
         self.assertEqual(global_mock.call_count, 1)

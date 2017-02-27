@@ -287,7 +287,7 @@ class Event(object):
                 raise MachineError(msg)
         event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
 
-        for func in self.machine.prepare_transition:
+        for func in self.machine.prepare_event:
             self.machine._callback(func, event_data)
             logger.debug("Executed machine preparation callback '%s' before conditions." % func)
 
@@ -331,7 +331,7 @@ class Machine(object):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, add_self=True, prepare_transition=None, finalize_event=None, **kwargs):
+                 queued=False, add_self=True, prepare_event=None, finalize_event=None, **kwargs):
         """
         Args:
             model (object): The object(s) whose states we want to manage. If 'self',
@@ -371,7 +371,7 @@ class Machine(object):
                 Due to the nature of the queued processing, all transitions will
                 _always_ return True since conditional checks cannot be conducted at queueing time.
             add_self (boolean): If no model(s) provided, intialize state machine against self.
-            prepare_transition: A callable called on for before possible transitions will be processed.
+            prepare_event: A callable called on for before possible transitions will be processed.
                 It receives the very same args as normal callbacks.
             finalize_event: A callable called on for each triggered event after transitions have been processed.
                 This is also called when a transition raises an exception.
@@ -389,7 +389,7 @@ class Machine(object):
         self._transition_queue = deque()
         self._before_state_change = []
         self._after_state_change = []
-        self._prepare_transition = []
+        self._prepare_event = []
         self._finalize_event = []
 
         self.states = OrderedDict()
@@ -397,7 +397,7 @@ class Machine(object):
         self.send_event = send_event
         self.auto_transitions = auto_transitions
         self.ignore_invalid_triggers = ignore_invalid_triggers
-        self.prepare_transition = prepare_transition
+        self.prepare_event = prepare_event
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
         self.finalize_event = finalize_event
@@ -528,13 +528,13 @@ class Machine(object):
         self._after_state_change = listify(value)
 
     @property
-    def prepare_transition(self):
-        return self._prepare_transition
+    def prepare_event(self):
+        return self._prepare_event
 
-    # this should make sure that prepare_transition is always a list
-    @prepare_transition.setter
-    def prepare_transition(self, value):
-        self._prepare_transition = listify(value)
+    # this should make sure that prepare_event is always a list
+    @prepare_event.setter
+    def prepare_event(self, value):
+        self._prepare_event = listify(value)
 
     @property
     def finalize_event(self):
