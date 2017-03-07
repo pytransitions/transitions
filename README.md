@@ -447,13 +447,13 @@ To facilitate this behavior, Transitions provides an `add_ordered_transitions()`
 ```python
 states = ['A', 'B', 'C']
  # See the "alternative initialization" section for an explanation of the 1st argument to init
-machine = Machine(None, states, initial='A')
+machine = Machine(states, initial='A')
 machine.add_ordered_transitions()
 machine.next_state()
 print(machine.state)
 >>> 'B'
 # We can also define a different order of transitions
-machine = Machine(None, states, initial='A')
+machine = Machine(states, initial='A')
 machine.add_ordered_transitions(['A', 'C', 'B'])
 machine.next_state()
 print(machine.state)
@@ -606,18 +606,20 @@ Note that `prepare` will not be called unless the current state is a valid sourc
 ### <a name="execution-order"> Execution order
 In summary, callbacks on transitions are executed in the following order:
 
-|      Callback             | Current State |               Comments                        |
-|---------------------------|:-------------:|-----------------------------------------------|
-| `'transition.prepare'`    | `source`      | executed as soon as the transition starts     |
-| `'transition.conditions'` | `source`      | conditions *may* fail and halt the transition |
-| `'transition.unless'`     | `source`      | conditions *may* fail and halt the transition |
-| `'transition.before'`     | `source`      |                                               |
-| `'machine.before'`        | `source`      | default callbacks declared on model           |
-| `'state.exit'`            | `source`      | callbacks declared on the source state        |
-| `<STATE CHANGE>`          |               |                                               |
-| `'state.enter'`           | `destination` | callbacks declared on the destination state   |
-| `'transition.after'`      | `destination` |                                               |
-| `'machine.after'`         | `destination` | default callbacks declared on model           |
+|      Callback              | Current State |               Comments                                      |
+|----------------------------|:-------------:|-------------------------------------------------------------|
+| `'machine.prepare_event'`  | `source`      | executed *once* before individual transitions are processed |
+| `'transition.prepare'`     | `source`      | executed as soon as the transition starts                   |
+| `'transition.conditions'`  | `source`      | conditions *may* fail and halt the transition               |
+| `'transition.unless'`      | `source`      | conditions *may* fail and halt the transition               |
+| `'machine.before'`         | `source`      | default callbacks declared on model                         |
+| `'transition.before'`      | `source`      |                                                             |
+| `'state.exit'`             | `source`      | callbacks declared on the source state                      |
+| `<STATE CHANGE>`           |               |                                                             |
+| `'state.enter'`            | `destination` | callbacks declared on the destination state                 |
+| `'transition.after'`       | `destination` |                                                             |
+| `'machine.after'`          | `destination` | default callbacks declared on model                         |
+| `'machine.finalize_event'` | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
 Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
 `before_state_change` and `after_state_change` respectively:
