@@ -177,13 +177,13 @@ class Transition(object):
                 logger.debug("%sTransition condition failed: %s() does not " +
                              "return %s. Transition halted.", event_data.machine.id, c.func, c.target)
                 return False
-        for func in self.before:
+        for func in itertools.chain(machine.before_state_change, self.before):
             machine._callback(func, event_data)
             logger.debug("%sExecuted callback '%s' before transition.", event_data.machine.id, func)
 
         self._change_state(event_data)
 
-        for func in self.after:
+        for func in itertools.chain(self.after, machine.after_state_change):
             machine._callback(func, event_data)
             logger.debug("%sExecuted callback '%s' after transition.", event_data.machine.id, func)
         return True
@@ -229,6 +229,7 @@ class EventData(object):
         self.model = model
         self.args = args
         self.kwargs = kwargs
+        self.error = None
 
     def update(self, model):
         """ Updates the current State to accurately reflect the Machine. """
@@ -284,13 +285,27 @@ class Event(object):
                 return False
             else:
                 raise MachineError(msg)
-        event = EventData(state, self, self.machine, model,
-                          args=args, kwargs=kwargs)
-        for t in self.transitions[state.name]:
-            event.transition = t
-            if t.execute(event):
-                return True
-        return False
+        event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
+
+        for func in self.machine.prepare_event:
+            self.machine._callback(func, event_data)
+            logger.debug("Executed machine preparation callback '%s' before conditions." % func)
+
+        result = False
+        try:
+            for t in self.transitions[state.name]:
+                event_data.transition = t
+                if t.execute(event_data):
+                    result = True
+                    break
+        except Exception as e:
+            event_data.error = e
+            raise
+        finally:
+            for func in self.machine.finalize_event:
+                self.machine._callback(func, event_data)
+                logger.debug("Executed machine finalize callback '%s'." % func)
+        return result
 
     def __repr__(self):
         return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
@@ -316,7 +331,7 @@ class Machine(object):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, add_self=True, **kwargs):
+                 queued=False, add_self=True, prepare_event=None, finalize_event=None, **kwargs):
         """
         Args:
             model (object): The object(s) whose states we want to manage. If 'self',
@@ -346,16 +361,20 @@ class Machine(object):
                 ignored rather than raising an invalid transition exception.
             before_state_change: A callable called on every change state before
                 the transition happened. It receives the very same args as normal
-                callbacks
+                callbacks.
             after_state_change: A callable called on every change state after
                 the transition happened. It receives the very same args as normal
-                callbacks
+                callbacks.
             name: If a name is set, it will be used as a prefix for logger output
             queued (boolean): When True, processes transitions sequentially. A trigger
                 executed in a state callback function will be queued and executed later.
                 Due to the nature of the queued processing, all transitions will
                 _always_ return True since conditional checks cannot be conducted at queueing time.
             add_self (boolean): If no model(s) provided, intialize state machine against self.
+            prepare_event: A callable called on for before possible transitions will be processed.
+                It receives the very same args as normal callbacks.
+            finalize_event: A callable called on for each triggered event after transitions have been processed.
+                This is also called when a transition raises an exception.
 
             **kwargs additional arguments passed to next class in MRO. This can be ignored in most cases.
         """
@@ -365,16 +384,25 @@ class Machine(object):
         except TypeError as e:
             raise ValueError('Passing arguments {0} caused an inheritance error: {1}'.format(kwargs.keys(), e))
 
+        # initialize protected attributes first
+        self._queued = queued
+        self._transition_queue = deque()
+        self._before_state_change = []
+        self._after_state_change = []
+        self._prepare_event = []
+        self._finalize_event = []
+
         self.states = OrderedDict()
         self.events = {}
         self.send_event = send_event
         self.auto_transitions = auto_transitions
         self.ignore_invalid_triggers = ignore_invalid_triggers
+        self.prepare_event = prepare_event
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
+        self.finalize_event = finalize_event
         self.id = name + ": " if name is not None else ""
-        self._queued = queued
-        self._transition_queue = deque()
+
         self.models = []
 
         if model is None and add_self:
@@ -480,6 +508,42 @@ class Machine(object):
             return self.models[0]
         else:
             return self.models
+
+    @property
+    def before_state_change(self):
+        return self._before_state_change
+
+    # this should make sure that _before_state_change is always a list
+    @before_state_change.setter
+    def before_state_change(self, value):
+        self._before_state_change = listify(value)
+
+    @property
+    def after_state_change(self):
+        return self._after_state_change
+
+    # this should make sure that _after_state_change is always a list
+    @after_state_change.setter
+    def after_state_change(self, value):
+        self._after_state_change = listify(value)
+
+    @property
+    def prepare_event(self):
+        return self._prepare_event
+
+    # this should make sure that prepare_event is always a list
+    @prepare_event.setter
+    def prepare_event(self, value):
+        self._prepare_event = listify(value)
+
+    @property
+    def finalize_event(self):
+        return self._finalize_event
+
+    # this should make sure that finalize_event is always a list
+    @finalize_event.setter
+    def finalize_event(self, value):
+        self._finalize_event = listify(value)
 
     def is_state(self, state, model):
         """ Check whether the current state matches the named state. """
@@ -602,12 +666,6 @@ class Machine(object):
             source = list(self.states.keys()) if source == '*' else [source]
         else:
             source = [s.name if self._has_state(s) else s for s in listify(source)]
-
-        if self.before_state_change:
-            before = listify(before) + listify(self.before_state_change)
-
-        if self.after_state_change:
-            after = listify(after) + listify(self.after_state_change)
 
         for s in source:
             if self._has_state(dest):

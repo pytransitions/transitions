@@ -379,8 +379,8 @@ class TestTransitions(TestCase):
         m.after_state_change = MagicMock()
 
         m.to_B()
-        self.assertTrue(m.before_state_change.called)
-        self.assertTrue(m.after_state_change.called)
+        self.assertTrue(m.before_state_change[0].called)
+        self.assertTrue(m.after_state_change[0].called)
 
     def test_function_callbacks(self):
         before_state_change = MagicMock()
@@ -392,8 +392,8 @@ class TestTransitions(TestCase):
                     initial='A', auto_transitions=True)
 
         m.to_B()
-        self.assertTrue(m.before_state_change.called)
-        self.assertTrue(m.after_state_change.called)
+        self.assertTrue(m.before_state_change[0].called)
+        self.assertTrue(m.after_state_change[0].called)
 
     def test_pickle(self):
         import sys
@@ -445,13 +445,14 @@ class TestTransitions(TestCase):
 
     def test_queued_errors(self):
         def before_change(machine):
-            machine.to_A()
+            if machine.has_queue:
+                machine.to_A(machine)
             machine._queued = False
 
         def after_change(machine):
-            machine.to_C()
+            machine.to_C(machine)
 
-        def failed_transition():
+        def failed_transition(machine):
             raise ValueError('Something was wrong')
 
         states = ['A', 'B', 'C']
@@ -462,7 +463,7 @@ class TestTransitions(TestCase):
             m.to_B(machine=m)
 
         with self.assertRaises(ValueError):
-            m.do()
+            m.do(machine=m)
 
     def test___getattr___and_identify_callback(self):
         m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
@@ -690,3 +691,75 @@ class TestTransitions(TestCase):
 
         with self.assertRaises(PendingDeprecationWarning):
             m = Machine(None, add_self=False)
+
+    def test_machine_prepare(self):
+
+        global_mock = MagicMock()
+        local_mock = MagicMock()
+
+        def global_callback():
+            global_mock()
+
+        def local_callback():
+            local_mock()
+
+        def always_fails():
+            return False
+
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'prepare': local_callback},
+
+        ]
+        m = Machine(states=['A', 'B'], transitions=transitions,
+                    prepare_event=global_callback, initial='A')
+
+        m.go()
+        self.assertEqual(global_mock.call_count, 1)
+        self.assertEqual(local_mock.call_count, len(transitions))
+
+    def test_machine_finalize(self):
+
+        finalize_mock = MagicMock()
+
+        def always_fails():
+            return False
+
+        def always_raises():
+            raise Exception()
+
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'planA', 'source': 'B', 'dest': 'C', 'conditions': always_fails},
+            {'trigger': 'planB', 'source': 'B', 'dest': 'C', 'conditions': always_raises}
+        ]
+        m = Machine(states=['A', 'B'], transitions=transitions,
+                    finalize_event=finalize_mock, initial='A')
+
+        m.go()
+        self.assertEqual(finalize_mock.call_count, 1)
+        m.planA()
+        self.assertEqual(finalize_mock.call_count, 2)
+        with self.assertRaises(Exception):
+            m.planB()
+        self.assertEqual(finalize_mock.call_count, 3)
+
+    def test_machine_finalize_exception(self):
+
+        exception = ZeroDivisionError()
+
+        def always_raises(event):
+            raise exception
+
+        def finalize_callback(event):
+            self.assertEqual(event.error, exception)
+
+        m = Machine(states=['A', 'B'], send_event=True, initial='A',
+                    before_state_change=always_raises,
+                    finalize_event=finalize_callback)
+
+        with self.assertRaises(ZeroDivisionError):
+            m.to_B()
