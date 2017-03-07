@@ -6,9 +6,7 @@ except ImportError:
 from .utils import InheritedStuff
 from .utils import Stuff
 import sys
-from transitions import Machine
-from transitions import MachineError
-from transitions import State
+from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify
 from unittest import TestCase, skipIf
 import warnings
@@ -379,8 +377,14 @@ class TestTransitions(TestCase):
         m.after_state_change = MagicMock()
 
         m.to_B()
+
         self.assertTrue(m.before_state_change[0].called)
         self.assertTrue(m.after_state_change[0].called)
+
+        # after_state_change should have been called with EventData
+        event_data = m.after_state_change[0].call_args[0][0]
+        self.assertIsInstance(event_data, EventData)
+        self.assertTrue(event_data.result)
 
     def test_function_callbacks(self):
         before_state_change = MagicMock()
@@ -725,10 +729,10 @@ class TestTransitions(TestCase):
 
         finalize_mock = MagicMock()
 
-        def always_fails():
+        def always_fails(event_data):
             return False
 
-        def always_raises():
+        def always_raises(event_data):
             raise Exception()
 
         transitions = [
@@ -737,12 +741,16 @@ class TestTransitions(TestCase):
             {'trigger': 'planB', 'source': 'B', 'dest': 'C', 'conditions': always_raises}
         ]
         m = Machine(states=['A', 'B'], transitions=transitions,
-                    finalize_event=finalize_mock, initial='A')
+                    finalize_event=finalize_mock, initial='A', send_event=True)
 
         m.go()
         self.assertEqual(finalize_mock.call_count, 1)
         m.planA()
+
+        event_data = finalize_mock.call_args[0][0]
+        self.assertIsInstance(event_data, EventData)
         self.assertEqual(finalize_mock.call_count, 2)
+        self.assertFalse(event_data.result)
         with self.assertRaises(Exception):
             m.planB()
         self.assertEqual(finalize_mock.call_count, 3)
