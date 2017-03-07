@@ -3,14 +3,15 @@
 ## 0.4.4 (March, 2017)
 Release 0.4.4 contains several new features and bugfixes:
 - Introduced deprecation warnings for upcoming changes concerning `Machine` keywords `model` and `add_self`
-- `locked` now supports custom context managers (thanks to @paulbovbel)
+- `LockedMachine` now supports custom context managers for each model (thanks to @paulbovbel)
 - New `prepare_event` and `finalize_event` keywords to handle transitions globally (thanks to @ankostis)
-- Fixed order of callback execution (thanks to @ankostis)
 - `Machine.before/after_state_change` can be altered dynamically (thanks to @peendebak)
-- Fixed bug related to pickling `RLock` in nesting
 - Test suite now skips contextual tests (e.g. pygraphviz) if dependencies cannot be found (thanks to @ankostis)
 - Improved string representation of several classes (thanks to @ankostis)
 - `MachineError` is now limited to internal error and has been replaced by `AttributeError` and `ValueError` where applicable (thanks to @ankostis)
+- Fixed bug related to pickling `RLock` in nesting
+- Fixed order of callback execution (thanks to @ankostis)
+- Fixed representation of condition names in graphs (thanks to @cemoody)
 
 ## 0.4.3 (December, 2016)
 Release 0.4.3 is a minor release and contains bug fixes and several new features:
