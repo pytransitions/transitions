@@ -620,6 +620,37 @@ lump.to_gas()
 >>> "where'd all the liquid go?"
 ```
 
+There are also two keywords for callbacks which should be executed *independently* a) of how many transitions are possible,
+b) if any transition succeeds and c) even if an error is raised during the execution of some other callback.
+Callbacks passed to `Machine` with `prepare_event` will be executed *once* before processing possible transitions 
+(and their individual `prepare` callbacks) takes place.
+Callbacks of `finalize_event` will be executed regardless of the success of the processed transitions.
+Note that if an error occurred it will be attached to `event_data` as `error` and can be retrieved with `send_event=True`.
+
+```python
+from transitions import Machine
+
+class Matter(object):
+    def raise_error(self, event): raise ValueError("Oh no")
+    def prepare(self, event): print("I am ready!")
+    def finalize(self, event): print("Result: ", type(event.error), event.error)
+
+states=['solid', 'liquid', 'gas', 'plasma']
+
+lump = Matter()
+m = Machine(lump, states, prepare_event='prepare', before_state_change='raise_error',
+            finalize_event='finalize', send_event=True)
+try:
+    lump.to_gas()
+except ValueError:
+    pass
+print(lump.state)
+
+>>> I am ready!
+>>> Result:  <class 'ValueError'> Oh no
+>>> initial
+```
+
 ### <a name="execution-order"> Execution order
 In summary, callbacks on transitions are executed in the following order:
 
