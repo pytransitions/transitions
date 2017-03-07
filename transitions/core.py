@@ -230,6 +230,7 @@ class EventData(object):
         self.args = args
         self.kwargs = kwargs
         self.error = None
+        self.result = False
 
     def update(self, model):
         """ Updates the current State to accurately reflect the Machine. """
@@ -291,12 +292,11 @@ class Event(object):
             self.machine._callback(func, event_data)
             logger.debug("Executed machine preparation callback '%s' before conditions." % func)
 
-        result = False
         try:
             for t in self.transitions[state.name]:
                 event_data.transition = t
                 if t.execute(event_data):
-                    result = True
+                    event_data.result = True
                     break
         except Exception as e:
             event_data.error = e
@@ -305,7 +305,7 @@ class Event(object):
             for func in self.machine.finalize_event:
                 self.machine._callback(func, event_data)
                 logger.debug("Executed machine finalize callback '%s'." % func)
-        return result
+        return event_data.result
 
     def __repr__(self):
         return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
