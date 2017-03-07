@@ -603,6 +603,23 @@ lump.melt()
 
 Note that `prepare` will not be called unless the current state is a valid source for the named transition.
 
+Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
+`before_state_change` and `after_state_change` respectively:
+
+```python
+class Matter(object):
+    def make_hissing_noises(self): print("HISSSSSSSSSSSSSSSS")
+    def disappear(self): print("where'd all the liquid go?")
+
+states=['solid', 'liquid', 'gas', 'plasma']
+
+lump = Matter()
+m = Machine(lump, states, before_state_change='make_hissing_noises', after_state_change='disappear')
+lump.to_gas()
+>>> "HISSSSSSSSSSSSSSSS"
+>>> "where'd all the liquid go?"
+```
+
 ### <a name="execution-order"> Execution order
 In summary, callbacks on transitions are executed in the following order:
 
@@ -620,23 +637,6 @@ In summary, callbacks on transitions are executed in the following order:
 | `'transition.after'`       | `destination` |                                                             |
 | `'machine.after'`          | `destination` | default callbacks declared on model                         |
 | `'machine.finalize_event'` | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
-
-Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
-`before_state_change` and `after_state_change` respectively:
-
-```python
-class Matter(object):
-    def make_hissing_noises(self): print("HISSSSSSSSSSSSSSSS")
-    def disappear(self): print("where'd all the liquid go?")
-
-states=['solid', 'liquid', 'gas', 'plasma']
-
-lump = Matter()
-m = Machine(lump, states, before_state_change='make_hissing_noises', after_state_change='disappear')
-lump.to_gas()
->>> "HISSSSSSSSSSSSSSSS"
->>> "where'd all the liquid go?"
-```
 
 ### <a name="passing-data"></a>Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways.
