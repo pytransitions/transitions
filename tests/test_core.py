@@ -7,7 +7,7 @@ from .utils import InheritedStuff
 from .utils import Stuff
 import sys
 from transitions import Machine, MachineError, State, EventData
-from transitions.core import listify
+from transitions.core import listify, prep_ordered_arg
 from unittest import TestCase, skipIf
 import warnings
 warnings.filterwarnings('error', category=PendingDeprecationWarning, message=r".*0\.5\.0.*")
@@ -771,3 +771,43 @@ class TestTransitions(TestCase):
 
         with self.assertRaises(ZeroDivisionError):
             m.to_B()
+
+    def test_prep_ordered_arg(self):
+        self.assertTrue(len(prep_ordered_arg(3, None)) == 3)
+        self.assertTrue(all(a == None for a in prep_ordered_arg(3, None)))
+        with self.assertRaises(ValueError):
+            prep_ordered_arg(3, [None, None])
+
+    def test_ordered_transition_callback(self):
+        class Model:
+            def __init__(self):
+                self.flag = False
+            def make_true(self):
+                self.flag = True
+
+        model = Model()
+        states = ['beginning', 'middle', 'end']
+        transits = [None, None, 'make_true']
+        m = Machine(model, states, initial='beginning')
+        m.add_ordered_transitions(before=transits)
+        model.next_state()
+        self.assertFalse(model.flag)
+        model.next_state()
+        model.next_state()
+        self.assertTrue(model.flag)
+
+    def test_ordered_transition_condition(self):
+        class Model:
+            def __init__(self):
+                self.blocker = False
+            def check_blocker(self):
+                return self.blocker
+
+        model = Model()
+        states = ['beginning', 'middle', 'end']
+        m = Machine(model, states, initial='beginning')
+        m.add_ordered_transitions(conditions=[None, None, 'check_blocker'])
+        model.to_end()
+        self.assertFalse(model.next_state())
+        model.blocker = True
+        self.assertTrue(model.next_state())

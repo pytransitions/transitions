@@ -34,6 +34,20 @@ def get_trigger(model, trigger_name, *args, **kwargs):
     raise AttributeError("Model has no trigger named '%s'" % trigger_name)
 
 
+def prep_ordered_arg(desired_length, arg_name):
+    """Ensure arguments to add_ordered_transitions are the proper length and
+    replicate the given argument if only one given (apply same condition, callback
+    to all transitions)
+    """
+    arg_name = listify(arg_name) if arg_name else [None]
+    if len(arg_name) != desired_length and len(arg_name) != 1:
+        raise ValueError("Argument length must be either 1 or the same length as "
+                         "the number of transitions.")
+    if len(arg_name) == 1:
+        return arg_name * desired_length
+    return arg_name
+
+
 class State(object):
 
     def __init__(self, name, on_enter=None, on_exit=None,
@@ -679,7 +693,9 @@ class Machine(object):
             self.events[trigger].add_transition(t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
-                                loop=True, loop_includes_initial=True):
+                                loop=True, loop_includes_initial=True,
+                                conditions=None, unless=None, before=None,
+                                after=None, prepare=None, **kwargs):
         """ Add a set of transitions that move linearly from state to state.
         Args:
             states (list): A list of state names defining the order of the
@@ -693,21 +709,60 @@ class Machine(object):
             loop_includes_initial (boolean): If no initial state was defined in
                 the machine, setting this to True will cause the _initial state
                 placeholder to be included in the added transitions.
+            conditions (string or list): Condition(s) that must pass in order
+                for the transition to take place. Either a list providing the
+                name of a callable, or a list of callables. For the transition
+                to occur, ALL callables must return True.
+            unless (string, list): Condition(s) that must return False in order
+                for the transition to occur. Behaves just like conditions arg
+                otherwise.
+            before (string or list): Callables to call before the transition.
+            after (string or list): Callables to call after the transition.
+            prepare (string or list): Callables to call when the trigger is activated
+            **kwargs: Additional arguments which can be passed to the created transition.
+                This is useful if you plan to extend Machine.Transition and require more parameters.
         """
         if states is None:
             states = list(self.states.keys())  # need to listify for Python3
-        if len(states) < 2:
+        len_transitions = len(states)
+        if len_transitions < 2:
             raise ValueError("Can't create ordered transitions on a Machine "
                              "with fewer than 2 states.")
+        if not loop:
+            len_transitions -= 1
+        # ensure all args are the proper length
+        conditions = prep_ordered_arg(len_transitions, conditions)
+        unless = prep_ordered_arg(len_transitions, unless)
+        before = prep_ordered_arg(len_transitions, before)
+        after = prep_ordered_arg(len_transitions, after)
+        prepare = prep_ordered_arg(len_transitions, prepare)
+
         states.remove(self._initial)
-        self.add_transition(trigger, self._initial, states[0])
+        self.add_transition(trigger, self._initial, states[0],
+                            conditions=conditions[0],
+                            unless=unless[0],
+                            before=before[0],
+                            after=after[0],
+                            prepare=prepare[0],
+                            **kwargs)
+
         for i in range(1, len(states)):
-            self.add_transition(trigger, states[i - 1], states[i])
+            self.add_transition(trigger, states[i - 1], states[i],
+                                conditions=conditions[i],
+                                unless=unless[i],
+                                before=before[i],
+                                after=after[i],
+                                prepare=prepare[i],
+                                **kwargs)
         if loop:
-            if loop_includes_initial:
-                self.add_transition(trigger, states[-1], self._initial)
-            else:
-                self.add_transition(trigger, states[-1], states[0])
+            self.add_transition(trigger, states[-1],
+                                self._initial if loop_includes_initial else states[0],
+                                conditions=conditions[-1],
+                                unless=unless[-1],
+                                before=before[-1],
+                                after=after[-1],
+                                prepare=prepare[-1],
+                                **kwargs)
 
     def _callback(self, func, event_data):
         """ Trigger a callback function, possibly wrapping it in an EventData
