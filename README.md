@@ -622,7 +622,7 @@ lump.to_gas()
 
 There are also two keywords for callbacks which should be executed *independently* a) of how many transitions are possible,
 b) if any transition succeeds and c) even if an error is raised during the execution of some other callback.
-Callbacks passed to `Machine` with `prepare_event` will be executed *once* before processing possible transitions 
+Callbacks passed to `Machine` with `prepare_event` will be executed *once* before processing possible transitions
 (and their individual `prepare` callbacks) takes place.
 Callbacks of `finalize_event` will be executed regardless of the success of the processed transitions.
 Note that if an error occurred it will be attached to `event_data` as `error` and can be retrieved with `send_event=True`.
@@ -944,9 +944,9 @@ transitions = [
   ['walk', 'standing', 'walking'],
   ['stop', 'walking', 'standing'],
   # this transition will end in 'caffeinated_dithering'...
-  ['drink', '*', 'caffeinated'], 
+  ['drink', '*', 'caffeinated'],
   # ... that is why we do not need do specify 'caffeinated' here anymore
-  ['walk', 'caffeinated_dithering', 'caffeinated_running'], 
+  ['walk', 'caffeinated_dithering', 'caffeinated_running'],
   ['relax', 'caffeinated', 'standing']
 ]
 # ...
