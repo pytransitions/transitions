@@ -421,21 +421,21 @@ class Machine(object):
 
         if model is None and add_self:
             model = 'self'
-            warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
+            warnings.warn("Starting from transitions version 0.6.0, passing model=None to the "
                           "constructor will no longer add the machine instance as a model but add "
                           "NO model at all. Consequently, add_self will be removed. To add the "
                           "machine as a model (and also hide this warning) use the new default "
                           "value model='self' instead.", PendingDeprecationWarning)
 
         if add_self is not True:
-            warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
+            warnings.warn("Starting from transitions version 0.6.0, passing model=None to the "
                           "constructor will no longer add the machine instance as a model but add "
                           "NO model at all. Consequently, add_self will be removed.",
                           PendingDeprecationWarning)
 
         if model and initial is None:
             initial = 'initial'
-            warnings.warn("Starting from transitions version 0.5.0, passing initial=None to the constructor "
+            warnings.warn("Starting from transitions version 0.6.0, passing initial=None to the constructor "
                           "will no longer create and set the 'initial' state. If no initial"
                           "state is provided but model is not None, an error will be raised.",
                           PendingDeprecationWarning)
@@ -763,6 +763,31 @@ class Machine(object):
                                 after=after[-1],
                                 prepare=prepare[-1],
                                 **kwargs)
+
+    def remove_transition(self, trigger, source="*", dest="*"):
+        """ Removes a transition from the Machine and all models.
+        Args:
+            trigger (string): Trigger name of the transition
+            source (string): Limits removal to transitions from a certain state.
+            dest (string): Limits removal to transitions to a certain state.
+        """
+        source = listify(source) if source != "*" else source
+        dest = listify(dest) if dest != "*" else dest
+        # outer comprehension, keeps events if inner comprehension returns lists with length > 0
+        self.events[trigger].transitions = {key: value for key, value in
+                                            {k: [t for t in v
+                                                 # keep entries if source should not be filtered; same for dest.
+                                                 if (source is not "*" and t.source not in source) or
+                                                 (dest is not "*" and t.dest not in dest)]
+                                             # }.items() takes the result of the inner comprehension and uses it
+                                             # for the outer comprehension (see first line of comment)
+                                             for k, v in self.events[trigger].transitions.items()}.items()
+                                            if len(value) > 0}
+        # if no transition is left remove the trigger from the machine and all models
+        if len(self.events[trigger].transitions) == 0:
+            for m in self.models:
+                delattr(m, trigger)
+            del self.events[trigger]
 
     def _callback(self, func, event_data):
         """ Trigger a callback function, possibly wrapping it in an EventData

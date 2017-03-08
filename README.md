@@ -622,7 +622,7 @@ lump.to_gas()
 
 There are also two keywords for callbacks which should be executed *independently* a) of how many transitions are possible,
 b) if any transition succeeds and c) even if an error is raised during the execution of some other callback.
-Callbacks passed to `Machine` with `prepare_event` will be executed *once* before processing possible transitions 
+Callbacks passed to `Machine` with `prepare_event` will be executed *once* before processing possible transitions
 (and their individual `prepare` callbacks) takes place.
 Callbacks of `finalize_event` will be executed regardless of the success of the processed transitions.
 Note that if an error occurred it will be attached to `event_data` as `error` and can be retrieved with `send_event=True`.
@@ -875,22 +875,29 @@ machine = Machine(model, states, transitions)
 Additional Keywords:
 * `title` (optional): Sets the title of the generated image.
 * `show_conditions` (default False): Shows conditions at transition edges
+* `show_auto_transitions` (default False): Shows auto transitions in graph
 
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). With
- `GraphMachine` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
+Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). With `GraphMachine` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
 
 ```python
 from transitions.extensions import GraphMachine as Machine
 m = Model()
 machine = Machine(model=m, ...)
-m.graph.draw('my_state_diagram.png', prog='dot')
+# in cases where auto transitions should be visible
+# Machine(model=m, show_auto_transitions=True, ...)
+
+# draw the whole graph ...
+m.get_graph().draw('my_state_diagram.png', prog='dot')
+# ... or just the region of interest
+# (previous state, active state and all reachable states)
+m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
 ```
 
 This produces something like this:
 
 ![state diagram example](https://cloud.githubusercontent.com/assets/19777/11530591/1a0c08a6-98f6-11e5-88a7-756585aafbbb.png)
 
-Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailled example.
+Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example.
 
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 

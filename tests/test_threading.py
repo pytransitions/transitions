@@ -69,7 +69,9 @@ class TestLockedTransitions(TestCore):
         time.sleep(0.1)
         logger.info('Check if state transition done...')
         # Thread will release lock before Transition is finished
-        self.assertTrue(self.stuff.is_D())
+        res = self.stuff.is_D()
+        time.sleep(0.5)
+        self.assertTrue(res)
 
     def test_pickle(self):
         import sys
@@ -105,6 +107,52 @@ class TestLockedTransitions(TestCore):
         blocked = time.time()
         self.assertAlmostEqual(fast - begin, 0, delta=0.1)
         self.assertAlmostEqual(blocked - begin, 1, delta=0.1)
+
+    def test_context_managers(self):
+
+        class CounterContext(object):
+            def __init__(self):
+                self.counter = 0
+                self.level = 0
+                self.max = 0
+                super(CounterContext, self).__init__()
+
+            def __enter__(self):
+                self.counter += 1
+                self.level += 1
+                self.max = max(self.level, self.max)
+
+            def __exit__(self, *exc):
+                self.level -= 1
+
+        M = MachineFactory.get_predefined(locked=True)
+        c = CounterContext()
+        m = M(states=['A', 'B', 'C', 'D'], transitions=[['reset', '*', 'A']], initial='A', machine_context=c)
+        m.get_triggers('A')
+        self.assertEqual(c.max, 1)  # was 3 before
+        self.assertEqual(c.counter, 4)  # was 72 (!) before
+
+    # This test has been used to quantify the changes made in locking in version 0.5.0.
+    # See https://github.com/tyarkoni/transitions/issues/167 for the results.
+    # def test_performance(self):
+    #     import timeit
+    #     states = ['A', 'B', 'C']
+    #     transitions = [['go', 'A', 'B'], ['go', 'B', 'C'], ['go', 'C', 'A']]
+    #
+    #     M1 = MachineFactory.get_predefined()
+    #     M2 = MachineFactory.get_predefined(locked=True)
+    #
+    #     def test_m1():
+    #         m1 = M1(states=states, transitions=transitions, initial='A')
+    #         m1.get_triggers('A')
+    #
+    #     def test_m2():
+    #         m2 = M2(states=states, transitions=transitions, initial='A')
+    #         m2.get_triggers('A')
+    #
+    #     t1 = timeit.timeit(test_m1, number=20000)
+    #     t2 = timeit.timeit(test_m2, number=20000)
+    #     self.assertAlmostEqual(t2/t1, 1, delta=0.5)
 
 
 class TestMultipleContexts(TestCore):
@@ -169,6 +217,7 @@ class TestMultipleContexts(TestCore):
 
 # Same as TestLockedTransition but with LockedHierarchicalMachine
 class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
+
     def setUp(self):
         NestedState.separator = '_'
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
