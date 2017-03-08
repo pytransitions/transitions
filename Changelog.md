@@ -9,6 +9,7 @@ Release 0.4.4 contains several new features and bugfixes:
 - Test suite now skips contextual tests (e.g. pygraphviz) if dependencies cannot be found (thanks to @ankostis)
 - Improved string representation of several classes (thanks to @ankostis)
 - `MachineError` is now limited to internal error and has been replaced by `AttributeError` and `ValueError` where applicable (thanks to @ankostis)
+- Introduced `Machine._create_state` for easier subclassing of states
 - Fixed bug related to pickling `RLock` in nesting
 - Fixed order of callback execution (thanks to @ankostis)
 - Fixed representation of condition names in graphs (thanks to @cemoody)
