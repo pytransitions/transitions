@@ -11,9 +11,13 @@ Release 0.5.0 is a major release:
 - `Machine.before/after_state_change` can now be altered dynamically (thanks to @peendebak)
 - `Machine.add_ordered_transitions` now supports `prepare`, `conditons`, `unless`, `before` and `after` (thanks to @aforren1)
 - New `prepare_event` and `finalize_event` keywords to handle transitions globally (thanks to @ankostis)
+- New `show_auto_transitions` keyword for `GraphMachine.__init__` (default `False`); if enabled, show auto transitions in graph
+- New `show_roi` keyword for `GraphMachine._get_graph` (default `False`); if `True`, show only reachable states in retrieved graph
 - Test suite now skips contextual tests (e.g. pygraphviz) if dependencies cannot be found (thanks to @ankostis)
 - Improved string representation of several classes (thanks to @ankostis)
 - Improved `LockedMachine` performance by removing recursive locking
+- Improved graph layout for nested graphs
+- `transitions.extensions.nesting.AGraph` has been split up into `Graph` and `NestedGraph` for easier maintenance
 - Fixed bug related to pickling `RLock` in nesting
 - Fixed order of callback execution (thanks to @ankostis)
 - Fixed representation of condition names in graphs (thanks to @cemoody)
