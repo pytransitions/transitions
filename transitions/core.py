@@ -47,6 +47,7 @@ def prep_ordered_arg(desired_length, arg_name):
         return arg_name * desired_length
     return arg_name
 
+
 class State(object):
 
     def __init__(self, name, on_enter=None, on_exit=None,
