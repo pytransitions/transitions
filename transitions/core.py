@@ -770,7 +770,6 @@ class Machine(object):
             trigger (string): Trigger name of the transition
             source (string): Limits removal to transitions from a certain state.
             dest (string): Limits removal to transitions to a certain state.
-
         """
         source = listify(source) if source != "*" else source
         dest = listify(dest) if dest != "*" else dest
