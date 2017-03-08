@@ -2,7 +2,7 @@ from transitions.core import Machine, Event, listify
 
 from collections import defaultdict
 from functools import partial
-from threading import RLock
+from threading import Lock
 import inspect
 
 import logging
@@ -35,7 +35,7 @@ except ImportError:
 class PickleableLock(object):
 
     def __init__(self):
-        self.lock = RLock()
+        self.lock = Lock()
 
     def __getstate__(self):
         return ''

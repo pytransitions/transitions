@@ -421,21 +421,21 @@ class Machine(object):
 
         if model is None and add_self:
             model = 'self'
-            warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
+            warnings.warn("Starting from transitions version 0.6.0, passing model=None to the "
                           "constructor will no longer add the machine instance as a model but add "
                           "NO model at all. Consequently, add_self will be removed. To add the "
                           "machine as a model (and also hide this warning) use the new default "
                           "value model='self' instead.", PendingDeprecationWarning)
 
         if add_self is not True:
-            warnings.warn("Starting from transitions version 0.5.0, passing model=None to the "
+            warnings.warn("Starting from transitions version 0.6.0, passing model=None to the "
                           "constructor will no longer add the machine instance as a model but add "
                           "NO model at all. Consequently, add_self will be removed.",
                           PendingDeprecationWarning)
 
         if model and initial is None:
             initial = 'initial'
-            warnings.warn("Starting from transitions version 0.5.0, passing initial=None to the constructor "
+            warnings.warn("Starting from transitions version 0.6.0, passing initial=None to the constructor "
                           "will no longer create and set the 'initial' state. If no initial"
                           "state is provided but model is not None, an error will be raised.",
                           PendingDeprecationWarning)

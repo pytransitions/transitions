@@ -10,7 +10,7 @@ from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, prep_ordered_arg
 from unittest import TestCase, skipIf
 import warnings
-warnings.filterwarnings('error', category=PendingDeprecationWarning, message=r".*0\.5\.0.*")
+warnings.filterwarnings('error', category=PendingDeprecationWarning, message=r".*0\.6\.0.*")
 
 try:
     from unittest.mock import MagicMock
@@ -774,7 +774,7 @@ class TestTransitions(TestCase):
 
     def test_prep_ordered_arg(self):
         self.assertTrue(len(prep_ordered_arg(3, None)) == 3)
-        self.assertTrue(all(a == None for a in prep_ordered_arg(3, None)))
+        self.assertTrue(all(a is None for a in prep_ordered_arg(3, None)))
         with self.assertRaises(ValueError):
             prep_ordered_arg(3, [None, None])
 
@@ -782,6 +782,7 @@ class TestTransitions(TestCase):
         class Model:
             def __init__(self):
                 self.flag = False
+
             def make_true(self):
                 self.flag = True
 
@@ -800,6 +801,7 @@ class TestTransitions(TestCase):
         class Model:
             def __init__(self):
                 self.blocker = False
+
             def check_blocker(self):
                 return self.blocker
 
