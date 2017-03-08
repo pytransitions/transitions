@@ -53,17 +53,6 @@ class PickleableLock(object):
         self.lock.__exit__(exc_type, exc_val, exc_tb)
 
 
-class LockedMethod:
-
-    def __init__(self, context, func):
-        self.context = context
-        self.func = func
-
-    def __call__(self, *args, **kwargs):
-        with nested(*self.context):
-            return self.func(*args, **kwargs)
-
-
 class LockedEvent(Event):
 
     def trigger(self, model, *args, **kwargs):

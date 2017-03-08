@@ -5,7 +5,7 @@ from ..core import Transition
 from .nesting import HierarchicalMachine
 try:
     import pygraphviz as pgv
-except ImportError:
+except ImportError:  # pragma: no cover
     pgv = None
 
 import logging
@@ -124,7 +124,7 @@ class Graph(Diagram):
         Args:
             title (string): Optional title for the graph.
         """
-        if not pgv:
+        if not pgv:  # pragma: no cover
             raise Exception('AGraph diagram requires pygraphviz')
 
         if title is False:
@@ -397,8 +397,6 @@ class TransitionGraphSupport(Transition):
                 dest = dest.name + '_anchor'
             else:
                 dest = dest.name
-            if event_data.event is None:
-                print("WHAAAT")
             machine.set_edge_state(model.graph, source, dest,
                                    state='previous', label=event_data.event.name)
 
