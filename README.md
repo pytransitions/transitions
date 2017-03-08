@@ -447,13 +447,13 @@ To facilitate this behavior, Transitions provides an `add_ordered_transitions()`
 ```python
 states = ['A', 'B', 'C']
  # See the "alternative initialization" section for an explanation of the 1st argument to init
-machine = Machine(None, states, initial='A')
+machine = Machine(states, initial='A')
 machine.add_ordered_transitions()
 machine.next_state()
 print(machine.state)
 >>> 'B'
 # We can also define a different order of transitions
-machine = Machine(None, states, initial='A')
+machine = Machine(states, initial='A')
 machine.add_ordered_transitions(['A', 'C', 'B'])
 machine.next_state()
 print(machine.state)
@@ -603,22 +603,6 @@ lump.melt()
 
 Note that `prepare` will not be called unless the current state is a valid source for the named transition.
 
-### <a name="execution-order"> Execution order
-In summary, callbacks on transitions are executed in the following order:
-
-|      Callback             | Current State |               Comments                        |
-|---------------------------|:-------------:|-----------------------------------------------|
-| `'transition.prepare'`    | `source`      | executed as soon as the transition starts     |
-| `'transition.conditions'` | `source`      | conditions *may* fail and halt the transition |
-| `'transition.unless'`     | `source`      | conditions *may* fail and halt the transition |
-| `'transition.before'`     | `source`      |                                               |
-| `'machine.before'`        | `source`      | default callbacks declared on model           |
-| `'state.exit'`            | `source`      | callbacks declared on the source state        |
-| `<STATE CHANGE>`          |               |                                               |
-| `'state.enter'`           | `destination` | callbacks declared on the destination state   |
-| `'transition.after'`      | `destination` |                                               |
-| `'machine.after'`         | `destination` | default callbacks declared on model           |
-
 Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
 `before_state_change` and `after_state_change` respectively:
 
@@ -635,6 +619,55 @@ lump.to_gas()
 >>> "HISSSSSSSSSSSSSSSS"
 >>> "where'd all the liquid go?"
 ```
+
+There are also two keywords for callbacks which should be executed *independently* a) of how many transitions are possible,
+b) if any transition succeeds and c) even if an error is raised during the execution of some other callback.
+Callbacks passed to `Machine` with `prepare_event` will be executed *once* before processing possible transitions 
+(and their individual `prepare` callbacks) takes place.
+Callbacks of `finalize_event` will be executed regardless of the success of the processed transitions.
+Note that if an error occurred it will be attached to `event_data` as `error` and can be retrieved with `send_event=True`.
+
+```python
+from transitions import Machine
+
+class Matter(object):
+    def raise_error(self, event): raise ValueError("Oh no")
+    def prepare(self, event): print("I am ready!")
+    def finalize(self, event): print("Result: ", type(event.error), event.error)
+
+states=['solid', 'liquid', 'gas', 'plasma']
+
+lump = Matter()
+m = Machine(lump, states, prepare_event='prepare', before_state_change='raise_error',
+            finalize_event='finalize', send_event=True)
+try:
+    lump.to_gas()
+except ValueError:
+    pass
+print(lump.state)
+
+>>> I am ready!
+>>> Result:  <class 'ValueError'> Oh no
+>>> initial
+```
+
+### <a name="execution-order"> Execution order
+In summary, callbacks on transitions are executed in the following order:
+
+|      Callback              | Current State |               Comments                                      |
+|----------------------------|:-------------:|-------------------------------------------------------------|
+| `'machine.prepare_event'`  | `source`      | executed *once* before individual transitions are processed |
+| `'transition.prepare'`     | `source`      | executed as soon as the transition starts                   |
+| `'transition.conditions'`  | `source`      | conditions *may* fail and halt the transition               |
+| `'transition.unless'`      | `source`      | conditions *may* fail and halt the transition               |
+| `'machine.before'`         | `source`      | default callbacks declared on model                         |
+| `'transition.before'`      | `source`      |                                                             |
+| `'state.exit'`             | `source`      | callbacks declared on the source state                      |
+| `<STATE CHANGE>`           |               |                                                             |
+| `'state.enter'`            | `destination` | callbacks declared on the destination state                 |
+| `'transition.after'`       | `destination` |                                                             |
+| `'machine.after'`          | `destination` | default callbacks declared on model                         |
+| `'machine.finalize_event'` | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
 ### <a name="passing-data"></a>Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways.
@@ -739,7 +772,10 @@ lump.state
 
 Here you get to consolidate all state machine functionality into your existing model, which often feels more natural way than sticking all of the functionality we want in a separate standalone `Machine` instance.
 
-You can also create a standalone machine, and register models dynamically via `machine.add_model`. Remember to call `machine.remove_model` if machine is long-lasting while your models are temporary and should be garbage collected:
+A machine can handle multiple models which can be passed as a list like `Machine(model=[model1, model2, ...])`.
+In cases where you want to add models *as well as* the machine instance itself, you can pass the string placeholder `'self'` during initialization like `Machine(model=['self', model1, ...])`.
+You can also create a standalone machine, and register models dynamically via `machine.add_model`.
+Remember to call `machine.remove_model` if machine is long-lasting and your models are temporary and should be garbage collected:
 
 ```python
 class Matter():
@@ -984,12 +1020,11 @@ counter = Machine(states=count_states, transitions=count_trans, initial='1')
 
 counter.increase() # love my counter
 states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
-# states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
 
 transitions = [
     ['collect', '*', 'collecting'],
     ['wait', '*', 'waiting'],
-    ['count', 'wait', 'counting_1']
+    ['count', 'collecting', 'counting_1']
 ]
 
 collector = Machine(states=states, transitions=transitions, initial='waiting')

@@ -11,6 +11,7 @@ from os.path import getsize
 
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState as State
+from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
 from .utils import Stuff
 
@@ -19,6 +20,11 @@ try:
 except ImportError:
     from mock import MagicMock
 
+try:
+    # Just to skip tests if *pygraphviz8 not installed
+    import pygraphviz as pgv  # @UnresolvedImport
+except ImportError:  # pragma: no cover
+    pgv = None
 
 state_separator = State.separator
 
@@ -298,22 +304,22 @@ class TestTransitions(TestsCore):
     def test_callbacks_duplicate(self):
 
         transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'C', 'before': 'before_state_change',
-             'after': 'after_state_change'},
+            {'trigger': 'walk', 'source': 'A', 'dest': 'C', 'before': 'before_change',
+             'after': 'after_change'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'}
         ]
 
         m = self.stuff.machine_cls(states=['A', 'B', 'C'], transitions=transitions,
-                                   before_state_change='before_state_change',
-                                   after_state_change='after_state_change', send_event=True,
+                                   before_state_change='before_change',
+                                   after_state_change='after_change', send_event=True,
                                    initial='A', auto_transitions=True)
 
-        m.before_state_change = MagicMock()
-        m.after_state_change = MagicMock()
+        m.before_change = MagicMock()
+        m.after_change = MagicMock()
 
         m.walk()
-        self.assertEqual(m.before_state_change.call_count, 2)
-        self.assertEqual(m.after_state_change.call_count, 2)
+        self.assertEqual(m.before_change.call_count, 2)
+        self.assertEqual(m.after_change.call_count, 2)
 
     def test_with_custom_separator(self):
         State.separator = '.'
@@ -453,6 +459,7 @@ class TestTransitions(TestsCore):
         self.assertTrue('relax' in trans)
 
 
+@skipIf(pgv is None, 'AGraph diagram requires pygraphviz')
 class TestWithGraphTransitions(TestTransitions):
 
     def setUp(self):

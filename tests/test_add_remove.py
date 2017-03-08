@@ -86,7 +86,7 @@ class TestTransitionsAddRemove(TestCase):
         s2 = Dummy()
         s3 = Dummy()
 
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             machine.add_model(s1)
         machine.add_model(s1, initial='A')
         machine.add_model(s2, initial='B')

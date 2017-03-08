@@ -5,13 +5,12 @@ except ImportError:
 
 from .utils import InheritedStuff
 from .utils import Stuff
-from transitions import Machine
-from transitions import MachineError
-from transitions import State
-from transitions.core import listify
-from unittest import TestCase
+import sys
+from transitions import Machine, MachineError, State, EventData
+from transitions.core import listify, prep_ordered_arg
+from unittest import TestCase, skipIf
 import warnings
-warnings.filterwarnings('error', category=PendingDeprecationWarning, message=".*0\.5\.0.*")
+warnings.filterwarnings('error', category=PendingDeprecationWarning, message=r".*0\.5\.0.*")
 
 try:
     from unittest.mock import MagicMock
@@ -242,7 +241,7 @@ class TestTransitions(TestCase):
         self.assertTrue(n.is_A())
         n.advance()
         self.assertTrue(n.is_B())
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m = NewMachine(state=['A', 'B'])
 
     def test_send_event_data_callbacks(self):
@@ -332,12 +331,12 @@ class TestTransitions(TestCase):
 
     def test_ordered_transition_error(self):
         m = Machine(states=['A'], initial='A')
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m.add_ordered_transitions()
         m.add_state('B')
         m.add_ordered_transitions()
         m.add_state('C')
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             m.add_ordered_transitions(['C'])
 
     def test_ignore_invalid_triggers(self):
@@ -378,8 +377,14 @@ class TestTransitions(TestCase):
         m.after_state_change = MagicMock()
 
         m.to_B()
-        self.assertTrue(m.before_state_change.called)
-        self.assertTrue(m.after_state_change.called)
+
+        self.assertTrue(m.before_state_change[0].called)
+        self.assertTrue(m.after_state_change[0].called)
+
+        # after_state_change should have been called with EventData
+        event_data = m.after_state_change[0].call_args[0][0]
+        self.assertIsInstance(event_data, EventData)
+        self.assertTrue(event_data.result)
 
     def test_function_callbacks(self):
         before_state_change = MagicMock()
@@ -391,8 +396,8 @@ class TestTransitions(TestCase):
                     initial='A', auto_transitions=True)
 
         m.to_B()
-        self.assertTrue(m.before_state_change.called)
-        self.assertTrue(m.after_state_change.called)
+        self.assertTrue(m.before_state_change[0].called)
+        self.assertTrue(m.after_state_change[0].called)
 
     def test_pickle(self):
         import sys
@@ -444,13 +449,14 @@ class TestTransitions(TestCase):
 
     def test_queued_errors(self):
         def before_change(machine):
-            machine.to_A()
+            if machine.has_queue:
+                machine.to_A(machine)
             machine._queued = False
 
         def after_change(machine):
-            machine.to_C()
+            machine.to_C(machine)
 
-        def failed_transition():
+        def failed_transition(machine):
             raise ValueError('Something was wrong')
 
         states = ['A', 'B', 'C']
@@ -461,7 +467,7 @@ class TestTransitions(TestCase):
             m.to_B(machine=m)
 
         with self.assertRaises(ValueError):
-            m.do()
+            m.do(machine=m)
 
     def test___getattr___and_identify_callback(self):
         m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
@@ -471,10 +477,10 @@ class TestTransitions(TestCase):
         callback = m.__getattr__('before_move')
         self.assertTrue(callable(callback))
 
-        with self.assertRaises(MachineError):
+        with self.assertRaises(AttributeError):
             m.__getattr__('before_no_such_transition')
 
-        with self.assertRaises(MachineError):
+        with self.assertRaises(AttributeError):
             m.__getattr__('before_no_such_transition')
 
         with self.assertRaises(AttributeError):
@@ -649,6 +655,33 @@ class TestTransitions(TestCase):
         # self stuff machine should have to-transitions to every state
         self.assertEqual(len(self.stuff.machine.get_triggers('B')), len(self.stuff.machine.states))
 
+    @skipIf(sys.version_info < (3, ),
+            "String-checking disabled on PY-2 because is different")
+    def test_repr(self):
+        def a_condition(event_data):
+            self.assertRegex(
+                str(event_data.transition.conditions),
+                r"\[<Condition\(<function TestTransitions.test_repr.<locals>"
+                r".a_condition at [^>]+>\)@\d+>\]")
+
+            return True
+
+        def check_repr(event_data):
+            self.assertRegex(
+                str(event_data),
+                r"<EventData\('<State\('A'\)@\d+>', "
+                r"<Transition\('A', 'B'\)@\d+>\)@\d+>")
+
+            m.checked = True
+
+        m = Machine(states=['A', 'B'],
+                    before_state_change=check_repr, send_event=True,
+                    initial='A')
+        m.add_transition('do_strcheck', 'A', 'B', conditions=a_condition)
+
+        self.assertTrue(m.do_strcheck())
+        self.assertIn('checked', vars(m))
+
     def test_warning(self):
         import sys
         # does not work with python 3.3. However, the warning is shown when Machine is initialized manually.
@@ -662,6 +695,122 @@ class TestTransitions(TestCase):
 
         with self.assertRaises(PendingDeprecationWarning):
             m = Machine(None, add_self=False)
+
+    def test_machine_prepare(self):
+
+        global_mock = MagicMock()
+        local_mock = MagicMock()
+
+        def global_callback():
+            global_mock()
+
+        def local_callback():
+            local_mock()
+
+        def always_fails():
+            return False
+
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'prepare': local_callback},
+
+        ]
+        m = Machine(states=['A', 'B'], transitions=transitions,
+                    prepare_event=global_callback, initial='A')
+
+        m.go()
+        self.assertEqual(global_mock.call_count, 1)
+        self.assertEqual(local_mock.call_count, len(transitions))
+
+    def test_machine_finalize(self):
+
+        finalize_mock = MagicMock()
+
+        def always_fails(event_data):
+            return False
+
+        def always_raises(event_data):
+            raise Exception()
+
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'planA', 'source': 'B', 'dest': 'C', 'conditions': always_fails},
+            {'trigger': 'planB', 'source': 'B', 'dest': 'C', 'conditions': always_raises}
+        ]
+        m = Machine(states=['A', 'B'], transitions=transitions,
+                    finalize_event=finalize_mock, initial='A', send_event=True)
+
+        m.go()
+        self.assertEqual(finalize_mock.call_count, 1)
+        m.planA()
+
+        event_data = finalize_mock.call_args[0][0]
+        self.assertIsInstance(event_data, EventData)
+        self.assertEqual(finalize_mock.call_count, 2)
+        self.assertFalse(event_data.result)
+        with self.assertRaises(Exception):
+            m.planB()
+        self.assertEqual(finalize_mock.call_count, 3)
+
+    def test_machine_finalize_exception(self):
+
+        exception = ZeroDivisionError()
+
+        def always_raises(event):
+            raise exception
+
+        def finalize_callback(event):
+            self.assertEqual(event.error, exception)
+
+        m = Machine(states=['A', 'B'], send_event=True, initial='A',
+                    before_state_change=always_raises,
+                    finalize_event=finalize_callback)
+
+        with self.assertRaises(ZeroDivisionError):
+            m.to_B()
+
+    def test_prep_ordered_arg(self):
+        self.assertTrue(len(prep_ordered_arg(3, None)) == 3)
+        self.assertTrue(all(a == None for a in prep_ordered_arg(3, None)))
+        with self.assertRaises(ValueError):
+            prep_ordered_arg(3, [None, None])
+
+    def test_ordered_transition_callback(self):
+        class Model:
+            def __init__(self):
+                self.flag = False
+            def make_true(self):
+                self.flag = True
+
+        model = Model()
+        states = ['beginning', 'middle', 'end']
+        transits = [None, None, 'make_true']
+        m = Machine(model, states, initial='beginning')
+        m.add_ordered_transitions(before=transits)
+        model.next_state()
+        self.assertFalse(model.flag)
+        model.next_state()
+        model.next_state()
+        self.assertTrue(model.flag)
+
+    def test_ordered_transition_condition(self):
+        class Model:
+            def __init__(self):
+                self.blocker = False
+            def check_blocker(self):
+                return self.blocker
+
+        model = Model()
+        states = ['beginning', 'middle', 'end']
+        m = Machine(model, states, initial='beginning')
+        m.add_ordered_transitions(conditions=[None, None, 'check_blocker'])
+        model.to_end()
+        self.assertFalse(model.next_state())
+        model.blocker = True
+        self.assertTrue(model.next_state())
 
     def test_remove_transition(self):
         self.stuff.machine.add_transition('go', ['A', 'B', 'C'], 'D')

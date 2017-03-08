@@ -1,9 +1,21 @@
 # Changelog
 
+## 0.5.0 (March, 2017)
+Release 0.5.0 contains several new features and bugfixes:
+- Introduced deprecation warnings for upcoming changes concerning `Machine` keywords `model` and `add_self`
+- `LockedMachine` now supports custom context managers for each model (thanks to @paulbovbel)
+- New `prepare_event` and `finalize_event` keywords to handle transitions globally (thanks to @ankostis)
+- `Machine.before/after_state_change` can be altered dynamically (thanks to @peendebak)
+- Test suite now skips contextual tests (e.g. pygraphviz) if dependencies cannot be found (thanks to @ankostis)
+- Improved string representation of several classes (thanks to @ankostis)
+- `MachineError` is now limited to internal error and has been replaced by `AttributeError` and `ValueError` where applicable (thanks to @ankostis)
+- Introduced `Machine._create_state` for easier subclassing of states
+- Fixed bug related to pickling `RLock` in nesting
+- Fixed order of callback execution (thanks to @ankostis)
+- Fixed representation of condition names in graphs (thanks to @cemoody)
+
 ## 0.4.3 (December, 2016)
-
 Release 0.4.3 is a minor release and contains bug fixes and several new features:
-
 - Support dynamic model addition via `Machine.add_model` (thanks to @paulbovbel)
 - Allow user to explicitly pass a lock instance or context manager to LockedMachine (thanks to @paulbovbel)
 - Fixed issue related to parsing of HSMs (thanks to @steval and @user2154065 from SO)

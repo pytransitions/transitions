@@ -32,6 +32,38 @@ except ImportError:
             yield contexts
 
 
+class PickleableLock(object):
+
+    def __init__(self):
+        self.lock = RLock()
+
+    def __getstate__(self):
+        return ''
+
+    def __setstate__(self, value):
+        return self.__init__()
+
+    def __getattr__(self, item):
+        return self.lock.__getattr__(item)
+
+    def __enter__(self):
+        self.lock.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.lock.__exit__(exc_type, exc_val, exc_tb)
+
+
+class LockedMethod:
+
+    def __init__(self, context, func):
+        self.context = context
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        with nested(*self.context):
+            return self.func(*args, **kwargs)
+
+
 class LockedEvent(Event):
 
     def trigger(self, model, *args, **kwargs):
@@ -50,7 +82,7 @@ class LockedMachine(Machine):
         try:
             self.machine_context = listify(kwargs.pop('machine_context'))
         except KeyError:
-            self.machine_context = [RLock()]
+            self.machine_context = [PickleableLock()]
 
         self.machine_context.append(self)
         self.model_context_map = defaultdict(list)
@@ -80,7 +112,7 @@ class LockedMachine(Machine):
         for model in models:
             del self.model_context_map[model]
 
-        return super(LockedMachine, self).add_model(models, *args, **kwargs)
+        return super(LockedMachine, self).remove_model(models, *args, **kwargs)
 
     def __getattribute__(self, item):
         f = super(LockedMachine, self).__getattribute__
