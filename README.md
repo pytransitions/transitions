@@ -2,9 +2,15 @@
 
 A lightweight, object-oriented state machine implementation in Python. Compatible with Python 2.7+ and 3.0+.
 
-## Status
-* [![Build Status](https://travis-ci.org/tyarkoni/transitions.svg?branch=master)](https://travis-ci.org/tyarkoni/transitions)
-* [![Coverage Status](https://coveralls.io/repos/tyarkoni/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/tyarkoni/transitions?branch=master)
+|               |                                           |
+|---------------|-------------------------------------------|
+|  **status**   | [![Build Status](https://travis-ci.org/tyarkoni/transitions.svg?branch=master)](https://travis-ci.org/tyarkoni/transitions) [![Coverage Status](https://coveralls.io/repos/tyarkoni/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/tyarkoni/transitions?branch=master) |
+| **version**   |   0.5.0                                   |
+| **updated**   |   2017-03-09 10:41:07                     |
+| **home**      |   https://github.com/tyarkoni/transitions |
+| **pypi**      |   https://pypi.org/project/transitions/   |
+| **license**   |   MIT                                     |
+
 
 ## Installation
 
