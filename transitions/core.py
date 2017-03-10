@@ -686,9 +686,13 @@ class Machine(object):
             source = [s.name if self._has_state(s) else s for s in listify(source)]
 
         for s in source:
-            if self._has_state(dest):
-                dest = dest.name
-            t = self._create_transition(s, dest, conditions, unless, before,
+            if dest == '=':
+                real_dest = s
+            else:
+                real_dest = dest
+            if self._has_state(real_dest):
+                real_dest = real_dest.name
+            t = self._create_transition(s, real_dest, conditions, unless, before,
                                         after, prepare, **kwargs)
             self.events[trigger].add_transition(t)
 
