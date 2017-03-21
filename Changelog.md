@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 ()
+
+Release 0.5.1 is a minor release and contains new features:
+- Added reflexive transitions (thanks to @janLo)
+- Wildcards for reflexive (`wildcard_same`) and all (`wildcard_all`) destinations are `Machine` class variables now which can be altered if necessary.
+
 ## 0.5.0 (March, 2017)
 Release 0.5.0 is a major release:
 - CHANGED API: `MachineError` is now limited to internal error and has been replaced by `AttributeError` and `ValueError` where applicable (thanks to @ankostis)

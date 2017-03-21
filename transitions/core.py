@@ -340,6 +340,8 @@ class Machine(object):
     # Callback naming parameters
     callbacks = ['before', 'after', 'prepare', 'on_enter', 'on_exit']
     separator = '_'
+    wildcard_all = '*'
+    wildcard_same = '='
 
     def __init__(self, model='self', states=None, initial='initial', transitions=None,
                  send_event=False, auto_transitions=True,
@@ -627,7 +629,7 @@ class Machine(object):
         # Add automatic transitions after all states have been created
         if self.auto_transitions:
             for s in self.states.keys():
-                self.add_transition('to_%s' % s, '*', s)
+                self.add_transition('to_%s' % s, self.wildcard_all, s)
 
     def _add_model_to_state(self, state, model):
         setattr(model, 'is_%s' % state.name,
@@ -685,18 +687,15 @@ class Machine(object):
                 self._add_trigger_to_model(trigger, model)
 
         if isinstance(source, string_types):
-            source = list(self.states.keys()) if source == '*' else [source]
+            source = list(self.states.keys()) if source == self.wildcard_all else [source]
         else:
             source = [s.name if self._has_state(s) else s for s in listify(source)]
 
         for s in source:
-            if dest == '=':
-                real_dest = s
-            else:
-                real_dest = dest
-            if self._has_state(real_dest):
-                real_dest = real_dest.name
-            t = self._create_transition(s, real_dest, conditions, unless, before,
+            d = s if dest == self.wildcard_same else dest
+            if self._has_state(d):
+                d = d.name
+            t = self._create_transition(s, d, conditions, unless, before,
                                         after, prepare, **kwargs)
             self.events[trigger].add_transition(t)
 
