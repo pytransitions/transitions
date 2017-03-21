@@ -462,13 +462,13 @@ To facilitate this behavior, Transitions provides an `add_ordered_transitions()`
 ```python
 states = ['A', 'B', 'C']
  # See the "alternative initialization" section for an explanation of the 1st argument to init
-machine = Machine(states, initial='A')
+machine = Machine(states=states, initial='A')
 machine.add_ordered_transitions()
 machine.next_state()
 print(machine.state)
 >>> 'B'
 # We can also define a different order of transitions
-machine = Machine(states, initial='A')
+machine = Machine(states=states, initial='A')
 machine.add_ordered_transitions(['A', 'C', 'B'])
 machine.next_state()
 print(machine.state)
