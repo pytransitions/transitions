@@ -659,9 +659,13 @@ class Machine(object):
                 model (e.g., passing trigger='advance' will create a new
                 advance() method in the model that triggers the transition.)
             source(string): The name of the source state--i.e., the state we
-                are transitioning away from.
+                are transitioning away from. This can be a single state, a
+                list of states or an asterisk for all states.
             dest (string): The name of the destination State--i.e., the state
-                we are transitioning into.
+                we are transitioning into. This can be a single state or an
+                equal sign to specify that the transition should be reflexive
+                so that the destination will be the same as the source for
+                every given source.
             conditions (string or list): Condition(s) that must pass in order
                 for the transition to take place. Either a list providing the
                 name of a callable, or a list of callables. For the transition
@@ -686,9 +690,13 @@ class Machine(object):
             source = [s.name if self._has_state(s) else s for s in listify(source)]
 
         for s in source:
-            if self._has_state(dest):
-                dest = dest.name
-            t = self._create_transition(s, dest, conditions, unless, before,
+            if dest == '=':
+                real_dest = s
+            else:
+                real_dest = dest
+            if self._has_state(real_dest):
+                real_dest = real_dest.name
+            t = self._create_transition(s, real_dest, conditions, unless, before,
                                         after, prepare, **kwargs)
             self.events[trigger].add_transition(t)
 

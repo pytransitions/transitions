@@ -28,6 +28,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
     - [Transitions](#transitions)
         - [Automatic transitions](#automatic-transitions-for-all-states)
         - [Transitioning from multiple states](#transitioning-from-multiple-states)
+        - [Reflexive transitions from multiple states](#reflexive-from-multiple-states)
         - [Ordered transitions](#ordered-transitions)
         - [Queued transitions](#queued-transitions)
         - [Conditional transitions](#conditional-transitions)
@@ -441,6 +442,17 @@ machine.add_transition('to_liquid', '*', 'liquid')
 ```
 
 Note that wildcard transitions will only apply to states that exist at the time of the add_transition() call. Calling a wildcard-based transition when the model is in a state added after the transition was defined will elicit an invalid transition message, and will not transition to the target state.
+
+#### <a name="reflexive-from-multiple-states"></a>Transitioning from multiple states
+A reflexive trigger (trigger that has the same state as source and destination) can easily be added specifying `=` as destination.
+This is handy if the same reflexive trigger should be added to multiple states.
+For example:
+
+```python
+machine.add_transition('touch', ['liquid', 'gas', 'plasma'], '=', after='change_shape')
+```
+
+This will add reflexive transitions for all three states with `touch()` as trigger and with `change_shape` executed after each trigger.
 
 #### <a name="ordered-transitions"></a> Ordered transitions
 A common desire is for state transitions to follow a strict linear sequence. For instance, given states `['A', 'B', 'C']`, you might want valid transitions for `A` → `B`, `B` → `C`, and `C` → `A` (but no other pairs).
