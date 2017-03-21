@@ -23,7 +23,7 @@ def edge_label_from_transition_label(label):
     return label.split(' | ')[0].split(' [')[0]  # if no condition, label is returned; returns first event only
 
 
-@skipIf(pgv is None, 'AGraph diagram requires pygraphviz')
+@skipIf(pgv is None, 'Graph diagram requires pygraphviz')
 class TestDiagrams(TestCase):
 
     def setUp(self):
@@ -151,6 +151,15 @@ class TestDiagrams(TestCase):
         self.assertEqual(len(g2.nodes()), 4)
 
 
+@skipIf(pgv is None, 'Graph diagram requires pygraphviz')
+class TestDiagramsLocked(TestDiagrams):
+
+    def setUp(self):
+        super(TestDiagramsLocked, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(graph=True, locked=True)
+
+
+@skipIf(pgv is None, 'NestedGraph diagram requires pygraphviz')
 class TestDiagramsNested(TestDiagrams):
 
     def setUp(self):
@@ -214,3 +223,11 @@ class TestDiagramsNested(TestDiagrams):
         g2 = model.get_graph(show_roi=True)
         self.assertEqual(len(g2.edges()), 2)
         self.assertEqual(len(g2.nodes()), 3)
+
+
+@skipIf(pgv is None, 'NestedGraph diagram requires pygraphviz')
+class TestDiagramsLockedNested(TestDiagramsNested):
+
+    def setUp(self):
+        super(TestDiagramsLockedNested, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(graph=True, nested=True, locked=True)

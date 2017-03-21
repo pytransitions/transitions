@@ -316,6 +316,13 @@ class TestTransitions(TestCase):
         m.next_state()
         self.assertEqual(m.state, 'beginning')
 
+        # Do not loop transitions
+        m = Machine('self', states)
+        m.add_ordered_transitions(loop=False)
+        m.to_end()
+        with self.assertRaises(MachineError):
+            m.next_state()
+
         # Test user-determined sequence and trigger name
         m = Machine('self', states, initial='beginning')
         m.add_ordered_transitions(['end', 'beginning'], trigger='advance')

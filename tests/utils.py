@@ -86,7 +86,3 @@ class InheritedStuff(Machine):
     @staticmethod
     def this_passes():
         return True
-
-    @staticmethod
-    def this_fails():
-        return False

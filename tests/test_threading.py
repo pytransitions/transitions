@@ -60,6 +60,15 @@ class TestLockedTransitions(TestCore):
         time.sleep(1)
         self.assertEqual(self.stuff.state, "C")
 
+    def test_parallel_deep(self):
+        self.stuff.machine.add_transition('deep', source='*', dest='C', after='to_D')
+        thread = Thread(target=self.stuff.deep)
+        thread.start()
+        time.sleep(0.01)
+        self.stuff.to_C()
+        time.sleep(1)
+        self.assertEqual(self.stuff.state, "C")
+
     def test_conditional_access(self):
         self.stuff.heavy_checking = heavy_checking  # checking takes 1s and returns False
         self.stuff.machine.add_transition('advance', 'A', 'B', conditions='heavy_checking')
