@@ -37,6 +37,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
     - [Passing data](#passing-data)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
+    - [(Re-)Storing machine instances](#restoring)
     - [Extensions](#extensions)
         - [Diagrams](#diagrams)
         - [Hierarchical State Machine](#hsm)
@@ -333,7 +334,7 @@ machine.get_state(lump.state).name
 ### <a name="transitions"></a>Transitions
 Some of the above examples already illustrate the use of transitions in passing, but here we'll explore them in more detail.
 
-As with states, each transition is represented internally as its own object--an instance of class `Transition`. The quickest way to initialize a set of transitions is to pass a dictionary, or list of dictionaries, to the `Machine` initializer. We already saw this above:
+As with states, each transition is represented internally as its own object – an instance of class `Transition`. The quickest way to initialize a set of transitions is to pass a dictionary, or list of dictionaries, to the `Machine` initializer. We already saw this above:
 
 ```python
 transitions = [
@@ -826,10 +827,9 @@ machine.add_model(Matter(), initial='liquid')
 
 ### Logging
 
-Transitions includes very rudimentary logging capabilities. A number of events--namely, state changes, transition triggers, and conditional checks--are logged as INFO-level events using the standard Python `logging` module. This means you can easily configure logging to standard output in a script:
+Transitions includes very rudimentary logging capabilities. A number of events – namely, state changes, transition triggers, and conditional checks – are logged as INFO-level events using the standard Python `logging` module. This means you can easily configure logging to standard output in a script:
 
 ```python
-
 # Set up logging
 import logging
 from transitions import logger
@@ -838,6 +838,31 @@ logger.setLevel(logging.INFO)
 # Business as usual
 machine = Machine(states=states, transitions=transitions, initial='solid')
 ...
+```
+
+### <a name="restoring"></a>(Re-)Storing machine instances
+
+Machines are picklable and can be stored and loaded with `pickle`. For Python 3.3 and earlier `dill` is required.
+
+```python
+import dill as pickle # only required for Python 3.3 and earlier
+
+m = Machine(states=['A', 'B', 'C'], initial='A')
+m.to_B()
+m.state  
+>>> B
+
+# store the machine
+dump = pickle.dumps(m)
+
+# load the Machine instance again
+m2 = pickle.loads(dump)
+
+m2.state
+>>> B
+
+m2.states.keys()
+>>> ['A', 'B', 'C']
 ```
 
 ### <a name="extensions"></a> Extensions
