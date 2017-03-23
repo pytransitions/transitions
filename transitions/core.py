@@ -110,7 +110,7 @@ class Condition(object):
         Notes:
             This class should not be initialized or called from outside a
             Transition instance, and exists at module level (rather than
-            nesting under the ransition class) only because of a bug in
+            nesting under the transition class) only because of a bug in
             dill that prevents serialization under Python 2.7.
         """
         self.func = func
