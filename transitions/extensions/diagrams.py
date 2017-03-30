@@ -180,8 +180,7 @@ class NestedGraph(Graph):
 
         for event in events.values():
             label = str(event.name)
-            if not self.machine.show_auto_transitions and label.startswith('to_') \
-                    and len(event.transitions) == len(self.machine.states):
+            if not self.machine.show_auto_transitions and label.startswith('to_'):
                 continue
 
             for transitions in event.transitions.items():
