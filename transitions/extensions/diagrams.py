@@ -244,16 +244,20 @@ class GraphMachine(Machine):
         self.show_conditions = kwargs.pop('show_conditions', False)
         self.show_auto_transitions = kwargs.pop('show_auto_transitions', False)
 
-        # temporally disable overwrites since graphing cannot
-        # be initialized before base machine
-        add_states = self.add_states
-        add_transition = self.add_transition
-        self.add_states = super(GraphMachine, self).add_states
-        self.add_transition = super(GraphMachine, self).add_transition
+        # Update March 2017: This temporal overwrite does not work
+        # well with inheritance. Since the tests pass I will disable it
+        # for now. If issues arise during initialization we might have to review this again.
+        # # temporally disable overwrites since graphing cannot
+        # # be initialized before base machine
+        # add_states = self.add_states
+        # add_transition = self.add_transition
+        # self.add_states = super(GraphMachine, self).add_states
+        # self.add_transition = super(GraphMachine, self).add_transition
 
         super(GraphMachine, self).__init__(*args, **kwargs)
-        self.add_states = add_states
-        self.add_transition = add_transition
+        # # Second part of overwrite
+        # self.add_states = add_states
+        # self.add_transition = add_transition
 
         # Create graph at beginning
         for model in self.models:
