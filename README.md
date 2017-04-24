@@ -670,20 +670,20 @@ print(lump.state)
 ### <a name="execution-order"> Execution order
 In summary, callbacks on transitions are executed in the following order:
 
-|      Callback              | Current State |               Comments                                      |
-|----------------------------|:-------------:|-------------------------------------------------------------|
-| `'machine.prepare_event'`  | `source`      | executed *once* before individual transitions are processed |
-| `'transition.prepare'`     | `source`      | executed as soon as the transition starts                   |
-| `'transition.conditions'`  | `source`      | conditions *may* fail and halt the transition               |
-| `'transition.unless'`      | `source`      | conditions *may* fail and halt the transition               |
-| `'machine.before'`         | `source`      | default callbacks declared on model                         |
-| `'transition.before'`      | `source`      |                                                             |
-| `'state.exit'`             | `source`      | callbacks declared on the source state                      |
-| `<STATE CHANGE>`           |               |                                                             |
-| `'state.enter'`            | `destination` | callbacks declared on the destination state                 |
-| `'transition.after'`       | `destination` |                                                             |
-| `'machine.after'`          | `destination` | default callbacks declared on model                         |
-| `'machine.finalize_event'` | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
+|      Callback                  | Current State |               Comments                                      |
+|--------------------------------|:-------------:|-------------------------------------------------------------|
+| `'machine.prepare_event'`      | `source`      | executed *once* before individual transitions are processed |
+| `'transition.prepare'`         | `source`      | executed as soon as the transition starts                   |
+| `'transition.conditions'`      | `source`      | conditions *may* fail and halt the transition               |
+| `'transition.unless'`          | `source`      | conditions *may* fail and halt the transition               |
+| `'machine.before_state_change'`| `source`      | default callbacks declared on model                         |
+| `'transition.before'`          | `source`      |                                                             |
+| `'state.on_exit'`              | `source`      | callbacks declared on the source state                      |
+| `<STATE CHANGE>`               |               |                                                             |
+| `'state.on_enter'`             | `destination` | callbacks declared on the destination state                 |
+| `'transition.after'`           | `destination` |                                                             |
+| `'machine.after_state_change'` | `destination` | default callbacks declared on model                         |
+| `'machine.finalize_event'`     | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
 ### <a name="passing-data"></a>Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways.
