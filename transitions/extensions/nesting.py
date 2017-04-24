@@ -124,23 +124,37 @@ class NestedTransition(Transition):
 class NestedEvent(Event):
 
     def _trigger(self, model, *args, **kwargs):
-        tmp = self.machine.get_state(model.state)
-        while tmp.parent and tmp.name not in self.transitions:
-            tmp = tmp.parent
-        if tmp.name not in self.transitions:
+        state = self.machine.get_state(model.state)
+        while state.parent and state.name not in self.transitions:
+            state = state.parent
+        if state.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.id, self.name,
                                                                model.state)
             if self.machine.get_state(model.state).ignore_invalid_triggers:
                 logger.warning(msg)
             else:
                 raise MachineError(msg)
-        event = EventData(self.machine.get_state(model.state), self, self.machine,
-                          model, args=args, kwargs=kwargs)
-        for t in self.transitions[tmp.name]:
-            event.transition = t
-            if t.execute(event):
-                return True
-        return False
+        event_data = EventData(self.machine.get_state(model.state), self, self.machine,
+                               model, args=args, kwargs=kwargs)
+
+        for func in self.machine.prepare_event:
+            self.machine._callback(func, event_data)
+            logger.debug("Executed machine preparation callback '%s' before conditions." % func)
+
+        try:
+            for t in self.transitions[state.name]:
+                event_data.transition = t
+                if t.execute(event_data):
+                    event_data.result = True
+                    break
+        except Exception as e:
+            event_data.error = e
+            raise
+        finally:
+            for func in self.machine.finalize_event:
+                self.machine._callback(func, event_data)
+                logger.debug("Executed machine finalize callback '%s'." % func)
+        return event_data.result
 
 
 class HierarchicalMachine(Machine):

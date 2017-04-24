@@ -744,11 +744,11 @@ class TestTransitions(TestCase):
 
         transitions = [
             {'trigger': 'go', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'planA', 'source': 'B', 'dest': 'C', 'conditions': always_fails},
-            {'trigger': 'planB', 'source': 'B', 'dest': 'C', 'conditions': always_raises}
+            {'trigger': 'planA', 'source': 'B', 'dest': 'A', 'conditions': always_fails},
+            {'trigger': 'planB', 'source': 'B', 'dest': 'A', 'conditions': always_raises}
         ]
-        m = Machine(states=['A', 'B'], transitions=transitions,
-                    finalize_event=finalize_mock, initial='A', send_event=True)
+        m = self.stuff.machine_cls(states=['A', 'B'], transitions=transitions,
+                                   finalize_event=finalize_mock, initial='A', send_event=True)
 
         m.go()
         self.assertEqual(finalize_mock.call_count, 1)
@@ -772,9 +772,9 @@ class TestTransitions(TestCase):
         def finalize_callback(event):
             self.assertEqual(event.error, exception)
 
-        m = Machine(states=['A', 'B'], send_event=True, initial='A',
-                    before_state_change=always_raises,
-                    finalize_event=finalize_callback)
+        m = self.stuff.machine_cls(states=['A', 'B'], send_event=True, initial='A',
+                                   before_state_change=always_raises,
+                                   finalize_event=finalize_callback)
 
         with self.assertRaises(ZeroDivisionError):
             m.to_B()

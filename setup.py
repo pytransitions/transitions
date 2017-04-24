@@ -29,7 +29,7 @@ setup(
     package_data={'transitions': ['data/*'],
                   'transitions.tests': ['data/*']
                   },
-    data_files=[('', 'LICENSE')],
+    data_files=[('', ['LICENSE'])],
     install_requires=['six'],
     tests_require=tests_require,
     license='MIT',
