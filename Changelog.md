@@ -1,10 +1,12 @@
 # Changelog
 
-## 0.5.1 ()
+## 0.5.1 (April, 2017)
 
-Release 0.5.1 is a minor release and contains new features:
+Release 0.5.1 is a minor release and contains new features and bug fixes:
 - Added reflexive transitions (thanks to @janLo)
 - Wildcards for reflexive (`wildcard_same`) and all (`wildcard_all`) destinations are `Machine` class variables now which can be altered if necessary.
+- Add LICENSE to packaged distribution (thanks to @bachp)
+- Bug #211: `prepare` and `finalized` had not been called for HierarchicalMachines (thanks to @booware) 
 
 ## 0.5.0 (March, 2017)
 Release 0.5.0 is a major release:
