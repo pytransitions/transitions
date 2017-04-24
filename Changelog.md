@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2 ()
+
+Release 0.5.2 is a minor release and contains bug fixes:
+- Bug #213: prevent `LICENSE` to be installed to root of installation path
+
 ## 0.5.1 (April, 2017)
 
 Release 0.5.1 is a minor release and contains new features and bug fixes:
