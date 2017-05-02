@@ -116,6 +116,17 @@ class LockedMachine(Machine):
         except AttributeError:
             return super(LockedMachine, self).__getattr__(item)
 
+    # Determine if the returned method is a partial and make sure the returned partial has
+    # not been created by Machine.__getattr__.
+    # https://github.com/tyarkoni/transitions/issues/214
+    def _add_model_to_state(self, state, model):
+        super(LockedMachine, self)._add_model_to_state(state, model)
+        for prefix in ['enter', 'exit']:
+            callback = "on_{0}_".format(prefix) + state.name
+            func = getattr(model, callback, None)
+            if isinstance(func, partial) and func.func != state.add_callback:
+                state.add_callback(prefix, callback)
+
     def _locked_method(self, func, *args, **kwargs):
         if self._locked != get_ident():
             with nested(*self.machine_context):

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3 ()
+
+- Bug #214: `LockedMachine` as a model prevented correct addition of `on_enter/exit_<state>`
+
 ## 0.5.2 (April, 2017)
 
 Release 0.5.2 is a minor release and contains a bug fix:

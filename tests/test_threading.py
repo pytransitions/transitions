@@ -246,6 +246,20 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
         time.sleep(1)
         self.assertEqual(self.stuff.state, "C")
 
+    def test_callbacks(self):
+
+        class MachineModel(self.stuff.machine_cls):
+            def __init__(self):
+                self.mock = MagicMock()
+                super(MachineModel, self).__init__(self, states=['A', 'B', 'C'])
+
+            def on_enter_A(self):
+                self.mock()
+
+        model = MachineModel()
+        model.to_A()
+        self.assertTrue(model.mock.called)
+
     def test_pickle(self):
         import sys
         if sys.version_info < (3, 4):
