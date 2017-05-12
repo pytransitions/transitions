@@ -150,6 +150,13 @@ class TestDiagrams(TestCase):
         self.assertEqual(len(g2.edges()), 4)
         self.assertEqual(len(g2.nodes()), 4)
 
+    def test_trigger_prefixed_with_to_XXX_not_ignored_if_XXX_not_in_states(self):
+        m = self.machine_cls(states=['A', 'B', 'C', 'D'], initial='A', show_auto_transitions=False)
+        m.add_transition('to_end', '*', 'D')
+
+        g = m.get_graph()
+        self.assertEquals(4, len(g.edges()))
+
 
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
 class TestDiagramsLocked(TestDiagrams):
