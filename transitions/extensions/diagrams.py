@@ -89,7 +89,7 @@ class Graph(Diagram):
     def _add_edges(self, events, container):
         for event in events.values():
             label = str(event.name)
-            if self._should_skip_auto_transition(event, label):
+            if self._omit_auto_transitions(event, label):
                 continue
 
             for transitions in event.transitions.items():
@@ -104,9 +104,11 @@ class Graph(Diagram):
                     else:
                         container.add_edge(src, dst, **edge_attr)
 
-    def _should_skip_auto_transition(self, event, label):
+    def _omit_auto_transitions(self, event, label):
         return self._is_auto_transition(event, label) and not self.machine.show_auto_transitions
 
+    # auto transition events commonly a) start with the 'to_' prefix, followed by b) the state name
+    # and c) contain a transition from each state to the target state (including the target)
     def _is_auto_transition(self, event, label):
         if label.startswith('to_') and len(event.transitions) == len(self.machine.states):
             state_name = label[len('to_'):]
@@ -189,7 +191,7 @@ class NestedGraph(Graph):
 
         for event in events.values():
             label = str(event.name)
-            if self._should_skip_auto_transition(event, label):
+            if self._omit_auto_transitions(event, label):
                 continue
 
             for transitions in event.transitions.items():

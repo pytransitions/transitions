@@ -2,7 +2,8 @@
 
 ## 0.5.3 ()
 
-- Bug #214: `LockedMachine` as a model prevented correct addition of `on_enter/exit_<state>`
+- Bug #214: `LockedMachine` as a model prevented correct addition of `on_enter/exit_<state>` (thanks to @kr2)
+- Bug #217: Filtering rules for auto transitions in graphs falsely filtered certain transitions (thanks to @KarolOlko)
 
 ## 0.5.2 (April, 2017)
 

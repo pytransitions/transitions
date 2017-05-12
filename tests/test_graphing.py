@@ -127,10 +127,13 @@ class TestDiagrams(TestCase):
         self.assertEqual(model.get_graph(), "This method already exists")
 
     def test_to_method_filtering(self):
-        m = self.machine_cls(states=['A', 'B'], initial='A')
+        m = self.machine_cls(states=['A', 'B', 'C'], initial='A')
         m.add_transition('to_state_A', 'B', 'A')
+        m.add_transition('to_end', '*', 'C')
         e = m.get_graph().get_edge('B', 'A')
         self.assertEqual(e.attr['label'], 'to_state_A')
+        e = m.get_graph().get_edge('A', 'C')
+        self.assertEqual(e.attr['label'], 'to_end')
         with self.assertRaises(KeyError):
             m.get_graph().get_edge('A', 'B')
         m2 = self.machine_cls(states=['A', 'B'], initial='A', show_auto_transitions=True)
@@ -149,13 +152,6 @@ class TestDiagrams(TestCase):
         g2 = m.get_graph(show_roi=True)
         self.assertEqual(len(g2.edges()), 4)
         self.assertEqual(len(g2.nodes()), 4)
-
-    def test_trigger_prefixed_with_to_XXX_not_ignored_if_XXX_not_in_states(self):
-        m = self.machine_cls(states=['A', 'B', 'C', 'D'], initial='A', show_auto_transitions=False)
-        m.add_transition('to_end', '*', 'D')
-
-        g = m.get_graph()
-        self.assertEquals(4, len(g.edges()))
 
 
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
