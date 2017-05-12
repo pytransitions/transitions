@@ -89,8 +89,7 @@ class Graph(Diagram):
     def _add_edges(self, events, container):
         for event in events.values():
             label = str(event.name)
-            if not self.machine.show_auto_transitions and label.startswith('to_')\
-                    and len(event.transitions) == len(self.machine.states):
+            if self._should_skip_auto_transition(event, label):
                 continue
 
             for transitions in event.transitions.items():
@@ -104,6 +103,16 @@ class Graph(Diagram):
                         edge.attr['label'] = edge.attr['label'] + ' | ' + edge_attr['label']
                     else:
                         container.add_edge(src, dst, **edge_attr)
+
+    def _should_skip_auto_transition(self, event, label):
+        return self._is_auto_transition(event, label) and not self.machine.show_auto_transitions
+
+    def _is_auto_transition(self, event, label):
+        if label.startswith('to_') and len(event.transitions) == len(self.machine.states):
+            state_name = label[len('to_'):]
+            if state_name in self.machine.states:
+                return True
+        return False
 
     def rep(self, f):
         return f.__name__ if callable(f) else f
@@ -180,8 +189,7 @@ class NestedGraph(Graph):
 
         for event in events.values():
             label = str(event.name)
-            if not self.machine.show_auto_transitions and label.startswith('to_') \
-                    and len(event.transitions) == len(self.machine.states):
+            if self._should_skip_auto_transition(event, label):
                 continue
 
             for transitions in event.transitions.items():
