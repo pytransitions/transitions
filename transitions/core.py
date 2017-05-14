@@ -252,7 +252,7 @@ class EventData(object):
 
     def __repr__(self):
         return "<%s('%s', %s)@%s>" % (type(self).__name__, self.state,
-                                      getattr(self, 'transition'), id(self))
+                                      getattr(self, 'transition', '[None]'), id(self))
 
 
 class Event(object):
