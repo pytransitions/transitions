@@ -670,19 +670,25 @@ class TestTransitions(TestCase):
                 str(event_data.transition.conditions),
                 r"\[<Condition\(<function TestTransitions.test_repr.<locals>"
                 r".a_condition at [^>]+>\)@\d+>\]")
-
             return True
 
-        def check_repr(event_data):
+        # No transition has been assigned to EventData yet
+        def check_prepare_repr(event_data):
+            self.assertRegex(
+                str(event_data),
+                r"<EventData\('<State\('A'\)@\d+>', "
+                r"None\)@\d+>")
+
+        def check_before_repr(event_data):
             self.assertRegex(
                 str(event_data),
                 r"<EventData\('<State\('A'\)@\d+>', "
                 r"<Transition\('A', 'B'\)@\d+>\)@\d+>")
-
             m.checked = True
 
         m = Machine(states=['A', 'B'],
-                    before_state_change=check_repr, send_event=True,
+                    prepare_event=check_prepare_repr,
+                    before_state_change=check_before_repr, send_event=True,
                     initial='A')
         m.add_transition('do_strcheck', 'A', 'B', conditions=a_condition)
 

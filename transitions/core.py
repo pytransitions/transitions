@@ -243,6 +243,7 @@ class EventData(object):
         self.model = model
         self.args = args
         self.kwargs = kwargs
+        self.transition = None
         self.error = None
         self.result = False
 
