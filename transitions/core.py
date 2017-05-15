@@ -1,3 +1,4 @@
+import types
 try:
     from builtins import object
 except ImportError:
@@ -812,7 +813,42 @@ class Machine(object):
         if self.send_event:
             func(event_data)
         else:
-            func(*event_data.args, **event_data.kwargs)
+            args_to_pass, kwargs_to_pass = self._trim_event_data_args_to_func_signature(func, event_data)
+            func(*args_to_pass, **kwargs_to_pass)
+
+    def _trim_event_data_args_to_func_signature(self, func, event_data):
+        if not (inspect.isfunction(func) or inspect.ismethod(func)):
+            return event_data.args, event_data.kwargs
+
+        args, varargs, keywords, _ = inspect.getargspec(func)
+
+        if inspect.ismethod(func):
+            args.pop(0)
+
+        args, args_to_pass = self._get_positional_arguments(event_data, args, varargs)
+        kwargs_to_pass = self._get_keyword_arguments(event_data, args, keywords)
+
+        return args_to_pass, kwargs_to_pass
+
+    def _get_positional_arguments(self, event_data, args, varargs):
+        if varargs:
+            args_to_pass = event_data.args
+        else:
+            number_of_positional_args = min(len(event_data.args), len(args))
+            args = args[number_of_positional_args:]
+            args_to_pass = event_data.args[:number_of_positional_args]
+        return args, args_to_pass
+
+    def _get_keyword_arguments(self, event_data, args, keywords):
+        if keywords:
+            kwargs_to_pass = event_data.kwargs
+        else:
+            kwargs_to_pass = {}
+            for arg in args:
+                if arg in event_data.kwargs.keys():
+                    kwargs_to_pass[arg] = event_data.kwargs[arg]
+
+        return kwargs_to_pass
 
     def _has_state(self, s):
         if isinstance(s, State):
