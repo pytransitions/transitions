@@ -381,8 +381,7 @@ class GraphMachine(Machine):
         style_attr = graph.style_attributes.get('graph', {}).get(style)
         item.graph_attr.update(style_attr)
 
-    @staticmethod
-    def _create_transition(*args, **kwargs):
+    def _create_transition(self, *args, **kwargs):
         return TransitionGraphSupport(*args, **kwargs)
 
 
