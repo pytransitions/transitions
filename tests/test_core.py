@@ -113,6 +113,10 @@ class TestTransitions(TestCase):
         state_B2 = State('B', on_enter='this_passes')
         with self.assertRaises(ValueError):
             m.add_transition('advance2', state_A, state_B2)
+        m2 = Machine(states=states, initial=state_A.name)
+        assert m.initial == m2.initial
+        with self.assertRaises(ValueError):
+            Machine(states=states, initial=State('A'))
 
     def test_conditions(self):
         s = self.stuff

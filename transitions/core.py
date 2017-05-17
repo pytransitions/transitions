@@ -357,7 +357,7 @@ class Machine(object):
             states (list): A list of valid states. Each element can be either a
                 string or a State instance. If string, a new generic State
                 instance will be created that has the same name as the string.
-            initial (string): The initial state of the Machine.
+            initial (string or State): The initial state of the Machine.
             transitions (list): An optional list of transitions. Each element
                 is a dictionary of named arguments to be passed onto the
                 Transition initializer.
@@ -408,6 +408,7 @@ class Machine(object):
         self._after_state_change = []
         self._prepare_event = []
         self._finalize_event = []
+        self._initial = None
 
         self.states = OrderedDict()
         self.events = {}
@@ -447,9 +448,16 @@ class Machine(object):
             self.add_states(states)
 
         if initial is not None:
-            if initial not in self.states:
-                self.add_states(initial)
-        self._initial = initial
+            if isinstance(initial, State):
+                if initial.name not in self.states:
+                    self.add_state(initial)
+                else:
+                    assert self._has_state(initial)
+                self._initial = initial.name
+            else:
+                if initial not in self.states:
+                    self.add_state(initial)
+                self._initial = initial
 
         if transitions is not None:
             transitions = listify(transitions)
