@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.5.3 ()
+## 0.5.3 (May, 2017)
+
+Release 0.5.3 is a minor release and contains several bug fixes:
 
 - Bug #214: `LockedMachine` as a model prevented correct addition of `on_enter/exit_<state>` (thanks to @kr2)
 - Bug #217: Filtering rules for auto transitions in graphs falsely filtered certain transitions (thanks to @KarolOlko)
