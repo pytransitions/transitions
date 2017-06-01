@@ -1,5 +1,5 @@
 nose
 mock
 dill
-pygraphviz
+pygraphviz==1.3
 pycodestyle
