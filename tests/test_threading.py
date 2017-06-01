@@ -65,6 +65,15 @@ class TestLockedTransitions(TestCore):
         time.sleep(1)
         self.assertEqual(self.stuff.state, "C")
 
+    def test_parallel_deep(self):
+        self.stuff.machine.add_transition('deep', source='*', dest='C', after='to_D')
+        thread = Thread(target=self.stuff.deep)
+        thread.start()
+        time.sleep(0.01)
+        self.stuff.to_C()
+        time.sleep(1)
+        self.assertEqual(self.stuff.state, "C")
+
     def test_conditional_access(self):
         self.stuff.heavy_checking = heavy_checking  # checking takes 1s and returns False
         self.stuff.machine.add_transition('advance', 'A', 'B', conditions='heavy_checking')
@@ -74,7 +83,9 @@ class TestLockedTransitions(TestCore):
         time.sleep(0.1)
         logger.info('Check if state transition done...')
         # Thread will release lock before Transition is finished
-        self.assertTrue(self.stuff.is_D())
+        res = self.stuff.is_D()
+        time.sleep(0.5)
+        self.assertTrue(res)
 
     def test_pickle(self):
         import sys
@@ -111,14 +122,121 @@ class TestLockedTransitions(TestCore):
         self.assertAlmostEqual(fast - begin, 0, delta=0.1)
         self.assertAlmostEqual(blocked - begin, 1, delta=0.1)
 
+    def test_context_managers(self):
+
+        class CounterContext(object):
+            def __init__(self):
+                self.counter = 0
+                self.level = 0
+                self.max = 0
+                super(CounterContext, self).__init__()
+
+            def __enter__(self):
+                self.counter += 1
+                self.level += 1
+                self.max = max(self.level, self.max)
+
+            def __exit__(self, *exc):
+                self.level -= 1
+
+        M = MachineFactory.get_predefined(locked=True)
+        c = CounterContext()
+        m = M(states=['A', 'B', 'C', 'D'], transitions=[['reset', '*', 'A']], initial='A', machine_context=c)
+        m.get_triggers('A')
+        self.assertEqual(c.max, 1)  # was 3 before
+        self.assertEqual(c.counter, 4)  # was 72 (!) before
+
+    # This test has been used to quantify the changes made in locking in version 0.5.0.
+    # See https://github.com/tyarkoni/transitions/issues/167 for the results.
+    # def test_performance(self):
+    #     import timeit
+    #     states = ['A', 'B', 'C']
+    #     transitions = [['go', 'A', 'B'], ['go', 'B', 'C'], ['go', 'C', 'A']]
+    #
+    #     M1 = MachineFactory.get_predefined()
+    #     M2 = MachineFactory.get_predefined(locked=True)
+    #
+    #     def test_m1():
+    #         m1 = M1(states=states, transitions=transitions, initial='A')
+    #         m1.get_triggers('A')
+    #
+    #     def test_m2():
+    #         m2 = M2(states=states, transitions=transitions, initial='A')
+    #         m2.get_triggers('A')
+    #
+    #     t1 = timeit.timeit(test_m1, number=20000)
+    #     t2 = timeit.timeit(test_m2, number=20000)
+    #     self.assertAlmostEqual(t2/t1, 1, delta=0.5)
+
+
+class TestMultipleContexts(TestCore):
+
+    class DummyModel(object):
+        pass
+
+    class TestContext(object):
+        def __init__(self, event_list):
+            self._event_list = event_list
+
+        def __enter__(self):
+            self._event_list.append((self, "enter"))
+
+        def __exit__(self, type, value, traceback):
+            self._event_list.append((self, "exit"))
+
+    def setUp(self):
+        self.event_list = []
+
+        self.s1 = self.DummyModel()
+
+        self.c1 = self.TestContext(event_list=self.event_list)
+        self.c2 = self.TestContext(event_list=self.event_list)
+        self.c3 = self.TestContext(event_list=self.event_list)
+        self.c4 = self.TestContext(event_list=self.event_list)
+
+        self.stuff = Stuff(machine_cls=MachineFactory.get_predefined(locked=True), extra_kwargs={
+            'machine_context': [self.c1, self.c2]
+        })
+        self.stuff.machine.add_model(self.s1, model_context=[self.c3, self.c4])
+        del self.event_list[:]
+
+        self.stuff.machine.add_transition('forward', 'A', 'B')
+
+    def tearDown(self):
+        self.stuff.machine.remove_model(self.s1)
+
+    def test_ordering(self):
+        self.stuff.forward()
+        # There are a lot of internal enter/exits, but the key is that the outermost are in the expected order
+        self.assertEqual((self.c1, "enter"), self.event_list[0])
+        self.assertEqual((self.c2, "enter"), self.event_list[1])
+        self.assertEqual((self.c2, "exit"), self.event_list[-2])
+        self.assertEqual((self.c1, "exit"), self.event_list[-1])
+
+    def test_model_context(self):
+        self.s1.forward()
+        self.assertEqual((self.c1, "enter"), self.event_list[0])
+        self.assertEqual((self.c2, "enter"), self.event_list[1])
+
+        # Since there are a lot of internal enter/exits, we don't actually know how deep in the stack
+        # to look for these. Should be able to correct when https://github.com/tyarkoni/transitions/issues/167
+        self.assertIn((self.c3, "enter"), self.event_list)
+        self.assertIn((self.c4, "enter"), self.event_list)
+        self.assertIn((self.c4, "exit"), self.event_list)
+        self.assertIn((self.c3, "exit"), self.event_list)
+
+        self.assertEqual((self.c2, "exit"), self.event_list[-2])
+        self.assertEqual((self.c1, "exit"), self.event_list[-1])
+
 
 # Same as TestLockedTransition but with LockedHierarchicalMachine
 class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
+
     def setUp(self):
         NestedState.separator = '_'
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
-        self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, graph=True, nested=True))
+        self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, nested=True))
         self.stuff.heavy_processing = heavy_processing
         self.stuff.machine.add_transition('forward', '*', 'B', before='heavy_processing')
 
@@ -132,6 +250,20 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
         # we have to wait to be sure it is done
         time.sleep(1)
         self.assertEqual(self.stuff.state, "C")
+
+    def test_callbacks(self):
+
+        class MachineModel(self.stuff.machine_cls):
+            def __init__(self):
+                self.mock = MagicMock()
+                super(MachineModel, self).__init__(self, states=['A', 'B', 'C'])
+
+            def on_enter_A(self):
+                self.mock()
+
+        model = MachineModel()
+        model.to_A()
+        self.assertTrue(model.mock.called)
 
     def test_pickle(self):
         import sys

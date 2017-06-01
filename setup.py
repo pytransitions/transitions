@@ -29,6 +29,7 @@ setup(
     package_data={'transitions': ['data/*'],
                   'transitions.tests': ['data/*']
                   },
+    include_package_data=True,
     install_requires=['six'],
     tests_require=tests_require,
     license='MIT',
@@ -40,6 +41,8 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
     **extra_setuptools_args
 )

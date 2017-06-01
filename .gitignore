@@ -11,3 +11,4 @@ dist/*
 .ipynb_checkpoints
 examples/state.png
 .tox
+.python-version

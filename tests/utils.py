@@ -3,12 +3,20 @@ from transitions import Machine
 
 class Stuff(object):
 
-    def __init__(self, states=None, machine_cls=Machine):
+    def __init__(self, states=None, machine_cls=Machine, extra_kwargs={}):
 
         self.state = None
         self.message = None
         states = ['A', 'B', 'C', 'D', 'E', 'F'] if states is None else states
-        self.machine = machine_cls(self, states=states, initial='A', name='Test Machine')
+
+        args = [self]
+        kwargs = {
+            'states': states,
+            'initial': 'A',
+            'name': 'Test Machine',
+        }
+        kwargs.update(extra_kwargs)
+        self.machine = machine_cls(*args, **kwargs)
         self.level = 1
         self.machine_cls = machine_cls
 
@@ -78,7 +86,3 @@ class InheritedStuff(Machine):
     @staticmethod
     def this_passes():
         return True
-
-    @staticmethod
-    def this_fails():
-        return False

@@ -1,4 +1,11 @@
 # <a name="transitions-module"></a> transitions
+[![Version](https://img.shields.io/badge/version-v0.5.3-orange.svg)](https://github.com/tyarkoni/transitions)
+[![Build Status](https://travis-ci.org/tyarkoni/transitions.svg?branch=master)](https://travis-ci.org/tyarkoni/transitions)
+[![Coverage Status](https://coveralls.io/repos/tyarkoni/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/tyarkoni/transitions?branch=master)
+[![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
+[![GitHub commits](https://img.shields.io/github/commits-since/tyarkoni/transitions/0.5.3.svg)](https://github.com/tyarkoni/transitions/compare/0.5.3...master)
+[![License](https://img.shields.io/github/license/tyarkoni/transitions.svg)](LICENSE)
+<!--[![Name](Image)](Link)-->
 
 A lightweight, object-oriented state machine implementation in Python. Build for python 2.6
 
@@ -11,7 +18,7 @@ For Python 2.6 you probably need:
 
     pip install six mock pycode ordereddict
     pip install transitions
-    
+
 ... or clone the repo from GitHub and then:
 
     python setup.py install
@@ -27,13 +34,16 @@ For Python 2.6 you probably need:
     - [Transitions](#transitions)
         - [Automatic transitions](#automatic-transitions-for-all-states)
         - [Transitioning from multiple states](#transitioning-from-multiple-states)
+        - [Reflexive transitions from multiple states](#reflexive-from-multiple-states)
         - [Ordered transitions](#ordered-transitions)
         - [Queued transitions](#queued-transitions)
         - [Conditional transitions](#conditional-transitions)
         - [Callbacks](#transition-callbacks)
+    - [Execution order](#execution-order)
     - [Passing data](#passing-data)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
+    - [(Re-)Storing machine instances](#restoring)
     - [Extensions](#extensions)
         - [Diagrams](#diagrams)
         - [Hierarchical State Machine](#hsm)
@@ -330,7 +340,7 @@ machine.get_state(lump.state).name
 ### <a name="transitions"></a>Transitions
 Some of the above examples already illustrate the use of transitions in passing, but here we'll explore them in more detail.
 
-As with states, each transition is represented internally as its own object--an instance of class `Transition`. The quickest way to initialize a set of transitions is to pass a dictionary, or list of dictionaries, to the `Machine` initializer. We already saw this above:
+As with states, each transition is represented internally as its own object – an instance of class `Transition`. The quickest way to initialize a set of transitions is to pass a dictionary, or list of dictionaries, to the `Machine` initializer. We already saw this above:
 
 ```python
 transitions = [
@@ -401,7 +411,7 @@ m.get_triggers('liquid')
 >>> ['evaporate']
 m.get_triggers('plasma')
 >>> []
-# you can also query several states at once 
+# you can also query several states at once
 m.get_triggers('solid', 'liquid', 'gas', 'plasma')
 >>> ['melt', 'evaporate', 'sublimate', 'ionize']
 ```
@@ -440,6 +450,17 @@ machine.add_transition('to_liquid', '*', 'liquid')
 
 Note that wildcard transitions will only apply to states that exist at the time of the add_transition() call. Calling a wildcard-based transition when the model is in a state added after the transition was defined will elicit an invalid transition message, and will not transition to the target state.
 
+#### <a name="reflexive-from-multiple-states"></a>Transitioning from multiple states
+A reflexive trigger (trigger that has the same state as source and destination) can easily be added specifying `=` as destination.
+This is handy if the same reflexive trigger should be added to multiple states.
+For example:
+
+```python
+machine.add_transition('touch', ['liquid', 'gas', 'plasma'], '=', after='change_shape')
+```
+
+This will add reflexive transitions for all three states with `touch()` as trigger and with `change_shape` executed after each trigger.
+
 #### <a name="ordered-transitions"></a> Ordered transitions
 A common desire is for state transitions to follow a strict linear sequence. For instance, given states `['A', 'B', 'C']`, you might want valid transitions for `A` → `B`, `B` → `C`, and `C` → `A` (but no other pairs).
 
@@ -448,13 +469,13 @@ To facilitate this behavior, Transitions provides an `add_ordered_transitions()`
 ```python
 states = ['A', 'B', 'C']
  # See the "alternative initialization" section for an explanation of the 1st argument to init
-machine = Machine(None, states, initial='A')
+machine = Machine(states=states, initial='A')
 machine.add_ordered_transitions()
 machine.next_state()
 print(machine.state)
 >>> 'B'
 # We can also define a different order of transitions
-machine = Machine(None, states, initial='A')
+machine = Machine(states=states, initial='A')
 machine.add_ordered_transitions(['A', 'C', 'B'])
 machine.next_state()
 print(machine.state)
@@ -604,13 +625,6 @@ lump.melt()
 
 Note that `prepare` will not be called unless the current state is a valid source for the named transition.
 
-In summary, callbacks on transitions are executed in the following order:
-
-* `'prepare'` (executed as soon as the transition starts)
-* `'conditions'` / `'unless'` (conditions *may* fail and halt the transition)
-* `'before'` (executed while the model is still in the source state)
-* `'after'` (executed while the model is in the destination state)
-
 Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
 `before_state_change` and `after_state_change` respectively:
 
@@ -627,6 +641,55 @@ lump.to_gas()
 >>> "HISSSSSSSSSSSSSSSS"
 >>> "where'd all the liquid go?"
 ```
+
+There are also two keywords for callbacks which should be executed *independently* a) of how many transitions are possible,
+b) if any transition succeeds and c) even if an error is raised during the execution of some other callback.
+Callbacks passed to `Machine` with `prepare_event` will be executed *once* before processing possible transitions
+(and their individual `prepare` callbacks) takes place.
+Callbacks of `finalize_event` will be executed regardless of the success of the processed transitions.
+Note that if an error occurred it will be attached to `event_data` as `error` and can be retrieved with `send_event=True`.
+
+```python
+from transitions import Machine
+
+class Matter(object):
+    def raise_error(self, event): raise ValueError("Oh no")
+    def prepare(self, event): print("I am ready!")
+    def finalize(self, event): print("Result: ", type(event.error), event.error)
+
+states=['solid', 'liquid', 'gas', 'plasma']
+
+lump = Matter()
+m = Machine(lump, states, prepare_event='prepare', before_state_change='raise_error',
+            finalize_event='finalize', send_event=True)
+try:
+    lump.to_gas()
+except ValueError:
+    pass
+print(lump.state)
+
+>>> I am ready!
+>>> Result:  <class 'ValueError'> Oh no
+>>> initial
+```
+
+### <a name="execution-order"> Execution order
+In summary, callbacks on transitions are executed in the following order:
+
+|      Callback                  | Current State |               Comments                                      |
+|--------------------------------|:-------------:|-------------------------------------------------------------|
+| `'machine.prepare_event'`      | `source`      | executed *once* before individual transitions are processed |
+| `'transition.prepare'`         | `source`      | executed as soon as the transition starts                   |
+| `'transition.conditions'`      | `source`      | conditions *may* fail and halt the transition               |
+| `'transition.unless'`          | `source`      | conditions *may* fail and halt the transition               |
+| `'machine.before_state_change'`| `source`      | default callbacks declared on model                         |
+| `'transition.before'`          | `source`      |                                                             |
+| `'state.on_exit'`              | `source`      | callbacks declared on the source state                      |
+| `<STATE CHANGE>`               |               |                                                             |
+| `'state.on_enter'`             | `destination` | callbacks declared on the destination state                 |
+| `'transition.after'`           | `destination` |                                                             |
+| `'machine.after_state_change'` | `destination` | default callbacks declared on model                         |
+| `'machine.finalize_event'`     | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
 ### <a name="passing-data"></a>Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways.
@@ -646,7 +709,7 @@ lump = Matter()
 machine = Machine(lump, ['solid', 'liquid'], initial='solid')
 machine.add_transition('melt', 'solid', 'liquid', before='set_environment')
 
-lump.melt(45)  # positional arg; 
+lump.melt(45)  # positional arg;
 # equivalent to lump.trigger('melt', 45)
 lump.print_temperature()
 >>> 'Current temperature is 45 degrees celsius.'
@@ -731,12 +794,48 @@ lump.state
 
 Here you get to consolidate all state machine functionality into your existing model, which often feels more natural way than sticking all of the functionality we want in a separate standalone `Machine` instance.
 
-### Logging
-
-Transitions includes very rudimentary logging capabilities. A number of events--namely, state changes, transition triggers, and conditional checks--are logged as INFO-level events using the standard Python `logging` module. This means you can easily configure logging to standard output in a script:
+A machine can handle multiple models which can be passed as a list like `Machine(model=[model1, model2, ...])`.
+In cases where you want to add models *as well as* the machine instance itself, you can pass the string placeholder `'self'` during initialization like `Machine(model=['self', model1, ...])`.
+You can also create a standalone machine, and register models dynamically via `machine.add_model`.
+Remember to call `machine.remove_model` if machine is long-lasting and your models are temporary and should be garbage collected:
 
 ```python
+class Matter():
+    pass
 
+lump1 = Matter()
+lump2 = Matter()
+
+machine = Machine(states=states, transitions=transitions, initial='solid', add_self=False)
+
+machine.add_model(lump1)
+machine.add_model(lump2, initial='liquid')
+
+lump1.state
+>>> 'solid'
+lump2.state
+>>> 'liquid'
+
+machine.remove_model([lump1, lump2])
+del lump1  # lump1 is garbage collected
+del lump2  # lump2 is garbage collected
+```
+
+If you don't provide an initial state in the state machine constructor, you must provide one every time you add a model:
+
+```python
+machine = Machine(states=states, transitions=transitions, add_self=False)
+
+machine.add_model(Matter())
+>>> "MachineError: No initial state configured for machine, must specify when adding model."
+machine.add_model(Matter(), initial='liquid')
+```
+
+### Logging
+
+Transitions includes very rudimentary logging capabilities. A number of events – namely, state changes, transition triggers, and conditional checks – are logged as INFO-level events using the standard Python `logging` module. This means you can easily configure logging to standard output in a script:
+
+```python
 # Set up logging
 import logging
 from transitions import logger
@@ -745,6 +844,31 @@ logger.setLevel(logging.INFO)
 # Business as usual
 machine = Machine(states=states, transitions=transitions, initial='solid')
 ...
+```
+
+### <a name="restoring"></a>(Re-)Storing machine instances
+
+Machines are picklable and can be stored and loaded with `pickle`. For Python 3.3 and earlier `dill` is required.
+
+```python
+import dill as pickle # only required for Python 3.3 and earlier
+
+m = Machine(states=['A', 'B', 'C'], initial='A')
+m.to_B()
+m.state  
+>>> B
+
+# store the machine
+dump = pickle.dumps(m)
+
+# load the Machine instance again
+m2 = pickle.loads(dump)
+
+m2.state
+>>> B
+
+m2.states.keys()
+>>> ['A', 'B', 'C']
 ```
 
 ### <a name="extensions"></a> Extensions
@@ -797,22 +921,29 @@ machine = Machine(model, states, transitions)
 Additional Keywords:
 * `title` (optional): Sets the title of the generated image.
 * `show_conditions` (default False): Shows conditions at transition edges
+* `show_auto_transitions` (default False): Shows auto transitions in graph
 
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). With
- `GraphMachine` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
+Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). With `GraphMachine` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
 
 ```python
 from transitions.extensions import GraphMachine as Machine
 m = Model()
 machine = Machine(model=m, ...)
-m.graph.draw('my_state_diagram.png', prog='dot')
+# in cases where auto transitions should be visible
+# Machine(model=m, show_auto_transitions=True, ...)
+
+# draw the whole graph ...
+m.get_graph().draw('my_state_diagram.png', prog='dot')
+# ... or just the region of interest
+# (previous state, active state and all reachable states)
+m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
 ```
 
 This produces something like this:
 
 ![state diagram example](https://cloud.githubusercontent.com/assets/19777/11530591/1a0c08a6-98f6-11e5-88a7-756585aafbbb.png)
 
-Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailled example.
+Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example.
 
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
@@ -859,9 +990,9 @@ transitions = [
   ['walk', 'standing', 'walking'],
   ['stop', 'walking', 'standing'],
   # this transition will end in 'caffeinated_dithering'...
-  ['drink', '*', 'caffeinated'], 
+  ['drink', '*', 'caffeinated'],
   # ... that is why we do not need do specify 'caffeinated' here anymore
-  ['walk', 'caffeinated_dithering', 'caffeinated_running'], 
+  ['walk', 'caffeinated_dithering', 'caffeinated_running'],
   ['relax', 'caffeinated', 'standing']
 ]
 # ...
@@ -935,12 +1066,11 @@ counter = Machine(states=count_states, transitions=count_trans, initial='1')
 
 counter.increase() # love my counter
 states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
-# states = ['waiting', 'collecting', {'name': 'counting', children: counter}]
 
 transitions = [
     ['collect', '*', 'collecting'],
     ['wait', '*', 'waiting'],
-    ['count', 'wait', 'counting_1']
+    ['count', 'collecting', 'counting_1']
 ]
 
 collector = Machine(states=states, transitions=transitions, initial='waiting')
@@ -989,6 +1119,32 @@ thread = Thread(target=machine.to_B)
 thread.start()
 machine.new_attrib = 42 # not synchronized! will mess with execution order
 ```
+
+Any python context manager can be passed in via the `machine_context` keyword argument:
+
+```python
+from transitions.extensions import LockedMachine as Machine
+from threading import Thread, RLock
+
+states = ['A', 'B', 'C']
+
+lock1 = RLock()
+lock2 = RLock()
+
+machine = Machine(states=states, initial='A', machine_context=[lock1, lock2])
+```
+
+Any contexts via `machine_model` will be shared between all models registered with the `Machine`.
+Per-model contexts can be added as well:
+
+```
+lock3 = RLock()
+
+machine.add_model(model, model_context=lock3)
+```
+
+It's important that any user-provided context managers are re-entrant since the state machine will call them multiple
+times, even in the context of a single trigger invocation.
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
 For bug reports and other issues, please open an issue on GitHub.
