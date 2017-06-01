@@ -1,7 +1,6 @@
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
 
 from six import string_types
-import copy
 from functools import partial
 
 import logging
@@ -139,6 +138,10 @@ class NestedEvent(Event):
             if self.machine.get_state(model.state).ignore_invalid_triggers:
                 logger.warning(msg)
             else:
+                print model.state
+                s = self.machine.get_state(model.state)
+                print s.name not in self.transitions
+                print state
                 raise MachineError(msg)
         event_data = EventData(self.machine.get_state(model.state), self, self.machine,
                                model, args=args, kwargs=kwargs)
@@ -221,7 +224,7 @@ class HierarchicalMachine(Machine):
             elif isinstance(state, dict):
                 if state['name'] in remap:
                     continue
-                state = copy.deepcopy(state)
+                state = state.copy()
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
                 state['parent'] = parent
@@ -240,46 +243,49 @@ class HierarchicalMachine(Machine):
                 else:
                     tmp_states.insert(0, self._create_state(**state))
             elif isinstance(state, HierarchicalMachine):
-                # copy only states not mentioned in remap
-                copied_states = [s for s in state.states.values() if s.name not in remap]
-                # inner_states are the root states of the passed machine
-                # which have be attached to the parent
-                inner_states = [s for s in copied_states if s.level == 0]
-                for s in inner_states:
-                    s.parent = parent
-                tmp_states.extend(copied_states)
-                for trigger, event in state.events.items():
-                    if trigger.startswith('to_'):
-                        path = trigger[3:].split(NestedState.separator)
-                        # do not copy auto_transitions since they would not be valid anymore;
-                        # trigger and destination do not exist in the new environment
-                        if path[0] in remap:
-                            continue
-                        ppath = parent.name.split(NestedState.separator)
-                        path = ['to_' + ppath[0]] + ppath[1:] + path
-                        trigger = '.'.join(path)
-                    # adjust all transition start and end points to new state names
-                    for transitions in event.transitions.values():
-                        for transition in transitions:
-                            src = transition.source
-                            # transitions from remapped states will be filtered to prevent
-                            # unexpected behaviour in the parent machine
-                            if src in remap:
-                                continue
-                            dst = parent.name + NestedState.separator + transition.dest\
-                                if transition.dest not in remap else remap[transition.dest]
-                            conditions = []
-                            unless = []
-                            for c in transition.conditions:
-                                conditions.append(c.func) if c.target else unless.append(c.func)
-                            self._buffered_transitions.append({'trigger': trigger,
-                                                               'source': parent.name + NestedState.separator + src,
-                                                               'dest': dst,
-                                                               'conditions': conditions,
-                                                               'unless': unless,
-                                                               'prepare': transition.prepare,
-                                                               'before': transition.before,
-                                                               'after': transition.after})
+                raise MachineError("Legacy version of transitions does not support embedded HierarchicalMachines due to "
+                                   "issues related to deepcopy and partial that prevent proper embedding. Please consider "
+                                   "updating your Python installation if you rely on this feature.")
+                # # copy only states not mentioned in remap
+                # copied_states = [s for s in state.states.values() if s.name not in remap]
+                # # inner_states are the root states of the passed machine
+                # # which have be attached to the parent
+                # inner_states = [s for s in copied_states if s.level == 0]
+                # for s in inner_states:
+                #     s.parent = parent
+                # tmp_states.extend(copied_states)
+                # for trigger, event in state.events.items():
+                #     if trigger.startswith('to_'):
+                #         path = trigger[3:].split(NestedState.separator)
+                #         # do not copy auto_transitions since they would not be valid anymore;
+                #         # trigger and destination do not exist in the new environment
+                #         if path[0] in remap:
+                #             continue
+                #         ppath = parent.name.split(NestedState.separator)
+                #         path = ['to_' + ppath[0]] + ppath[1:] + path
+                #         trigger = '.'.join(path)
+                #     # adjust all transition start and end points to new state names
+                #     for transitions in event.transitions.values():
+                #         for transition in transitions:
+                #             src = transition.source
+                #             # transitions from remapped states will be filtered to prevent
+                #             # unexpected behaviour in the parent machine
+                #             if src in remap:
+                #                 continue
+                #             dst = parent.name + NestedState.separator + transition.dest\
+                #                 if transition.dest not in remap else remap[transition.dest]
+                #             conditions = []
+                #             unless = []
+                #             for c in transition.conditions:
+                #                 conditions.append(c.func) if c.target else unless.append(c.func)
+                #             self._buffered_transitions.append({'trigger': trigger,
+                #                                                'source': parent.name + NestedState.separator + src,
+                #                                                'dest': dst,
+                #                                                'conditions': conditions,
+                #                                                'unless': unless,
+                #                                                'prepare': transition.prepare,
+                #                                                'before': transition.before,
+                #                                                'after': transition.after})
 
             elif isinstance(state, NestedState):
                 tmp_states.append(state)

@@ -4,11 +4,14 @@ except ImportError:
     pass
 
 from transitions import Machine, MachineError
-from unittest import TestCase
-
 import gc
 import weakref
 import threading
+import sys
+if sys.version_info < (2, 7):
+    from unittest2 import TestCase
+else:
+    from unittest import TestCase
 
 
 class Dummy(object):

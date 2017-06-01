@@ -4,10 +4,22 @@ from collections import defaultdict
 from functools import partial
 from threading import Lock
 import inspect
-
 import logging
+import sys
+
+if sys.version_info < (2, 7):
+    from ordereddict import OrderedDict
+
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
+else:
+    from collections import OrderedDict
+    from logging import NullHandler
+
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+logger.addHandler(NullHandler())
 
 
 try:

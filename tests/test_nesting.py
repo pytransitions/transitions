@@ -8,10 +8,8 @@ except ImportError:
 import sys
 import tempfile
 from os.path import getsize
-
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState as State
-from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
 from .utils import Stuff
 
@@ -457,33 +455,3 @@ class TestTransitions(TestsCore):
         print(trans)
         self.assertEqual(len(trans), 3)
         self.assertTrue('relax' in trans)
-
-
-@skipIf(pgv is None, 'AGraph diagram requires pygraphviz')
-class TestWithGraphTransitions(TestTransitions):
-
-    def setUp(self):
-        State.separator = state_separator
-        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
-                  'D', 'E', 'F']
-
-        machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
-        self.stuff = Stuff(states, machine_cls)
-
-    def test_ordered_with_graph(self):
-        GraphMachine = MachineFactory.get_predefined(graph=True, nested=True)
-
-        states = ['A', 'B', {'name': 'C', 'children': ['1', '2',
-                                                       {'name': '3', 'children': ['a', 'b', 'c']}]}, 'D', 'E', 'F']
-
-        State.separator = '/'
-        machine = GraphMachine('self', states, initial='A',
-                               auto_transitions=False,
-                               ignore_invalid_triggers=True)
-        machine.add_ordered_transitions(trigger='next_state')
-        machine.next_state()
-        self.assertEqual(machine.state, 'B')
-        target = tempfile.NamedTemporaryFile()
-        machine.get_graph().draw(target.name, prog='dot')
-        self.assertTrue(getsize(target.name) > 0)
-        target.close()

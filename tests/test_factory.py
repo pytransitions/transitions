@@ -2,9 +2,12 @@ try:
     from builtins import object
 except ImportError:
     pass
-
-from unittest import TestCase
 from transitions.extensions import MachineFactory
+import sys
+if sys.version_info < (2, 7):
+    from unittest2 import TestCase
+else:
+    from unittest import TestCase
 
 
 class TestFactory(TestCase):
