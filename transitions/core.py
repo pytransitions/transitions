@@ -14,7 +14,6 @@ from functools import partial
 from six import string_types
 
 import warnings
-warnings.simplefilter('default')
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
