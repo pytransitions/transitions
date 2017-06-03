@@ -1,3 +1,4 @@
+import types
 try:
     from builtins import object
 except ImportError:
@@ -132,8 +133,8 @@ class Condition(object):
         if event_data.machine.send_event:
             return predicate(event_data) == self.target
         else:
-            return predicate(
-                *event_data.args, **event_data.kwargs) == self.target
+            args_to_pass, kwargs_to_pass = event_data.trim_event_data_args_to_func_signature(predicate)
+            return predicate(*args_to_pass, **kwargs_to_pass) == self.target
 
     def __repr__(self):
         return "<%s(%s)@%s>" % (type(self).__name__, self.func, id(self))
@@ -252,6 +253,40 @@ class EventData(object):
     def update(self, model):
         """ Updates the current State to accurately reflect the Machine. """
         self.state = self.machine.get_state(model.state)
+
+    def trim_event_data_args_to_func_signature(self, func):
+        if not (inspect.isfunction(func) or inspect.ismethod(func)):
+            return self.args, self.kwargs
+
+        func_args, func_varargs, func_keywords, _ = inspect.getargspec(func)
+
+        if inspect.ismethod(func):
+            func_args.pop(0)
+
+        func_args, args_to_pass = self._get_positional_arguments(func_args, func_varargs)
+        kwargs_to_pass = self._get_keyword_arguments(func_args, func_keywords)
+
+        return args_to_pass, kwargs_to_pass
+
+    def _get_positional_arguments(self, func_args, func_varargs):
+        if func_varargs:
+            args_to_pass = self.args
+        else:
+            number_of_positional_args = min(len(self.args), len(func_args))
+            func_args = func_args[number_of_positional_args:]
+            args_to_pass = self.args[:number_of_positional_args]
+        return func_args, args_to_pass
+
+    def _get_keyword_arguments(self, func_args, func_keywords):
+        if func_keywords:
+            kwargs_to_pass = self.kwargs
+        else:
+            kwargs_to_pass = {}
+            for arg in func_args:
+                if arg in self.kwargs.keys():
+                    kwargs_to_pass[arg] = self.kwargs[arg]
+
+        return kwargs_to_pass
 
     def __repr__(self):
         return "<%s('%s', %s)@%s>" % (type(self).__name__, self.state,
@@ -822,7 +857,8 @@ class Machine(object):
         if self.send_event:
             func(event_data)
         else:
-            func(*event_data.args, **event_data.kwargs)
+            args_to_pass, kwargs_to_pass = event_data.trim_event_data_args_to_func_signature(func)
+            func(*args_to_pass, **kwargs_to_pass)
 
     def _has_state(self, s):
         if isinstance(s, State):
