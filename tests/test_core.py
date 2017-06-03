@@ -409,6 +409,57 @@ class TestTransitions(TestCase):
         self.assertTrue(m.before_state_change[0].called)
         self.assertTrue(m.after_state_change[0].called)
 
+    def test_machine_matches_event_data_to_callback_signature(self):
+        class TestModel(object):
+            def __init__(self):
+                self.b_mock = MagicMock()
+                self.c_mock = MagicMock()
+
+            def on_enter_B(self):
+                self.b_mock()
+
+            def on_enter_C(self):
+                self.c_mock()
+            
+            def on_enter_D(self, a, b):
+                self.a = a
+                self.b = b
+
+            def on_enter_E(self, *args):
+                self.args = args
+
+            def on_enter_F(self, **kwargs):
+                self.kwargs = kwargs
+
+        model = TestModel()
+        m = Machine(model, states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A', auto_transitions=False)
+        m.add_transition('trigger', 'A', 'B')
+        m.add_transition('kwargs_trigger', 'B', 'C')
+        m.add_transition('mixed_trigger', 'C', 'D')
+        m.add_transition('args_trigger', 'D', 'E')
+        m.add_transition('final_trigger', 'E', 'F')
+        m.on_enter_B('on_enter_B')
+        m.on_enter_C('on_enter_C')
+        m.on_enter_D('on_enter_D')
+        m.on_enter_E('on_enter_E')
+        m.on_enter_F('on_enter_F')
+
+        model.trigger('arg1')
+        self.assertTrue(model.b_mock.called)
+
+        model.kwargs_trigger(a=1, b=2)
+        self.assertTrue(model.c_mock.called)
+        
+        model.mixed_trigger(1, c=15, b=20)
+        self.assertEquals(1, model.a)
+        self.assertEquals(20, model.b)
+        
+        model.args_trigger(1, 2, 3, 4, 5, a=15)
+        self.assertEquals(5, len(model.args))
+
+        model.final_trigger(1, 2, 3, b=15, c=20)
+        self.assertEquals(2, len(model.kwargs))
+
     def test_pickle(self):
         import sys
         if sys.version_info < (3, 4):
