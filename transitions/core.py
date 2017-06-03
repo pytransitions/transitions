@@ -14,7 +14,9 @@ from functools import partial
 from six import string_types
 
 import warnings
-warnings.simplefilter('default')
+# make deprecation warnings of transition visible for module users
+warnings.filterwarnings('default', category=PendingDeprecationWarning,
+                        message=r".*transitions version 0\.6\.0.*")
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())

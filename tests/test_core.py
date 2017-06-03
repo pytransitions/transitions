@@ -10,7 +10,6 @@ from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, prep_ordered_arg
 from unittest import TestCase, skipIf
 import warnings
-warnings.filterwarnings('error', category=PendingDeprecationWarning, message=r".*0\.6\.0.*")
 
 try:
     from unittest.mock import MagicMock
@@ -699,20 +698,6 @@ class TestTransitions(TestCase):
         self.assertTrue(m.do_strcheck())
         self.assertIn('checked', vars(m))
 
-    def test_warning(self):
-        import sys
-        # does not work with python 3.3. However, the warning is shown when Machine is initialized manually.
-        if (3, 3) <= sys.version_info < (3, 4):
-            return
-        with self.assertRaises(PendingDeprecationWarning):
-            m = Machine(None)
-
-        with self.assertRaises(PendingDeprecationWarning):
-            m = Machine(initial=None)
-
-        with self.assertRaises(PendingDeprecationWarning):
-            m = Machine(None, add_self=False)
-
     def test_machine_prepare(self):
 
         global_mock = MagicMock()
@@ -862,3 +847,20 @@ class TestTransitions(TestCase):
         with self.assertRaises(MachineError):
             self.stuff.reflex()
         self.assertEqual(self.stuff.level, 3)
+
+
+class TestWarnings(TestCase):
+
+    def test_warning(self):
+        import sys
+        # does not work with python 3.3. However, the warning is shown when Machine is initialized manually.
+        if (3, 3) <= sys.version_info < (3, 4):
+            return
+
+        with warnings.catch_warnings(record=True) as w:
+            m = Machine(None)
+            m = Machine(initial=None)
+            m = Machine(None, add_self=False)
+            self.assertEqual(len(w), 3)
+            for warn in w:
+                self.assertEqual(warn.category, PendingDeprecationWarning)
