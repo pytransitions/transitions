@@ -38,15 +38,13 @@ class LockedNestedEvent(LockedEvent, NestedEvent):
 
 class HierarchicalGraphMachine(GraphMachine, HierarchicalMachine):
 
-    @staticmethod
-    def _create_transition(*args, **kwargs):
+    def _create_transition(self, *args, **kwargs):
         return NestedGraphTransition(*args, **kwargs)
 
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
 
-    @staticmethod
-    def _create_event(*args, **kwargs):
+    def _create_event(self, *args, **kwargs):
         return LockedNestedEvent(*args, **kwargs)
 
 
@@ -56,10 +54,8 @@ class LockedGraphMachine(GraphMachine, LockedMachine):
 
 class LockedHierarchicalGraphMachine(GraphMachine, LockedMachine, HierarchicalMachine):
 
-    @staticmethod
-    def _create_transition(*args, **kwargs):
+    def _create_transition(self, *args, **kwargs):
         return NestedGraphTransition(*args, **kwargs)
 
-    @staticmethod
-    def _create_event(*args, **kwargs):
+    def _create_event(self, *args, **kwargs):
         return LockedNestedEvent(*args, **kwargs)

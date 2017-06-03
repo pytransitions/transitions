@@ -511,16 +511,13 @@ class Machine(object):
         for model in models:
             self.models.remove(model)
 
-    @staticmethod
-    def _create_transition(*args, **kwargs):
+    def _create_transition(self, *args, **kwargs):
         return Transition(*args, **kwargs)
 
-    @staticmethod
-    def _create_event(*args, **kwargs):
+    def _create_event(self, *args, **kwargs):
         return Event(*args, **kwargs)
 
-    @staticmethod
-    def _create_state(*args, **kwargs):
+    def _create_state(self, *args, **kwargs):
         return State(*args, **kwargs)
 
     @property
