@@ -65,6 +65,8 @@ class LockedEvent(Event):
 
 class LockedMachine(Machine):
 
+    event_cls = LockedEvent
+
     def __init__(self, *args, **kwargs):
         self._locked = 0
 
@@ -139,7 +141,3 @@ class LockedMachine(Machine):
 
     def __exit__(self, *exc):
         self._locked = 0
-
-    @staticmethod
-    def _create_event(*args, **kwargs):
-        return LockedEvent(*args, **kwargs)

@@ -345,6 +345,9 @@ class Machine(object):
     separator = '_'
     wildcard_all = '*'
     wildcard_same = '='
+    state_cls = State
+    transition_cls = Transition
+    event_cls = Event
 
     def __init__(self, model='self', states=None, initial='initial', transitions=None,
                  send_event=False, auto_transitions=True,
@@ -511,17 +514,17 @@ class Machine(object):
         for model in models:
             self.models.remove(model)
 
-    @staticmethod
-    def _create_transition(*args, **kwargs):
-        return Transition(*args, **kwargs)
+    @classmethod
+    def _create_transition(cls, *args, **kwargs):
+        return cls.transition_cls(*args, **kwargs)
 
-    @staticmethod
-    def _create_event(*args, **kwargs):
-        return Event(*args, **kwargs)
+    @classmethod
+    def _create_event(cls, *args, **kwargs):
+        return cls.event_cls(*args, **kwargs)
 
-    @staticmethod
-    def _create_state(*args, **kwargs):
-        return State(*args, **kwargs)
+    @classmethod
+    def _create_state(cls, *args, **kwargs):
+        return cls.state_cls(*args, **kwargs)
 
     @property
     def initial(self):

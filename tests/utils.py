@@ -16,7 +16,8 @@ class Stuff(object):
             'name': 'Test Machine',
         }
         kwargs.update(extra_kwargs)
-        self.machine = machine_cls(*args, **kwargs)
+        if machine_cls is not None:
+            self.machine = machine_cls(*args, **kwargs)
         self.level = 1
         self.machine_cls = machine_cls
 

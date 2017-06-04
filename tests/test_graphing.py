@@ -105,8 +105,8 @@ class TestDiagrams(TestCase):
             self.assertTrue(trigger in str(graph))
 
     def test_multi_model_state(self):
-        m1 = Stuff()
-        m2 = Stuff()
+        m1 = Stuff(machine_cls=None)
+        m2 = Stuff(machine_cls=None)
         m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A')
         m1.walk()
         self.assertEqual(m1.graph.get_node(m1.state).attr['color'],
@@ -188,7 +188,7 @@ class TestDiagramsNested(TestDiagrams):
         # Test that graph properties match the Machine
         node_names = set([n.name for n in graph.nodes()])
         self.assertEqual(set(m.states.keys()) - set(['C', 'C%s1' % NestedState.separator]),
-                         node_names - set(['C_anchor', 'C_1_anchor']))
+                         node_names - set(['C_anchor', 'C%s1_anchor' % NestedState.separator]))
 
         triggers = set([n.attr['label'] for n in graph.edges()])
         for t in triggers:
@@ -202,7 +202,9 @@ class TestDiagramsNested(TestDiagrams):
 
         # write diagram to temp file
         target = tempfile.NamedTemporaryFile()
-        self.assertIsNotNone(graph.get_subgraph('cluster_C').get_subgraph('cluster_C_child').get_subgraph('cluster_C_1'))
+        sgraph = graph.get_subgraph('cluster_C').get_subgraph('cluster_C_child')
+        sgraph = sgraph.get_subgraph('cluster_C%s1' % NestedState.separator)
+        self.assertIsNotNone(sgraph)
         # print(graph.string())
         graph.draw(target.name, prog='dot')
         self.assertTrue(os.path.getsize(target.name) > 0)

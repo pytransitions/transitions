@@ -159,6 +159,10 @@ class NestedEvent(Event):
 
 class HierarchicalMachine(Machine):
 
+    state_cls = NestedState
+    transition_cls = NestedTransition
+    event_cls = NestedEvent
+
     def __init__(self, *args, **kwargs):
         self._buffered_transitions = []
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
@@ -173,19 +177,6 @@ class HierarchicalMachine(Machine):
             else:
                 to_func = partial(self.to, m)
                 setattr(m, 'to', to_func)
-
-    # Instead of creating transitions directly, Machine now use a factory method which can be overridden
-    @staticmethod
-    def _create_transition(*args, **kwargs):
-        return NestedTransition(*args, **kwargs)
-
-    @staticmethod
-    def _create_event(*args, **kwargs):
-        return NestedEvent(*args, **kwargs)
-
-    @staticmethod
-    def _create_state(*args, **kwargs):
-        return NestedState(*args, **kwargs)
 
     def is_state(self, state_name, model, allow_substates=False):
         if not allow_substates:

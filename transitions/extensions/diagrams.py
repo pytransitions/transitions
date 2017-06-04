@@ -236,8 +236,41 @@ class NestedGraph(Graph):
         return events
 
 
+class TransitionGraphSupport(Transition):
+
+    def _change_state(self, event_data):
+        machine = event_data.machine
+        model = event_data.model
+        dest = machine.get_state(self.dest)
+
+        # Mark the active node
+        machine.reset_graph(model.graph)
+
+        # Mark the previous node and path used
+        if self.source is not None:
+            source = machine.get_state(self.source)
+            machine.set_node_state(model.graph, source.name,
+                                   state='previous')
+            machine.set_node_state(model.graph, dest.name, state='active')
+
+            if hasattr(source, 'children') and len(source.children) > 0:
+                source = source.name + '_anchor'
+            else:
+                source = source.name
+            if hasattr(dest, 'children') and len(dest.children) > 0:
+                dest = dest.name + '_anchor'
+            else:
+                dest = dest.name
+            machine.set_edge_state(model.graph, source, dest,
+                                   state='previous', label=event_data.event.name)
+
+        super(TransitionGraphSupport, self)._change_state(event_data)
+
+
 class GraphMachine(Machine):
+
     _pickle_blacklist = ['graph']
+    transition_cls = TransitionGraphSupport
 
     def __getstate__(self):
         return {k: v for k, v in self.__dict__.items() if k not in self._pickle_blacklist}
@@ -380,41 +413,6 @@ class GraphMachine(Machine):
     def set_graph_style(graph, item, style='default'):
         style_attr = graph.style_attributes.get('graph', {}).get(style)
         item.graph_attr.update(style_attr)
-
-    @staticmethod
-    def _create_transition(*args, **kwargs):
-        return TransitionGraphSupport(*args, **kwargs)
-
-
-class TransitionGraphSupport(Transition):
-
-    def _change_state(self, event_data):
-        machine = event_data.machine
-        model = event_data.model
-        dest = machine.get_state(self.dest)
-
-        # Mark the active node
-        machine.reset_graph(model.graph)
-
-        # Mark the previous node and path used
-        if self.source is not None:
-            source = machine.get_state(self.source)
-            machine.set_node_state(model.graph, source.name,
-                                   state='previous')
-            machine.set_node_state(model.graph, dest.name, state='active')
-
-            if hasattr(source, 'children') and len(source.children) > 0:
-                source = source.name + '_anchor'
-            else:
-                source = source.name
-            if hasattr(dest, 'children') and len(dest.children) > 0:
-                dest = dest.name + '_anchor'
-            else:
-                dest = dest.name
-            machine.set_edge_state(model.graph, source, dest,
-                                   state='previous', label=event_data.event.name)
-
-        super(TransitionGraphSupport, self)._change_state(event_data)
 
 
 def _get_subgraph(g, name):
