@@ -1,5 +1,4 @@
-from threading import Thread
-from time import sleep
+from threading import Timer
 from six import string_types
 from ..core import MachineError
 
@@ -48,15 +47,15 @@ class Timeout(object):
         if self.timeout > 0:
             func = getattr(event_data.model, self.on_timeout) if isinstance(self.on_timeout, string_types)\
                 else self.on_timeout
-            t = TimeoutThread(self.timeout, func)
+            t = Timer(self.timeout, func)
             t.start()
             self.runner[id(event_data.model)] = t
         super(Timeout, self).enter(event_data)
 
     def exit(self, event_data):
         t = self.runner.get(id(event_data.model), None)
-        if t:
-            t.cancelled = True
+        if t is not None and t.is_alive:
+            t.cancel()
         super(Timeout, self).exit(event_data)
 
 
@@ -105,17 +104,3 @@ def add_state_features(*args):
 
 class VolatileObject(object):
     pass
-
-
-class TimeoutThread(Thread):
-
-    def __init__(self, timeout, func):
-        Thread.__init__(self)
-        self.timeout = timeout
-        self.func = func
-        self.cancelled = False
-
-    def run(self):
-        sleep(self.timeout)
-        if not self.cancelled:
-            self.func()
