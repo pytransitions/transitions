@@ -24,7 +24,7 @@ setup(
     description="A lightweight, object-oriented Python state machine implementation.",
     maintainer='Tal Yarkoni',
     maintainer_email='tyarkoni@gmail.com',
-    url='http://github.com/tyarkoni/transitions',
+    url='http://github.com/pytransitions/transitions',
     packages=find_packages(exclude=['tests', 'test_*']),
     package_data={'transitions': ['data/*'],
                   'transitions.tests': ['data/*']
@@ -33,7 +33,7 @@ setup(
     install_requires=['six'],
     tests_require=tests_require,
     license='MIT',
-    download_url='https://github.com/tyarkoni/transitions/archive/%s.tar.gz' % __version__,
+    download_url='https://github.com/pytransitions/transitions/archive/%s.tar.gz' % __version__,
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
