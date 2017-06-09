@@ -1,10 +1,10 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.5.3-orange.svg)](https://github.com/tyarkoni/transitions)
-[![Build Status](https://travis-ci.org/tyarkoni/transitions.svg?branch=master)](https://travis-ci.org/tyarkoni/transitions)
-[![Coverage Status](https://coveralls.io/repos/tyarkoni/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/tyarkoni/transitions?branch=master)
+[![Version](https://img.shields.io/badge/version-v0.5.3-orange.svg)](https://github.com/pytransitions/transitions)
+[![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
+[![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/tyarkoni/transitions/0.5.3.svg)](https://github.com/tyarkoni/transitions/compare/0.5.3...master)
-[![License](https://img.shields.io/github/license/tyarkoni/transitions.svg)](LICENSE)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.5.3.svg)](https://github.com/pytransitions/transitions/compare/0.5.3...master)
+[![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 <!--[![Name](Image)](Link)-->
 
 A lightweight, object-oriented state machine implementation in Python. Compatible with Python 2.7+ and 3.0+.
