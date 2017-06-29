@@ -27,7 +27,6 @@ class Error(Tags):
         super(Error, self).__init__(*args, **kwargs)
 
     def enter(self, event_data):
-        print(event_data.machine.get_triggers(self.name))
         if len(event_data.machine.get_triggers(self.name)) == 0 and not self.is_accepted:
             raise MachineError("Error state '{0}' reached!".format(self.name))
 

@@ -7,15 +7,15 @@ with open('transitions/version.py') as f:
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools
 
-tests_require = ['dill', 'pygraphviz']
+tests_require = ['dill']
+extras_require = {'diagrams': ['pygraphviz']}
 
 extra_setuptools_args = {}
 if 'setuptools' in sys.modules:
+    extras_require['test'] = ['nose>=0.10.1']
     tests_require.append('nose')
     extra_setuptools_args = dict(
         test_suite='nose.collector',
-        extras_require=dict(
-            test='nose>=0.10.1')
     )
 
 setup(
@@ -30,7 +30,8 @@ setup(
                   'transitions.tests': ['data/*']
                   },
     include_package_data=True,
-    install_requires=['six'],
+    install_requires=['six'],	
+    extras_require=extras_require,
     tests_require=tests_require,
     license='MIT',
     download_url='https://github.com/tyarkoni/transitions/archive/%s.tar.gz' % __version__,
