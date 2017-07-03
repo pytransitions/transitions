@@ -62,33 +62,20 @@ class Volatile(object):
 
     def __init__(self, *args, **kwargs):
         self.volatile_cls = kwargs.pop('volatile', VolatileObject)
-        self.volatile = self.volatile_cls()
+        self.volatile_hook = kwargs.pop('hook', 'volatile')
         super(Volatile, self).__init__(*args, **kwargs)
         self.initialized = True
 
     def enter(self, event_data):
-        self.volatile = self.volatile_cls()
+        setattr(event_data.model, self.volatile_hook, self.volatile_cls())
         super(Volatile, self).enter(event_data)
 
-    # def exit(self, event_data):
-    #     super(Timeout, self).exit(event_data)
-    #     del self.volatile
-
-    def __getattr__(self, item):
+    def exit(self, event_data):
+        super(Volatile, self).exit(event_data)
         try:
-            return super(Volatile, self).__getattribute__(item)
+            delattr(event_data.model, self.volatile_hook)
         except AttributeError:
-            return super(Volatile, self).__getattribute__('volatile').__getattribute__(item)
-
-    def __setattr__(self, key, value):
-        if hasattr(self, 'initialized'):
-            try:
-                super(Volatile, self).__getattribute__(key)
-                super(Volatile, self).__setattr__(key, value)
-            except AttributeError:
-                setattr(super(Volatile, self).__getattribute__('volatile'), key, value)
-        else:
-            super(Volatile, self).__setattr__(key, value)
+            pass
 
 
 def add_state_features(*args):
