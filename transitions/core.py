@@ -15,8 +15,7 @@ from six import string_types
 
 import warnings
 # make deprecation warnings of transition visible for module users
-warnings.filterwarnings('default', category=PendingDeprecationWarning,
-                        message=r".*transitions version 0\.6\.0.*")
+warnings.filterwarnings(action='default', message=r"Starting from transitions version 0\.6\.0 .*")
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -353,7 +352,7 @@ class Machine(object):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, add_self=True, prepare_event=None, finalize_event=None, **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, **kwargs):
         """
         Args:
             model (object): The object(s) whose states we want to manage. If 'self',
@@ -392,7 +391,6 @@ class Machine(object):
                 executed in a state callback function will be queued and executed later.
                 Due to the nature of the queued processing, all transitions will
                 _always_ return True since conditional checks cannot be conducted at queueing time.
-            add_self (boolean): If no model(s) provided, intialize state machine against self.
             prepare_event: A callable called on for before possible transitions will be processed.
                 It receives the very same args as normal callbacks.
             finalize_event: A callable called on for each triggered event after transitions have been processed.
@@ -400,6 +398,11 @@ class Machine(object):
 
             **kwargs additional arguments passed to next class in MRO. This can be ignored in most cases.
         """
+
+        if kwargs.pop('add_self', None) is not None:
+            warnings.warn("Starting from transitions version 0.6.0 'add_self' is no longer"
+                          "supported. To add the machine as a model use the new default "
+                          "value model='self' instead.", DeprecationWarning)
 
         try:
             super(Machine, self).__init__(**kwargs)
@@ -427,27 +430,6 @@ class Machine(object):
         self.id = name + ": " if name is not None else ""
 
         self.models = []
-
-        if model is None and add_self:
-            model = 'self'
-            warnings.warn("Starting from transitions version 0.6.0, passing model=None to the "
-                          "constructor will no longer add the machine instance as a model but add "
-                          "NO model at all. Consequently, add_self will be removed. To add the "
-                          "machine as a model (and also hide this warning) use the new default "
-                          "value model='self' instead.", PendingDeprecationWarning)
-
-        if add_self is not True:
-            warnings.warn("Starting from transitions version 0.6.0, passing model=None to the "
-                          "constructor will no longer add the machine instance as a model but add "
-                          "NO model at all. Consequently, add_self will be removed.",
-                          PendingDeprecationWarning)
-
-        if model and initial is None:
-            initial = 'initial'
-            warnings.warn("Starting from transitions version 0.6.0, passing initial=None to the constructor "
-                          "will no longer create and set the 'initial' state. If no initial"
-                          "state is provided but model is not None, an error will be raised.",
-                          PendingDeprecationWarning)
 
         if states is not None:
             self.add_states(states)

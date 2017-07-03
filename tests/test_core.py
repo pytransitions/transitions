@@ -3,13 +3,14 @@ try:
 except ImportError:
     pass
 
+import warnings
+import sys
+
 from .utils import InheritedStuff
 from .utils import Stuff
-import sys
 from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, prep_ordered_arg
 from unittest import TestCase, skipIf
-import warnings
 
 try:
     from unittest.mock import MagicMock
@@ -858,9 +859,9 @@ class TestWarnings(TestCase):
             return
 
         with warnings.catch_warnings(record=True) as w:
+            warnings.filterwarnings(action='default', message=r"Starting from transitions version 0\.6\.0 .*")
             m = Machine(None)
-            m = Machine(initial=None)
-            m = Machine(None, add_self=False)
-            self.assertEqual(len(w), 3)
+            m = Machine(add_self=False)
+            self.assertEqual(len(w), 1)
             for warn in w:
-                self.assertEqual(warn.category, PendingDeprecationWarning)
+                self.assertEqual(warn.category, DeprecationWarning)

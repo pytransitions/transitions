@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 ()
+
+Release 0.6.0 is a major release and introduces new state features
+
+- `add_state_features` convenience decorator supports creation of custom states
+- `Tags` makes states taggable
+- `Error` checks for error (not accepted states that cannot be left) states; subclass of `Tags`
+- `Volatile` enables scoped/temporary state objects to handle 
+- removed `add_self` from `Machine` constructor 
+
 ## 0.5.3 (May, 2017)
 
 Release 0.5.3 is a minor release and contains several bug fixes:

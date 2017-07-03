@@ -30,7 +30,7 @@ setup(
                   'transitions.tests': ['data/*']
                   },
     include_package_data=True,
-    install_requires=['six'],	
+    install_requires=['six'],
     extras_require=extras_require,
     tests_require=tests_require,
     license='MIT',

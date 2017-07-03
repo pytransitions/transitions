@@ -62,7 +62,7 @@ class Volatile(object):
 
     def __init__(self, *args, **kwargs):
         self.volatile_cls = kwargs.pop('volatile', VolatileObject)
-        self.volatile_hook = kwargs.pop('hook', 'volatile')
+        self.volatile_hook = kwargs.pop('hook', 'scope')
         super(Volatile, self).__init__(*args, **kwargs)
         self.initialized = True
 

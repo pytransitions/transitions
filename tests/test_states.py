@@ -96,24 +96,25 @@ class TestTransitions(TestCase):
 
         states = ['A', {'name': 'B', 'volatile': TemporalState}]
         m = CustomMachine(states=states, initial='A')
-        # retrieve states
-        a = m.get_state('A')
-        b = m.get_state('B')
-        # add a new variable to empty default volatile object
-        a.foo = 3
-        self.assertEqual(a.volatile.foo, 3)
-        # on_exit is an attribute of state; should be persistent
-        b.on_exit = [mock]
+
         m.to_B()
-        self.assertIn(mock, b.on_exit)
-        # value has been set in __init__ of TemporalState
-        self.assertEqual(b.value, 5)
+        self.assertEqual(m.scope.value, 5)
+
         # should call method of TemporalState
-        b.increase()
-        self.assertEqual(b.value, 6)
+        m.scope.increase()
+        self.assertEqual(m.scope.value, 6)
+
         # re-entering state should reset default volatile object
         m.to_A()
-        self.assertFalse(hasattr(a, 'foo'))
+        self.assertFalse(hasattr(m.scope, 'value'))
+
+        m.scope.foo = 'bar'
+        m.to_B()
+        # custom attribute of A should be gone
+        self.assertFalse(hasattr(m.scope, 'foo'))
+        # value should be reset
+        self.assertEqual(m.scope.value, 5)
+
 
 #
 # class TestStatesDiagramsLockedNested(TestDiagramsLockedNested):
