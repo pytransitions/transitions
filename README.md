@@ -873,6 +873,7 @@ Even though the core of transitions is kept lightweight, there are a variety of 
 - **Diagrams** to visualize the current state of a machine
 - **Hierarchical State Machines** for nesting and reuse
 - **Threadsafe Locks** for parallel execution
+- **Custom States** for extended state-related behaviour
 
 There are two mechanisms to retrieve a state machine instance with the desired features enabled. The first approach makes use of the convenience `factory` with the three parameters `graph`, `nested` and `locked` set to `True` if the certain feature is required:
 
@@ -918,7 +919,12 @@ Additional Keywords:
 * `show_conditions` (default False): Shows conditions at transition edges
 * `show_auto_transitions` (default False): Shows auto transitions in graph
 
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed (`pip install pygraphviz`). With `GraphMachine` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
+Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed:
+ 
+    pip install pygraphviz  # install pygraphviz manually...
+    pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras
+    
+With `GraphMachine` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
 
 ```python
 from transitions.extensions import GraphMachine as Machine

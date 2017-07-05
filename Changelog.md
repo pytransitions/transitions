@@ -9,6 +9,7 @@ Release 0.6.0 is a major release and introduces new state features
 - `Error` checks for error (not accepted states that cannot be left) states; subclass of `Tags`
 - `Volatile` enables scoped/temporary state objects to handle 
 - removed `add_self` from `Machine` constructor 
+- `pygraphviz` is now optional; use `pip install transitions[diagrams]` to install it
 
 ## 0.5.3 (May, 2017)
 
