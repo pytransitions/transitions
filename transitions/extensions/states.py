@@ -36,8 +36,9 @@ class Timeout(object):
     def __init__(self, *args, **kwargs):
         self.timeout = kwargs.pop('timeout', 0)
         if self.timeout > 0:
-            self.on_timeout = kwargs.pop('on_timeout', None)
-            if self.on_timeout is None:
+            try:
+                self.on_timeout = kwargs.pop('on_timeout')
+            except KeyError:
                 raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.")
         self.runner = {}
         super(Timeout, self).__init__(*args, **kwargs)
