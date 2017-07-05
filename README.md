@@ -42,6 +42,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Diagrams](#diagrams)
         - [Hierarchical State Machine](#hsm)
         - [Threading](#threading)
+        - [State features](#state-features)
     - [Bug reports etc.](#bug-reports)
 
 
@@ -1118,7 +1119,7 @@ Any python context manager can be passed in via the `machine_context` keyword ar
 
 ```python
 from transitions.extensions import LockedMachine as Machine
-from threading import Thread, RLock
+from threading import RLock
 
 states = ['A', 'B', 'C']
 
@@ -1139,6 +1140,72 @@ machine.add_model(model, model_context=lock3)
 
 It's important that any user-provided context managers are re-entrant since the state machine will call them multiple
 times, even in the context of a single trigger invocation.
+
+#### <a name="state-features"></a>Adding features to states
+
+If your superheroes need some custom behaviour, you can throw in some extra functionality by decorating machine states:
+
+```python
+from time import sleep
+from transitions import Machine
+from transitions.extensions.states import add_state_features, Tags, Timeout
+
+
+@add_state_features(Tags, Timeout)
+class CustomStateMachine(Machine):
+    pass
+
+
+class SocialSuperhero(object):
+    def __init__(self):
+        self.entourage = 0
+
+    def on_enter_Waiting(self):
+        self.entourage += 1
+
+
+states = [{'name': 'Preparing', 'tags': ['home', 'busy']},
+          {'name': 'Waiting', 'timeout': 1, 'on_timeout': 'go'},
+          {'name': 'Away'}]  # The city needs us!
+
+transitions = [['done', 'Preparing', 'Waiting'],
+               ['join', 'Waiting', 'Waiting'],  # Entering Waiting again will increase our entourage
+               ['go', 'Waiting', 'Away']]  # Okay, let' move
+
+hero = SocialSuperhero()
+machine = CustomStateMachine(model=hero, states=states, transitions=transitions, initial='Preparing')
+assert hero.state == 'Preparing'  # Preparing for the night shift
+assert machine.get_state(hero.state).is_busy  # We are at home and busy
+hero.done()
+assert hero.state == 'Waiting'  # Waiting for fellow superheroes to join us
+assert hero.entourage == 1  # It's just us so far
+sleep(0.7)  # Waiting...
+hero.join()  # Weeh, we got company
+sleep(0.5)  # Waiting...
+hero.join()  # Even more company \o/
+sleep(2)  # Waiting...
+assert hero.state == 'Away'  # Impatient superhero already left the building
+assert machine.get_state(hero.state).is_home is False  # Yupp, not at home anymore
+assert hero.entourage == 3  # At least he is not alone
+```
+
+Currently, transitions comes equipped with the following state features:
+
+* **Timeout** -- triggers an event after some time has passed
+    - keyword: `timeout` (int, optional) -- if passed, an entered state will timeout after `timeout` seconds
+    - keyword: `on_timeout` (string/callable, optional) -- will be called when timeout time has been reached
+    - will raise an `AttributeError` when `timeout` is set but `on_timeout` is not
+
+* **Tags** -- adds tags to states
+    - keyword: `tags` (list, optional) -- assigns tags to a state
+    - `State.is_<tag_name>` will return `True` when the state has been tagged with `tag_name`, else `False`
+
+* **Error** -- raises a `MachineError` when a state cannot be left 
+    - inherits from `Tags` (if you use `Error` do not use `Tags`)
+    - keyword: `accepted` (bool, optional) -- marks a state as accepted
+    - alternatively the keyword `tags` can be passed, containing 'accepted'
+
+You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit` and should *not* inherit from `State` directly. 
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
 For bug reports and other issues, please open an issue on GitHub.
