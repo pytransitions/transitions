@@ -603,6 +603,8 @@ class Machine(object):
                 argument defined at the Machine level, and is in turn
                 overridden by any ignore_invalid_triggers explicitly
                 passed in an individual state's initialization arguments.
+
+            **kwargs additional keyword arguments used by state mixins.
         """
 
         ignore = ignore_invalid_triggers
