@@ -7,7 +7,7 @@ with open('transitions/version.py') as f:
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools
 
-tests_require = ['dill']
+tests_require = ['dill<0.2.7', 'pygraphviz']
 extras_require = {'diagrams': ['pygraphviz']}
 
 extra_setuptools_args = {}
@@ -24,7 +24,7 @@ setup(
     description="A lightweight, object-oriented Python state machine implementation.",
     maintainer='Tal Yarkoni',
     maintainer_email='tyarkoni@gmail.com',
-    url='http://github.com/tyarkoni/transitions',
+    url='http://github.com/pytransitions/transitions',
     packages=find_packages(exclude=['tests', 'test_*']),
     package_data={'transitions': ['data/*'],
                   'transitions.tests': ['data/*']
@@ -34,7 +34,7 @@ setup(
     extras_require=extras_require,
     tests_require=tests_require,
     license='MIT',
-    download_url='https://github.com/tyarkoni/transitions/archive/%s.tar.gz' % __version__,
+    download_url='https://github.com/pytransitions/transitions/archive/%s.tar.gz' % __version__,
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
