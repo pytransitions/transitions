@@ -584,7 +584,7 @@ class Machine(object):
         self.add_states(*args, **kwargs)
 
     def add_states(self, states, on_enter=None, on_exit=None,
-                   ignore_invalid_triggers=None):
+                   ignore_invalid_triggers=None, **kwargs):
         """ Add new state(s).
         Args:
             state (list, string, dict, or State): a list, a State instance, the
@@ -614,7 +614,7 @@ class Machine(object):
             if isinstance(state, string_types):
                 state = self._create_state(
                     state, on_enter=on_enter, on_exit=on_exit,
-                    ignore_invalid_triggers=ignore)
+                    ignore_invalid_triggers=ignore, **kwargs)
             elif isinstance(state, dict):
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
