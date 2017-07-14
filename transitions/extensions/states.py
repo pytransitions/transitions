@@ -58,6 +58,10 @@ class Timeout(object):
             t.cancel()
         super(Timeout, self).exit(event_data)
 
+    def set_timeout(self, timeout, on_timeout):
+        self.timeout = timeout
+        self.on_timeout = on_timeout
+
 
 class Volatile(object):
 
