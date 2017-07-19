@@ -278,7 +278,8 @@ class HierarchicalMachine(Machine):
             elif isinstance(state, NestedState):
                 tmp_states.append(state)
             else:
-                raise ValueError("%s cannot be added to the machine since its type is not known." % state)
+                raise ValueError("%s is not an instance or subclass of NestedState "
+                                 "required by HierarchicalMachine." % state)
             new_states.extend(tmp_states)
 
         duplicate_check = []
