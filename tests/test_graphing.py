@@ -75,6 +75,31 @@ class TestDiagrams(TestCase):
         graph = m.get_graph(force_new=True, title=False)
         self.assertEqual("", graph.graph_attr['label'])
 
+    def test_anonymous_callable_conditions(self):
+        import functools
+        def check(result):
+            return result
+
+        class Check:
+            def __init__(self, result):
+                self.result = result
+            def __call__(self):
+                return self.result
+
+        m = self.machine_cls(states=self.states,
+                             transitions=self.transitions,
+                             initial='A',
+                             auto_transitions=False,
+                             show_conditions=True,
+                             title='a test')
+        m.add_state({'name': 'E'})
+        m.add_transition(trigger='fly', source='D', dest='E',
+                         conditions=Check(True))
+        m.add_transition(trigger='fly', source='D', dest='E',
+                         unless=functools.partial(check, False))
+        graph = m.get_graph()
+        self.assertIsNotNone(graph)
+
     def test_add_custom_state(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False, title='a test')
         m.add_state('X')

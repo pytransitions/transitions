@@ -10,6 +10,7 @@ except ImportError:  # pragma: no cover
 
 import logging
 from functools import partial
+from six import string_types
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -117,7 +118,12 @@ class Graph(Diagram):
         return False
 
     def rep(self, f):
-        return f.__name__ if callable(f) else f
+        if isinstance(f, string_types):
+            return f
+        try:
+            return f.__name__
+        except AttributeError:
+            return str(f)
 
     def _transition_label(self, edge_label, tran):
         if self.machine.show_conditions and tran.conditions:
