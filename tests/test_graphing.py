@@ -32,29 +32,36 @@ class TestRep(TestCase):
     def test_rep_function(self):
         def check():
             return True
+        self.assertTrue(check())
         self.assertEqual(rep(check), "check")
 
     def rest_rep_partial_no_args_no_kwargs(self):
         def check():
             return True
-        self.assertEqual(rep(partial(check)), "check()")
+        pcheck = partial(check)
+        self.assertTrue(pcheck())
+        self.assertEqual(rep(pcheck), "check()")
 
     def test_rep_partial_with_args(self):
         def check(result):
             return result
-        self.assertEqual(rep(partial(check, True)), "check(True)")
+        pcheck = partial(check, True)
+        self.assertTrue(pcheck())
+        self.assertEqual(rep(pcheck), "check(True)")
 
     def test_rep_partial_with_kwargs(self):
         def check(result=True):
             return result
-        self.assertEqual(rep(partial(check, result=True)),
-                         "check(result=True)")
+        pcheck = partial(check, result=True)
+        self.assertTrue(pcheck())
+        self.assertEqual(rep(pcheck), "check(result=True)")
 
     def test_rep_partial_with_args_and_kwargs(self):
         def check(result, doublecheck=True):
             return result == doublecheck
-        self.assertEqual(rep(partial(check, True, doublecheck=True)),
-                         "check(True, doublecheck=True)")
+        pcheck = partial(check, True, doublecheck=True)
+        self.assertTrue(pcheck())
+        self.assertEqual(rep(pcheck), "check(True, doublecheck=True)")
 
     def test_rep_callable_class(self):
         class Check(object):
@@ -67,7 +74,9 @@ class TestRep(TestCase):
             def __repr__(self):
                 return "%s(%r)" % (type(self).__name__, self.result)
 
-        self.assertEqual(rep(Check(True)), "Check(True)")
+        ccheck = Check(True)
+        self.assertTrue(ccheck())
+        self.assertEqual(rep(ccheck), "Check(True)")
 
 
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
