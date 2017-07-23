@@ -6,9 +6,10 @@ except ImportError:
 from .utils import Stuff
 
 from transitions.extensions import MachineFactory
-from transitions.extensions.diagrams import Diagram
+from transitions.extensions.diagrams import Diagram, rep
 from transitions.extensions.nesting import NestedState
 from unittest import TestCase, skipIf
+from functools import partial
 import tempfile
 import os
 
@@ -21,6 +22,52 @@ except ImportError:  # pragma: no cover
 
 def edge_label_from_transition_label(label):
     return label.split(' | ')[0].split(' [')[0]  # if no condition, label is returned; returns first event only
+
+
+class TestRep(TestCase):
+
+    def test_rep_string(self):
+        self.assertEqual(rep("string"), "string")
+
+    def test_rep_function(self):
+        def check():
+            return True
+        self.assertEqual(rep(check), "check")
+
+    def rest_rep_partial_no_args_no_kwargs(self):
+        def check():
+            return True
+        self.assertEqual(rep(partial(check)), "check()")
+
+    def test_rep_partial_with_args(self):
+        def check(result):
+            return result
+        self.assertEqual(rep(partial(check, True)), "check(True)")
+
+    def test_rep_partial_with_kwargs(self):
+        def check(result=True):
+            return result
+        self.assertEqual(rep(partial(check, result=True)),
+                         "check(result=True)")
+
+    def test_rep_partial_with_args_and_kwargs(self):
+        def check(result, doublecheck=True):
+            return result == doublecheck
+        self.assertEqual(rep(partial(check, True, doublecheck=True)),
+                         "check(True, doublecheck=True)")
+
+    def test_rep_callable_class(self):
+        class Check(object):
+            def __init__(self, result):
+                self.result = result
+
+            def __call__(self):
+                return self.result
+
+            def __repr__(self):
+                return "%s(%r)" % (type(self).__name__, self.result)
+
+        self.assertEqual(rep(Check(True)), "Check(True)")
 
 
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
@@ -74,31 +121,6 @@ class TestDiagrams(TestCase):
 
         graph = m.get_graph(force_new=True, title=False)
         self.assertEqual("", graph.graph_attr['label'])
-
-    def test_anonymous_callable_conditions(self):
-        import functools
-        def check(result):
-            return result
-
-        class Check:
-            def __init__(self, result):
-                self.result = result
-            def __call__(self):
-                return self.result
-
-        m = self.machine_cls(states=self.states,
-                             transitions=self.transitions,
-                             initial='A',
-                             auto_transitions=False,
-                             show_conditions=True,
-                             title='a test')
-        m.add_state({'name': 'E'})
-        m.add_transition(trigger='fly', source='D', dest='E',
-                         conditions=Check(True))
-        m.add_transition(trigger='fly', source='D', dest='E',
-                         unless=functools.partial(check, False))
-        graph = m.get_graph()
-        self.assertIsNotNone(graph)
 
     def test_add_custom_state(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False, title='a test')

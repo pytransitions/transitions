@@ -10,9 +10,28 @@ except ImportError:  # pragma: no cover
 
 import logging
 from functools import partial
-from six import string_types
+import itertools
+from six import string_types, iteritems
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+
+def rep(f):
+    """Return a string representation for `f`."""
+    if isinstance(f, string_types):
+        return f
+    try:
+        return f.__name__
+    except AttributeError:
+        pass
+    if isinstance(f, partial):
+        return "%s(%s)" % (
+            f.func.__name__,
+            ", ".join(itertools.chain(
+                (str(_) for _ in f.args),
+                ("%s=%s" % (key, value)
+                 for key, value in iteritems(f.keywords)))))
+    return str(f)
 
 
 class Diagram(object):
@@ -117,20 +136,12 @@ class Graph(Diagram):
                 return True
         return False
 
-    def rep(self, f):
-        if isinstance(f, string_types):
-            return f
-        try:
-            return f.__name__
-        except AttributeError:
-            return str(f)
-
     def _transition_label(self, edge_label, tran):
         if self.machine.show_conditions and tran.conditions:
             return '{edge_label} [{conditions}]'.format(
                 edge_label=edge_label,
                 conditions=' & '.join(
-                    self.rep(c.func) if c.target else '!' + self.rep(c.func)
+                    rep(c.func) if c.target else '!' + rep(c.func)
                     for c in tran.conditions
                 ),
             )
