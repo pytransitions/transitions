@@ -5,6 +5,7 @@ except ImportError:
 
 from .utils import InheritedStuff
 from .utils import Stuff
+from functools import partial
 import sys
 from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, prep_ordered_arg
@@ -123,6 +124,24 @@ class TestTransitions(TestCase):
         s.machine.add_transition('advance', 'B', 'C', unless=['this_fails'])
         s.machine.add_transition('advance', 'C', 'D', unless=['this_fails',
                                                               'this_passes'])
+        s.advance()
+        self.assertEqual(s.state, 'B')
+        s.advance()
+        self.assertEqual(s.state, 'C')
+        s.advance()
+        self.assertEqual(s.state, 'C')
+
+    def test_conditions_with_partial(self):
+        def check(result):
+            return result
+
+        s = self.stuff
+        s.machine.add_transition('advance', 'A', 'B',
+                                 conditions=partial(check, True))
+        s.machine.add_transition('advance', 'B', 'C',
+                                 unless=[partial(check, False)])
+        s.machine.add_transition('advance', 'C', 'D',
+                                 unless=[partial(check, False), partial(check, True)])
         s.advance()
         self.assertEqual(s.state, 'B')
         s.advance()
