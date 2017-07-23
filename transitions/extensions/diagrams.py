@@ -30,7 +30,7 @@ def rep(f):
             ", ".join(itertools.chain(
                 (str(_) for _ in f.args),
                 ("%s=%s" % (key, value)
-                 for key, value in iteritems(f.keywords)))))
+                 for key, value in iteritems(f.keywords if f.keywords else {})))))
     return str(f)
 
 
