@@ -35,7 +35,7 @@ class TestRep(TestCase):
         self.assertTrue(check())
         self.assertEqual(rep(check), "check")
 
-    def rest_rep_partial_no_args_no_kwargs(self):
+    def test_rep_partial_no_args_no_kwargs(self):
         def check():
             return True
         pcheck = partial(check)
