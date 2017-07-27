@@ -353,9 +353,10 @@ class Machine(object):
                  queued=False, add_self=True, prepare_event=None, finalize_event=None, **kwargs):
         """
         Args:
-            model (object): The object(s) whose states we want to manage. If 'self',
+            model (object or list): The object(s) whose states we want to manage. If 'self',
                 the current Machine instance will be used the model (i.e., all
-                triggering events will be attached to the Machine itself).
+                triggering events will be attached to the Machine itself). Note that an empty list
+                is treated like no model.
             states (list): A list of valid states. Each element can be either a
                 string or a State instance. If string, a new generic State
                 instance will be created that has the same name as the string.
