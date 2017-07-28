@@ -649,11 +649,13 @@ class Machine(object):
         #  Add enter/exit callbacks if there are existing bound methods
         enter_callback = 'on_enter_' + state.name
         if hasattr(model, enter_callback) and \
-                inspect.ismethod(getattr(model, enter_callback)):
+                inspect.ismethod(getattr(model, enter_callback)) and \
+                enter_callback not in state.on_enter:
             state.add_callback('enter', enter_callback)
         exit_callback = 'on_exit_' + state.name
         if hasattr(model, exit_callback) and \
-                inspect.ismethod(getattr(model, exit_callback)):
+                inspect.ismethod(getattr(model, exit_callback)) and \
+                exit_callback not in state.on_exit:
             state.add_callback('exit', exit_callback)
 
     def _add_trigger_to_model(self, trigger, model):

@@ -428,6 +428,22 @@ class TestTransitions(TestCase):
         self.assertTrue(m.before_state_change[0].called)
         self.assertTrue(m.after_state_change[0].called)
 
+    def test_state_callbacks(self):
+        class Model:
+            def on_enter_A(self): pass
+            def on_exit_A(self): pass
+            def on_enter_B(self): pass
+            def on_exit_B(self): pass
+        states = [
+                  State(name='A', on_enter='on_enter_A', on_exit='on_exit_A'),
+                  State(name='B', on_enter='on_enter_B', on_exit='on_exit_B')
+                  ]
+        machine = Machine(Model(), states=states)
+        self.assertEqual(len(states[0].on_enter), 1)
+        self.assertEqual(len(states[0].on_enter), 1)
+        self.assertEqual(len(states[1].on_exit), 1)
+        self.assertEqual(len(states[1].on_exit), 1)
+
     def test_pickle(self):
         import sys
         if sys.version_info < (3, 4):
