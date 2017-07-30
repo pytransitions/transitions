@@ -1212,6 +1212,28 @@ Currently, transitions comes equipped with the following state features:
     - alternatively the keyword `tags` can be passed, containing 'accepted'
 
 You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit` and should *not* inherit from `State` directly. 
+In case you prefer to write your own custom states from scratch be aware that some state extensions *require* certain state features. `HierarchicalStateMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:
+
+```python
+from transitions import Machine, State
+
+class MyState(State):
+    pass
+
+class CustomMachine(Machine):
+    # Use MyState as state class
+    state_cls = MyState
+
+    
+class VerboseMachine(Machine):
+
+    # `Machine._create_state` is a class method but we can 
+    # override it to be an instance method
+    def _create_state(self, *args, **kwargs):
+        print("Creating a new state with machine '{0}'".format(self.name))
+        return MyState(*args, **kwargs)
+
+```
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
 For bug reports and other issues, please open an issue on GitHub.
