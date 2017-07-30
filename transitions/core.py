@@ -646,7 +646,8 @@ class Machine(object):
     def _add_model_to_state(self, state, model):
         setattr(model, 'is_%s' % state.name,
                 partial(self.is_state, state.name, model))
-        #  Add enter/exit callbacks if there are existing bound methods
+        # Add enter/exit callbacks if there are existing bound methods
+        # except if they are already mentioned in 'on_enter/exit'
         enter_callback = 'on_enter_' + state.name
         if hasattr(model, enter_callback) and \
                 inspect.ismethod(getattr(model, enter_callback)) and \
