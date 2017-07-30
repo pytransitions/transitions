@@ -1,6 +1,10 @@
 from threading import Timer
 from six import string_types
-from ..core import MachineError
+from ..core import MachineError, listify
+import logging
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 class Tags(object):
@@ -35,6 +39,7 @@ class Timeout(object):
 
     def __init__(self, *args, **kwargs):
         self.timeout = kwargs.pop('timeout', 0)
+        self._on_timeout = None
         if self.timeout > 0:
             try:
                 self.on_timeout = kwargs.pop('on_timeout')
@@ -45,9 +50,7 @@ class Timeout(object):
 
     def enter(self, event_data):
         if self.timeout > 0:
-            func = getattr(event_data.model, self.on_timeout) if isinstance(self.on_timeout, string_types)\
-                else self.on_timeout
-            t = Timer(self.timeout, func)
+            t = Timer(self.timeout, self._process_timeout, args=event_data)
             t.start()
             self.runner[id(event_data.model)] = t
         super(Timeout, self).enter(event_data)
@@ -57,6 +60,20 @@ class Timeout(object):
         if t is not None and t.is_alive:
             t.cancel()
         super(Timeout, self).exit(event_data)
+
+    def _process_timeout(self, event_data):
+        logger.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.id, self.name)
+        for oe in self.on_timeout:
+            event_data.machine._callback(oe, event_data)
+        logger.info("%sTimeout state %s processed.", event_data.machine.id, self.name)
+
+    @property
+    def on_timeout(self):
+        return self._on_timeout
+
+    @on_timeout.setter
+    def on_timeout(self, value):
+        self._on_timeout = listify(value)
 
 
 class Volatile(object):
