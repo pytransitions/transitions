@@ -8,6 +8,8 @@ import sys
 
 from .utils import InheritedStuff
 from .utils import Stuff
+
+from functools import partial
 from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, prep_ordered_arg
 from unittest import TestCase, skipIf
@@ -124,6 +126,24 @@ class TestTransitions(TestCase):
         s.machine.add_transition('advance', 'B', 'C', unless=['this_fails'])
         s.machine.add_transition('advance', 'C', 'D', unless=['this_fails',
                                                               'this_passes'])
+        s.advance()
+        self.assertEqual(s.state, 'B')
+        s.advance()
+        self.assertEqual(s.state, 'C')
+        s.advance()
+        self.assertEqual(s.state, 'C')
+
+    def test_conditions_with_partial(self):
+        def check(result):
+            return result
+
+        s = self.stuff
+        s.machine.add_transition('advance', 'A', 'B',
+                                 conditions=partial(check, True))
+        s.machine.add_transition('advance', 'B', 'C',
+                                 unless=[partial(check, False)])
+        s.machine.add_transition('advance', 'C', 'D',
+                                 unless=[partial(check, False), partial(check, True)])
         s.advance()
         self.assertEqual(s.state, 'B')
         s.advance()
@@ -409,6 +429,22 @@ class TestTransitions(TestCase):
         m.to_B()
         self.assertTrue(m.before_state_change[0].called)
         self.assertTrue(m.after_state_change[0].called)
+
+    def test_state_callbacks(self):
+        class Model:
+            def on_enter_A(self): pass
+            def on_exit_A(self): pass
+            def on_enter_B(self): pass
+            def on_exit_B(self): pass
+        states = [
+                  State(name='A', on_enter='on_enter_A', on_exit='on_exit_A'),
+                  State(name='B', on_enter='on_enter_B', on_exit='on_exit_B')
+                  ]
+        machine = Machine(Model(), states=states)
+        self.assertEqual(len(states[0].on_enter), 1)
+        self.assertEqual(len(states[0].on_enter), 1)
+        self.assertEqual(len(states[1].on_exit), 1)
+        self.assertEqual(len(states[1].on_exit), 1)
 
     def test_pickle(self):
         import sys

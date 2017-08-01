@@ -355,9 +355,10 @@ class Machine(object):
                  queued=False, prepare_event=None, finalize_event=None, **kwargs):
         """
         Args:
-            model (object): The object(s) whose states we want to manage. If 'self',
+            model (object or list): The object(s) whose states we want to manage. If 'self',
                 the current Machine instance will be used the model (i.e., all
-                triggering events will be attached to the Machine itself).
+                triggering events will be attached to the Machine itself). Note that an empty list
+                is treated like no model.
             states (list): A list of valid states. Each element can be either a
                 string or a State instance. If string, a new generic State
                 instance will be created that has the same name as the string.
@@ -632,14 +633,17 @@ class Machine(object):
     def _add_model_to_state(self, state, model):
         setattr(model, 'is_%s' % state.name,
                 partial(self.is_state, state.name, model))
-        #  Add enter/exit callbacks if there are existing bound methods
+        # Add enter/exit callbacks if there are existing bound methods
+        # except if they are already mentioned in 'on_enter/exit'
         enter_callback = 'on_enter_' + state.name
         if hasattr(model, enter_callback) and \
-                inspect.ismethod(getattr(model, enter_callback)):
+                inspect.ismethod(getattr(model, enter_callback)) and \
+                enter_callback not in state.on_enter:
             state.add_callback('enter', enter_callback)
         exit_callback = 'on_exit_' + state.name
         if hasattr(model, exit_callback) and \
-                inspect.ismethod(getattr(model, exit_callback)):
+                inspect.ismethod(getattr(model, exit_callback)) and \
+                exit_callback not in state.on_exit:
             state.add_callback('exit', exit_callback)
 
     def _add_trigger_to_model(self, trigger, model):

@@ -170,6 +170,23 @@ class TestTransitions(TestsCore):
         s.go()
         s.run()
 
+    def test_enter_exit_nested_state(self):
+        mock = MagicMock()
+
+        def callback():
+            mock()
+        states = ['A', 'B', {'name': 'C', 'on_enter': callback, 'on_exit': callback,
+                             'children': [{'name': '1', 'on_exit': callback}, '2', '3']}, 'D']
+        transitions = [['go', 'A', 'C{0}1'.format(State.separator)],
+                       ['go', 'C', 'D']]
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
+        m.go()
+        self.assertTrue(mock.called)
+        self.assertEqual(mock.call_count, 1)
+        m.go()
+        self.assertTrue(m.is_D())
+        self.assertEqual(mock.call_count, 3)
+
     def test_state_change_listeners(self):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'C%s1' % State.separator)

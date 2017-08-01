@@ -219,12 +219,13 @@ class HierarchicalMachine(Machine):
                 if 'children' in state:
                     # Concat the state names with the current scope. The scope is the concatenation of all
                     # previous parents. Call traverse again to check for more nested states.
-                    p = self._create_state(state['name'], on_enter=on_enter, on_exit=on_exit,
-                                           ignore_invalid_triggers=ignore, parent=parent,
+                    p = self._create_state(state['name'],
+                                           on_enter=state.get('on_enter', None),
+                                           on_exit=state.get('on_exit', None),
+                                           ignore_invalid_triggers=state.get('ignore_invalid_triggers', ignore),
+                                           parent=parent,
                                            initial=state.get('initial', None))
-                    nested = self.traverse(state['children'], on_enter=on_enter, on_exit=on_exit,
-                                           ignore_invalid_triggers=ignore,
-                                           parent=p, remap=state.get('remap', {}))
+                    nested = self.traverse(state['children'], parent=p, remap=state.get('remap', {}))
                     tmp_states.append(p)
                     tmp_states.extend(nested)
                 else:
@@ -274,7 +275,8 @@ class HierarchicalMachine(Machine):
             elif isinstance(state, NestedState):
                 tmp_states.append(state)
             else:
-                raise ValueError("%s cannot be added to the machine since its type is not known." % state)
+                raise ValueError("%s is not an instance or subclass of NestedState "
+                                 "required by HierarchicalMachine." % state)
             new_states.extend(tmp_states)
 
         duplicate_check = []
