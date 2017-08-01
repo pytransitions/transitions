@@ -9,6 +9,10 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+# this is a workaround for dill issues when partials and super is used in conjunction
+# without it, Python 3.0 - 3.3 will not support pickling
+# https://github.com/pytransitions/transitions/issues/236
+_super = super
 
 try:
     from contextlib import nested  # Python 2
@@ -58,9 +62,9 @@ class LockedEvent(Event):
     def trigger(self, model, *args, **kwargs):
         if self.machine._locked != get_ident():
             with nested(*self.machine.model_context_map[model]):
-                return super(LockedEvent, self).trigger(model, *args, **kwargs)
+                return _super(LockedEvent, self).trigger(model, *args, **kwargs)
         else:
-            return super(LockedEvent, self).trigger(model, *args, **kwargs)
+            return _super(LockedEvent, self).trigger(model, *args, **kwargs)
 
 
 class LockedMachine(Machine):
@@ -78,7 +82,7 @@ class LockedMachine(Machine):
         self.machine_context.append(self)
         self.model_context_map = defaultdict(list)
 
-        super(LockedMachine, self).__init__(*args, **kwargs)
+        _super(LockedMachine, self).__init__(*args, **kwargs)
 
     def add_model(self, model, *args, **kwargs):
         models = listify(model)
@@ -88,7 +92,7 @@ class LockedMachine(Machine):
         except KeyError:
             model_context = []
 
-        output = super(LockedMachine, self).add_model(models, *args, **kwargs)
+        output = _super(LockedMachine, self).add_model(models, *args, **kwargs)
 
         for model in models:
             model = self if model == 'self' else model
@@ -106,7 +110,7 @@ class LockedMachine(Machine):
         return super(LockedMachine, self).remove_model(models, *args, **kwargs)
 
     def __getattribute__(self, item):
-        f = super(LockedMachine, self).__getattribute__
+        f = _super(LockedMachine, self).__getattribute__
         tmp = f(item)
         if not item.startswith('_') and inspect.ismethod(tmp):
             return partial(f('_locked_method'), tmp)
@@ -114,15 +118,15 @@ class LockedMachine(Machine):
 
     def __getattr__(self, item):
         try:
-            return super(LockedMachine, self).__getattribute__(item)
+            return _super(LockedMachine, self).__getattribute__(item)
         except AttributeError:
-            return super(LockedMachine, self).__getattr__(item)
+            return _super(LockedMachine, self).__getattr__(item)
 
     # Determine if the returned method is a partial and make sure the returned partial has
     # not been created by Machine.__getattr__.
     # https://github.com/tyarkoni/transitions/issues/214
     def _add_model_to_state(self, state, model):
-        super(LockedMachine, self)._add_model_to_state(state, model)
+        _super(LockedMachine, self)._add_model_to_state(state, model)
         for prefix in ['enter', 'exit']:
             callback = "on_{0}_".format(prefix) + state.name
             func = getattr(model, callback, None)

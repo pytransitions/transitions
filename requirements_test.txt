@@ -1,5 +1,5 @@
 nose
 mock
-dill<0.2.7
+dill
 pygraphviz
 pycodestyle

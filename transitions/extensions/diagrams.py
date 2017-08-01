@@ -13,6 +13,11 @@ from functools import partial
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+# this is a workaround for dill issues when partials and super is used in conjunction
+# without it, Python 3.0 - 3.3 will not support pickling
+# https://github.com/pytransitions/transitions/issues/236
+_super = super
+
 
 class Diagram(object):
 
@@ -79,7 +84,7 @@ class Graph(Diagram):
     }
 
     def __init__(self, *args, **kwargs):
-        super(Graph, self).__init__(*args, **kwargs)
+        _super(Graph, self).__init__(*args, **kwargs)
 
     def _add_nodes(self, states, container):
         for state in states:
@@ -163,7 +168,7 @@ class NestedGraph(Graph):
     def __init__(self, *args, **kwargs):
         self.seen_nodes = []
         self.seen_transitions = []
-        super(NestedGraph, self).__init__(*args, **kwargs)
+        _super(NestedGraph, self).__init__(*args, **kwargs)
         self.style_attributes['edge']['default']['minlen'] = 2
 
     def _add_nodes(self, states, container):
@@ -264,7 +269,7 @@ class TransitionGraphSupport(Transition):
             machine.set_edge_state(model.graph, source, dest,
                                    state='previous', label=event_data.event.name)
 
-        super(TransitionGraphSupport, self)._change_state(event_data)
+        _super(TransitionGraphSupport, self)._change_state(event_data)
 
 
 class GraphMachine(Machine):
@@ -297,7 +302,7 @@ class GraphMachine(Machine):
         # self.add_states = super(GraphMachine, self).add_states
         # self.add_transition = super(GraphMachine, self).add_transition
 
-        super(GraphMachine, self).__init__(*args, **kwargs)
+        _super(GraphMachine, self).__init__(*args, **kwargs)
         # # Second part of overwrite
         # self.add_states = add_states
         # self.add_transition = add_transition
@@ -338,12 +343,12 @@ class GraphMachine(Machine):
         self.set_edge_style(graph, edge, state)
 
     def add_states(self, *args, **kwargs):
-        super(GraphMachine, self).add_states(*args, **kwargs)
+        _super(GraphMachine, self).add_states(*args, **kwargs)
         for model in self.models:
             model.get_graph(force_new=True)
 
     def add_transition(self, *args, **kwargs):
-        super(GraphMachine, self).add_transition(*args, **kwargs)
+        _super(GraphMachine, self).add_transition(*args, **kwargs)
         for model in self.models:
             model.get_graph(force_new=True)
 

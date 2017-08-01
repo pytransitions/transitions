@@ -8,6 +8,11 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+# this is a workaround for dill issues when partials and super is used in conjunction
+# without it, Python 3.0 - 3.3 will not support pickling
+# https://github.com/pytransitions/transitions/issues/236
+_super = super
+
 
 class FunctionWrapper(object):
     def __init__(self, func, path):
@@ -44,8 +49,8 @@ class NestedState(State):
         self._initial = initial
         self._parent = None
         self.parent = parent
-        super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
-                                          ignore_invalid_triggers=ignore_invalid_triggers)
+        _super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
+                                           ignore_invalid_triggers=ignore_invalid_triggers)
         self.children = []
 
     @property
@@ -107,7 +112,7 @@ class NestedTransition(Transition):
         while dest_state.initial:
             dest_state = event_data.machine.get_state(dest_state.initial)
         self.dest = dest_state.name
-        return super(NestedTransition, self).execute(event_data)
+        return _super(NestedTransition, self).execute(event_data)
 
     # The actual state change method 'execute' in Transition was restructured to allow overriding
     def _change_state(self, event_data):
@@ -165,10 +170,10 @@ class HierarchicalMachine(Machine):
 
     def __init__(self, *args, **kwargs):
         self._buffered_transitions = []
-        super(HierarchicalMachine, self).__init__(*args, **kwargs)
+        _super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
     def add_model(self, model):
-        super(HierarchicalMachine, self).add_model(model)
+        _super(HierarchicalMachine, self).add_model(model)
         models = listify(model)
         for m in models:
             m = self if m == 'self' else m
@@ -284,7 +289,7 @@ class HierarchicalMachine(Machine):
     def add_states(self, states, *args, **kwargs):
         # preprocess states to flatten the configuration and resolve nesting
         new_states = self.traverse(states, *args, **kwargs)
-        super(HierarchicalMachine, self).add_states(new_states, *args, **kwargs)
+        _super(HierarchicalMachine, self).add_states(new_states, *args, **kwargs)
 
         # for t in self._buffered_transitions:
         #     print(t['trigger'])
@@ -301,7 +306,7 @@ class HierarchicalMachine(Machine):
                 states.append(s.parent.name)
                 s = s.parent
         states.extend(args)
-        return super(HierarchicalMachine, self).get_triggers(*states)
+        return _super(HierarchicalMachine, self).get_triggers(*states)
 
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None, **kwargs):
@@ -313,8 +318,8 @@ class HierarchicalMachine(Machine):
             self.events[trigger] = self._create_event(trigger, self)
             for model in self.models:
                 self._add_trigger_to_model(trigger, model)
-        super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
-                                                        prepare=prepare, before=before, after=after, **kwargs)
+        _super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
+                                                         prepare=prepare, before=before, after=after, **kwargs)
 
     def _add_trigger_to_model(self, trigger, model):
         if trigger.startswith('to_') and NestedState.separator != '_':
@@ -328,7 +333,7 @@ class HierarchicalMachine(Machine):
                 t = FunctionWrapper(trig_func, path[1:])
                 setattr(model, 'to_' + path[0], t)
         else:
-            super(HierarchicalMachine, self)._add_trigger_to_model(trigger, model)
+            _super(HierarchicalMachine, self)._add_trigger_to_model(trigger, model)
 
     def on_enter(self, state_name, callback):
         self.get_state(state_name).add_callback('enter', callback)

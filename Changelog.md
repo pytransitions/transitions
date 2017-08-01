@@ -8,14 +8,14 @@ Release 0.6.0 is a major release and introduces new state features and bug fixes
 - `Tags` makes states taggable
 - `Error` checks for error (not accepted states that cannot be left) states; subclass of `Tags`
 - `Volatile` enables scoped/temporary state objects to handle 
-- removed `add_self` from `Machine` constructor 
+- Removed `add_self` from `Machine` constructor 
 - `pygraphviz` is now optional; use `pip install transitions[diagrams]` to install it
-- narrowed warnings filter to prevent output cluttering by other 3rd party  modules (thanks to @ksandeep)
-- reword HSM exception when wrong state object had been passedn (thanks to @Blindfreddy)
-- improved handling of partials during graph generation (thanks to @Synss)
-- introduced check to allow explicit passing of callback functions which match the `on_enter_<state>` scheme (thanks to @termim)
+- Narrowed warnings filter to prevent output cluttering by other 3rd party  modules (thanks to @ksandeep)
+- Reword HSM exception when wrong state object had been passedn (thanks to @Blindfreddy)
+- Improved handling of partials during graph generation (thanks to @Synss)
+- Introduced check to allow explicit passing of callback functions which match the `on_enter_<state>` scheme (thanks to @termim)
 - Bug #243: on_enter/exit callbacks defined in dictionaries had not been assigned correctly in HSMs (thanks to @Blindfreddy)
-
+- Introduced workaround for Python 3 versions older than 3.4 to support dill version 0.2.7 and higher (thanks to @mmckerns)
 
 ## 0.5.3 (May, 2017)
 

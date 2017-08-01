@@ -144,14 +144,13 @@ class TestTransitions(TestCase):
         self.assertEqual(m.scope.value, 5)
 
 
-#
-# class TestStatesDiagramsLockedNested(TestDiagramsLockedNested):
-#
-#     def setUp(self):
-#
-#         @add_state_features(Error, Timeout, Volatile)
-#         class CustomMachine(LockedHierarchicalGraphMachine):
-#             pass
-#
-#         super(TestStatesDiagramsLockedNested, self).setUp()
-#         self.machine_cls = CustomMachine
+class TestStatesDiagramsLockedNested(TestDiagramsLockedNested):
+
+    def setUp(self):
+
+        @add_state_features(Error, Timeout, Volatile)
+        class CustomMachine(LockedHierarchicalGraphMachine):
+            pass
+
+        super(TestStatesDiagramsLockedNested, self).setUp()
+        self.machine_cls = CustomMachine
