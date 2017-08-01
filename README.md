@@ -228,7 +228,7 @@ This method lets you execute transitions by name in case dynamic triggering is r
 
 ### <a name="states"></a>States
 
-The soul of any good state machine (and of many bad ones, no doubt) is a set of states. Above, we defined the valid model states by passing a list of strings to the `Machine` initializer. But internally, states are actually represented as `State` objects.
+The soul of any good state machine (and of many bad ones, no doubt) is a set of states. Above, we defined the valid model states by passing a list of strings to the `Machine` initializer. But internally, states are actually represented as `State` objects. States are initialized *once* when added to the machine and will persist until they are removed from it. 
 
 You can initialize and modify States in a number of ways. Specifically, you can:
 
@@ -1144,7 +1144,7 @@ lock3 = RLock()
 machine.add_model(model, model_context=lock3)
 ```
 
-It's important that any user-provided context managers are re-entrant since the state machine will call them multiple
+It's important that all user-provided context managers are re-entrant since the state machine will call them multiple
 times, even in the context of a single trigger invocation.
 
 #### <a name="state-features"></a>Adding features to states
@@ -1166,31 +1166,31 @@ class SocialSuperhero(object):
     def __init__(self):
         self.entourage = 0
 
-    def on_enter_Waiting(self):
+    def on_enter_waiting(self):
         self.entourage += 1
 
 
-states = [{'name': 'Preparing', 'tags': ['home', 'busy']},
-          {'name': 'Waiting', 'timeout': 1, 'on_timeout': 'go'},
-          {'name': 'Away'}]  # The city needs us!
+states = [{'name': 'preparing', 'tags': ['home', 'busy']},
+          {'name': 'waiting', 'timeout': 1, 'on_timeout': 'go'},
+          {'name': 'away'}]  # The city needs us!
 
-transitions = [['done', 'Preparing', 'Waiting'],
-               ['join', 'Waiting', 'Waiting'],  # Entering Waiting again will increase our entourage
-               ['go', 'Waiting', 'Away']]  # Okay, let' move
+transitions = [['done', 'preparing', 'waiting'],
+               ['join', 'waiting', 'waiting'],  # Entering Waiting again will increase our entourage
+               ['go', 'waiting', 'away']]  # Okay, let' move
 
 hero = SocialSuperhero()
 machine = CustomStateMachine(model=hero, states=states, transitions=transitions, initial='Preparing')
-assert hero.state == 'Preparing'  # Preparing for the night shift
+assert hero.state == 'preparing'  # Preparing for the night shift
 assert machine.get_state(hero.state).is_busy  # We are at home and busy
 hero.done()
-assert hero.state == 'Waiting'  # Waiting for fellow superheroes to join us
+assert hero.state == 'waiting'  # Waiting for fellow superheroes to join us
 assert hero.entourage == 1  # It's just us so far
 sleep(0.7)  # Waiting...
 hero.join()  # Weeh, we got company
 sleep(0.5)  # Waiting...
 hero.join()  # Even more company \o/
 sleep(2)  # Waiting...
-assert hero.state == 'Away'  # Impatient superhero already left the building
+assert hero.state == 'away'  # Impatient superhero already left the building
 assert machine.get_state(hero.state).is_home is False  # Yupp, not at home anymore
 assert hero.entourage == 3  # At least he is not alone
 ```
@@ -1210,6 +1210,10 @@ Currently, transitions comes equipped with the following state features:
     - inherits from `Tags` (if you use `Error` do not use `Tags`)
     - keyword: `accepted` (bool, optional) -- marks a state as accepted
     - alternatively the keyword `tags` can be passed, containing 'accepted'
+    
+* **Volatile** -- initialises an object every time a state is entered
+    - keyword: `volatile` (class, optional) -- every time the state is entered an object of type class will be assigned to the model. The attribute name is defined by `hook`. If omitted, an empty VolatileObject will be created instead
+    - keyword: `hook` (string, default='scope') -- The model's attribute name fore the temporal object.
 
 You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit` and should *not* inherit from `State` directly. 
 In case you prefer to write your own custom states from scratch be aware that some state extensions *require* certain state features. `HierarchicalStateMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:

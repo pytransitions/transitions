@@ -79,8 +79,36 @@ class TestTransitions(TestCase):
         with self.assertRaises(AttributeError):
             m.add_state({'name': 'D', 'timeout': 0.3})
 
+    def test_timeout_callbacks(self):
+        timeout = MagicMock()
+        notification = MagicMock()
+
+        @add_state_features(Timeout)
+        class CustomMachine(Machine):
+
+            def timeout(self):
+                timeout()
+
+            def notification(self):
+                notification()
+
+        states = ['A', {'name': 'B', 'timeout': 0.05, 'on_timeout': 'timeout'}]
+        m = CustomMachine(states=states, initial='A')
+        m.to_B()
+        sleep(0.1)
+        self.assertTrue(timeout.called)
+        m.get_state('B').add_callback('timeout', 'notification')
+        m.to_B()
+        sleep(0.1)
+        self.assertEqual(timeout.call_count, 2)
+        self.assertTrue(notification.called)
+        m.get_state('B').on_timeout = []
+        m.to_B()
+        sleep(0.1)
+        self.assertEqual(timeout.call_count, 2)
+        self.assertEqual(notification.call_count, 1)
+
     def test_volatile(self):
-        mock = MagicMock()
 
         class TemporalState(object):
 

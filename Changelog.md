@@ -2,7 +2,7 @@
 
 ## 0.6.0 ()
 
-Release 0.6.0 is a major release and introduces new state features
+Release 0.6.0 is a major release and introduces new state features and bug fixes:
 
 - `add_state_features` convenience decorator supports creation of custom states
 - `Tags` makes states taggable
@@ -10,6 +10,12 @@ Release 0.6.0 is a major release and introduces new state features
 - `Volatile` enables scoped/temporary state objects to handle 
 - removed `add_self` from `Machine` constructor 
 - `pygraphviz` is now optional; use `pip install transitions[diagrams]` to install it
+- narrowed warnings filter to prevent output cluttering by other 3rd party  modules (thanks to @ksandeep)
+- reword HSM exception when wrong state object had been passedn (thanks to @Blindfreddy)
+- improved handling of partials during graph generation (thanks to @Synss)
+- introduced check to allow explicit passing of callback functions which match the `on_enter_<state>` scheme (thanks to @termim)
+- Bug #243: on_enter/exit callbacks defined in dictionaries had not been assigned correctly in HSMs (thanks to @Blindfreddy)
+
 
 ## 0.5.3 (May, 2017)
 

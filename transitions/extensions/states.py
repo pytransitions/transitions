@@ -1,5 +1,4 @@
 from threading import Timer
-from six import string_types
 from ..core import MachineError, listify
 import logging
 
@@ -50,7 +49,7 @@ class Timeout(object):
 
     def enter(self, event_data):
         if self.timeout > 0:
-            t = Timer(self.timeout, self._process_timeout, args=event_data)
+            t = Timer(self.timeout, self._process_timeout, args=(event_data,))
             t.start()
             self.runner[id(event_data.model)] = t
         super(Timeout, self).enter(event_data)
