@@ -12,3 +12,4 @@ dist/*
 examples/state.png
 .tox
 .python-version
+MANIFEST
