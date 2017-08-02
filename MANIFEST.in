@@ -1,1 +1,9 @@
+include *.md
+include *.txt
+include .coveragerc
 include LICENSE
+include MANIFEST
+include tox.ini
+
+recursive-include examples *.ipynb
+recursive-include tests *.py
