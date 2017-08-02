@@ -1,13 +1,13 @@
 # Changelog
 
-## 0.6.0 ()
+## 0.6.0 (August, 2017)
 
 Release 0.6.0 is a major release and introduces new state features and bug fixes:
 
 - `add_state_features` convenience decorator supports creation of custom states
 - `Tags` makes states taggable
-- `Error` checks for error (not accepted states that cannot be left) states; subclass of `Tags`
-- `Volatile` enables scoped/temporary state objects to handle 
+- `Error` checks for error states (not accepted states that cannot be left); subclass of `Tags`
+- `Volatile` enables scoped/temporary state objects to handle context parameters
 - Removed `add_self` from `Machine` constructor 
 - `pygraphviz` is now optional; use `pip install transitions[diagrams]` to install it
 - Narrowed warnings filter to prevent output cluttering by other 3rd party  modules (thanks to @ksandeep)
@@ -16,6 +16,7 @@ Release 0.6.0 is a major release and introduces new state features and bug fixes
 - Introduced check to allow explicit passing of callback functions which match the `on_enter_<state>` scheme (thanks to @termim)
 - Bug #243: on_enter/exit callbacks defined in dictionaries had not been assigned correctly in HSMs (thanks to @Blindfreddy)
 - Introduced workaround for Python 3 versions older than 3.4 to support dill version 0.2.7 and higher (thanks to @mmckerns)
+- Improved manifest (#242) to comply with distribution standards (thanks to @jodal)
 
 ## 0.5.3 (May, 2017)
 
