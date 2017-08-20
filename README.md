@@ -228,7 +228,7 @@ This method lets you execute transitions by name in case dynamic triggering is r
 
 ### <a name="states"></a>States
 
-The soul of any good state machine (and of many bad ones, no doubt) is a set of states. Above, we defined the valid model states by passing a list of strings to the `Machine` initializer. But internally, states are actually represented as `State` objects. States are initialized *once* when added to the machine and will persist until they are removed from it. 
+The soul of any good state machine (and of many bad ones, no doubt) is a set of states. Above, we defined the valid model states by passing a list of strings to the `Machine` initializer. But internally, states are actually represented as `State` objects.
 
 You can initialize and modify States in a number of ways. Specifically, you can:
 
@@ -259,6 +259,8 @@ gas = State('gas')
 machine.add_states([solid, liquid, gas])
 
 ```
+
+States are initialized *once* when added to the machine and will persist until they are removed from it. In other words: if you alter the attributes of a state object, this change will NOT be reset the next time you enter that state. Have a look at how to [extend state features](#state-features) in case you require some other behaviour.
 
 #### <a name="state-callbacks"></a>Callbacks
 A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization, or add them later.
