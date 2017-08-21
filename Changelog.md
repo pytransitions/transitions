@@ -1,5 +1,13 @@
 # Changelog
 
+
+## 0.6.1 (September, 2017)
+
+Release 0.6.1 is a minor release and contains new features as well as bug fixes:
+
+- Feature #245: Callback definitions ('before', 'on_enter', ...) have been moved to classes `Transition` and `State`
+
+
 ## 0.6.0 (August, 2017)
 
 Release 0.6.0 is a major release and introduces new state features and bug fixes:

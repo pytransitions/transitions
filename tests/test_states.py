@@ -92,12 +92,16 @@ class TestTransitions(TestCase):
             def notification(self):
                 notification()
 
+            def another_notification(self):
+                notification()
+
         states = ['A', {'name': 'B', 'timeout': 0.05, 'on_timeout': 'timeout'}]
         m = CustomMachine(states=states, initial='A')
         m.to_B()
         sleep(0.1)
         self.assertTrue(timeout.called)
         m.get_state('B').add_callback('timeout', 'notification')
+        m.on_timeout_B('another_notification')
         m.to_B()
         sleep(0.1)
         self.assertEqual(timeout.call_count, 2)
@@ -106,7 +110,7 @@ class TestTransitions(TestCase):
         m.to_B()
         sleep(0.1)
         self.assertEqual(timeout.call_count, 2)
-        self.assertEqual(notification.call_count, 1)
+        self.assertEqual(notification.call_count, 2)
 
     def test_volatile(self):
 

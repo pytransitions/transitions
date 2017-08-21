@@ -51,6 +51,8 @@ def prep_ordered_arg(desired_length, arg_name):
 
 class State(object):
 
+    dynamic_methods = ['on_enter', 'on_exit']
+
     def __init__(self, name, on_enter=None, on_exit=None,
                  ignore_invalid_triggers=False):
         """
@@ -139,6 +141,8 @@ class Condition(object):
 
 
 class Transition(object):
+
+    dynamic_methods = ['before', 'after', 'prepare']
 
     def __init__(self, source, dest, conditions=None, unless=None, before=None,
                  after=None, prepare=None):
@@ -340,7 +344,6 @@ class Event(object):
 class Machine(object):
 
     # Callback naming parameters
-    callbacks = ['before', 'after', 'prepare', 'on_enter', 'on_exit']
     separator = '_'
     wildcard_all = '*'
     wildcard_same = '='
@@ -854,9 +857,11 @@ class Machine(object):
     @classmethod
     def _identify_callback(cls, name):
         # Does the prefix match a known callback?
-        try:
-            callback_type = cls.callbacks[[name.find(x) for x in cls.callbacks].index(0)]
-        except ValueError:
+        for cb in itertools.chain(cls.state_cls.dynamic_methods, cls.transition_cls.dynamic_methods):
+            if name.startswith(cb):
+                callback_type = cb
+                break
+        else:
             return None, None
 
         # Extract the target by cutting the string after the type and separator
@@ -879,13 +884,13 @@ class Machine(object):
         callback_type, target = self._identify_callback(name)
 
         if callback_type is not None:
-            if callback_type in ['before', 'after', 'prepare']:
+            if callback_type in self.transition_cls.dynamic_methods:
                 if target not in self.events:
                     raise AttributeError("event '{}' is not registered on <Machine@{}>"
                                          .format(target, id(self)))
                 return partial(self.events[target].add_callback, callback_type)
 
-            elif callback_type in ['on_enter', 'on_exit']:
+            elif callback_type in self.state_cls.dynamic_methods:
                 state = self.get_state(target)
                 return partial(state.add_callback, callback_type[3:])
 

@@ -1,6 +1,8 @@
 from threading import Timer
 from ..core import MachineError, listify
 import logging
+import itertools
+import inspect
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -35,6 +37,8 @@ class Error(Tags):
 
 
 class Timeout(object):
+
+    dynamic_methods = ['on_timeout']
 
     def __init__(self, *args, **kwargs):
         self.timeout = kwargs.pop('timeout', 0)
@@ -97,9 +101,11 @@ class Volatile(object):
 
 def add_state_features(*args):
     def class_decorator(cls):
-        class CustomState(type('CustomMixins', args, {}), cls.state_cls):
+        class CustomState(type('CustomState', args, {}), cls.state_cls):
             pass
 
+        method_list = sum([c.dynamic_methods for c in inspect.getmro(CustomState) if hasattr(c, 'dynamic_methods')], [])
+        CustomState.dynamic_methods = set(method_list)
         cls.state_cls = CustomState
         return cls
     return class_decorator
