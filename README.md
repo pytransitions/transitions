@@ -1052,7 +1052,7 @@ machine.is_C(allow_substates=True)
 
 #### Reuse of previously created HSMs
 
-Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them. Be aware that this will *embed* the passed machine's states. This means if your states had been altered *before*, this change will be persistent.
+Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them. Be aware that this will *embed* the passed machine's states. This means if your states had been altered *before*, this change will be persistent. 
 
 ```python
 count_states = ['1', '2', '3', 'done']
@@ -1099,6 +1099,8 @@ collector.state
 ```
 
 If a reused state machine does not have a final state, you can of course add the transitions manually. If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'waiting']` to achieve the same behaviour.
+
+Note that the `HierarchicalMachine` will not integrate the machine instance itself but the states and transitions by creating copies of them. This way you are able to continue using your previously created instance without interfering with the embedded version.
 
 #### <a name="threading"></a> Threadsafe(-ish) State Machine
 
