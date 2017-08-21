@@ -82,9 +82,16 @@ class TestTransitions(TestCase):
     def test_timeout_callbacks(self):
         timeout = MagicMock()
         notification = MagicMock()
+        counter = MagicMock()
 
         @add_state_features(Timeout)
         class CustomMachine(Machine):
+            pass
+
+        class Model(object):
+
+            def on_timeout_B(self):
+                counter()
 
             def timeout(self):
                 timeout()
@@ -96,18 +103,21 @@ class TestTransitions(TestCase):
                 notification()
 
         states = ['A', {'name': 'B', 'timeout': 0.05, 'on_timeout': 'timeout'}]
-        m = CustomMachine(states=states, initial='A')
-        m.to_B()
+        model = Model()
+        machine = CustomMachine(model=model, states=states, initial='A')
+        model.to_B()
         sleep(0.1)
         self.assertTrue(timeout.called)
-        m.get_state('B').add_callback('timeout', 'notification')
-        m.on_timeout_B('another_notification')
-        m.to_B()
+        self.assertTrue(counter.called)
+        machine.get_state('B').add_callback('timeout', 'notification')
+        machine.on_timeout_B('another_notification')
+        model.to_B()
         sleep(0.1)
         self.assertEqual(timeout.call_count, 2)
+        self.assertEqual(counter.call_count, 2)
         self.assertTrue(notification.called)
-        m.get_state('B').on_timeout = []
-        m.to_B()
+        machine.get_state('B').on_timeout = []
+        model.to_B()
         sleep(0.1)
         self.assertEqual(timeout.call_count, 2)
         self.assertEqual(notification.call_count, 2)

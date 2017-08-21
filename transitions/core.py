@@ -636,18 +636,14 @@ class Machine(object):
     def _add_model_to_state(self, state, model):
         setattr(model, 'is_%s' % state.name,
                 partial(self.is_state, state.name, model))
-        # Add enter/exit callbacks if there are existing bound methods
-        # except if they are already mentioned in 'on_enter/exit'
-        enter_callback = 'on_enter_' + state.name
-        if hasattr(model, enter_callback) and \
-                inspect.ismethod(getattr(model, enter_callback)) and \
-                enter_callback not in state.on_enter:
-            state.add_callback('enter', enter_callback)
-        exit_callback = 'on_exit_' + state.name
-        if hasattr(model, exit_callback) and \
-                inspect.ismethod(getattr(model, exit_callback)) and \
-                exit_callback not in state.on_exit:
-            state.add_callback('exit', exit_callback)
+
+        # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
+        # except if they are already mentioned in 'on_enter/exit' of the defined state
+        for callback in self.state_cls.dynamic_methods:
+            method = "{0}_{1}".format(callback, state.name)
+            if hasattr(model, method) and inspect.ismethod(getattr(model, method)) and \
+                    method not in getattr(state, callback):
+                state.add_callback(callback[3:], method)
 
     def _add_trigger_to_model(self, trigger, model):
         trig_func = partial(self.events[trigger].trigger, model)
