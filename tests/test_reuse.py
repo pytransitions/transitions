@@ -274,3 +274,5 @@ class TestTransitions(TestCase):
         self.assertEqual(top_machine, top_machine.nested.parent)
         self.assertTrue(top_machine.mock.called)
         self.assertTrue(top_machine.nested.mock.called)
+        self.assertIsNot(top_machine.nested.get_state('2').on_enter,
+                         top_machine.get_state('B{0}2'.format(State.separator)).on_enter)
