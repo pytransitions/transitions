@@ -236,3 +236,41 @@ class TestTransitions(TestCase):
         m_model.to('NEST%sC' % State.separator)
         m_model.go()
         self.assertTrue(m_model.prepared)
+
+    def test_reuse_self_reference(self):
+
+        class Nested(Machine):
+
+            def __init__(self, parent):
+                self.parent = parent
+                self.mock = MagicMock()
+                states = ['1', {'name': '2', 'on_enter': self.print_msg}]
+                transitions = [['finish', '*', '2']]
+                super(Nested, self).__init__(states=states, transitions=transitions, initial='1')
+
+            def print_msg(self):
+                self.mock()
+                self.parent.print_top()
+
+        class Top(Machine):
+
+            def print_msg(self):
+                self.mock()
+
+            def __init__(self):
+                self.nested = Nested(self)
+                self.mock = MagicMock()
+
+                states = ['A', {'name': 'B', 'children': self.nested}]
+                transitions = [dict(trigger='print_top', source='*', dest='=', after=self.print_msg),
+                               dict(trigger='to_nested', source='*', dest='B{0}1'.format(State.separator))]
+
+                super(Top, self).__init__(states=states, transitions=transitions, initial='A')
+
+        top_machine = Top()
+        top_machine.to_nested()
+        top_machine.finish()
+
+        self.assertEqual(top_machine, top_machine.nested.parent)
+        self.assertTrue(top_machine.mock.called)
+        self.assertTrue(top_machine.nested.mock.called)

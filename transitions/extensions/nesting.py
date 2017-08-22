@@ -1,14 +1,14 @@
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
 
 from six import string_types
-import copy
+from copy import copy, deepcopy
 from functools import partial
 
 import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-# this is a workaround for dill issues when partials and super is used in conjunction
+# This is a workaround for dill issues when partials and super is used in conjunction
 # without it, Python 3.0 - 3.3 will not support pickling
 # https://github.com/pytransitions/transitions/issues/236
 _super = super
@@ -104,6 +104,20 @@ class NestedState(State):
                 self.parent.enter_nested(event_data, level)
             self.enter(event_data)
 
+    # Prevent deep copying of callback lists since these include either references to callables or
+    # strings. Deep copying a method reference would lead to the creation of an entire new (model) object
+    # (see https://github.com/pytransitions/transitions/issues/248)
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for key, value in self.__dict__.items():
+            if key in cls.dynamic_methods:
+                setattr(result, key, copy(value))
+            else:
+                setattr(result, key, deepcopy(value, memo))
+        return result
+
 
 class NestedTransition(Transition):
 
@@ -124,6 +138,20 @@ class NestedTransition(Transition):
         event_data.machine.set_state(self.dest, model)
         event_data.update(model)
         dest_state.enter_nested(event_data, lvl)
+
+    # Prevent deep copying of callback lists since these include either references to callables or
+    # strings. Deep copying a method reference would lead to the creation of an entire new (model) object
+    # (see https://github.com/pytransitions/transitions/issues/248)
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for key, value in self.__dict__.items():
+            if key in cls.dynamic_methods:
+                setattr(result, key, copy(value))
+            else:
+                setattr(result, key, deepcopy(value, memo))
+        return result
 
 
 class NestedEvent(Event):
@@ -211,7 +239,9 @@ class HierarchicalMachine(Machine):
             elif isinstance(state, dict):
                 if state['name'] in remap:
                     continue
-                state = copy.deepcopy(state)
+
+                # shallow copy the dictionary to alter/add some parameters
+                state = copy(state)
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
                 state['parent'] = parent
@@ -231,8 +261,8 @@ class HierarchicalMachine(Machine):
                 else:
                     tmp_states.insert(0, self._create_state(**state))
             elif isinstance(state, HierarchicalMachine):
-                # copy only states not mentioned in remap
-                copied_states = [s for s in state.states.values() if s.name not in remap]
+                # (deep) copy only states not mentioned in remap
+                copied_states = [s for s in deepcopy(state.states).values() if s.name not in remap]
                 # inner_states are the root states of the passed machine
                 # which have be attached to the parent
                 inner_states = [s for s in copied_states if s.level == 0]
@@ -249,8 +279,9 @@ class HierarchicalMachine(Machine):
                         ppath = parent.name.split(NestedState.separator)
                         path = ['to_' + ppath[0]] + ppath[1:] + path
                         trigger = '.'.join(path)
+                    # (deep) copy transitions and
                     # adjust all transition start and end points to new state names
-                    for transitions in event.transitions.values():
+                    for transitions in deepcopy(event.transitions).values():
                         for transition in transitions:
                             src = transition.source
                             # transitions from remapped states will be filtered to prevent
@@ -293,8 +324,6 @@ class HierarchicalMachine(Machine):
         new_states = self.traverse(states, *args, **kwargs)
         _super(HierarchicalMachine, self).add_states(new_states, *args, **kwargs)
 
-        # for t in self._buffered_transitions:
-        #     print(t['trigger'])
         while len(self._buffered_transitions) > 0:
             args = self._buffered_transitions.pop()
             self.add_transition(**args)
