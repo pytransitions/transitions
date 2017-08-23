@@ -13,3 +13,5 @@ examples/state.png
 .tox
 .python-version
 MANIFEST
+*.bak
+pylint.log
