@@ -791,14 +791,14 @@ class Machine(object):
                 # for the outer comprehension (see first line of comment)
                 for k, v in self.events[trigger].transitions.items()}.items()
                if len(value) > 0}
+        # convert dict back to defaultdict in case tmp is not empty
+        if tmp:
+            self.events[trigger].transitions = defaultdict(list, tmp)
         # if no transition is left remove the trigger from the machine and all models
-        if len(tmp) == 0:
+        else:
             for m in self.models:
                 delattr(m, trigger)
             del self.events[trigger]
-        else:
-            # convert dict back to defaultdict
-            self.events[trigger].transitions = defaultdict(list, tmp)
 
     def _callback(self, func, event_data):
         """ Trigger a callback function, possibly wrapping it in an EventData

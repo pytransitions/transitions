@@ -6,7 +6,8 @@
 Release 0.6.1 is a minor release and contains new features as well as bug fixes:
 
 - Feature #245: Callback definitions ('before', 'on_enter', ...) have been moved to classes `Transition` and `State`
-
+- Bugfix #253: `Machine.remove_transitions` converted `defaultdict` into dict (thanks @Synss)
+- Bugfix #248: `HierarchicalStateMachine`'s copy procedure used to cause issues with function callbacks and object references (thanks @Grey-Bit)
 
 ## 0.6.0 (August, 2017)
 
