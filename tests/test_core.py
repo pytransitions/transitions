@@ -872,6 +872,7 @@ class TestTransitions(TestCase):
         self.stuff.machine.remove_transition('go', source='A')
         with self.assertRaises(MachineError):
             self.stuff.go()
+        self.stuff.machine.add_transition('go', 'A', 'D')
         self.stuff.walk()
         self.stuff.go()
         self.assertEqual(self.stuff.state, 'D')
