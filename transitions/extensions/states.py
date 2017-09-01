@@ -65,10 +65,10 @@ class Timeout(object):
         super(Timeout, self).exit(event_data)
 
     def _process_timeout(self, event_data):
-        logger.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.id, self.name)
+        logger.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
         for oe in self.on_timeout:
             event_data.machine._callback(oe, event_data)
-        logger.info("%sTimeout state %s processed.", event_data.machine.id, self.name)
+        logger.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
 
     @property
     def on_timeout(self):

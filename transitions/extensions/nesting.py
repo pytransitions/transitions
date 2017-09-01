@@ -161,7 +161,7 @@ class NestedEvent(Event):
         while state.parent and state.name not in self.transitions:
             state = state.parent
         if state.name not in self.transitions:
-            msg = "%sCan't trigger event %s from state %s!" % (self.machine.id, self.name,
+            msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
                                                                model.state)
             if self.machine.get_state(model.state).ignore_invalid_triggers:
                 logger.warning(msg)
@@ -206,7 +206,7 @@ class HierarchicalMachine(Machine):
         for m in models:
             m = self if m == 'self' else m
             if hasattr(m, 'to'):
-                logger.warning("%sModel already has a 'to'-method. It will NOT be overwritten by NestedMachine", self.id)
+                logger.warning("%sModel already has a 'to'-method. It will NOT be overwritten by NestedMachine", self.name)
             else:
                 to_func = partial(self.to, m)
                 setattr(m, 'to', to_func)
