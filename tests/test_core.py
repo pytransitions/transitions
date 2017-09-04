@@ -11,7 +11,7 @@ from .utils import Stuff
 
 from functools import partial
 from transitions import Machine, MachineError, State, EventData
-from transitions.core import listify, prep_ordered_arg
+from transitions.core import listify, _prep_ordered_arg
 from unittest import TestCase, skipIf
 
 try:
@@ -822,10 +822,10 @@ class TestTransitions(TestCase):
             m.to_B()
 
     def test_prep_ordered_arg(self):
-        self.assertTrue(len(prep_ordered_arg(3, None)) == 3)
-        self.assertTrue(all(a is None for a in prep_ordered_arg(3, None)))
+        self.assertTrue(len(_prep_ordered_arg(3, None)) == 3)
+        self.assertTrue(all(a is None for a in _prep_ordered_arg(3, None)))
         with self.assertRaises(ValueError):
-            prep_ordered_arg(3, [None, None])
+            _prep_ordered_arg(3, [None, None])
 
     def test_ordered_transition_callback(self):
         class Model:
