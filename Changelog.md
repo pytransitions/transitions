@@ -9,6 +9,7 @@ Release 0.6.1 is a minor release and contains new features as well as bug fixes:
 - Bugfix #253: `Machine.remove_transitions` converted `defaultdict` into dict (thanks @Synss)
 - Bugfix #248: `HierarchicalStateMachine`'s copy procedure used to cause issues with function callbacks and object references (thanks @Grey-Bit)
 - Renamed `Machine.id` to `Machine.name` to be consistent with the constructor parameter `name`
+- Add `Machine.add_transitions` for adding multiple transitions at once (thanks @Synss)
 
 ## 0.6.0 (August, 2017)
 
