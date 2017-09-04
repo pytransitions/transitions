@@ -171,7 +171,7 @@ class NestedEvent(Event):
                                model, args=args, kwargs=kwargs)
 
         for func in self.machine.prepare_event:
-            self.machine._callback(func, event_data)
+            self.machine.callback(func, event_data)
             logger.debug("Executed machine preparation callback '%s' before conditions." % func)
 
         try:
@@ -185,7 +185,7 @@ class NestedEvent(Event):
             raise
         finally:
             for func in self.machine.finalize_event:
-                self.machine._callback(func, event_data)
+                self.machine.callback(func, event_data)
                 logger.debug("Executed machine finalize callback '%s'." % func)
         return event_data.result
 
