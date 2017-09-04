@@ -440,12 +440,7 @@ class Machine(object):
             self.initial = initial
 
         if transitions is not None:
-            transitions = listify(transitions)
-            for t in transitions:
-                if isinstance(t, list):
-                    self.add_transition(*t)
-                else:
-                    self.add_transition(**t)
+            self.add_transitions(transitions)
 
         if ordered_transitions:
             self.add_ordered_transitions()
@@ -701,6 +696,19 @@ class Machine(object):
             t = self._create_transition(s, d, conditions, unless, before,
                                         after, prepare, **kwargs)
             self.events[trigger].add_transition(t)
+
+    def add_transitions(self, transitions):
+        """ Add several transitions.
+
+        Args:
+            transitions (list): A list of transitions.
+
+        """
+        for t in listify(transitions):
+            if isinstance(t, list):
+                self.add_transition(*t)
+            else:
+                self.add_transition(**t)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
                                 loop=True, loop_includes_initial=True,
