@@ -1184,7 +1184,7 @@ transitions = [['done', 'preparing', 'waiting'],
                ['go', 'waiting', 'away']]  # Okay, let' move
 
 hero = SocialSuperhero()
-machine = CustomStateMachine(model=hero, states=states, transitions=transitions, initial='Preparing')
+machine = CustomStateMachine(model=hero, states=states, transitions=transitions, initial='preparing')
 assert hero.state == 'preparing'  # Preparing for the night shift
 assert machine.get_state(hero.state).is_busy  # We are at home and busy
 hero.done()
