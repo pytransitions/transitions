@@ -15,14 +15,12 @@ except ImportError:
 import inspect
 import itertools
 import logging
+import warnings
 
-from collections import OrderedDict
-from collections import defaultdict
-from collections import deque
+from collections import OrderedDict, defaultdict, deque
 from functools import partial
 from six import string_types
 
-import warnings
 # make deprecation warnings of transition visible for module users
 warnings.filterwarnings(action='default', message=r"Starting from transitions version 0\.6\.0 .*")
 
@@ -1061,6 +1059,7 @@ class MachineError(Exception):
     """
 
     def __init__(self, value):
+        super(MachineError, self).__init__(value)
         self.value = value
 
     def __str__(self):
