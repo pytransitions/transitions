@@ -6,7 +6,7 @@ except ImportError:
 from .utils import Stuff
 
 from transitions.extensions import MachineFactory
-from transitions.extensions.diagrams import Diagram, rep
+from transitions.extensions.diagrams import rep
 from transitions.extensions.nesting import NestedState
 from unittest import TestCase, skipIf
 from functools import partial
@@ -92,17 +92,6 @@ class TestDiagrams(TestCase):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D', 'conditions': 'is_fast'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
         ]
-
-    def test_diagram_base(self):
-
-        class MyDiagram(Diagram):
-            def get_graph(self):
-                super(MyDiagram, self).get_graph()
-
-        m = self.machine_cls()
-        d = MyDiagram(m)
-        with self.assertRaises(Exception):
-            d.get_graph()
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False, title='a test')
