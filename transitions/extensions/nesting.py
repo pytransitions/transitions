@@ -200,8 +200,8 @@ class HierarchicalMachine(Machine):
         self._buffered_transitions = []
         _super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
-    def add_model(self, model):
-        _super(HierarchicalMachine, self).add_model(model)
+    def add_model(self, model, initial=None):
+        _super(HierarchicalMachine, self).add_model(model, initial=initial)
         models = listify(model)
         for m in models:
             m = self if m == 'self' else m
