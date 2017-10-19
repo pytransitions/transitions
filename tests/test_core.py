@@ -20,6 +20,14 @@ except ImportError:
     from mock import MagicMock
 
 
+def on_exit_A(event):
+    event.model.exit_A_called = True
+
+
+def on_exit_B(event):
+    event.model.exit_B_called = True
+
+
 class TestTransitions(TestCase):
 
     def setUp(self):
@@ -266,7 +274,7 @@ class TestTransitions(TestCase):
         n.advance()
         self.assertTrue(n.is_B())
         with self.assertRaises(ValueError):
-            m = NewMachine(state=['A', 'B'])
+            NewMachine(state=['A', 'B'])
 
     def test_send_event_data_callbacks(self):
         states = ['A', 'B', 'C', 'D', 'E']
@@ -455,6 +463,39 @@ class TestTransitions(TestCase):
         self.assertEqual(len(state_a.on_exit), 1)
         self.assertEqual(len(state_b.on_enter), 1)
         self.assertEqual(len(state_b.on_exit), 1)
+
+    def test_state_callable_callbacks(self):
+
+        class Model:
+
+            def __init__(self):
+                self.exit_A_called = False
+                self.exit_B_called = False
+
+            def on_enter_A(self, event):
+                pass
+
+            def on_enter_B(self, event):
+                pass
+
+        states = [State(name='A', on_enter='on_enter_A', on_exit='tests.test_core.on_exit_A'),
+                  State(name='B', on_enter='on_enter_B', on_exit=on_exit_B),
+                  State(name='C', on_enter='test.test_core.AAAA')]
+
+        model = Model()
+        machine = Machine(model, states=states, send_event=True, initial='A')
+        state_a = machine.get_state('A')
+        state_b = machine.get_state('B')
+        self.assertEqual(len(state_a.on_enter), 1)
+        self.assertEqual(len(state_a.on_exit), 1)
+        self.assertEqual(len(state_b.on_enter), 1)
+        self.assertEqual(len(state_b.on_exit), 1)
+        model.to_B()
+        self.assertTrue(model.exit_A_called)
+        model.to_A()
+        self.assertTrue(model.exit_B_called)
+        with self.assertRaises(AttributeError):
+            model.to_C()
 
     def test_pickle(self):
         import sys
