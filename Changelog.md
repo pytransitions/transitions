@@ -10,11 +10,11 @@ Release 0.6.2 is a minor release and contains new features and bug fixes but als
 - Add `appveyor.yml` for Windows testing; However, Windows testing is disabled due to #258
 - Bugfix #262: Timeout threads prevented program from execution when main thread ended (thanks to @tkuester)
 - `prep_ordered_arg` is now protected in `core`
-- renamed `logger` instances to `_LOGGER` to comply with protected module constant naming standards
-- `traverse` is not protected in `HierarchicalMachine`
-- removed abstract class `Diagram` since it did not add functionality to `diagrams`
-- Specified several overrides of `add_state` or `add_transition` to keep the base class parameters instead of `*args` and `**kwargs`
-- Changed several `if len(x) > 0:` checks to `if x:` as suggested by the static code analysis to make use of falsy empty lists/strings.
+- Convert `logger` instances to `_LOGGER` to comply with protected module constant naming standards
+- `traverse` is now protected in `HierarchicalMachine`
+- Remove abstract class `Diagram` since it did not add functionality to `diagrams`
+- Specify several overrides of `add_state` or `add_transition` to keep the base class parameters instead of `*args` and `**kwargs`
+- Change several `if len(x) > 0:` checks to `if x:` as suggested by the static code analysis to make use of falsy empty lists/strings.
 
 ## 0.6.1 (September, 2017)
 
