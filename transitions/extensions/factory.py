@@ -30,23 +30,7 @@ class MachineFactory(object):
 
         Returns (class): A machine class with the specified features.
         """
-        if graph and nested and locked:
-            cls = LockedHierarchicalGraphMachine
-        elif locked and nested:
-            cls = LockedHierarchicalMachine
-        elif locked and graph:
-            cls = LockedGraphMachine
-        elif nested and graph:
-            cls = HierarchicalGraphMachine
-        elif graph:
-            cls = GraphMachine
-        elif nested:
-            cls = HierarchicalMachine
-        elif locked:
-            cls = LockedMachine
-        else:
-            cls = Machine
-        return cls
+        return _class_map[(graph, nested, locked)]
 
 
 class NestedGraphTransition(TransitionGraphSupport, NestedTransition):
@@ -95,3 +79,16 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedMachine, HierarchicalMa
 
     transition_cls = NestedGraphTransition
     event_cls = LockedNestedEvent
+
+
+# 3d tuple (graph, nested, locked)
+_class_map = {
+    (False, False, False): Machine,
+    (False, False, True): LockedMachine,
+    (False, True, False): HierarchicalMachine,
+    (False, True, True): LockedHierarchicalMachine,
+    (True, False, False): GraphMachine,
+    (True, False, True): LockedGraphMachine,
+    (True, True, False): HierarchicalGraphMachine,
+    (True, True, True): LockedHierarchicalGraphMachine
+}
