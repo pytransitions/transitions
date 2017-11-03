@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.6.1.svg)](https://github.com/pytransitions/transitions/compare/0.6.1...master)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.6.2.svg)](https://github.com/pytransitions/transitions/compare/0.6.2...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 <!--[![Name](Image)](Link)-->
 
@@ -1220,7 +1220,7 @@ Currently, transitions comes equipped with the following state features:
     - keyword: `volatile` (class, optional) -- every time the state is entered an object of type class will be assigned to the model. The attribute name is defined by `hook`. If omitted, an empty VolatileObject will be created instead
     - keyword: `hook` (string, default='scope') -- The model's attribute name fore the temporal object.
 
-You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit` and should *not* inherit from `State` directly. 
+You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit`. Your extension may inherit from *State* but will also work without it.
 In case you prefer to write your own custom states from scratch be aware that some state extensions *require* certain state features. `HierarchicalStateMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:
 
 ```python
