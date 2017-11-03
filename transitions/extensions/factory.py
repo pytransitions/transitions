@@ -30,7 +30,7 @@ class MachineFactory(object):
 
         Returns (class): A machine class with the specified features.
         """
-        return _class_map[(graph, nested, locked)]
+        return _CLASS_MAP[(graph, nested, locked)]
 
 
 class NestedGraphTransition(TransitionGraphSupport, NestedTransition):
@@ -82,7 +82,7 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedMachine, HierarchicalMa
 
 
 # 3d tuple (graph, nested, locked)
-_class_map = {
+_CLASS_MAP = {
     (False, False, False): Machine,
     (False, False, True): LockedMachine,
     (False, True, False): HierarchicalMachine,

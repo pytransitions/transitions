@@ -2,7 +2,6 @@ include *.md
 include *.txt
 include .coveragerc
 include .pylintrc
-include .scrutinizer.yml
 include LICENSE
 include MANIFEST
 include tox.ini
