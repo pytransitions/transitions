@@ -834,10 +834,11 @@ machine.add_model(Matter(), initial='liquid')
 Transitions includes very rudimentary logging capabilities. A number of events – namely, state changes, transition triggers, and conditional checks – are logged as INFO-level events using the standard Python `logging` module. This means you can easily configure logging to standard output in a script:
 
 ```python
-# Set up logging
+# Set up logging; The basic log level will be DEBUG
 import logging
-from transitions import logger
-logger.setLevel(logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+# Set transitions' log level to INFO; DEBUG messages will be omitted
+logging.getLogger('transitions').setLevel(logging.INFO)
 
 # Business as usual
 machine = Machine(states=states, transitions=transitions, initial='solid')
