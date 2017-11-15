@@ -369,6 +369,8 @@ class TestTransitions(TestsCore):
         state = 'C{0}3{0}a'.format(State.separator)
         s.to(state)
         self.assertEqual(s.state, state)
+        # backwards compatibility check (can be removed in 0.7)
+        self.assertEqual(s.state, state)
 
     def test_example_one(self):
         State.separator = '_'
@@ -416,7 +418,7 @@ class TestTransitions(TestsCore):
         machine.to_C()  # exit B, enter C
         machine.to_C.s3.a()  # enter C↦a; enter C↦3↦a;
         self.assertEqual(machine.state, 'C{0}3{0}a'.format(State.separator))
-        machine.to_C.s2()  # exit C↦3↦a, exit C↦3, enter C↦2
+        machine.to('C{0}2'.format(State.separator))  # exit C↦3↦a, exit C↦3, enter C↦2
         machine.reset()  # exit C↦2; reset C has been overwritten by C↦3
         self.assertEqual(machine.state, 'C')
         machine.reset()  # exit C, enter A

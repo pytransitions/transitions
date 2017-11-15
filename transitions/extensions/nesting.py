@@ -9,9 +9,14 @@
 from copy import copy, deepcopy
 from functools import partial
 import logging
+import warnings
 from six import string_types
 
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
+
+# make deprecation warnings of transition visible for module users
+warnings.filterwarnings(action='default', message=r".*transitions version.*")
+
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -250,11 +255,12 @@ class HierarchicalMachine(Machine):
         models = listify(model)
         for mod in models:
             mod = self if mod == 'self' else mod
-            if hasattr(mod, 'to'):
+            # TODO: Remove 'mod != self' in 0.7.0
+            if hasattr(mod, 'to') and mod != self:
                 _LOGGER.warning("%sModel already has a 'to'-method. It will NOT "
                                 "be overwritten by NestedMachine", self.name)
             else:
-                to_func = partial(self.to, mod)
+                to_func = partial(self.to_state, mod)
                 setattr(mod, 'to', to_func)
 
     def is_state(self, state_name, model, allow_substates=False):
@@ -436,12 +442,28 @@ class HierarchicalMachine(Machine):
         """
         self.get_state(state_name).add_callback('exit', callback)
 
-    def to(self, model, state_name, *args, **kwargs):
+    def to_state(self, model, state_name, *args, **kwargs):
         """ Helper function to add go to states in case a custom state separator is used.
         Args:
-            model (class): The model tgat should be used.
+            model (class): The model that should be used.
             state_name (str): Name of the destination state.
         """
+
+        # TODO: Remove in 0.7.0
+        if not isinstance(state_name, string_types):
+            warnings.warn("'HierarchicalMachine.to' has been renamed to 'HierarchicalMachine.to_state' and "
+                          "will be removed in transitions version 0.7.0.", DeprecationWarning)
+            model = state_name
+            state_name = args[0]
+            args = tuple(x for idx, x in enumerate(args) if idx > 0)
+
         event = EventData(self.get_state(model.state), Event('to', self), self,
                           model, args=args, kwargs=kwargs)
         self._create_transition(model.state, state_name).execute(event)
+
+    # TODO: Remove in 0.7.0
+    def to(self, model, state_name, *args, **kwargs):
+        """ DEPRECATED! See `to_state` instead """
+        warnings.warn("'HierarchicalMachine.to' has been renamed to 'HierarchicalMachine.to_state' and "
+                      "will be removed in transitions version 0.7.0.", DeprecationWarning)
+        self.to_state(model, state_name, *args, **kwargs)

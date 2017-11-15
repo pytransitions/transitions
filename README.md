@@ -1028,7 +1028,7 @@ machine.to_C()  # exit B, enter C
 machine.to_C.s3.a()  # enter C↦a; enter C↦3↦a;
 machine.state,
 >>> 'C↦3↦a'
-machine.to('C↦s2')  # not interactive; exit C↦3↦a, exit C↦3, enter C↦2
+machine.to('C↦2')  # not interactive; exit C↦3↦a, exit C↦3, enter C↦2
 machine.reset()  # exit C↦2; reset C has been overwritten by C↦3
 machine.state
 >>> 'C'
