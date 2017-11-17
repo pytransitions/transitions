@@ -928,6 +928,21 @@ class Machine(object):
                                 prepare=prepare[-1],
                                 **kwargs)
 
+    def get_transitions(self, trigger, source="*", dest="*"):
+        """ Return the transitions from the Machine.
+        Args:
+            trigger (string): Trigger name of the transition.
+            source (string): Limits removal to transitions from a certain state.
+            dest (string): Limits removal to transitions to a certain state.
+        """
+        transitions = itertools.chain.from_iterable(
+            self.events[trigger].transitions.values())
+        return (transition
+                for transition in transitions
+                if (transition.source, transition.dest) == (
+                    source if source != "*" else transition.source,
+                    dest if dest != "*" else transition.dest))
+
     def remove_transition(self, trigger, source="*", dest="*"):
         """ Removes a transition from the Machine and all models.
         Args:
