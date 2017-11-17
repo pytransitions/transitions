@@ -931,7 +931,7 @@ class Machine(object):
     def remove_transition(self, trigger, source="*", dest="*"):
         """ Removes a transition from the Machine and all models.
         Args:
-            trigger (string): Trigger name of the transition
+            trigger (string): Trigger name of the transition.
             source (string): Limits removal to transitions from a certain state.
             dest (string): Limits removal to transitions to a certain state.
         """
