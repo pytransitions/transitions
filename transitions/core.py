@@ -804,7 +804,7 @@ class Machine(object):
                 transition. This will be attached to the currently specified
                 model (e.g., passing trigger='advance' will create a new
                 advance() method in the model that triggers the transition.)
-            source(string): The name of the source state--i.e., the state we
+            source(string or list): The name of the source state--i.e., the state we
                 are transitioning away from. This can be a single state, a
                 list of states or an asterisk for all states.
             dest (string): The name of the destination State--i.e., the state
