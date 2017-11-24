@@ -360,6 +360,13 @@ class TestTransitions(TestCase):
         m.next_state()
         self.assertEqual(m.state, 'middle')
 
+        # Alter initial state
+        m = Machine('self', states, initial='middle', ordered_transitions=True)
+        m.next_state()
+        self.assertEqual(m.state, 'end')
+        m.next_state()
+        self.assertEqual(m.state, 'beginning')
+
     def test_ordered_transition_error(self):
         m = Machine(states=['A'], initial='A')
         with self.assertRaises(ValueError):

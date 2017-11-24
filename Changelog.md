@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.3 ()
+
+- Bugfix #268: `Machine.add_ordered_transitions` changed states' order if `initial` is not the first or last state (thanks to @janekbaraniewski)
 
 ## 0.6.2 (November, 2017)
 
