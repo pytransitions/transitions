@@ -864,14 +864,17 @@ class TestTransitions(TestCase):
         self.assertTrue(model.next_state())
 
     def test_get_transitions(self):
-        self.stuff.machine.add_transition('go', ['A', 'B', 'C'], 'D')
-        self.stuff.machine.add_transition('walk', 'A', 'B')
-        go_transitions = list(self.stuff.machine.get_transitions("go"))
-        walk_transitions = list(self.stuff.machine.get_transitions("walk"))
-        self.assertEqual(len(go_transitions), 3)
-        self.assertEqual(set(t.source for t in go_transitions), {'A', 'B', 'C'})
-        self.assertEqual(set(t.dest for t in go_transitions), {'D'})
-        self.assertEqual(len(walk_transitions), 1)
+        states = ['A', 'B', 'C', 'D']
+        m = Machine('self', states, initial='a', auto_transitions=False)
+        m.add_transition('go', ['A', 'B', 'C'], 'D')
+        m.add_transition('run', 'A', 'D')
+        self.assertEqual(
+            {(t.source, t.dest) for t in m.get_transitions('go')},
+            {('A', 'D'), ('B', 'D'), ('C', 'D')})
+        self.assertEqual(
+            [(t.source, t.dest)
+             for t in m.get_transitions(source='A', dest='D')],
+            [('A', 'D'), ('A', 'D')])
 
     def test_remove_transition(self):
         self.stuff.machine.add_transition('go', ['A', 'B', 'C'], 'D')
