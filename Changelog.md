@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.6.3 ()
+## 0.6.3 (November, 2017)
 
 - Bugfix #268: `Machine.add_ordered_transitions` changed states' order if `initial` is not the first or last state (thanks to @janekbaraniewski)
+- Bugfix #265: Renamed `HierarchicalMachine.to` to `to_state` to prevent warnings when HSM is used as a model
+- Feature #266: Introduce `Machine.get_transitions` to get a list of transitions for alteration.
 
 ## 0.6.2 (November, 2017)
 
