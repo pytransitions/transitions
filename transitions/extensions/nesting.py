@@ -251,7 +251,7 @@ class HierarchicalMachine(Machine):
         """ Extends transitions.core.Machine.add_model by applying a custom 'to' function to
             the added model.
         """
-        _super(HierarchicalMachine, self).add_model(model)
+        _super(HierarchicalMachine, self).add_model(model, initial=initial)
         models = listify(model)
         for mod in models:
             mod = self if mod == 'self' else mod
