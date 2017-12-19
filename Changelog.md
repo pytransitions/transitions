@@ -1,6 +1,12 @@
 # Changelog
 
+## 0.6.4 ()
+
+- Bugfix #274: `initial` has not been passed to super in `HierachicalMachine.add_model` (thanks @illes)
+
 ## 0.6.3 (November, 2017)
+
+Release 0.6.3 is a minor release and contains a new feature and two bug fixes:
 
 - Bugfix #268: `Machine.add_ordered_transitions` changed states' order if `initial` is not the first or last state (thanks to @janekbaraniewski)
 - Bugfix #265: Renamed `HierarchicalMachine.to` to `to_state` to prevent warnings when HSM is used as a model
