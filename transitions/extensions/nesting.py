@@ -64,12 +64,10 @@ class FunctionWrapper(object):
         return self._func(*args, **kwargs)
 
 
-# Added parent and children parameter children is a list of NestedStates
-# and parent is the full name of the parent e.g. Foo_Bar_Baz.
 class NestedState(State):
     """ A state which allows substates.
     Attributes:
-        parent (State): The parent of the current state.
+        parent (NestedState): The parent of the current state.
         children (list): A list of child states of the current state.
     """
 
@@ -285,11 +283,34 @@ class HierarchicalMachine(Machine):
 
     def _traverse(self, states, on_enter=None, on_exit=None,
                   ignore_invalid_triggers=None, parent=None, remap=None):
-        """ Parses passed value to build a nested state structure recursively. """
+        """ Parses passed value to build a nested state structure recursively.
+        Args:
+            states (list, string, dict, or State): a list, a State instance, the
+                name of a new state, or a dict with keywords to pass on to the
+                State initializer. If a list, each element can be of any of the
+                latter three types.
+            on_enter (string or list): callbacks to trigger when the state is
+                entered. Only valid if first argument is string.
+            on_exit (string or list): callbacks to trigger when the state is
+                exited. Only valid if first argument is string.
+            ignore_invalid_triggers: when True, any calls to trigger methods
+                that are not valid for the present state (e.g., calling an
+                a_to_b() trigger when the current state is c) will be silently
+                ignored rather than raising an invalid transition exception.
+                Note that this argument takes precedence over the same
+                argument defined at the Machine level, and is in turn
+                overridden by any ignore_invalid_triggers explicitly
+                passed in an individual state's initialization arguments.
+            parent (NestedState or string): parent state for nested states.
+            remap (dict): reassigns transitions named `key from nested machines to parent state `value`.
+        Returns: list of new `NestedState` objects
+        """
         states = listify(states)
         new_states = []
         ignore = ignore_invalid_triggers
         remap = {} if remap is None else remap
+        parent = self.get_state(parent) if isinstance(parent, string_types) else parent
+
         if ignore is None:
             ignore = self.ignore_invalid_triggers
         for state in states:
@@ -308,21 +329,17 @@ class HierarchicalMachine(Machine):
                 state = copy(state)
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
-                state['parent'] = parent
+                if 'parent' not in state:
+                    state['parent'] = parent
 
-                if 'children' in state:
-                    # Concat the state names with the current scope. The scope is the concatenation of all
-                    # previous parents. Call _traverse again to check for more nested states.
-                    par = self._create_state(state['name'],
-                                             on_enter=state.get('on_enter', None),
-                                             on_exit=state.get('on_exit', None),
-                                             ignore_invalid_triggers=state.get('ignore_invalid_triggers', ignore),
-                                             parent=parent,
-                                             initial=state.get('initial', None))
-                    nested = self._traverse(state['children'], parent=par, remap=state.get('remap', None))
-                    tmp_states.append(par)
+                try:
+                    state_children = state.pop('children')  # throws KeyError when no children set
+                    state_remap = state.pop('remap', None)
+                    state_parent = self._create_state(**state)
+                    nested = self._traverse(state_children, parent=state_parent, remap=state_remap)
+                    tmp_states.append(state_parent)
                     tmp_states.extend(nested)
-                else:
+                except KeyError:
                     tmp_states.insert(0, self._create_state(**state))
             elif isinstance(state, HierarchicalMachine):
                 # (deep) copy only states not mentioned in remap

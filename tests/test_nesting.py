@@ -164,11 +164,17 @@ class TestTransitions(TestsCore):
 
     def test_add_custom_state(self):
         s = self.stuff
-        s.machine.add_states([{'name': 'E', 'children': ['1', '2', '3']}])
+        s.machine.add_states([{'name': 'E', 'children': ['1', '2']}])
+        s.machine.add_state('3', parent='E')
         s.machine.add_transition('go', '*', 'E%s1' % State.separator)
+        s.machine.add_transition('walk', '*', 'E%s3' % State.separator)
         s.machine.add_transition('run', 'E', 'C{0}3{0}a'.format(State.separator))
         s.go()
+        self.assertEqual(s.state, 'E{0}1'.format(State.separator))
+        s.walk()
+        self.assertEqual(s.state, 'E{0}3'.format(State.separator))
         s.run()
+        self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
 
     def test_enter_exit_nested_state(self):
         mock = MagicMock()
