@@ -4,6 +4,7 @@
 
 - Bugfix #274: `initial` has not been passed to super in `HierachicalMachine.add_model` (thanks @illes)
 - Feature #275: `HierarchicalMachine.add_states` now supports keyword `parent` to be a `NestedState` or a string.
+- Bugfix #278: `NestedState` has not been exited correctly during reflexive triggering (thanks @hrsmanian)
 
 ## 0.6.3 (November, 2017)
 

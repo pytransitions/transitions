@@ -225,39 +225,51 @@ class TestTransitions(TestsCore):
 
     def test_enter_exit_nested(self):
         s = self.stuff
-        s.machine.add_transition('advance', 'A', 'C%s1' % State.separator)
+        s.machine.add_transition('advance', 'A', 'C{0}3'.format(State.separator))
         s.machine.add_transition('reverse', 'C', 'A')
-        s.machine.add_transition('lower', 'C%s1' % State.separator, 'C{0}3{0}a'.format(State.separator))
+        s.machine.add_transition('lower', ['C{0}1'.format(State.separator),
+                                           'C{0}3'.format(State.separator)], 'C{0}3{0}a'.format(State.separator))
         s.machine.add_transition('rise', 'C%s3' % State.separator, 'C%s1' % State.separator)
         s.machine.add_transition('fast', 'A', 'C{0}3{0}a'.format(State.separator))
-        for name, state in s.machine.states.items():
+        for state in s.machine.states.values():
             state.on_enter.append('increase_level')
             state.on_exit.append('decrease_level')
 
         s.advance()
-        self.assertEqual(s.state, 'C%s1' % State.separator)
+        self.assertEqual(s.state, 'C%s3' % State.separator)
         self.assertEqual(s.level, 2)
+        self.assertEqual(s.transitions, 3)  # exit A; enter C,3
         s.lower()
         self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
         self.assertEqual(s.level, 3)
+        self.assertEqual(s.transitions, 4)  # enter a
         s.rise()
         self.assertEqual(s.state, 'C%s1' % State.separator)
         self.assertEqual(s.level, 2)
+        self.assertEqual(s.transitions, 7)  # exit a, 3; enter 1
         s.reverse()
         self.assertEqual(s.state, 'A')
         self.assertEqual(s.level, 1)
+        self.assertEqual(s.transitions, 10)  # exit 1, C; enter A
         s.fast()
         self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
         self.assertEqual(s.level, 3)
+        self.assertEqual(s.transitions, 14)  # exit A; enter C, 3, a
         s.to_A()
         self.assertEqual(s.state, 'A')
         self.assertEqual(s.level, 1)
+        self.assertEqual(s.transitions, 18)  # exit a, 3, C; enter A
+        s.to_A()
+        self.assertEqual(s.state, 'A')
+        self.assertEqual(s.level, 1)
+        self.assertEqual(s.transitions, 20)  # exit A; enter A
         if State.separator in '_':
             s.to_C_3_a()
         else:
             s.to_C.s3.a()
         self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
         self.assertEqual(s.level, 3)
+        self.assertEqual(s.transitions, 24)  # exit A; enter C, 3, a
 
     def test_ordered_transitions(self):
         states = [{'name': 'first', 'children': ['second', 'third', {'name': 'fourth', 'children': ['fifth', 'sixth']},

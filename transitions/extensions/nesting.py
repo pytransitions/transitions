@@ -128,7 +128,10 @@ class NestedState(State):
         Returns: int level of the currently investigated (sub)state.
 
         """
-        if self.level > target_state.level:
+        if self == target_state:
+            self.exit(event_data)
+            return self.level
+        elif self.level > target_state.level:
             self.exit(event_data)
             return self.parent.exit_nested(event_data, target_state)
         elif self.level <= target_state.level:
@@ -140,10 +143,10 @@ class NestedState(State):
                 tmp_self.exit(event_data)
                 tmp_self = tmp_self.parent
                 tmp_state = tmp_state.parent
-            if tmp_self != tmp_state:
-                tmp_self.exit(event_data)
-                return tmp_self.level
-            return tmp_self.level + 1
+            if tmp_self == tmp_state:
+                return tmp_self.level + 1
+            tmp_self.exit(event_data)
+            return tmp_self.level
 
     def enter_nested(self, event_data, level=None):
         """ Tracks parent states to be entered when the states is entered itself. This should not
