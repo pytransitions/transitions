@@ -1,18 +1,20 @@
 # Changelog
 
-## 0.6.4 ()
+## 0.6.4 (January, 2018)
 
-- Bugfix #274: `initial` has not been passed to super in `HierachicalMachine.add_model` (thanks @illes)
+Release 0.6.4 is a minor release and contains a new feature and two bug fixes related to `HierachicalMachine`:
+
+- Bugfix #274: `initial` has not been passed to super in `HierachicalMachine.add_model` (thanks to @illes).
 - Feature #275: `HierarchicalMachine.add_states` now supports keyword `parent` to be a `NestedState` or a string.
-- Bugfix #278: `NestedState` has not been exited correctly during reflexive triggering (thanks @hrsmanian)
+- Bugfix #278: `NestedState` has not been exited correctly during reflexive triggering (thanks to @hrsmanian).
 
 ## 0.6.3 (November, 2017)
 
 Release 0.6.3 is a minor release and contains a new feature and two bug fixes:
 
-- Bugfix #268: `Machine.add_ordered_transitions` changed states' order if `initial` is not the first or last state (thanks to @janekbaraniewski)
-- Bugfix #265: Renamed `HierarchicalMachine.to` to `to_state` to prevent warnings when HSM is used as a model
-- Feature #266: Introduce `Machine.get_transitions` to get a list of transitions for alteration.
+- Bugfix #268: `Machine.add_ordered_transitions` changed states' order if `initial` is not the first or last state (thanks to @janekbaraniewski).
+- Bugfix #265: Renamed `HierarchicalMachine.to` to `to_state` to prevent warnings when HSM is used as a model.
+- Feature #266: Introduce `Machine.get_transitions` to get a list of transitions for alteration (thanks to @Synss).
 
 ## 0.6.2 (November, 2017)
 
