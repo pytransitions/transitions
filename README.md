@@ -448,7 +448,7 @@ machine.add_transition('to_liquid', '*', 'liquid')
 
 Note that wildcard transitions will only apply to states that exist at the time of the add_transition() call. Calling a wildcard-based transition when the model is in a state added after the transition was defined will elicit an invalid transition message, and will not transition to the target state.
 
-#### <a name="reflexive-from-multiple-states"></a>Transitioning from multiple states
+#### <a name="reflexive-from-multiple-states"></a>Reflexive transitions from multiple states
 A reflexive trigger (trigger that has the same state as source and destination) can easily be added specifying `=` as destination.
 This is handy if the same reflexive trigger should be added to multiple states.
 For example:
