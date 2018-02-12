@@ -22,7 +22,7 @@ def get_callable(name):
         m = getattr(m, n)
     try:
         func = getattr(m, name)
-    except AttributeError, exc:
+    except AttributeError as exc:
         raise ImportError(exc.message)
     if callable(func):
         return func
