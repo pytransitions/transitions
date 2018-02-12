@@ -244,8 +244,8 @@ class TestTransitions(TestCase):
             def __init__(self, parent):
                 self.parent = parent
                 self.mock = MagicMock()
-                states = ['1', {'name': '2', 'on_enter': self.print_msg}]
-                transitions = [['finish', '*', '2']]
+                states = ['1', '2']
+                transitions = [{'trigger': 'finish', 'source': '*', 'dest': '2', 'after': self.print_msg}]
                 super(Nested, self).__init__(states=states, transitions=transitions, initial='1')
 
             def print_msg(self):

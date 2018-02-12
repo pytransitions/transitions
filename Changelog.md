@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.6.4 (January, 2018)
+
+Release 0.6.4 is a minor release and contains a new feature and two bug fixes related to `HierachicalMachine`:
+
+- Bugfix #274: `initial` has not been passed to super in `HierachicalMachine.add_model` (thanks to @illes).
+- Feature #275: `HierarchicalMachine.add_states` now supports keyword `parent` to be a `NestedState` or a string.
+- Bugfix #278: `NestedState` has not been exited correctly during reflexive triggering (thanks to @hrsmanian).
+
+## 0.6.3 (November, 2017)
+
+Release 0.6.3 is a minor release and contains a new feature and two bug fixes:
+
+- Bugfix #268: `Machine.add_ordered_transitions` changed states' order if `initial` is not the first or last state (thanks to @janekbaraniewski).
+- Bugfix #265: Renamed `HierarchicalMachine.to` to `to_state` to prevent warnings when HSM is used as a model.
+- Feature #266: Introduce `Machine.get_transitions` to get a list of transitions for alteration (thanks to @Synss).
+
+## 0.6.2 (November, 2017)
+
+Release 0.6.2 is a minor release and contains new features and bug fixes but also several internal changes:
+
+- Documentation: Add docstring to every public method
+- Bugfix #257: Readme example variable had been capitalized (thanks to @fedesismo)
+- Add `appveyor.yml` for Windows testing; However, Windows testing is disabled due to #258
+- Bugfix #262: Timeout threads prevented program from execution when main thread ended (thanks to @tkuester)
+- `prep_ordered_arg` is now protected in `core`
+- Convert `logger` instances to `_LOGGER` to comply with protected module constant naming standards
+- `traverse` is now protected in `HierarchicalMachine`
+- Remove abstract class `Diagram` since it did not add functionality to `diagrams`
+- Specify several overrides of `add_state` or `add_transition` to keep the base class parameters instead of `*args` and `**kwargs`
+- Change several `if len(x) > 0:` checks to `if x:` as suggested by the static code analysis to make use of falsy empty lists/strings.
 
 ## 0.6.1 (September, 2017)
 

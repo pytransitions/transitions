@@ -11,7 +11,7 @@ from .utils import Stuff
 
 from functools import partial
 from transitions import Machine, MachineError, State, EventData
-from transitions.core import listify, prep_ordered_arg
+from transitions.core import listify, _prep_ordered_arg
 from unittest import TestCase, skipIf
 
 try:
@@ -367,6 +367,13 @@ class TestTransitions(TestCase):
         m = Machine('self', states, initial='beginning', ordered_transitions=True)
         m.next_state()
         self.assertEqual(m.state, 'middle')
+
+        # Alter initial state
+        m = Machine('self', states, initial='middle', ordered_transitions=True)
+        m.next_state()
+        self.assertEqual(m.state, 'end')
+        m.next_state()
+        self.assertEqual(m.state, 'beginning')
 
     def test_ordered_transition_error(self):
         m = Machine(states=['A'], initial='A')
@@ -863,10 +870,10 @@ class TestTransitions(TestCase):
             m.to_B()
 
     def test_prep_ordered_arg(self):
-        self.assertTrue(len(prep_ordered_arg(3, None)) == 3)
-        self.assertTrue(all(a is None for a in prep_ordered_arg(3, None)))
+        self.assertTrue(len(_prep_ordered_arg(3, None)) == 3)
+        self.assertTrue(all(a is None for a in _prep_ordered_arg(3, None)))
         with self.assertRaises(ValueError):
-            prep_ordered_arg(3, [None, None])
+            _prep_ordered_arg(3, [None, None])
 
     def test_ordered_transition_callback(self):
         class Model:
@@ -903,6 +910,19 @@ class TestTransitions(TestCase):
         self.assertFalse(model.next_state())
         model.blocker = True
         self.assertTrue(model.next_state())
+
+    def test_get_transitions(self):
+        states = ['A', 'B', 'C', 'D']
+        m = Machine('self', states, initial='a', auto_transitions=False)
+        m.add_transition('go', ['A', 'B', 'C'], 'D')
+        m.add_transition('run', 'A', 'D')
+        self.assertEqual(
+            {(t.source, t.dest) for t in m.get_transitions('go')},
+            {('A', 'D'), ('B', 'D'), ('C', 'D')})
+        self.assertEqual(
+            [(t.source, t.dest)
+             for t in m.get_transitions(source='A', dest='D')],
+            [('A', 'D'), ('A', 'D')])
 
     def test_remove_transition(self):
         self.stuff.machine.add_transition('go', ['A', 'B', 'C'], 'D')

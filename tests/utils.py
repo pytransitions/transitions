@@ -19,6 +19,7 @@ class Stuff(object):
         if machine_cls is not None:
             self.machine = machine_cls(*args, **kwargs)
         self.level = 1
+        self.transitions = 0
         self.machine_cls = machine_cls
 
     @staticmethod
@@ -56,9 +57,11 @@ class Stuff(object):
 
     def increase_level(self):
         self.level += 1
+        self.transitions += 1
 
     def decrease_level(self):
         self.level -= 1
+        self.transitions += 1
 
     def set_message(self, message="Hello World!"):
         self.message = message

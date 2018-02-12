@@ -20,16 +20,16 @@ class TestFactory(TestCase):
         self.assertTrue(hasattr(graph_cls, 'set_edge_state'))
         nested_cls = self.factory.get_predefined(nested=True)
         self.assertFalse(hasattr(nested_cls, 'set_edge_state'))
-        self.assertTrue(hasattr(nested_cls, 'traverse'))
+        self.assertTrue(hasattr(nested_cls, '_traverse'))
 
         locked_cls = self.factory.get_predefined(locked=True)
         self.assertFalse(hasattr(locked_cls, 'set_edge_state'))
-        self.assertFalse(hasattr(locked_cls, 'traverse'))
+        self.assertFalse(hasattr(locked_cls, '_traverse'))
         self.assertTrue('__getattribute__' in locked_cls.__dict__)
 
         locked_nested_cls = self.factory.get_predefined(nested=True, locked=True)
         self.assertFalse(hasattr(locked_nested_cls, 'set_edge_state'))
-        self.assertTrue(hasattr(locked_nested_cls, 'traverse'))
+        self.assertTrue(hasattr(locked_nested_cls, '_traverse'))
         self.assertEqual(locked_nested_cls.__getattribute__, locked_cls.__getattribute__)
         self.assertNotEqual(machine_cls.__getattribute__, locked_cls.__getattribute__)
 

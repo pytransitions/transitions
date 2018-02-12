@@ -1,10 +1,10 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.6.1-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.6.4-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
-[![Pylint](https://img.shields.io/badge/pylint-7.55%2F10-yellowgreen.svg)](https://github.com/pytransitions/transitions)
+[![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.6.0.svg)](https://github.com/pytransitions/transitions/compare/0.6.0...master)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.6.4.svg)](https://github.com/pytransitions/transitions/compare/0.6.4...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 <!--[![Name](Image)](Link)-->
 
@@ -448,7 +448,7 @@ machine.add_transition('to_liquid', '*', 'liquid')
 
 Note that wildcard transitions will only apply to states that exist at the time of the add_transition() call. Calling a wildcard-based transition when the model is in a state added after the transition was defined will elicit an invalid transition message, and will not transition to the target state.
 
-#### <a name="reflexive-from-multiple-states"></a>Transitioning from multiple states
+#### <a name="reflexive-from-multiple-states"></a>Reflexive transitions from multiple states
 A reflexive trigger (trigger that has the same state as source and destination) can easily be added specifying `=` as destination.
 This is handy if the same reflexive trigger should be added to multiple states.
 For example:
@@ -834,10 +834,11 @@ machine.add_model(Matter(), initial='liquid')
 Transitions includes very rudimentary logging capabilities. A number of events – namely, state changes, transition triggers, and conditional checks – are logged as INFO-level events using the standard Python `logging` module. This means you can easily configure logging to standard output in a script:
 
 ```python
-# Set up logging
+# Set up logging; The basic log level will be DEBUG
 import logging
-from transitions import logger
-logger.setLevel(logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+# Set transitions' log level to INFO; DEBUG messages will be omitted
+logging.getLogger('transitions').setLevel(logging.INFO)
 
 # Business as usual
 machine = Machine(states=states, transitions=transitions, initial='solid')
@@ -1027,7 +1028,7 @@ machine.to_C()  # exit B, enter C
 machine.to_C.s3.a()  # enter C↦a; enter C↦3↦a;
 machine.state,
 >>> 'C↦3↦a'
-machine.to('C↦s2')  # not interactive; exit C↦3↦a, exit C↦3, enter C↦2
+machine.to('C↦2')  # not interactive; exit C↦3↦a, exit C↦3, enter C↦2
 machine.reset()  # exit C↦2; reset C has been overwritten by C↦3
 machine.state
 >>> 'C'
@@ -1220,7 +1221,7 @@ Currently, transitions comes equipped with the following state features:
     - keyword: `volatile` (class, optional) -- every time the state is entered an object of type class will be assigned to the model. The attribute name is defined by `hook`. If omitted, an empty VolatileObject will be created instead
     - keyword: `hook` (string, default='scope') -- The model's attribute name fore the temporal object.
 
-You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit` and should *not* inherit from `State` directly. 
+You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit`. Your extension may inherit from *State* but will also work without it.
 In case you prefer to write your own custom states from scratch be aware that some state extensions *require* certain state features. `HierarchicalStateMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:
 
 ```python
