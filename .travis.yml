@@ -8,7 +8,7 @@ python:
 install:
   - pip install python-coveralls coverage
   - pip install -r requirements.txt
-  - pip install -r requirements_diaggrams.txt
+  - pip install -r requirements_diagrams.txt
   - pip install -r requirements_test.txt
 script:  nosetests --with-coverage --with-doctest
 after_success:

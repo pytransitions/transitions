@@ -2,7 +2,7 @@
 
 ## 0.6.5 ()
 
-- Feature #287: Embedding `HierarchicalMachine` will now reuse the `initial` state of this machine (thanks @mrjogo)
+- Feature #287: Embedding `HierarchicalMachine` will now reuse the machine's `initial` state. Passing `initial: False` overrides this(thanks @mrjogo).
 
 ## 0.6.4 (January, 2018)
 
