@@ -101,7 +101,11 @@ class NestedState(State):
     def initial(self):
         """ When this state is entered it will automatically enter
             the child with this name if not None. """
-        return self.name + NestedState.separator + self._initial if self._initial else None
+        return self.name + NestedState.separator + self._initial if self._initial else self._initial
+
+    @initial.setter
+    def initial(self, value):
+        self._initial = value
 
     @property
     def level(self):
@@ -345,6 +349,9 @@ class HierarchicalMachine(Machine):
                 except KeyError:
                     tmp_states.insert(0, self._create_state(**state))
             elif isinstance(state, HierarchicalMachine):
+                # set initial state of parent if it is None
+                if parent.initial is None:
+                    parent.initial = state.initial
                 # (deep) copy only states not mentioned in remap
                 copied_states = [s for s in deepcopy(state.states).values() if s.name not in remap]
                 # inner_states are the root states of the passed machine

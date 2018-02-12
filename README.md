@@ -1,5 +1,5 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.6.4-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.6.5-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions)
@@ -990,7 +990,7 @@ A configuration making use of  `initial` could look like this:
 
 ```python
 # ...
-states = ['standing', 'walking', {'name': 'caffeinated', 'initial': 'dithering' 'children':['dithering', 'running']}]
+states = ['standing', 'walking', {'name': 'caffeinated', 'initial': 'dithering', 'children': ['dithering', 'running']}]
 transitions = [
   ['walk', 'standing', 'walking'],
   ['stop', 'walking', 'standing'],
@@ -1075,17 +1075,19 @@ states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
 transitions = [
     ['collect', '*', 'collecting'],
     ['wait', '*', 'waiting'],
-    ['count', 'collecting', 'counting_1']
+    ['count', 'collecting', 'counting']
 ]
 
 collector = Machine(states=states, transitions=transitions, initial='waiting')
 collector.collect()  # collecting
-collector.count()  # let's see what we got
+collector.count()  # let's see what we got; counting_1
 collector.increase()  # counting_2
 collector.increase()  # counting_3
 collector.done()  # collector.state == counting_done
 collector.wait()  # collector.state == waiting
 ```
+
+If a `HierarchicalStateMachine` is passed with the `children` keyword, the initial state of this machine will be assigned to the new parent state. In the above example we see that entering `counting` will also enter `counting_1`. If this is undesired behaviour and the machine should rather halt in the parent state, the user can pass `initial` as `False` like `{'name': 'counting', 'children': counter, 'initial': False}`.
 
 Sometimes you want such an embedded state collection to 'return' which means after it is done it should exit and transit to one of your states. To achieve this behaviour you can remap state transitions. In the example above we would like the counter to return if the state `done` was reached. This is done as follows:
 

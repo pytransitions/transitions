@@ -72,7 +72,13 @@ class TestTransitions(TestCase):
         walker.to_A()
         self.assertEqual(walker.state, 'A')
         walker.calc()
-        self.assertEqual(walker.state, 'C')
+        self.assertEqual(walker.state, 'C_1')
+
+    def test_blueprint_initial_false(self):
+        child = Machine(states=['A', 'B'], initial='A')
+        parent = Machine(states=['a', 'b', {'name': 'c', 'children': child, 'initial': False}])
+        parent.to_c()
+        self.assertEqual(parent.state, 'c')
 
     def test_blueprint_remap(self):
         states = ['1', '2', '3', 'finished']

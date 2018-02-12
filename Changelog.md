@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.5 ()
+
+- Feature #287: Embedding `HierarchicalMachine` will now reuse the `initial` state of this machine (thanks @mrjogo)
+
 ## 0.6.4 (January, 2018)
 
 Release 0.6.4 is a minor release and contains a new feature and two bug fixes related to `HierachicalMachine`:
