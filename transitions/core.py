@@ -988,14 +988,10 @@ class Machine(object):
             the callable will be resolved from the passed model in event_data. This function is not intended to
             be called directly but through state and transition callback definitions.
         Args:
-<<<<<<< HEAD
             func (string, callable): The callback function.
                 1. First, if the func is callable, just call it
                 2. Second, we try to import string assuming it is a path to a func
                 3. Fallback to a model attribute
-=======
-            func (callable or str): The callback function.
->>>>>>> upstream/master
             event_data (EventData): An EventData instance to pass to the
                 callback (if event sending is enabled) or to extract arguments
                 from (if event sending is disabled).
