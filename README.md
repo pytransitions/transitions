@@ -398,6 +398,10 @@ This behavior is generally desirable, since it helps alert you to problems in yo
 >>> # ...or even just for a single state. Here, exceptions will only be suppressed when the current state is A.
 >>> states = [State('A', ignore_invalid_triggers=True), 'B', 'C']
 >>> m = Machine(lump, states)
+>>> # ...this can be inverted as well if just one state should raise an exception
+>>> # since the machine's global value is not applied to a previously initialized state.
+>>> states = ['A', 'B', State('C')] # the default value for 'ignore_invalid_triggers' is False
+>>> m = Machine(lump, states, ignore_invalid_triggers=True)
 ```
 
 If you need to know which transitions are valid from a certain state, you can use `get_triggers`:
