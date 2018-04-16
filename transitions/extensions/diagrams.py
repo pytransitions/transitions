@@ -274,16 +274,16 @@ class TransitionGraphSupport(Transition):
         machine = event_data.machine
         model = event_data.model
         dest = machine.get_state(self.dest)
+        graph = model.get_graph()
 
         # Mark the active node
-        machine.reset_graph_style(model.graph)
+        machine.reset_graph_style(graph)
 
         # Mark the previous node and path used
         if self.source is not None:
             source = machine.get_state(self.source)
-            machine.set_node_state(model.graph, source.name,
-                                   state='previous')
-            machine.set_node_state(model.graph, dest.name, state='active')
+            machine.set_node_state(graph, source.name, state='previous')
+            machine.set_node_state(graph, dest.name, state='active')
 
             if getattr(source, 'children', []):
                 source = source.name + '_anchor'
@@ -293,8 +293,7 @@ class TransitionGraphSupport(Transition):
                 dest = dest.name + '_anchor'
             else:
                 dest = dest.name
-            machine.set_edge_state(model.graph, source, dest,
-                                   state='previous', label=event_data.event.name)
+            machine.set_edge_state(graph, source, dest, state='previous', label=event_data.event.name)
 
         _super(TransitionGraphSupport, self)._change_state(event_data)  # pylint: disable=protected-access
 
@@ -307,23 +306,29 @@ class GraphMachine(Machine):
             transition_cls (cls): TransitionGraphSupport
     """
 
-    _pickle_blacklist = ['graph']
+    _pickle_blacklist = ['model_graphs']
     transition_cls = TransitionGraphSupport
 
+    # model_graphs cannot be pickled. Omit them.
     def __getstate__(self):
         return {k: v for k, v in self.__dict__.items() if k not in self._pickle_blacklist}
 
     def __setstate__(self, state):
         self.__dict__.update(state)
+        self.model_graphs = {}  # reinitialize new model_graphs
         for model in self.models:
-            graph = self._get_graph(model, title=self.title)
-            self.set_node_style(graph, model.state, 'active')
+            try:
+                graph = self._get_graph(model, title=self.title)
+                self.set_node_style(graph, model.state, 'active')
+            except AttributeError:
+                _LOGGER.warning("Graph for model could not be initialized after pickling.")
 
     def __init__(self, *args, **kwargs):
         # remove graph config from keywords
         self.title = kwargs.pop('title', 'State Machine')
         self.show_conditions = kwargs.pop('show_conditions', False)
         self.show_auto_transitions = kwargs.pop('show_auto_transitions', False)
+        self.model_graphs = {}
 
         # Update March 2017: This temporal overwrite does not work
         # well with inheritance. Since the tests pass I will disable it
@@ -346,7 +351,7 @@ class GraphMachine(Machine):
                 raise AttributeError('Model already has a get_graph attribute. Graph retrieval cannot be bound.')
             setattr(model, 'get_graph', partial(self._get_graph, model))
             model.get_graph()
-            self.set_node_state(model.graph, self.initial, 'active')
+            self.set_node_state(self.model_graphs[model], self.initial, 'active')
 
         # for backwards compatibility assign get_combined_graph to get_graph
         # if model is not the machine
@@ -356,12 +361,12 @@ class GraphMachine(Machine):
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
         if title is None:
             title = self.title
-        if not hasattr(model, 'graph') or force_new:
-            model.graph = NestedGraph(self).get_graph(title) if isinstance(self, HierarchicalMachine) \
+        if model not in self.model_graphs or force_new:
+            self.model_graphs[model] = NestedGraph(self).get_graph(title) if isinstance(self, HierarchicalMachine) \
                 else Graph(self).get_graph(title)
-            self.set_node_state(model.graph, model.state, state='active')
+            self.set_node_state(self.model_graphs[model], model.state, state='active')
 
-        return model.graph if not show_roi else self._graph_roi(model)
+        return self.model_graphs[model] if not show_roi else self._graph_roi(model)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
         """ This method is currently equivalent to 'get_graph' of the first machine's model.
@@ -374,7 +379,7 @@ class GraphMachine(Machine):
                 the current state.
         Returns: AGraph of the first machine's model.
         """
-        _LOGGER.info('Returning graph of the first model. In future releases, this ' +
+        _LOGGER.info('Returning graph of the first model. In future releases, this '
                      'method will return a combined graph of all models.')
         return self._get_graph(self.models[0], title, force_new, show_roi)
 
@@ -439,9 +444,8 @@ class GraphMachine(Machine):
             func = self.set_graph_style
         func(graph, node, state)
 
-    @staticmethod
-    def _graph_roi(model):
-        graph = model.graph
+    def _graph_roi(self, model):
+        graph = model.get_graph()
         filtered = graph.copy()
 
         kept_nodes = set()

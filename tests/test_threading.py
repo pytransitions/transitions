@@ -11,7 +11,7 @@ from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState
 from .test_nesting import TestTransitions as TestsNested
 from .test_core import TestTransitions as TestCore
-from .utils import Stuff
+from .utils import Stuff, DummyModel, TestContext
 
 try:
     from unittest.mock import MagicMock
@@ -166,28 +166,15 @@ class TestLockedTransitions(TestCore):
 
 class TestMultipleContexts(TestCore):
 
-    class DummyModel(object):
-        pass
-
-    class TestContext(object):
-        def __init__(self, event_list):
-            self._event_list = event_list
-
-        def __enter__(self):
-            self._event_list.append((self, "enter"))
-
-        def __exit__(self, type, value, traceback):
-            self._event_list.append((self, "exit"))
-
     def setUp(self):
         self.event_list = []
 
-        self.s1 = self.DummyModel()
+        self.s1 = DummyModel()
 
-        self.c1 = self.TestContext(event_list=self.event_list)
-        self.c2 = self.TestContext(event_list=self.event_list)
-        self.c3 = self.TestContext(event_list=self.event_list)
-        self.c4 = self.TestContext(event_list=self.event_list)
+        self.c1 = TestContext(event_list=self.event_list)
+        self.c2 = TestContext(event_list=self.event_list)
+        self.c3 = TestContext(event_list=self.event_list)
+        self.c4 = TestContext(event_list=self.event_list)
 
         self.stuff = Stuff(machine_cls=MachineFactory.get_predefined(locked=True), extra_kwargs={
             'machine_context': [self.c1, self.c2]

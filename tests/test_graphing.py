@@ -4,11 +4,12 @@ except ImportError:
     pass
 
 from .utils import Stuff
+from .test_core import TestTransitions
 
 from transitions.extensions import MachineFactory
 from transitions.extensions.diagrams import rep
 from transitions.extensions.nesting import NestedState
-from unittest import TestCase, skipIf
+from unittest import skipIf
 from functools import partial
 import tempfile
 import os
@@ -24,7 +25,7 @@ def edge_label_from_transition_label(label):
     return label.split(' | ')[0].split(' [')[0]  # if no condition, label is returned; returns first event only
 
 
-class TestRep(TestCase):
+class TestRep(TestTransitions):
 
     def test_rep_string(self):
         self.assertEqual(rep("string"), "string")
@@ -80,11 +81,12 @@ class TestRep(TestCase):
 
 
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
-class TestDiagrams(TestCase):
+class TestDiagrams(TestTransitions):
+
+    machine_cls = MachineFactory.get_predefined(graph=True)
 
     def setUp(self):
-        self.machine_cls = MachineFactory.get_predefined(graph=True)
-
+        self.stuff = Stuff(machine_cls=self.machine_cls)
         self.states = ['A', 'B', 'C', 'D']
         self.transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
@@ -154,12 +156,12 @@ class TestDiagrams(TestCase):
         m2 = Stuff(machine_cls=None)
         m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A')
         m1.walk()
-        self.assertEqual(m1.graph.get_node(m1.state).attr['color'],
-                         m1.graph.style_attributes['node']['active']['color'])
-        self.assertEqual(m2.graph.get_node(m1.state).attr['color'],
-                         m2.graph.style_attributes['node']['default']['color'])
+        self.assertEqual(m1.get_graph().get_node(m1.state).attr['color'],
+                         m1.get_graph().style_attributes['node']['active']['color'])
+        self.assertEqual(m2.get_graph().get_node(m1.state).attr['color'],
+                         m2.get_graph().style_attributes['node']['default']['color'])
         # backwards compatibility test
-        self.assertEqual(m.get_graph(), m1.get_graph())
+        self.assertEqual(id(m.get_graph()), id(m1.get_graph()))
 
     def test_model_method_collision(self):
         class GraphModel:
@@ -202,16 +204,16 @@ class TestDiagrams(TestCase):
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
 class TestDiagramsLocked(TestDiagrams):
 
-    def setUp(self):
-        super(TestDiagramsLocked, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(graph=True, locked=True)
+    machine_cls = MachineFactory.get_predefined(graph=True, locked=True)
 
 
 @skipIf(pgv is None, 'NestedGraph diagram requires pygraphviz')
 class TestDiagramsNested(TestDiagrams):
 
+    machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
+
     def setUp(self):
-        self.machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
+        super(TestDiagramsNested, self).setUp()
         self.states = ['A', 'B',
                        {'name': 'C', 'children': [{'name': '1', 'children': ['a', 'b', 'c']},
                                                   '2', '3']}, 'D']

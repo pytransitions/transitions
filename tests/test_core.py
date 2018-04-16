@@ -485,6 +485,20 @@ class TestTransitions(TestCase):
         self.assertEqual(m.state, m2.state)
         m2.run()
 
+    def test_pickle_model(self):
+        import sys
+        if sys.version_info < (3, 4):
+            import dill as pickle
+        else:
+            import pickle
+
+        self.stuff.to_B()
+        dump = pickle.dumps(self.stuff)
+        self.assertIsNotNone(dump)
+        model2 = pickle.loads(dump)
+        self.assertEqual(self.stuff.state, model2.state)
+        model2.to_F()
+
     def test_queued(self):
         states = ['A', 'B', 'C', 'D']
         # Define with list of dictionaries

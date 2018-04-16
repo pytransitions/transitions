@@ -4,6 +4,9 @@ from setuptools import setup, find_packages
 with open('transitions/version.py') as f:
     exec(f.read())
 
+with open('README.md') as file:
+    long_description = file.read()
+
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools
 
@@ -22,6 +25,7 @@ setup(
     name="transitions",
     version=__version__,
     description="A lightweight, object-oriented Python state machine implementation.",
+    long_description=long_description,
     maintainer='Tal Yarkoni',
     maintainer_email='tyarkoni@gmail.com',
     url='http://github.com/pytransitions/transitions',

@@ -90,3 +90,18 @@ class InheritedStuff(Machine):
     @staticmethod
     def this_passes():
         return True
+
+
+class DummyModel(object):
+    pass
+
+
+class TestContext(object):
+    def __init__(self, event_list):
+        self._event_list = event_list
+
+    def __enter__(self):
+        self._event_list.append((self, "enter"))
+
+    def __exit__(self, type, value, traceback):
+        self._event_list.append((self, "exit"))

@@ -252,8 +252,8 @@ class Transition(object):
 
         for cond in self.conditions:
             if not cond.check(event_data):
-                _LOGGER.debug("%sTransition condition failed: %s() does not " +
-                              "return %s. Transition halted.", event_data.machine.name, cond.func, cond.target)
+                _LOGGER.debug("%sTransition condition failed: %s() does not return %s. Transition halted.",
+                              event_data.machine.name, cond.func, cond.target)
                 return False
         for func in itertools.chain(machine.before_state_change, self.before):
             machine.callback(func, event_data)
