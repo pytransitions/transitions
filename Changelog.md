@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.6.5 ()
+## 0.6.5 (April, 2018)
 
-- Feature #287: Embedding `HierarchicalMachine` will now reuse the machine's `initial` state. Passing `initial: False` overrides this(thanks @mrjogo).
+Release 0.6.5 is a minor release and contains a new feature and a bugfix:
+
+- Feature #287: Embedding `HierarchicalMachine` will now reuse the machine's `initial` state. Passing `initial: False` overrides this (thanks @mrjogo).
 - Bug #292: Models using `GraphMashine` were not picklable in the past due to `graph` property. Graphs for each model are now stored in `GraphMachine.model_graphs` (thanks @ansumanm)
 
 ## 0.6.4 (January, 2018)

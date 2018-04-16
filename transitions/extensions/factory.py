@@ -11,7 +11,7 @@ from ..core import Machine
 
 from .nesting import HierarchicalMachine, NestedTransition, NestedEvent
 from .locking import LockedMachine, LockedEvent
-from .diagrams import GraphMachine, TransitionGraphSupport
+from .diagrams import GraphMachine, TransitionGraphSupport, NestedGraph
 
 
 class MachineFactory(object):
@@ -55,6 +55,7 @@ class HierarchicalGraphMachine(GraphMachine, HierarchicalMachine):
     """
 
     transition_cls = NestedGraphTransition
+    graph_cls = NestedGraph
 
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
@@ -79,6 +80,7 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedMachine, HierarchicalMa
 
     transition_cls = NestedGraphTransition
     event_cls = LockedNestedEvent
+    graph_cls = NestedGraph
 
 
 # 3d tuple (graph, nested, locked)

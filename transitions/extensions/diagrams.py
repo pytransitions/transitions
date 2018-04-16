@@ -307,6 +307,7 @@ class GraphMachine(Machine):
     """
 
     _pickle_blacklist = ['model_graphs']
+    graph_cls = Graph
     transition_cls = TransitionGraphSupport
 
     # model_graphs cannot be pickled. Omit them.
@@ -359,14 +360,13 @@ class GraphMachine(Machine):
             setattr(self, 'get_graph', self.get_combined_graph)
 
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
-        if title is None:
-            title = self.title
-        if model not in self.model_graphs or force_new:
-            self.model_graphs[model] = NestedGraph(self).get_graph(title) if isinstance(self, HierarchicalMachine) \
-                else Graph(self).get_graph(title)
+        if force_new:
+            self.model_graphs[model] = self.graph_cls(self).get_graph(title if title is not None else self.title)
             self.set_node_state(self.model_graphs[model], model.state, state='active')
-
-        return self.model_graphs[model] if not show_roi else self._graph_roi(model)
+        try:
+            return self.model_graphs[model] if not show_roi else self._graph_roi(model)
+        except KeyError:
+            return self._get_graph(model, title, force_new=True, show_roi=show_roi)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
         """ This method is currently equivalent to 'get_graph' of the first machine's model.
