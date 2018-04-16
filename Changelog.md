@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.6.6 ()
+
 ## 0.6.5 (April, 2018)
 
 Release 0.6.5 is a minor release and contains a new feature and a bugfix:

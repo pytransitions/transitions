@@ -4,8 +4,9 @@ from setuptools import setup, find_packages
 with open('transitions/version.py') as f:
     exec(f.read())
 
-with open('README.md') as file:
-    long_description = file.read()
+with open("README.md") as f:
+    # cut the badges from the description and also the TOC which is currently not working on PyPi
+    long_description = '\n'.join(f.readlines()[49:])
 
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools
@@ -26,8 +27,11 @@ setup(
     version=__version__,
     description="A lightweight, object-oriented Python state machine implementation.",
     long_description=long_description,
-    maintainer='Tal Yarkoni',
-    maintainer_email='tyarkoni@gmail.com',
+    long_description_content_type="text/markdown",
+    author='Tal Yarkoni',
+    author_email='tyarkoni@gmail.com',
+    maintainer='Alexander Neumann',
+    maintainer_email='aleneum@gmail.com',
     url='http://github.com/pytransitions/transitions',
     packages=find_packages(exclude=['tests', 'test_*']),
     package_data={'transitions': ['data/*'],
