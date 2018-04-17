@@ -233,9 +233,9 @@ class NestedGraph(Graph):
                 label_pos = 'label'
                 if src.children:
                     edge_attr['ltail'] = "cluster_" + src.name
-                    src = src.name + "_anchor"
+                    src_name = src.name + "_anchor"
                 else:
-                    src = src.name
+                    src_name = src.name
 
                 for trans in transitions[1]:
                     if trans in self.seen_transitions:
@@ -246,21 +246,22 @@ class NestedGraph(Graph):
                     self.seen_transitions.append(trans)
                     dst = self.machine.get_state(trans.dest)
                     if dst.children:
-                        edge_attr['lhead'] = "cluster_" + dst.name
-                        dst = dst.name + '_anchor'
+                        if not src.is_substate_of(dst.name):
+                            edge_attr['lhead'] = "cluster_" + dst.name
+                        dst_name = dst.name + '_anchor'
                     else:
-                        dst = dst.name
+                        dst_name = dst.name
 
                     if 'ltail' in edge_attr:
-                        if _get_subgraph(container, edge_attr['ltail']).has_node(dst):
+                        if _get_subgraph(container, edge_attr['ltail']).has_node(dst_name):
                             del edge_attr['ltail']
 
                     edge_attr[label_pos] = self._transition_label(label, trans)
-                    if container.has_edge(src, dst):
-                        edge = container.get_edge(src, dst)
+                    if container.has_edge(src_name, dst_name):
+                        edge = container.get_edge(src_name, dst_name)
                         edge.attr[label_pos] += ' | ' + edge_attr[label_pos]
                     else:
-                        container.add_edge(src, dst, **edge_attr)
+                        container.add_edge(src_name, dst_name, **edge_attr)
 
         return events
 

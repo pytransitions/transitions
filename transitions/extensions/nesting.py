@@ -122,6 +122,19 @@ class NestedState(State):
     def name(self, value):
         self._name = value
 
+    def is_substate_of(self, state_name):
+        """Check whether this state is a substate of a state named `state_name`
+        Args:
+            state_name (str): Name of the parent state to be checked
+
+        Returns: bool True when `state_name` is a parent of this state
+        """
+
+        temp_state = self
+        while not temp_state.name == state_name and temp_state.level > 0:
+            temp_state = temp_state.parent
+        return temp_state.name == state_name
+
     def exit_nested(self, event_data, target_state):
         """ Tracks child states to exit when the states is exited itself. This should not
             be triggered by the user but will be handled by the hierarchical machine.
@@ -282,11 +295,7 @@ class HierarchicalMachine(Machine):
         if not allow_substates:
             return model.state == state_name
 
-        temp_state = self.get_state(model.state)
-        while not temp_state.name == state_name and temp_state.level > 0:
-            temp_state = temp_state.parent
-
-        return temp_state.name == state_name
+        return self.get_state(model.state).is_substate_of(state_name)
 
     def _traverse(self, states, on_enter=None, on_exit=None,
                   ignore_invalid_triggers=None, parent=None, remap=None):
