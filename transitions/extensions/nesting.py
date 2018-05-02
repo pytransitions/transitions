@@ -422,6 +422,10 @@ class HierarchicalMachine(Machine):
 
             elif isinstance(state, NestedState):
                 tmp_states.append(state)
+                if state.children:
+                    tmp_states.extend(self._traverse(state.children, on_enter=on_enter, on_exit=on_exit,
+                                                     ignore_invalid_triggers=ignore_invalid_triggers,
+                                                     parent=state, remap=remap))
             else:
                 raise ValueError("%s is not an instance or subclass of NestedState "
                                  "required by HierarchicalMachine." % state)

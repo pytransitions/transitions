@@ -71,6 +71,15 @@ class TestTransitions(TestsCore):
         s.advance()
         self.assertEqual(s.message, 'Hello World!')
 
+    def test_init_machine_with_nested_states(self):
+        a = State('A')
+        b = State('B')
+        b_1 = State('1', parent=b)
+        b_2 = State('2', parent=b)
+        m = self.stuff.machine_cls(states=[a, b])
+        self.assertEqual(b_1.name, 'B{0}1'.format(state_separator))
+        m.to("B{0}1".format(state_separator))
+
     def test_property_initial(self):
         # Define with list of dictionaries
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
