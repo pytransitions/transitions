@@ -464,13 +464,15 @@ class TestTransitions(TestsCore):
         m = self.stuff.machine_cls(states=states, initial='A')
 
     def test_intial_state(self):
-        states = ['A', {'name': 'B', 'initial': '2',
-                        'children': ['1', {'name': '2', 'initial': 'a',
-                                           'children': ['a', 'b']}]}]
+        states = [{'name': 'A', 'children': ['1', '2'], 'initial': '2'},
+                  {'name': 'B', 'initial': '2',
+                   'children': ['1', {'name': '2', 'initial': 'a',
+                                      'children': ['a', 'b']}]}]
         transitions = [['do', 'A', 'B'],
                        ['do', 'B{0}2'.format(state_separator),
                         'B{0}1'.format(state_separator)]]
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
+        self.assertEqual(m.state, 'A{0}2'.format(state_separator))
         m.do()
         self.assertEqual(m.state, 'B{0}2{0}a'.format(state_separator))
         self.assertTrue(m.is_B(allow_substates=True))

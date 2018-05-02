@@ -265,6 +265,23 @@ class HierarchicalMachine(Machine):
         self._buffered_transitions = []
         _super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
+    @Machine.initial.setter
+    def initial(self, value):
+        if isinstance(value, NestedState):
+            if value.name not in self.states:
+                self.add_state(value)
+            else:
+                assert self._has_state(value)
+            state = value
+        else:
+            if value not in self.states:
+                self.add_state(value)
+            state = self.get_state(value)
+        if state.initial:
+            self.initial = state.initial
+        else:
+            self._initial = state.name
+
     def add_model(self, model, initial=None):
         """ Extends transitions.core.Machine.add_model by applying a custom 'to' function to
             the added model.
