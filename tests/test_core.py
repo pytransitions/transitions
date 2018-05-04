@@ -699,6 +699,16 @@ class TestTransitions(TestCase):
         # rather than a list
         self.assertNotIsInstance(m.model, list)
 
+    def test_dispatch(self):
+        s1, s2 = Stuff(), Stuff()
+        states = ['A', 'B', 'C']
+        m = Machine(model=s1, states=states, ignore_invalid_triggers=True,
+                    initial=states[0], transitions=[['go', 'A', 'B'], ['go', 'B', 'C']])
+        m.add_model(s2, initial='B')
+        m.dispatch('go')
+        self.assertEqual(s1.state, 'B')
+        self.assertEqual(s2.state, 'C')
+
     def test_string_trigger(self):
         def return_value(value):
             return value

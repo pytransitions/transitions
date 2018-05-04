@@ -4,6 +4,7 @@
 
 - `HierarchicalMachine` now considers the initial state of `NestedState` instances/names passed to `initial`.
 - Bugfix: `HierarchicalMachine` used to ignore children when `NestedStates` were added to the machine.
+- Feature: Added `Machine.dispatch` to trigger events on all models assigned to `Machine`.
 
 ## 0.6.5 (April, 2018)
 

@@ -971,6 +971,17 @@ class Machine(object):
                 delattr(model, trigger)
             del self.events[trigger]
 
+    def dispatch(self, trigger, *args, **kwargs):
+        """ Trigger an event on all models assigned to the machine.
+        Args:
+            trigger (str): Event name
+            *args (list): List of arguments passed to the event trigger
+            **kwargs (dict): Dictionary of keyword arguments passed to the event trigger
+        Returns:
+            bool The truth value of all triggers combined with AND
+        """
+        return all([getattr(model, trigger)(*args, **kwargs) for model in self.models])
+
     def callback(self, func, event_data):
         """ Trigger a callback function with passed event_data parameters. In case func is a string,
             the callable will be resolved from the passed model in event_data. This function is not intended to
