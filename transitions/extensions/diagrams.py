@@ -240,6 +240,8 @@ class NestedGraph(Graph):
                 for trans in transitions[1]:
                     if trans in self.seen_transitions:
                         continue
+                    if trans.dest is None:
+                        continue
                     if not container.has_node(trans.dest) and _get_subgraph(container, 'cluster_' + trans.dest) is None:
                         continue
 
@@ -272,6 +274,9 @@ class TransitionGraphSupport(Transition):
     """
 
     def _change_state(self, event_data):
+        if self.dest is None:
+            return
+
         machine = event_data.machine
         model = event_data.model
         dest = machine.get_state(self.dest)
