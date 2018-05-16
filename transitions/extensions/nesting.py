@@ -201,6 +201,8 @@ class NestedTransition(Transition):
 
     def execute(self, event_data):
         """ Extends transitions.core.transitions to handle nested states. """
+        if self.dest is None:
+            return _super(NestedTransition, self).execute(event_data)
         dest_state = event_data.machine.get_state(self.dest)
         while dest_state.initial:
             dest_state = event_data.machine.get_state(dest_state.initial)
@@ -209,6 +211,8 @@ class NestedTransition(Transition):
 
     # The actual state change method 'execute' in Transition was restructured to allow overriding
     def _change_state(self, event_data):
+        if self.dest is None:
+            return
         machine = event_data.machine
         model = event_data.model
         dest_state = machine.get_state(self.dest)

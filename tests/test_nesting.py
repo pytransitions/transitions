@@ -506,6 +506,12 @@ class TestTransitions(TestsCore):
         self.assertEqual(len(trans), 3)
         self.assertTrue('relax' in trans)
 
+    def test_internal_trantisions(self):
+        s = self.stuff
+        s.machine.add_transition('internal', 'A', None, prepare='increase_level')
+        s.internal()
+        self.assertEqual(s.state, 'A')
+        self.assertEqual(s.level, 2)
 
 @skipIf(pgv is None, 'AGraph diagram requires pygraphviz')
 class TestWithGraphTransitions(TestTransitions):
