@@ -487,7 +487,7 @@ class TestTransitions(TestCase):
 
         states = [State(name='A', on_enter='on_enter_A', on_exit='tests.test_core.on_exit_A'),
                   State(name='B', on_enter='on_enter_B', on_exit=on_exit_B),
-                  State(name='C', on_enter='test.test_core.AAAA')]
+                  State(name='C', on_enter='tests.test_core.AAAA')]
 
         model = Model()
         machine = Machine(model, states=states, send_event=True, initial='A')

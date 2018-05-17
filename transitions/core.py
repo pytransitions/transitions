@@ -16,28 +16,17 @@ except ImportError:
 import inspect
 import itertools
 import logging
-import sys
 import warnings
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
 from six import string_types
 
-from .utils import get_callable
-
 # make deprecation warnings of transition visible for module users
 warnings.filterwarnings(action='default', message=r"Starting from transitions version 0\.6\.0 .*")
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
-
-
-# PY3 callable check from nsi-iff/fluidity project
-if sys.version_info >= (3,):
-    def callable(obj):
-        return hasattr(obj, '__call__')
-else:
-    callable = callable
 
 
 def listify(obj):
@@ -187,8 +176,7 @@ class Condition(object):
                 model attached to the current machine which is used to invoke
                 the condition.
         """
-        predicate = getattr(event_data.model, self.func) if isinstance(self.func, string_types) else self.func
-
+        predicate = event_data.machine.resolve_callable(self.func, event_data.model)
         if event_data.machine.send_event:
             return predicate(event_data) == self.target
         return predicate(*event_data.args, **event_data.kwargs) == self.target
@@ -1007,19 +995,36 @@ class Machine(object):
                 callback (if event sending is enabled) or to extract arguments
                 from (if event sending is disabled).
         """
-        if callable(func):  # Do nothing
-            pass
-        elif isinstance(func, string_types):
-            # Try to import a callable
-            try:
-                func = get_callable(func)
-            except ImportError:
-                func = getattr(event_data.model, func)
 
+        func = self.resolve_callable(func, event_data.model)
         if self.send_event:
             func(event_data)
         else:
             func(*event_data.args, **event_data.kwargs)
+
+    @staticmethod
+    def resolve_callable(func, model):
+        """ Converts path to a callable into callable
+        Args:
+            func (string, callable): Path to a callable
+            model (object): Currently targeted model
+        Returns:
+            callable function resolved from string or func
+        """
+        if isinstance(func, string_types):
+            try:
+                func = getattr(model, func)
+            except AttributeError:
+                try:
+                    mod, name = func.rsplit('.', 1)
+                    m = __import__(mod)
+                    for n in mod.split('.')[1:]:
+                        m = getattr(m, n)
+                    func = getattr(m, name)
+                except (ImportError, AttributeError, ValueError):
+                    raise AttributeError("Callable with name '%s' could neither be retrieved from the passed "
+                                         "model nor imported from a module.")
+        return func
 
     def _has_state(self, state):
         if isinstance(state, State):
