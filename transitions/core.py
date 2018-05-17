@@ -176,7 +176,7 @@ class Condition(object):
                 model attached to the current machine which is used to invoke
                 the condition.
         """
-        predicate = event_data.machine.resolve_callable(self.func, event_data.model)
+        predicate = event_data.machine.resolve_callable(self.func, event_data)
         if event_data.machine.send_event:
             return predicate(event_data) == self.target
         return predicate(*event_data.args, **event_data.kwargs) == self.target
@@ -996,24 +996,24 @@ class Machine(object):
                 from (if event sending is disabled).
         """
 
-        func = self.resolve_callable(func, event_data.model)
+        func = self.resolve_callable(func, event_data)
         if self.send_event:
             func(event_data)
         else:
             func(*event_data.args, **event_data.kwargs)
 
     @staticmethod
-    def resolve_callable(func, model):
+    def resolve_callable(func, event_data):
         """ Converts path to a callable into callable
         Args:
             func (string, callable): Path to a callable
-            model (object): Currently targeted model
+            event_data (EventData): Currently processed event
         Returns:
             callable function resolved from string or func
         """
         if isinstance(func, string_types):
             try:
-                func = getattr(model, func)
+                func = getattr(event_data.model, func)
             except AttributeError:
                 try:
                     mod, name = func.rsplit('.', 1)
