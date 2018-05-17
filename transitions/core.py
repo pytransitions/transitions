@@ -12,20 +12,32 @@ try:
 except ImportError:
     # python2
     pass
+
 import inspect
 import itertools
 import logging
+import sys
 import warnings
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
 from six import string_types
 
+from .utils import get_callable
+
 # make deprecation warnings of transition visible for module users
 warnings.filterwarnings(action='default', message=r"Starting from transitions version 0\.6\.0 .*")
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
+
+
+# PY3 callable check from nsi-iff/fluidity project
+if sys.version_info >= (3,):
+    def callable(obj):
+        return hasattr(obj, '__call__')
+else:
+    callable = callable
 
 
 def listify(obj):
@@ -987,13 +999,22 @@ class Machine(object):
             the callable will be resolved from the passed model in event_data. This function is not intended to
             be called directly but through state and transition callback definitions.
         Args:
-            func (callable or str): The callback function.
+            func (string, callable): The callback function.
+                1. First, if the func is callable, just call it
+                2. Second, we try to import string assuming it is a path to a func
+                3. Fallback to a model attribute
             event_data (EventData): An EventData instance to pass to the
                 callback (if event sending is enabled) or to extract arguments
                 from (if event sending is disabled).
         """
-        if isinstance(func, string_types):
-            func = getattr(event_data.model, func)
+        if callable(func):  # Do nothing
+            pass
+        elif isinstance(func, string_types):
+            # Try to import a callable
+            try:
+                func = get_callable(func)
+            except ImportError:
+                func = getattr(event_data.model, func)
 
         if self.send_event:
             func(event_data)
