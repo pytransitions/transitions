@@ -103,7 +103,7 @@ class Timeout(State):
     def exit(self, event_data):
         """ Extends `transitions.core.State.exit` by canceling a timer for the current model. """
         timer = self.runner.get(id(event_data.model), None)
-        if timer is not None and timer.is_alive:
+        if timer is not None and timer.is_alive():
             timer.cancel()
         super(Timeout, self).exit(event_data)
 
