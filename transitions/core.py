@@ -267,10 +267,11 @@ class Transition(object):
         return True
 
     def _change_state(self, event_data):
-        event_data.machine.get_state(self.source).exit(event_data)
-        event_data.machine.set_state(self.dest, event_data.model)
-        event_data.update(event_data.model)
-        event_data.machine.get_state(self.dest).enter(event_data)
+        if self.dest:
+            event_data.machine.get_state(self.source).exit(event_data)
+            event_data.machine.set_state(self.dest, event_data.model)
+            event_data.update(event_data.model)
+            event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
         """ Add a new before, after, or prepare callback.
@@ -811,7 +812,8 @@ class Machine(object):
                 we are transitioning into. This can be a single state or an
                 equal sign to specify that the transition should be reflexive
                 so that the destination will be the same as the source for
-                every given source.
+                every given source. If dest is None, this transition will be
+                an internal transition.
             conditions (string or list): Condition(s) that must pass in order
                 for the transition to take place. Either a list providing the
                 name of a callable, or a list of callables. For the transition
@@ -837,7 +839,7 @@ class Machine(object):
 
         for state in source:
             _dest = state if dest == self.wildcard_same else dest
-            if self._has_state(_dest):
+            if _dest and self._has_state(_dest):
                 _dest = _dest.name
             _trans = self._create_transition(state, _dest, conditions, unless, before,
                                              after, prepare, **kwargs)

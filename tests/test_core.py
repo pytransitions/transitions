@@ -940,6 +940,12 @@ class TestTransitions(TestCase):
             self.stuff.reflex()
         self.assertEqual(self.stuff.level, 3)
 
+    def test_internal_transition(self):
+        m = Machine(Stuff(), states=['A', 'B'], initial='A')
+        m.add_transition('move', 'A', None, prepare='increase_level')
+        m.model.move()
+        self.assertEqual(m.model.state, 'A')
+        self.assertEqual(m.model.level, 2)
 
 class TestWarnings(TestCase):
 
