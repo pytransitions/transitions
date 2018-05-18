@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.7 (May, 2018)
+
+Release 0.6.7 is identical to 0.6.6. A release had been necessary due to #294 related to PyPI.
+
 ## 0.6.6 (May, 2018)
 
 Release 0.6.6 is a minor release and contains several bugfixes and new features:

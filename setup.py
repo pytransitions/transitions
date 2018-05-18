@@ -6,7 +6,7 @@ with open('transitions/version.py') as f:
 
 with open("README.md") as f:
     # cut the badges from the description and also the TOC which is currently not working on PyPi
-    long_description = '\n'.join(f.readlines()[49:])
+    long_description = ''.join(f.readlines()[49:])
 
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools

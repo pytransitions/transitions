@@ -1,10 +1,10 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.6.6-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.6.7-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.6.5.svg)](https://github.com/pytransitions/transitions/compare/0.6.5...master)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.6.6.svg)](https://github.com/pytransitions/transitions/compare/0.6.6...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 <!--[![Name](Image)](Link)-->
 
@@ -685,7 +685,7 @@ print(lump.state)
 >>> initial
 ```
 
-### <a name="execution-order"> Callback resolution and execution order
+### <a name="execution-order"></a>Callback resolution and execution order
 
 As you have probably already realized, the standard way of passing callbacks to states and transitions is by name.
 When processing callbacks, Transitions will use the name to retrieve the related callback from the model.
