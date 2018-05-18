@@ -267,7 +267,7 @@ class Transition(object):
         return True
 
     def _change_state(self, event_data):
-        if self.dest:
+        if self.dest:  # if self.dest is None this is an internal transition with no actual state change
             event_data.machine.get_state(self.source).exit(event_data)
             event_data.machine.set_state(self.dest, event_data.model)
             event_data.update(event_data.model)
@@ -813,7 +813,7 @@ class Machine(object):
                 equal sign to specify that the transition should be reflexive
                 so that the destination will be the same as the source for
                 every given source. If dest is None, this transition will be
-                an internal transition.
+                an internal transition (exit/enter callbacks won't be processed).
             conditions (string or list): Condition(s) that must pass in order
                 for the transition to take place. Either a list providing the
                 name of a callable, or a list of callables. For the transition

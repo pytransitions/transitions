@@ -947,6 +947,7 @@ class TestTransitions(TestCase):
         self.assertEqual(m.model.state, 'A')
         self.assertEqual(m.model.level, 2)
 
+
 class TestWarnings(TestCase):
 
     def test_warning(self):
