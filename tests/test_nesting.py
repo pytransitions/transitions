@@ -29,6 +29,10 @@ except ImportError:  # pragma: no cover
 state_separator = State.separator
 
 
+class Dummy(object):
+    pass
+
+
 class TestTransitions(TestsCore):
 
     def setUp(self):
@@ -40,6 +44,10 @@ class TestTransitions(TestsCore):
     def tearDown(self):
         State.separator = state_separator
         pass
+
+    def test_add_model(self):
+        model = Dummy()
+        self.stuff.machine.add_model(model, initial='E')
 
     def test_function_wrapper(self):
         from transitions.extensions.nesting import FunctionWrapper
