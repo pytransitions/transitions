@@ -187,6 +187,12 @@ class TestDiagrams(TestTransitions):
         self.assertEqual(len(m2.get_graph().get_edge('B', 'A')), 2)
         self.assertEqual(m2.get_graph().get_edge('A', 'B').attr['label'], 'to_B')
 
+    def test_loops(self):
+        m = self.machine_cls(states=['A'], initial='A')
+        m.add_transition('reflexive', 'A', '=')
+        m.add_transition('fixed', 'A', None)
+        g1 = m.get_graph()
+
     def test_roi(self):
         m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A')
         m.add_transition('to_state_A', 'B', 'A')

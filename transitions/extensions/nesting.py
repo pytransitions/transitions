@@ -211,8 +211,6 @@ class NestedTransition(Transition):
 
     # The actual state change method 'execute' in Transition was restructured to allow overriding
     def _change_state(self, event_data):
-        if self.dest is None:
-            return
         machine = event_data.machine
         model = event_data.model
         dest_state = machine.get_state(self.dest)

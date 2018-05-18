@@ -1,17 +1,22 @@
 # Changelog
 
-## 0.6.6 ()
+## 0.6.6 (May, 2018)
 
-- `HierarchicalMachine` now considers the initial state of `NestedState` instances/names passed to `initial`.
+Release 0.6.6 is a minor release and contains several bugfixes and new features:
+
+- Bugfix: `HierarchicalMachine` now considers the initial state of `NestedState` instances/names passed to `initial`.
 - Bugfix: `HierarchicalMachine` used to ignore children when `NestedStates` were added to the machine.
-- Feature: Added `Machine.dispatch` to trigger events on all models assigned to `Machine`.
+- Bugfix #300: Fixed missing brackets in `TimeoutState` (thanks @Synss)
+- Feature #289: Introduced `Machine.resolve_callable(func, event_data)` to enable customization of callback definitions (thanks @ollamh and @paulbovbel)
+- Feature #299: Added support for internal transitions with `dest=None` (thanks @maueki)
+- Feature: Added `Machine.dispatch` to trigger events on all models assigned to `Machine`
 
 ## 0.6.5 (April, 2018)
 
 Release 0.6.5 is a minor release and contains a new feature and a bugfix:
 
 - Feature #287: Embedding `HierarchicalMachine` will now reuse the machine's `initial` state. Passing `initial: False` overrides this (thanks @mrjogo).
-- Bugfix #292: Models using `GraphMashine` were not picklable in the past due to `graph` property. Graphs for each model are now stored in `GraphMachine.model_graphs` (thanks @ansumanm)
+- Bugfix #292: Models using `GraphMashine` were not picklable in the past due to `graph` property. Graphs for each model are now stored in `GraphMachine.model_graphs` (thanks @ansumanm).
 
 ## 0.6.4 (January, 2018)
 

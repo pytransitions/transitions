@@ -259,7 +259,8 @@ class Transition(object):
             machine.callback(func, event_data)
             _LOGGER.debug("%sExecuted callback '%s' before transition.", event_data.machine.name, func)
 
-        self._change_state(event_data)
+        if self.dest:  # if self.dest is None this is an internal transition with no actual state change
+            self._change_state(event_data)
 
         for func in itertools.chain(self.after, machine.after_state_change):
             machine.callback(func, event_data)
@@ -267,11 +268,10 @@ class Transition(object):
         return True
 
     def _change_state(self, event_data):
-        if self.dest:  # if self.dest is None this is an internal transition with no actual state change
-            event_data.machine.get_state(self.source).exit(event_data)
-            event_data.machine.set_state(self.dest, event_data.model)
-            event_data.update(event_data.model)
-            event_data.machine.get_state(self.dest).enter(event_data)
+        event_data.machine.get_state(self.source).exit(event_data)
+        event_data.machine.set_state(self.dest, event_data.model)
+        event_data.update(event_data.model)
+        event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
         """ Add a new before, after, or prepare callback.

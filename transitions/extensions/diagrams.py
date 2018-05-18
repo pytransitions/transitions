@@ -124,7 +124,11 @@ class Graph(object):
                 src = transitions[0]
                 edge_attr = {}
                 for trans in transitions[1]:
-                    dst = trans.dest
+                    if trans.dest is None:
+                        dst = src
+                        label += " [internal]"
+                    else:
+                        dst = trans.dest
                     edge_attr['label'] = self._transition_label(label, trans)
                     if container.has_edge(src, dst):
                         edge = container.get_edge(src, dst)
@@ -241,12 +245,14 @@ class NestedGraph(Graph):
                     if trans in self.seen_transitions:
                         continue
                     if trans.dest is None:
+                        dst = src
+                        label += " [internal]"
+                    elif not container.has_node(trans.dest) and _get_subgraph(container, 'cluster_' + trans.dest) is None:
                         continue
-                    if not container.has_node(trans.dest) and _get_subgraph(container, 'cluster_' + trans.dest) is None:
-                        continue
+                    else:
+                        dst = self.machine.get_state(trans.dest)
 
                     self.seen_transitions.append(trans)
-                    dst = self.machine.get_state(trans.dest)
                     if dst.children:
                         if not src.is_substate_of(dst.name):
                             edge_attr['lhead'] = "cluster_" + dst.name
@@ -274,9 +280,6 @@ class TransitionGraphSupport(Transition):
     """
 
     def _change_state(self, event_data):
-        if self.dest is None:
-            return
-
         machine = event_data.machine
         model = event_data.model
         dest = machine.get_state(self.dest)

@@ -30,11 +30,12 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Automatic transitions](#automatic-transitions-for-all-states)
         - [Transitioning from multiple states](#transitioning-from-multiple-states)
         - [Reflexive transitions from multiple states](#reflexive-from-multiple-states)
+        - [Internal transitions](#internal-transitions)
         - [Ordered transitions](#ordered-transitions)
         - [Queued transitions](#queued-transitions)
         - [Conditional transitions](#conditional-transitions)
         - [Callbacks](#transition-callbacks)
-    - [Execution order](#execution-order)
+    - [Callback resolution and execution order](#execution-order)
     - [Passing data](#passing-data)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
@@ -463,6 +464,15 @@ machine.add_transition('touch', ['liquid', 'gas', 'plasma'], '=', after='change_
 
 This will add reflexive transitions for all three states with `touch()` as trigger and with `change_shape` executed after each trigger.
 
+#### <a name="internal-transitions"></a>Internal transitions
+In contrast to reflexive transitions, internal transitions will never actually leave the state.
+This means that transition-related callbacks such as `before` or `after` will be processed while state-related callbacks `exit` or `enter` will not.
+To define a transition to be internal, set the destination to `None`.
+
+```python
+machine.add_transition('internal', ['liquid', 'gas'], None, after='change_shape')
+```
+
 #### <a name="ordered-transitions"></a> Ordered transitions
 A common desire is for state transitions to follow a strict linear sequence. For instance, given states `['A', 'B', 'C']`, you might want valid transitions for `A` → `B`, `B` → `C`, and `C` → `A` (but no other pairs).
 
@@ -675,7 +685,37 @@ print(lump.state)
 >>> initial
 ```
 
-### <a name="execution-order"> Execution order
+### <a name="execution-order"> Callback resolution and execution order
+
+As you have probably already realized, the standard way of passing callbacks to states and transitions is by name.
+When processing callbacks, Transitions will use the name to retrieve the related callback from the model.
+If the method cannot be retrieved and it contains dots, Transitions will treat the name as a path to a module function and try to import it.
+Alternatively, you can pass callables such as (bound) functions directly.
+
+```python
+from transitions import Machine
+from mod import imported_func
+
+
+class Model(object):
+
+    def a_callback(self):
+        imported_func()
+
+
+model = Model()
+machine = Machine(model=model, states=['A'], initial='A')
+machine.add_transition('by_name', 'A', 'A', after='a_callback')
+machine.add_transition('by_reference', 'A', 'A', after=model.a_callback)
+machine.add_transition('imported', 'A', 'A', after='mod.imported_func')
+
+model.by_name()
+model.by_reference()
+model.imported()
+```
+The callback resolution is done in `Machine.resolve_callbacks`.
+This method can be overridden in case more complex callback resolution strategies are required.
+
 In summary, callbacks on transitions are executed in the following order:
 
 |      Callback                  | Current State |               Comments                                      |
