@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.8 (May, 2018)
+
+Release 0.6.8 is a minor release and contains a critical bugfix:
+
+- Bugfix #301: Reading `Readme.md` in `setup.py` causes a `UnicodeDecodeError` in non-UTF8-locale environments (thanks @jodal)
+
 ## 0.6.7 (May, 2018)
 
 Release 0.6.7 is identical to 0.6.6. A release had been necessary due to #294 related to PyPI.
