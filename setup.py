@@ -1,10 +1,11 @@
+import codecs
 import sys
 from setuptools import setup, find_packages
 
 with open('transitions/version.py') as f:
     exec(f.read())
 
-with open("README.md") as f:
+with codecs.open('README.md', 'r', 'utf-8') as f:
     # cut the badges from the description and also the TOC which is currently not working on PyPi
     long_description = ''.join(f.readlines()[49:])
 
