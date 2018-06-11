@@ -733,6 +733,8 @@ In summary, callbacks on transitions are executed in the following order:
 | `'machine.after_state_change'` | `destination` | default callbacks declared on model                         |
 | `'machine.finalize_event'`     | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
+If any callback raises an exception, the processing of callbacks is not continued. This means that when an error occurs before the transition (in `state.on_exit` or earlier), it is halted. In case there is a raise after the transition has been conducted (in `state.on_enter` or later), the state change persists and no rollback is happening. Callbacks specified in `machine.finalize_event` will always be executed unless the exception is raised by a finalizing callback itself.
+
 ### <a name="passing-data"></a>Passing data
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways.
 
