@@ -1006,9 +1006,10 @@ class Machine(object):
 
     @staticmethod
     def resolve_callable(func, event_data):
-        """ Converts path to a callable into callable
+        """ Converts a model's method name or a path to a callable into a callable.
+            If func is not a string it will be returned unaltered.
         Args:
-            func (string, callable): Path to a callable
+            func (string, callable): Method name or a path to a callable
             event_data (EventData): Currently processed event
         Returns:
             callable function resolved from string or func
@@ -1025,7 +1026,7 @@ class Machine(object):
                     func = getattr(m, name)
                 except (ImportError, AttributeError, ValueError):
                     raise AttributeError("Callable with name '%s' could neither be retrieved from the passed "
-                                         "model nor imported from a module.")
+                                         "model nor imported from a module." % func)
         return func
 
     def _has_state(self, state):
