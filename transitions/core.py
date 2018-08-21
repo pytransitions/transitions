@@ -112,19 +112,25 @@ class State(object):
         self.ignore_invalid_triggers = ignore_invalid_triggers
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
+        self.enter_results = []
+        self.exit_results = []
 
     def enter(self, event_data):
         """ Triggered when a state is entered. """
         _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
+        self.enter_results.clear()
         for handle in self.on_enter:
-            event_data.machine.callback(handle, event_data)
+            enter_result = event_data.machine.callback(handle, event_data)
+            self.enter_results.append(enter_result)
         _LOGGER.info("%sEntered state %s", event_data.machine.name, self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
+        self.exit_results.clear()
         for handle in self.on_exit:
-            event_data.machine.callback(handle, event_data)
+            exit_result = event_data.machine.callback(handle, event_data)
+            self.exit_results.append(exit_result)
         _LOGGER.info("%sExited state %s", event_data.machine.name, self.name)
 
     def add_callback(self, trigger, func):
