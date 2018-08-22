@@ -532,7 +532,7 @@ prepare -> before -> on_enter_B -> on_enter_C -> after.
 If queued processing is enabled, a transition will be finished before the next transition is triggered:
 
 ```python
-machine = Machine(states=states, queued=True)
+machine = Machine(states=states, queued=True, initial='A')
 ...
 machine.advance()
 >>> 'I am in state B now!'
