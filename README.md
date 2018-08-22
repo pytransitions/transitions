@@ -510,7 +510,7 @@ def entering_C():
     print("I am in state C now!")
 
 states = ['A', 'B', 'C']
-machine = Machine(states=states)
+machine = Machine(states=states, initial='A')
 
 # we want a message when state transition to B has been completed
 machine.add_transition('advance', 'A', 'B', after=after_advance)
