@@ -582,11 +582,7 @@ class Machine(object):
         for mod in models:
             mod = self if mod == 'self' else mod
             if mod not in self.models:
-                if hasattr(mod, 'trigger'):
-                    _LOGGER.warning("%sModel already contains an attribute 'trigger'. Skip method binding ",
-                                    self.name)
-                else:
-                    mod.trigger = partial(_get_trigger, mod)
+                self._checked_assignment(mod, 'trigger', partial(_get_trigger, mod))
 
                 for trigger, _ in self.events.items():
                     self._add_trigger_to_model(trigger, mod)
@@ -771,8 +767,7 @@ class Machine(object):
                 self.add_transition('to_%s' % state, self.wildcard_all, state)
 
     def _add_model_to_state(self, state, model):
-        setattr(model, 'is_%s' % state.name,
-                partial(self.is_state, state.name, model))
+        self._checked_assignment(model, 'is_%s' % state.name, partial(self.is_state, state.name, model))
 
         # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
         # except if they are already mentioned in 'on_enter/exit' of the defined state
@@ -782,9 +777,14 @@ class Machine(object):
                     method not in getattr(state, callback):
                 state.add_callback(callback[3:], method)
 
+    def _checked_assignment(self, model, name, func):
+        if hasattr(model, name):
+            _LOGGER.warning("%sModel already contains an attribute '%s'. Skip binding.", self.name, name)
+        else:
+            setattr(model, name, func)
+
     def _add_trigger_to_model(self, trigger, model):
-        trig_func = partial(self.events[trigger].trigger, model)
-        setattr(model, trigger, trig_func)
+        self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
 
     def get_triggers(self, *args):
         """ Collects all triggers FROM certain states.
