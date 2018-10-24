@@ -59,6 +59,7 @@ class Error(Tags):
         """
         if not event_data.machine.get_triggers(self.name) and not self.is_accepted:
             raise MachineError("Error state '{0}' reached!".format(self.name))
+        super(Error, self).enter(event_data)
 
 
 class Timeout(State):

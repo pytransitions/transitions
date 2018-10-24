@@ -51,6 +51,24 @@ class TestTransitions(TestCase):
         with self.assertRaises(MachineError):
             m.fail()
 
+    def test_error_callback(self):
+        @add_state_features(Error)
+        class CustomMachine(Machine):
+            pass
+
+        mock_callback = MagicMock()
+
+        states = ['A', {"name": "B", "on_enter": mock_callback}, 'C']
+        transitions = [
+            ["to_B", "A", "B"],
+            ["to_C", "B", "C"],
+        ]
+        m = CustomMachine(states=states, transitions=transitions, auto_transitions=False, initial='A')
+        m.to_B()
+        self.assertEqual(m.state, "B")
+        self.assertTrue(mock_callback.called)
+
+
     def test_timeout(self):
         mock = MagicMock()
 
