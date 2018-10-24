@@ -1255,6 +1255,7 @@ Currently, transitions comes equipped with the following state features:
     - keyword: `timeout` (int, optional) -- if passed, an entered state will timeout after `timeout` seconds
     - keyword: `on_timeout` (string/callable, optional) -- will be called when timeout time has been reached
     - will raise an `AttributeError` when `timeout` is set but `on_timeout` is not
+    - Note: A timeout is triggered in a thread. This implies several limitations (e.g. catching Exceptions raised in timeouts). Consider an event queue for more sophisticated applications.
 
 * **Tags** -- adds tags to states
     - keyword: `tags` (list, optional) -- assigns tags to a state
@@ -1264,6 +1265,7 @@ Currently, transitions comes equipped with the following state features:
     - inherits from `Tags` (if you use `Error` do not use `Tags`)
     - keyword: `accepted` (bool, optional) -- marks a state as accepted
     - alternatively the keyword `tags` can be passed, containing 'accepted'
+    - Note: Errors will only be raised if `auto_transitions` has been set to `False`. Otherwise every state can be exited with `to_<state>` methods.
     
 * **Volatile** -- initialises an object every time a state is entered
     - keyword: `volatile` (class, optional) -- every time the state is entered an object of type class will be assigned to the model. The attribute name is defined by `hook`. If omitted, an empty VolatileObject will be created instead
