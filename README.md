@@ -993,7 +993,7 @@ m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
 
 This produces something like this:
 
-![state diagram example](https://cloud.githubusercontent.com/assets/19777/11530591/1a0c08a6-98f6-11e5-88a7-756585aafbbb.png)
+![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
 
 Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example.
 
