@@ -30,7 +30,7 @@ class MarkupMachine(Machine):
             self._markup['after_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
             self._markup['prepare_event'] = [x for x in (rep(f) for f in self.prepare_event) if x]
             self._markup['finalize_event'] = [x for x in (rep(f) for f in self.finalize_event) if x]
-            self._markup['name'] = self.name
+            self._markup['name'] = "" if not self.name else self.name[:-2]
             self._markup['send_event'] = self.send_event
             self._markup['auto_transitions'] = self.auto_transitions
             self._markup['ignore_invalid_triggers'] = self.ignore_invalid_triggers
