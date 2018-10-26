@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.6.9 ()
+## 0.6.9 (October 2018)
+
+Release 0.6.9 is a minor release and contains two bugfixes:
 
 - Bugfix #314: Do not override already defined model functions with convenience functions (thanks @Arkanayan)
 - Bugfix #316: `state.Error` did not call parent's `enter` method (thanks @potens1)

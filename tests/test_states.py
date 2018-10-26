@@ -68,7 +68,6 @@ class TestTransitions(TestCase):
         self.assertEqual(m.state, "B")
         self.assertTrue(mock_callback.called)
 
-
     def test_timeout(self):
         mock = MagicMock()
 
