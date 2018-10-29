@@ -95,7 +95,7 @@ class State(object):
     dynamic_methods = ['on_enter', 'on_exit']
 
     def __init__(self, name, on_enter=None, on_exit=None,
-                 ignore_invalid_triggers=False):
+                 ignore_invalid_triggers=None):
         """
         Args:
             name (string): The name of the state
@@ -391,7 +391,9 @@ class Event(object):
         if state.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
                                                                state.name)
-            if state.ignore_invalid_triggers:
+            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
+                else self.machine.ignore_invalid_triggers
+            if ignore:
                 _LOGGER.warning(msg)
                 return False
             else:

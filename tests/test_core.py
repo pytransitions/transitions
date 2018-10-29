@@ -394,11 +394,15 @@ class TestTransitions(TestCase):
                      initial='B')
         with self.assertRaises(MachineError):
             m1.a_to_b()
+        # Set default value on machine level
+        m2 = Machine('self', states=[a_state, b_state], transitions=transitions,
+                     initial='B', ignore_invalid_triggers=True)
+        m2.a_to_b()
         # Exception is suppressed, so this passes
         b_state = State('B', ignore_invalid_triggers=True)
-        m2 = Machine('self', states=[a_state, b_state], transitions=transitions,
+        m3 = Machine('self', states=[a_state, b_state], transitions=transitions,
                      initial='B')
-        m2.a_to_b()
+        m3.a_to_b()
         # Set for some states but not others
         new_states = ['C', 'D']
         m1.add_states(new_states, ignore_invalid_triggers=True)
@@ -407,9 +411,9 @@ class TestTransitions(TestCase):
         m1.to_B()
         with self.assertRaises(MachineError):
             m1.a_to_b()
-        # Set at machine level
+        # State value overrides machine behaviour
         m3 = Machine('self', states=[a_state, b_state], transitions=transitions,
-                     initial='B', ignore_invalid_triggers=True)
+                     initial='B', ignore_invalid_triggers=False)
         m3.a_to_b()
 
     def test_string_callbacks(self):
