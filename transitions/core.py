@@ -16,14 +16,10 @@ except ImportError:
 import inspect
 import itertools
 import logging
-import warnings
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
 from six import string_types
-
-# make deprecation warnings of transition visible for module users
-warnings.filterwarnings(action='default', message=r"Starting from transitions version 0\.6\.0 .*")
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -522,11 +518,6 @@ class Machine(object):
 
             **kwargs additional arguments passed to next class in MRO. This can be ignored in most cases.
         """
-
-        if kwargs.pop('add_self', None) is not None:
-            warnings.warn("Starting from transitions version 0.6.0 'add_self' is no longer"
-                          "supported. To add the machine as a model use the new default "
-                          "value model='self' instead.", DeprecationWarning)
 
         # calling super in case `Machine` is used as a mix in
         # all keyword arguments should be consumed by now if this is not the case

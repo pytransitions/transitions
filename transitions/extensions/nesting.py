@@ -9,14 +9,9 @@
 from copy import copy, deepcopy
 from functools import partial
 import logging
-import warnings
 from six import string_types
 
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
-
-# make deprecation warnings of transition visible for module users
-warnings.filterwarnings(action='default', message=r".*transitions version.*")
-
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -508,21 +503,6 @@ class HierarchicalMachine(Machine):
             state_name (str): Name of the destination state.
         """
 
-        # TODO: Remove in 0.7.0
-        if not isinstance(state_name, string_types):
-            warnings.warn("'HierarchicalMachine.to' has been renamed to 'HierarchicalMachine.to_state' and "
-                          "will be removed in transitions version 0.7.0.", DeprecationWarning)
-            model = state_name
-            state_name = args[0]
-            args = tuple(x for idx, x in enumerate(args) if idx > 0)
-
         event = EventData(self.get_state(model.state), Event('to', self), self,
                           model, args=args, kwargs=kwargs)
         self._create_transition(model.state, state_name).execute(event)
-
-    # TODO: Remove in 0.7.0
-    def to(self, model, state_name, *args, **kwargs):
-        """ DEPRECATED! See `to_state` instead """
-        warnings.warn("'HierarchicalMachine.to' has been renamed to 'HierarchicalMachine.to_state' and "
-                      "will be removed in transitions version 0.7.0.", DeprecationWarning)
-        self.to_state(model, state_name, *args, **kwargs)
