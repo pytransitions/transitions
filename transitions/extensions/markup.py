@@ -2,6 +2,7 @@ from six import string_types, iteritems
 from functools import partial
 import itertools
 import importlib
+from collections import defaultdict
 
 from ..core import Machine
 import numbers
@@ -19,7 +20,7 @@ class MarkupMachine(Machine):
         self.skip_references = True
 
         if self._markup:
-            models_markup = self._markup.pop('model', [])
+            models_markup = self._markup.pop('models', [])
             super(MarkupMachine, self).__init__(None, **self._markup)
             for m in models_markup:
                 self._add_markup_model(m)
@@ -38,7 +39,7 @@ class MarkupMachine(Machine):
 
     @property
     def markup(self):
-        self._markup['model'] = self._convert_models()
+        self._markup['models'] = self._convert_models()
         return self._markup
 
     def add_transition(self, trigger, source, dest, conditions=None,
