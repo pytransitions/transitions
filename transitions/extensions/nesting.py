@@ -294,7 +294,7 @@ class HierarchicalMachine(Machine):
             mod = self if mod == 'self' else mod
             # TODO: Remove 'mod != self' in 0.7.0
             if hasattr(mod, 'to') and mod != self:
-                _LOGGER.warning("%sModel already has a 'to'-method. It will NOT "
+                _LOGGER.warning("%s Model already has a 'to'-method. It will NOT "
                                 "be overwritten by NestedMachine", self.name)
             else:
                 to_func = partial(self.to_state, mod)

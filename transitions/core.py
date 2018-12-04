@@ -115,17 +115,17 @@ class State(object):
 
     def enter(self, event_data):
         """ Triggered when a state is entered. """
-        _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
+        _LOGGER.debug("%s Entering state %s. Processing callbacks...", event_data.machine.name, self.name)
         for handle in self.on_enter:
             event_data.machine.callback(handle, event_data)
-        _LOGGER.info("%sEntered state %s", event_data.machine.name, self.name)
+        _LOGGER.info("%s Entered state %s", event_data.machine.name, self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
-        _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
+        _LOGGER.debug("%s Exiting state %s. Processing callbacks...", event_data.machine.name, self.name)
         for handle in self.on_exit:
             event_data.machine.callback(handle, event_data)
-        _LOGGER.info("%sExited state %s", event_data.machine.name, self.name)
+        _LOGGER.info("%s Exited state %s", event_data.machine.name, self.name)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -242,7 +242,7 @@ class Transition(object):
         Returns: boolean indicating whether or not the transition was
             successfully executed (True if successful, False if not).
         """
-        _LOGGER.debug("%sInitiating transition from state %s to state %s...",
+        _LOGGER.debug("%s Initiating transition from state %s to state %s...",
                       event_data.machine.name, self.source, self.dest)
         machine = event_data.machine
 
@@ -252,19 +252,19 @@ class Transition(object):
 
         for cond in self.conditions:
             if not cond.check(event_data):
-                _LOGGER.debug("%sTransition condition failed: %s() does not return %s. Transition halted.",
+                _LOGGER.debug("%s Transition condition failed: %s() does not return %s. Transition halted.",
                               event_data.machine.name, cond.func, cond.target)
                 return False
         for func in itertools.chain(machine.before_state_change, self.before):
             machine.callback(func, event_data)
-            _LOGGER.debug("%sExecuted callback '%s' before transition.", event_data.machine.name, func)
+            _LOGGER.debug("%s Executed callback '%s' before transition.", event_data.machine.name, func)
 
         if self.dest:  # if self.dest is None this is an internal transition with no actual state change
             self._change_state(event_data)
 
         for func in itertools.chain(self.after, machine.after_state_change):
             machine.callback(func, event_data)
-            _LOGGER.debug("%sExecuted callback '%s' after transition.", event_data.machine.name, func)
+            _LOGGER.debug("%s Executed callback '%s' after transition.", event_data.machine.name, func)
         return True
 
     def _change_state(self, event_data):
@@ -779,7 +779,7 @@ class Machine(object):
 
     def _checked_assignment(self, model, name, func):
         if hasattr(model, name):
-            _LOGGER.warning("%sModel already contains an attribute '%s'. Skip binding.", self.name, name)
+            _LOGGER.warning("%s Model already contains an attribute '%s'. Skip binding.", self.name, name)
         else:
             setattr(model, name, func)
 
