@@ -784,6 +784,25 @@ class TestTransitions(TestCase):
         # self stuff machine should have to-transitions to every state
         self.assertEqual(len(self.stuff.machine.get_triggers('B')), len(self.stuff.machine.states))
 
+    def test_skip_override(self):
+        local_mock = MagicMock()
+
+        class Model(object):
+
+            def go(self):
+                local_mock()
+        model = Model()
+        transitions = [['go', 'A', 'B'], ['advance', 'A', 'B']]
+        m = self.stuff.machine_cls(model=model, states=['A', 'B'], transitions=transitions, initial='A')
+        model.go()
+        self.assertEqual(model.state, 'A')
+        self.assertTrue(local_mock.called)
+        model.advance()
+        self.assertEqual(model.state, 'B')
+        model.to_A()
+        model.trigger('go')
+        self.assertEqual(model.state, 'B')
+
     @skipIf(sys.version_info < (3, ),
             "String-checking disabled on PY-2 because is different")
     def test_repr(self):

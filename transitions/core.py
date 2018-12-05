@@ -42,21 +42,22 @@ def listify(obj):
     return obj if isinstance(obj, (list, tuple)) else [obj]
 
 
-def _get_trigger(model, trigger_name, *args, **kwargs):
+def _get_trigger(model, machine, trigger_name, *args, **kwargs):
     """Convenience function added to the model to trigger events by name.
-
     Args:
         model (object): Model with assigned event trigger.
+        machine (Machine): The machine containing the evaluated events.
         trigger_name (str): Name of the trigger to be called.
         *args: Variable length argument list which is passed to the triggered event.
         **kwargs: Arbitrary keyword arguments which is passed to the triggered event.
     Returns:
         bool: True if a transitions has been conducted or the trigger event has been queued.
     """
-    func = getattr(model, trigger_name, None)
-    if func:
-        return func(*args, **kwargs)
-    raise AttributeError("Model has no trigger named '%s'" % trigger_name)
+    try:
+        return machine.events[trigger_name].trigger(model, *args, **kwargs)
+    except KeyError:
+        pass
+    raise AttributeError("Do not know event named '%s'." % trigger_name)
 
 
 def _prep_ordered_arg(desired_length, arguments=None):
@@ -582,7 +583,7 @@ class Machine(object):
         for mod in models:
             mod = self if mod == 'self' else mod
             if mod not in self.models:
-                self._checked_assignment(mod, 'trigger', partial(_get_trigger, mod))
+                self._checked_assignment(mod, 'trigger', partial(_get_trigger, mod, self))
 
                 for trigger, _ in self.events.items():
                     self._add_trigger_to_model(trigger, mod)
