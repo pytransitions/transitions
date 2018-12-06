@@ -222,6 +222,7 @@ class Transition(object):
 
     # A list of dynamic methods which can be resolved by a ``Machine`` instance for convenience functions.
     dynamic_methods = ['before', 'after', 'prepare']
+    condition_cls = Condition
 
     def __init__(self, source, dest, conditions=None, unless=None, before=None,
                  after=None, prepare=None):
@@ -250,10 +251,32 @@ class Transition(object):
         self.conditions = []
         if conditions is not None:
             for cond in listify(conditions):
-                self.conditions.append(Condition(cond))
+                self.conditions.append(self.condition_cls(cond))
         if unless is not None:
             for cond in listify(unless):
-                self.conditions.append(Condition(cond, target=False))
+                self.conditions.append(self.condition_cls(cond, target=False))
+
+    def _eval_conditions(self, event_data):
+        for cond in self.conditions:
+            if not cond.check(event_data):
+                _LOGGER.debug("%sTransition condition failed: %s() does not return %s. Transition halted.",
+                              event_data.machine.name, cond.func, cond.target)
+            return False
+
+    def _prepare_state_change(self, event_data):
+        for func in self.prepare:
+            event_data.machine.callback(func, event_data)
+            _LOGGER.debug("Executed callback '%s' before conditions.", func)
+
+    def _before_state_change(self, event_data):
+        for func in itertools.chain(event_data.machine.before_state_change, self.before):
+            event_data.machine.callback(func, event_data)
+            _LOGGER.debug("%sExecuted callback '%s' before transition.", event_data.machine.name, func)
+
+    def _after_state_change(self, event_data):
+        for func in itertools.chain(self.after, event_data.machine.after_state_change):
+            event_data.machine.callback(func, event_data)
+            _LOGGER.debug("%sExecuted callback '%s' after transition.", event_data.machine.name, func)
 
     def execute(self, event_data):
         """ Execute the transition.
@@ -264,27 +287,16 @@ class Transition(object):
         """
         _LOGGER.debug("%sInitiating transition from state %s to state %s...",
                       event_data.machine.name, self.source, self.dest)
-        machine = event_data.machine
 
-        for func in self.prepare:
-            machine.callback(func, event_data)
-            _LOGGER.debug("Executed callback '%s' before conditions.", func)
+        self._prepare_state_change(event_data)
 
-        for cond in self.conditions:
-            if not cond.check(event_data):
-                _LOGGER.debug("%sTransition condition failed: %s() does not return %s. Transition halted.",
-                              event_data.machine.name, cond.func, cond.target)
-                return False
-        for func in itertools.chain(machine.before_state_change, self.before):
-            machine.callback(func, event_data)
-            _LOGGER.debug("%sExecuted callback '%s' before transition.", event_data.machine.name, func)
+        if not self._eval_conditions(event_data):
+            return False
 
+        self._before_state_change(event_data)
         if self.dest:  # if self.dest is None this is an internal transition with no actual state change
             self._change_state(event_data)
-
-        for func in itertools.chain(self.after, machine.after_state_change):
-            machine.callback(func, event_data)
-            _LOGGER.debug("%sExecuted callback '%s' after transition.", event_data.machine.name, func)
+        self._after_state_change(event_data)
         return True
 
     def _change_state(self, event_data):
