@@ -261,7 +261,8 @@ class Transition(object):
             if not cond.check(event_data):
                 _LOGGER.debug("%sTransition condition failed: %s() does not return %s. Transition halted.",
                               event_data.machine.name, cond.func, cond.target)
-            return False
+                return False
+        return True
 
     def _prepare_state_change(self, event_data):
         for func in self.prepare:

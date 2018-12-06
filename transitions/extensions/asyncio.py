@@ -48,7 +48,7 @@ class AsyncTransition(Transition):
         loop.run_until_complete(
             asyncio.gather(*[
                 event_data.machine.callback(func, event_data)
-                    for func in itertools.chain(event_data.machine.before_state_change, self.before)
+                for func in itertools.chain(event_data.machine.before_state_change, self.before)
             ])
         )
 
@@ -57,7 +57,7 @@ class AsyncTransition(Transition):
         loop.run_until_complete(
             asyncio.gather(*[
                 event_data.machine.callback(func, event_data)
-                    for func in itertools.chain(self.after, event_data.machine.after_state_change)
+                for func in itertools.chain(self.after, event_data.machine.after_state_change)
             ])
         )
         _LOGGER.debug("Executed callback after transition.")
@@ -68,8 +68,15 @@ class AsyncMachine(Machine):
     transition_cls = AsyncTransition
 
     async def callback(self, func, event_data):
-        func = asyncio.wrap_future(self.resolve_callable(func, event_data))
+        func = self.resolve_callable(func, event_data)
+
         if self.send_event:
-            await func(event_data)
+            if asyncio.iscoroutinefunction(func):
+                await func(event_data)
+            else:
+                func(event_data)
         else:
-            await func(*event_data.args, **event_data.kwargs)
+            if asyncio.iscoroutinefunction(func):
+                await func(*event_data.args, **event_data.kwargs)
+            else:
+                func(*event_data.args, **event_data.kwargs)
