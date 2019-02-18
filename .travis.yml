@@ -1,3 +1,4 @@
+dist: xenial
 language: python
 python:
   - "3.6"
@@ -11,7 +12,6 @@ install:
 script:  nosetests --with-coverage --with-doctest
 after_success:
   - coveralls --config_file .coveragerc
-sudo: false
 addons:
   apt:
     packages:
