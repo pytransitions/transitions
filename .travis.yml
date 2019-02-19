@@ -1,8 +1,10 @@
+dist: xenial
 language: python
 python:
-  - "3.6"
-  - "3.5"
   - "2.7"
+  - "3.5"
+  - "3.6"
+  - "3.7"
 install:
   - pip install python-coveralls coverage
   - pip install -r requirements.txt
@@ -11,7 +13,6 @@ install:
 script:  nosetests --with-coverage --with-doctest
 after_success:
   - coveralls --config_file .coveragerc
-sudo: false
 addons:
   apt:
     packages:
