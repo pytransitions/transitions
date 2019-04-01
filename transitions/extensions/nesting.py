@@ -451,7 +451,7 @@ class HierarchicalMachine(Machine):
                                                      **kwargs)
 
         while self._buffered_transitions:
-            args = self._buffered_transitions.pop()
+            args = self._buffered_transitions.pop(0)
             self.add_transition(**args)
 
     def get_triggers(self, *args):
