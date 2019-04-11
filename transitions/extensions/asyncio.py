@@ -17,7 +17,6 @@ class AsyncCondition(Condition):
             else:
                 return await predicate(*event_data.args, **event_data.kwargs) == self.target
         else:
-            print("SIMPLE RETURN")
             return super(AsyncCondition, self).check(event_data)
 
 
