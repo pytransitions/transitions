@@ -17,6 +17,10 @@ class TestAsync(TestTransitions):
         await asyncio.sleep(0.1)
         return True
 
+    @staticmethod
+    def synced_true():
+        return True
+
     def setUp(self):
         super(TestAsync, self).setUp()
         self.machine = AsyncMachine(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
@@ -40,6 +44,25 @@ class TestAsync(TestTransitions):
         m.proceed()
         self.assertEqual(m.state, 'C')
 
+    def test_async_enter_exit(self):
+        enter_mock = MagicMock()
+        exit_mock = MagicMock()
+
+        async def async_enter():
+            await asyncio.sleep(0.1)
+            enter_mock()
+
+        async def async_exit():
+            await asyncio.sleep(0.1)
+            exit_mock()
+
+        m = self.machine
+        m.on_exit_A(async_exit)
+        m.on_enter_B(async_enter)
+        m.go()
+        self.assertTrue(exit_mock.called)
+        self.assertTrue(enter_mock.called)
+
     def test_sync_conditions(self):
         mock = MagicMock()
 
@@ -47,7 +70,7 @@ class TestAsync(TestTransitions):
             mock()
 
         m = self.machine
-        m.after_state_change = sync_process
-        m.go()
-        self.assertEqual(m.state, 'B')
+        m.add_transition('proceed', 'A', 'C', conditions=self.synced_true, after=sync_process)
+        m.proceed()
+        self.assertEqual(m.state, 'C')
         self.assertTrue(mock.called)
