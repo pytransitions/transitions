@@ -124,12 +124,13 @@ class Graph(object):
                 src = transitions[0]
                 edge_attr = {}
                 for trans in transitions[1]:
+                    full_label = label
                     if trans.dest is None:
                         dst = src
-                        label += " [internal]"
+                        full_label = label + " [internal]"
                     else:
                         dst = trans.dest
-                    edge_attr['label'] = self._transition_label(label, trans)
+                    edge_attr['label'] = self._transition_label(full_label, trans)
                     if container.has_edge(src, dst):
                         edge = container.get_edge(src, dst)
                         edge.attr['label'] = edge.attr['label'] + ' | ' + edge_attr['label']
@@ -244,9 +245,10 @@ class NestedGraph(Graph):
                 for trans in transitions[1]:
                     if trans in self.seen_transitions:
                         continue
+                    full_label = label
                     if trans.dest is None:
                         dst = src
-                        label += " [internal]"
+                        full_label = label + " [internal]"
                     elif not container.has_node(trans.dest) and _get_subgraph(container, 'cluster_' + trans.dest) is None:
                         continue
                     else:
@@ -264,7 +266,7 @@ class NestedGraph(Graph):
                         if _get_subgraph(container, edge_attr['ltail']).has_node(dst_name):
                             del edge_attr['ltail']
 
-                    edge_attr[label_pos] = self._transition_label(label, trans)
+                    edge_attr[label_pos] = self._transition_label(full_label, trans)
                     if container.has_edge(src_name, dst_name):
                         edge = container.get_edge(src_name, dst_name)
                         edge.attr[label_pos] += ' | ' + edge_attr[label_pos]
