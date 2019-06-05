@@ -210,7 +210,7 @@ class Transition(object):
     dynamic_methods = ['before', 'after', 'prepare']
 
     def __init__(self, source, dest, conditions=None, unless=None, before=None,
-                 after=None, prepare=None):
+                 after=None, prepare=None, condition_args=None):
         """
         Args:
             source (str): The name of the source State.
@@ -240,6 +240,8 @@ class Transition(object):
         if unless is not None:
             for cond in listify(unless):
                 self.conditions.append(Condition(cond, target=False))
+        
+        self.condition_args = condition_args
 
     def execute(self, event_data):
         """ Execute the transition.
@@ -257,6 +259,8 @@ class Transition(object):
             _LOGGER.debug("Executed callback '%s' before conditions.", func)
 
         for cond in self.conditions:
+            if self.condition_args:
+                event_data.kwargs['condition_args'] = self.condition_args
             if not cond.check(event_data):
                 _LOGGER.debug("%sTransition condition failed: %s() does not return %s. Transition halted.",
                               event_data.machine.name, cond.func, cond.target)
