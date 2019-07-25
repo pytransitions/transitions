@@ -5,6 +5,7 @@ except ImportError:
 
 import warnings
 import sys
+import enum
 
 from .utils import InheritedStuff
 from .utils import Stuff
@@ -29,7 +30,6 @@ def on_exit_B(event):
 
 
 class TestTransitions(TestCase):
-
     def setUp(self):
         self.stuff = Stuff()
 
@@ -1008,8 +1008,99 @@ class TestTransitions(TestCase):
         self.assertEqual(m.model.level, 2)
 
 
-class TestWarnings(TestCase):
+class TestEnumsAsStates(TestCase):
+    class States(enum.Enum):
+        RED = 1
+        YELLOW = 2
+        GREEN = 3
 
+    def test_pass_enums_as_states(self):
+        m = Machine(states=self.States, initial=self.States.YELLOW)
+
+        assert m.state == self.States.YELLOW
+        assert m.is_RED() is False
+        assert m.is_YELLOW() is True
+        assert m.is_RED() is False
+
+        m.to_RED()
+
+        assert m.state == self.States.RED
+        assert m.is_RED() is True
+        assert m.is_YELLOW() is False
+        assert m.is_GREEN() is False
+
+    def test_transitions(self):
+        m = Machine(states=self.States, initial=self.States.RED)
+        m.add_transition('switch_to_yellow', self.States.RED, self.States.YELLOW)
+        m.add_transition('switch_to_green', 'YELLOW', 'GREEN')
+
+        m.switch_to_yellow()
+        assert m.is_YELLOW() is True
+
+        m.switch_to_green()
+        assert m.is_YELLOW() is False
+        assert m.is_GREEN() is True
+
+    def test_property_initial(self):
+        transitions = [
+            {'trigger': 'switch_to_yellow', 'source': self.States.RED, 'dest': self.States.YELLOW},
+            {'trigger': 'switch_to_green', 'source': 'YELLOW', 'dest': 'GREEN'},
+        ]
+
+        m = Machine(states=self.States, initial=self.States.RED, transitions=transitions)
+        m.switch_to_yellow()
+        assert m.is_YELLOW()
+
+        m.switch_to_green()
+        assert m.is_GREEN()
+
+    def test_pass_state_instances_instead_of_names(self):
+        state_A = State(self.States.YELLOW)
+        state_B = State(self.States.GREEN)
+
+        states = [state_A, state_B]
+
+        m = Machine(states=states, initial=state_A)
+        assert m.state == self.States.YELLOW
+
+        m.add_transition('advance', state_A, state_B)
+        m.advance()
+        assert m.state == self.States.GREEN
+
+    def test_state_change_listeners(self):
+        class States(enum.Enum):
+            ONE = 1
+            TWO = 2
+
+        class Staff(object):
+            def __init__(self):
+                self.state = None
+                self.machine = Machine(states=States, initial=States.ONE, model=self)
+
+                self.machine.add_transition('advance', States.ONE, States.TWO)
+                self.machine.add_transition('reverse', States.TWO, States.ONE)
+                self.machine.on_enter_TWO('hello')
+                self.machine.on_exit_TWO('goodbye')
+
+            def hello(self):
+                self.message = 'Hello'
+
+            def goodbye(self):
+                self.message = 'Goodbye'
+
+        s = Staff()
+        s.advance()
+
+        assert s.is_TWO()
+        assert s.message == 'Hello'
+
+        s.reverse()
+
+        assert s.is_ONE()
+        assert s.message == 'Goodbye'
+
+
+class TestWarnings(TestCase):
     def test_warning(self):
         import sys
         # does not work with python 3.3. However, the warning is shown when Machine is initialized manually.
