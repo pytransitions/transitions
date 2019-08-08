@@ -127,7 +127,8 @@ class Graph(object):
                     full_label = label
                     if trans.dest is None:
                         dst = src
-                        full_label = label + " [internal]"
+                        if not '[internal]' in label:
+                            label += " [internal]"
                     else:
                         dst = trans.dest
                     edge_attr['label'] = self._transition_label(full_label, trans)
