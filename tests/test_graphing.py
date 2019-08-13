@@ -3,7 +3,7 @@ try:
 except ImportError:
     pass
 
-from .utils import Stuff
+from .utils import Stuff, DummyModel
 from .test_core import TestTransitions
 
 from transitions.extensions import MachineFactory
@@ -149,6 +149,11 @@ class TestDiagrams(TestTransitions):
         g2 = m.get_graph(show_roi=True)
         self.assertEqual(len(g2.edges()), 4)
         self.assertEqual(len(g2.nodes()), 4)
+
+    def test_add_model(self):
+        model = DummyModel()
+        self.stuff.machine.add_model(model)
+        self.assertIsNotNone(model.get_graph())
 
 
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')

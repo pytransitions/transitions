@@ -9,7 +9,7 @@
 import logging
 from functools import partial
 
-from ..core import Transition
+from ..core import Transition, listify
 from .markup import MarkupMachine, rep
 from .nesting import NestedState
 try:
@@ -300,20 +300,25 @@ class GraphMachine(MarkupMachine):
         # keep 'show_auto_transitions' for backwards compatibility
         kwargs['with_auto_transitions'] = kwargs.pop('show_auto_transitions', False)
         self.model_graphs = {}
-        _super(GraphMachine, self).__init__(*args, **kwargs)
 
-        # Create graph at beginning
-        for model in self.models:
-            if hasattr(model, 'get_graph'):
-                raise AttributeError('Model already has a get_graph attribute. Graph retrieval cannot be bound.')
-            setattr(model, 'get_graph', partial(self._get_graph, model))
-            model.get_graph()
-            self.set_node_state(self.model_graphs[model], self.initial, 'active')
+        _super(GraphMachine, self).__init__(*args, **kwargs)
 
         # for backwards compatibility assign get_combined_graph to get_graph
         # if model is not the machine
         if not hasattr(self, 'get_graph'):
             setattr(self, 'get_graph', self.get_combined_graph)
+
+    def add_model(self, model, initial=None):
+        models = listify(model)
+        _super(GraphMachine, self).add_model(models, initial)
+
+        for mod in models:
+            mod = self if mod == 'self' else mod
+            if hasattr(mod, 'get_graph'):
+                raise AttributeError('Model already has a get_graph attribute. Graph retrieval cannot be bound.')
+            setattr(mod, 'get_graph', partial(self._get_graph, mod))
+            mod.get_graph()
+            self.set_node_state(self.model_graphs[mod], self.initial, 'active')
 
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
         if force_new:
