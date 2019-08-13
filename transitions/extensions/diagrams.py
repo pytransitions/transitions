@@ -127,7 +127,7 @@ class Graph(object):
                     full_label = label
                     if trans.dest is None:
                         dst = src
-                        if not '[internal]' in label:
+                        if '[internal]' not in label:
                             label += " [internal]"
                     else:
                         dst = trans.dest
