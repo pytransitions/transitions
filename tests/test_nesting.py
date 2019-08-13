@@ -510,7 +510,6 @@ class TestTransitions(TestsCore):
 
         machine = self.stuff.machine_cls(states=states, transitions=transitions, auto_transitions=False)
         trans = machine.get_triggers('caffeinated{0}dithering'.format(state_separator))
-        # print(trans)
         self.assertEqual(len(trans), 3)
         self.assertTrue('relax' in trans)
 

@@ -15,4 +15,4 @@ examples/state.png
 MANIFEST
 *.bak
 pylint.log
-test.py
+sandbox.py
