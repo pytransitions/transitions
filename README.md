@@ -970,25 +970,40 @@ Additional Keywords:
 * `show_auto_transitions` (default False): Shows auto transitions in graph
 * `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
 
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed:
- 
-    pip install pygraphviz  # install pygraphviz manually...
-    pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras
-    
-With `GraphMachine` enabled, a PyGraphviz `AGraph` object is generated during machine initialization and is constantly updated when the machine state changes:
+Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed:   
+To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
+
+    sudo apt-get install graphviz  # Ubuntu and Debian
+    brew install graphviz  # MacOS
+    conda install graphviz python-graphviz  # (Ana)conda
+
+Now you can install the actual Python packages
+
+    pip install graphviz pygraphviz # install graphviz and/or pygraphviz manually...
+    pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras which currently depends on pygraphviz
+
+Currently, `GraphMachine` will use `pygraphviz` when available and fall back to `graphviz` when `pygraphviz` cannot be 
+found. This can be overridden by passing `use_pygraphviz=False` to the constructor. Note that this default might change 
+in the future and `pygraphviz` support may be dropped.
+With `Model.get_graph()` you can get the current graph or the region of interest (roi) and draw it like this:
 
 ```python
+# import transitions
+
 from transitions.extensions import GraphMachine as Machine
 m = Model()
+# without further arguments pygraphviz will be used
 machine = Machine(model=m, ...)
+# when you want to use graphviz explicitely
+machine = Machine(model=m, use_pygraphviz=False, ...)
 # in cases where auto transitions should be visible
-# Machine(model=m, show_auto_transitions=True, ...)
+machine = Machine(model=m, show_auto_transitions=True, ...)
 
 # draw the whole graph ...
 m.get_graph().draw('my_state_diagram.png', prog='dot')
 # ... or just the region of interest
 # (previous state, active state and all reachable states)
-m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
+roi = m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
 ```
 
 This produces something like this:
