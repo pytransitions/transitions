@@ -3,44 +3,32 @@ try:
 except ImportError:
     pass
 
-from .utils import Stuff, DummyModel
-from .test_core import TestTransitions
-
-from transitions.extensions import MachineFactory
-from transitions.extensions.nesting import NestedState
+from .utils import Stuff
+from .test_graphviz import TestDiagrams, TestDiagramsNested, NestedState
+from .test_graphviz import edge_label_from_transition_label
+from transitions.extensions.states import add_state_features, Timeout, Tags
 from unittest import skipIf
-from functools import partial
 import tempfile
 import os
 
 try:
-    # Just to skip tests if *pygraphviz8 not installed
+    # Just to skip tests if graphviz not installed
     import pygraphviz as pgv  # @UnresolvedImport
 except ImportError:  # pragma: no cover
     pgv = None
 
 
-def edge_label_from_transition_label(label):
-    return label.split(' | ')[0].split(' [')[0]  # if no condition, label is returned; returns first event only
-
-
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
-class TestDiagrams(TestTransitions):
+class PygraphvizTest(TestDiagrams):
 
-    machine_cls = MachineFactory.get_predefined(graph=True)
+    use_pygraphviz = True
 
     def setUp(self):
-        self.stuff = Stuff(machine_cls=self.machine_cls)
-        self.states = ['A', 'B', 'C', 'D']
-        self.transitions = [
-            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
-            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'D', 'conditions': 'is_fast'},
-            {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
-        ]
+        super(PygraphvizTest, self).setUp()
 
     def test_diagram(self):
-        m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False, title='a test')
+        m = self.machine_cls(states=self.states, transitions=self.transitions, use_pygraphviz=self.use_pygraphviz,
+                             initial='A', auto_transitions=False, title='a test')
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue(graph.directed)
@@ -66,12 +54,6 @@ class TestDiagrams(TestTransitions):
         graph = m.get_graph(force_new=True, title=False)
         self.assertEqual("", graph.graph_attr['label'])
 
-    def test_add_custom_state(self):
-        m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False, title='a test')
-        m.add_state('X')
-        m.add_transition('foo', '*', 'X')
-        m.foo()
-
     def test_if_multiple_edges_are_supported(self):
         transitions = [
             ['event_0', 'a', 'b'],
@@ -85,6 +67,7 @@ class TestDiagrams(TestTransitions):
             transitions=transitions,
             initial='a',
             auto_transitions=False,
+            use_pygraphviz=self.use_pygraphviz
         )
 
         graph = m.get_graph()
@@ -98,7 +81,8 @@ class TestDiagrams(TestTransitions):
     def test_multi_model_state(self):
         m1 = Stuff(machine_cls=None)
         m2 = Stuff(machine_cls=None)
-        m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A')
+        m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A',
+                             use_pygraphviz=self.use_pygraphviz)
         m1.walk()
         self.assertEqual(m1.get_graph().get_node(m1.state).attr['color'],
                          m1.get_graph().style_attributes['node']['active']['color'])
@@ -106,16 +90,6 @@ class TestDiagrams(TestTransitions):
                          m2.get_graph().style_attributes['node']['default']['color'])
         # backwards compatibility test
         self.assertEqual(id(m.get_graph()), id(m1.get_graph()))
-
-    def test_model_method_collision(self):
-        class GraphModel:
-            def get_graph(self):
-                return "This method already exists"
-
-        model = GraphModel()
-        with self.assertRaises(AttributeError):
-            m = self.machine_cls(model=model)
-        self.assertEqual(model.get_graph(), "This method already exists")
 
     def test_to_method_filtering(self):
         m = self.machine_cls(states=['A', 'B', 'C'], initial='A')
@@ -131,12 +105,6 @@ class TestDiagrams(TestTransitions):
         self.assertEqual(len(m2.get_graph().get_edge('B', 'A')), 2)
         self.assertEqual(m2.get_graph().get_edge('A', 'B').attr['label'], 'to_B')
 
-    def test_loops(self):
-        m = self.machine_cls(states=['A'], initial='A')
-        m.add_transition('reflexive', 'A', '=')
-        m.add_transition('fixed', 'A', None)
-        g1 = m.get_graph()
-
     def test_roi(self):
         m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A')
         m.add_transition('to_state_A', 'B', 'A')
@@ -150,25 +118,26 @@ class TestDiagrams(TestTransitions):
         self.assertEqual(len(g2.edges()), 4)
         self.assertEqual(len(g2.nodes()), 4)
 
-    def test_add_model(self):
-        model = DummyModel()
-        self.stuff.machine.add_model(model)
-        self.assertIsNotNone(model.get_graph())
+    def test_state_tags(self):
 
+        @add_state_features(Tags, Timeout)
+        class CustomMachine(self.machine_cls):
+            pass
 
-@skipIf(pgv is None, 'Graph diagram requires pygraphviz')
-class TestDiagramsLocked(TestDiagrams):
-
-    machine_cls = MachineFactory.get_predefined(graph=True, locked=True)
+        self.states[0] = {'name': 'A', 'tags': ['new', 'polling'], 'timeout': 5, 'on_enter': 'say_hello',
+                          'on_exit': 'say_goodbye', 'on_timeout': 'do_something'}
+        m = CustomMachine(states=self.states, transitions=self.transitions, initial='A', show_state_attributes=True)
+        g = m.get_graph(show_roi=True)
 
 
 @skipIf(pgv is None, 'NestedGraph diagram requires pygraphviz')
-class TestDiagramsNested(TestDiagrams):
+class TestPygraphvizNested(TestDiagramsNested, PygraphvizTest):
 
-    machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
+    use_pygraphviz = True
 
     def setUp(self):
-        super(TestDiagramsNested, self).setUp()
+        super(TestPygraphvizNested, self).setUp()
+
         self.states = ['A', 'B',
                        {'name': 'C', 'children': [{'name': '1', 'children': ['a', 'b', 'c']},
                                                   '2', '3']}, 'D']
@@ -236,11 +205,3 @@ class TestDiagramsNested(TestDiagrams):
         g2 = model.get_graph(show_roi=True)
         self.assertEqual(len(g2.edges()), 2)
         self.assertEqual(len(g2.nodes()), 3)
-
-
-@skipIf(pgv is None, 'NestedGraph diagram requires pygraphviz')
-class TestDiagramsLockedNested(TestDiagramsNested):
-
-    def setUp(self):
-        super(TestDiagramsLockedNested, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(graph=True, nested=True, locked=True)

@@ -12,7 +12,7 @@ with codecs.open('README.md', 'r', 'utf-8') as f:
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools
 
-tests_require = ['dill', 'pygraphviz']
+tests_require = ['dill', 'graphviz', 'pygraphviz']
 extras_require = {'diagrams': ['pygraphviz']}
 
 extra_setuptools_args = {}
