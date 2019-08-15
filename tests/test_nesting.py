@@ -21,8 +21,8 @@ except ImportError:
     from mock import MagicMock
 
 try:
-    # Just to skip tests if *pygraphviz8 not installed
-    import pygraphviz as pgv  # @UnresolvedImport
+    # Just to skip tests if graphviz not installed
+    import graphviz as pgv  # @UnresolvedImport
 except ImportError:  # pragma: no cover
     pgv = None
 
@@ -521,7 +521,7 @@ class TestTransitions(TestsCore):
         self.assertEqual(s.level, 2)
 
 
-@skipIf(pgv is None, 'AGraph diagram requires pygraphviz')
+@skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
 class TestWithGraphTransitions(TestTransitions):
 
     def setUp(self):

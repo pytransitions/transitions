@@ -88,23 +88,23 @@ class TestMarkupMachine(TestCase):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
+        self.num_trans = len(self.transitions)
+        self.num_auto = self.num_trans + len(self.states)**2
 
     def test_markup_self(self):
-
         m1 = self.machine_cls(states=self.states, transitions=self.transitions, initial='A')
         m1.walk()
         # print(m1.markup)
         m2 = self.machine_cls(markup=m1.markup)
         self.assertEqual(m1.state, m2.state)
         self.assertEqual(len(m1.models), len(m2.models))
-        self.assertEqual(m1.states.keys(), m2.states.keys())
-        self.assertEqual(m1.events.keys(), m2.events.keys())
+        self.assertEqual(sorted(m1.states.keys()), sorted(m2.states.keys()))
+        self.assertEqual(sorted(m1.events.keys()), sorted(m2.events.keys()))
         m2.run()
         m2.sprint()
         self.assertNotEqual(m1.state, m2.state)
 
     def test_markup_model(self):
-
         model1 = SimpleModel()
         m1 = self.machine_cls(model1, states=self.states, transitions=self.transitions, initial='A')
         model1.walk()
@@ -113,8 +113,8 @@ class TestMarkupMachine(TestCase):
         self.assertIsInstance(model2, SimpleModel)
         self.assertEqual(len(m1.models), len(m2.models))
         self.assertEqual(model1.state, model2.state)
-        self.assertEqual(m1.states.keys(), m2.states.keys())
-        self.assertEqual(m1.events.keys(), m2.events.keys())
+        self.assertEqual(sorted(m1.states.keys()), sorted(m2.states.keys()))
+        self.assertEqual(sorted(m1.events.keys()), sorted(m2.events.keys()))
 
     def test_conditions_unless(self):
         s = Stuff(machine_cls=self.machine_cls)
@@ -125,6 +125,22 @@ class TestMarkupMachine(TestCase):
         self.assertEqual(t[0]['trigger'], 'go')
         self.assertEqual(len(t[0]['conditions']), 1)
         self.assertEqual(len(t[0]['unless']), 2)
+
+    def test_auto_transitions(self):
+        m1 = self.machine_cls(states=self.states, transitions=self.transitions, initial='A')
+        m2 = self.machine_cls(states=self.states, transitions=self.transitions, initial='A',
+                              auto_transitions_markup=True)
+
+        self.assertEqual(len(m1.markup.get('transitions')), self.num_trans)
+        self.assertEqual(len(m2.markup.get('transitions')), self.num_auto)
+        m1.add_transition('go', 'A', 'B')
+        m2.add_transition('go', 'A', 'B')
+        self.assertEqual(len(m1.markup.get('transitions')), self.num_trans + 1)
+        self.assertEqual(len(m2.markup.get('transitions')), self.num_auto + 1)
+        m1.auto_transitions_markup = True
+        m2.auto_transitions_markup = False
+        self.assertEqual(len(m1.markup.get('transitions')), self.num_auto + 1)
+        self.assertEqual(len(m2.markup.get('transitions')), self.num_trans + 1)
 
 
 class TestMarkupHierarchicalMachine(TestMarkupMachine):
@@ -140,3 +156,5 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
         ]
 
         self.machine_cls = HierarchicalMarkupMachine
+        self.num_trans = len(self.transitions)
+        self.num_auto = self.num_trans + 9**2

@@ -4,7 +4,7 @@ from transitions.extensions.factory import LockedHierarchicalGraphMachine
 from time import sleep
 
 from unittest import TestCase
-from .test_graphing import TestDiagramsLockedNested
+from .test_graphviz import TestDiagramsLockedNested
 
 try:
     from unittest.mock import MagicMock
