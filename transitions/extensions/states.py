@@ -169,7 +169,7 @@ def add_state_features(*args):
             pass
 
         method_list = sum([c.dynamic_methods for c in inspect.getmro(CustomState) if hasattr(c, 'dynamic_methods')], [])
-        CustomState.dynamic_methods = set(method_list)
+        CustomState.dynamic_methods = list(set(method_list))
         cls.state_cls = CustomState
         return cls
     return _class_decorator
