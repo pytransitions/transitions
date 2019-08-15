@@ -16,7 +16,7 @@ class MarkupMachine(Machine):
 
     def __init__(self, *args, **kwargs):
         self._markup = kwargs.pop('markup', {})
-        self.with_auto_transitions = kwargs.pop('with_auto_transitions', False)
+        self._auto_transitions_markup = kwargs.pop('auto_transitions_markup', False)
         self.skip_references = True
 
         if self._markup:
@@ -36,6 +36,15 @@ class MarkupMachine(Machine):
             self._markup['auto_transitions'] = self.auto_transitions
             self._markup['ignore_invalid_triggers'] = self.ignore_invalid_triggers
             self._markup['queued'] = self.has_queue
+
+    @property
+    def auto_transitions_markup(self):
+        return self._auto_transitions_markup
+
+    @auto_transitions_markup.setter
+    def auto_transitions_markup(self, value):
+        self._auto_transitions_markup = value
+        self._markup['transitions'] = self._convert_transitions()
 
     @property
     def markup(self):
@@ -104,7 +113,7 @@ class MarkupMachine(Machine):
         return models
 
     def _omit_auto_transitions(self, event):
-        return self.with_auto_transitions is False and self._is_auto_transition(event)
+        return self.auto_transitions_markup is False and self._is_auto_transition(event)
 
     # auto transition events commonly a) start with the 'to_' prefix, followed by b) the state name
     # and c) contain a transition from each state to the target state (including the target)
