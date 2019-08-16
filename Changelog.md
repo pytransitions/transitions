@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0 (August 2019)
+
+Release 0.7.0 is a major release with fundamental changes to the diagram extension. It also introduces an intermediate `MarkupMachine` which can be used to transfer and (re-)initialize machine configurations.
+
+- Feature #263: `MarkupMachine` can be used to retrieve a Machine's dictionary representation
+  - `GraphMachine` uses this representation for Graphs now and does not rely on `Machine` attributes any longer
+- Feature: The default value of `State.ignore_invalid_triggers` changed to `None`. If it is not explicitly set, the `Machine`'s value is used instead.
+- Feature #325: transitions now supports `pygraphviz` and `graphviz` for the creation of diagrams. Currently, `GraphMachine` will check for `pygraphviz` first and fall back to `graphviz`. To use `graphviz` directly pass `use_pygraphiv=False` to the constructor of `GraphMachine`
+- Diagram style has been overhauled. Have a look at `GraphMachine`'s attributes `machine_attributes` and `style_attributes` to adjust it to your needs.
+- Feature #305: Timeouts and other features are now marked in the graphs
+- Bugfix #343: `get_graph` was not assigned to models added during machine runtime
+
 ## 0.6.9 (October 2018)
 
 Release 0.6.9 is a minor release and contains two bugfixes:
