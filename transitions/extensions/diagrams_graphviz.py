@@ -234,7 +234,8 @@ class NestedGraph(Graph):
                 container.edge(attr.pop('source'), attr.pop('dest'), **attr)
 
 
-def _filter_states(states, state_names, prefix=[]):
+def _filter_states(states, state_names, prefix=None):
+    prefix = prefix or []
     result = []
     for state in states:
         pref = prefix + [state['name']]
