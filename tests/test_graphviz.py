@@ -146,16 +146,14 @@ class TestDiagrams(TestTransitions):
         m.add_transition('to_state_A', 'B', 'A')
         m.add_transition('to_end', '*', 'C')
         _, _, edges = self.parse_dot(m.get_graph())
-        self.assertEqual(len(edges), 4)
-        self.assertEqual(edges[0], '[label=to_state_A]')
-        self.assertEqual(edges[1], '[label=to_end]')
-        self.assertEqual(edges[3], '[label=to_end]')
+        self.assertEqual(len([e for e in edges if e == '[label=to_state_A]']), 1)
+        self.assertEqual(len([e for e in edges if e == '[label=to_end]']), 3)
         m2 = self.machine_cls(states=['A', 'B', 'C'], initial='A', show_auto_transitions=True,
                               use_pygraphviz=self.use_pygraphviz)
         _, _, edges = self.parse_dot(m2.get_graph())
         self.assertEqual(len(edges), 9)
-        self.assertEqual(edges[0], '[label=to_A]')
-        self.assertEqual(edges[8], '[label=to_C]')
+        self.assertEqual(len([e for e in edges if e == '[label=to_A]']), 3)
+        self.assertEqual(len([e for e in edges if e == '[label=to_C]']), 3)
 
     def test_loops(self):
         m = self.machine_cls(states=['A'], initial='A', use_pygraphviz=self.use_pygraphviz)
