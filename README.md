@@ -1,5 +1,5 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.6.10-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.7.0-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions)
@@ -968,6 +968,7 @@ Additional Keywords:
 * `title` (optional): Sets the title of the generated image.
 * `show_conditions` (default False): Shows conditions at transition edges
 * `show_auto_transitions` (default False): Shows auto transitions in graph
+* `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
 
 Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `pygraphviz` installed:
  

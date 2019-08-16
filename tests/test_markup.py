@@ -127,7 +127,6 @@ class TestMarkupMachine(TestCase):
         self.assertEqual(len(t[0]['unless']), 2)
 
 
-
 class TestMarkupHierarchicalMachine(TestMarkupMachine):
 
     def setUp(self):
