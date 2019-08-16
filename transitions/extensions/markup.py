@@ -74,9 +74,9 @@ class MarkupMachine(Machine):
                     t_def = _convert(trans, self.transition_attributes, self.skip_references)
                     t_def['trigger'] = event.name
                     con = [x for x in (rep(f.func, self.skip_references) for f in trans.conditions
-                                       if not f.target) if x]
-                    unl = [x for x in (rep(f.func, self.skip_references) for f in trans.conditions
                                        if f.target) if x]
+                    unl = [x for x in (rep(f.func, self.skip_references) for f in trans.conditions
+                                       if not f.target) if x]
                     if con:
                         t_def['conditions'] = con
                     if unl:
