@@ -5,6 +5,7 @@ except ImportError:
 
 from transitions.extensions.markup import MarkupMachine, rep
 from transitions.extensions.factory import HierarchicalMarkupMachine
+from .utils import Stuff
 from functools import partial
 
 
@@ -114,6 +115,17 @@ class TestMarkupMachine(TestCase):
         self.assertEqual(model1.state, model2.state)
         self.assertEqual(m1.states.keys(), m2.states.keys())
         self.assertEqual(m1.events.keys(), m2.events.keys())
+
+    def test_conditions_unless(self):
+        s = Stuff(machine_cls=self.machine_cls)
+        s.machine.add_transition('go', 'A', 'B', conditions='this_passes',
+                                 unless=['this_fails', 'this_fails_by_default'])
+        t = s.machine.markup['transitions']
+        self.assertEqual(len(t), 1)
+        self.assertEqual(t[0]['trigger'], 'go')
+        self.assertEqual(len(t[0]['conditions']), 1)
+        self.assertEqual(len(t[0]['unless']), 2)
+
 
 
 class TestMarkupHierarchicalMachine(TestMarkupMachine):
