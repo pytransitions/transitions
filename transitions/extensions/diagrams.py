@@ -190,22 +190,6 @@ class GraphMachine(MarkupMachine):
                      'method will return a combined graph of all models.')
         return self._get_graph(self.models[0], title, force_new, show_roi)
 
-    def set_edge_state(self, graph, edge_from, edge_to, state='default', label=None):
-        """ Retrieves/creates an edge between two states and changes the style/label.
-        Args:
-            graph (AGraph): The graph to be changed.
-            edge_from (str): Source state of the edge.
-            edge_to (str): Destination state of the edge.
-            state (str): Style name (Should be part of the node style_attributes in Graph)
-            label (str): Label of the edge.
-        """
-        # If show_auto_transitions is True, there will be an edge from 'edge_from' to 'edge_to'.
-        # This test is considered faster than always calling 'has_edge'.
-        if not self.with_auto_transitions and not graph.has_edge(edge_from, edge_to):
-            graph.add_edge(edge_from, edge_to, label)
-        edge = graph.get_edge(edge_from, edge_to)
-        self.set_edge_style(graph, edge, state)
-
     def add_states(self, states, on_enter=None, on_exit=None,
                    ignore_invalid_triggers=None, **kwargs):
         """ Calls the base method and regenerates all models's graphs. """
