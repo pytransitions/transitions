@@ -1,10 +1,10 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.7.0-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.7.1-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.6.9.svg)](https://github.com/pytransitions/transitions/compare/0.6.9...master)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.7.0.svg)](https://github.com/pytransitions/transitions/compare/0.7.0...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 <!--[![Name](Image)](Link)-->
 
@@ -492,6 +492,14 @@ machine.add_ordered_transitions(['A', 'C', 'B'])
 machine.next_state()
 print(machine.state)
 >>> 'C'
+# Conditions can be passed to 'add_ordered_transitions' as well
+# If one condition is passed, it will be used for all transitions
+machine = Machine(states=states, initial='A')
+machine.add_ordered_transitions(conditions='check')
+# If a list is passed, it must contain exactly as many elements as the
+# machine contains states (A->B, ..., X->A)
+machine = Machine(states=states, initial='A')
+machine.add_ordered_transitions(conditions=['check_A2B', ..., 'check_X2A'])
 ```
 
 #### <a name="queued-transitions"></a>Queued transitions

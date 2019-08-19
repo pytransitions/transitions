@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1 ()
+
+- Extended `add_ordered_transitions` documentation
+
 ## 0.7.0 (August 2019)
 
 Release 0.7.0 is a major release with fundamental changes to the diagram extension. It also introduces an intermediate `MarkupMachine` which can be used to transfer and (re-)initialize machine configurations.
