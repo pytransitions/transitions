@@ -16,6 +16,7 @@ except ImportError:
 import inspect
 import itertools
 import logging
+import enum
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
@@ -35,7 +36,8 @@ def listify(obj):
     """
     if obj is None:
         return []
-    return obj if isinstance(obj, (list, tuple)) else [obj]
+
+    return obj if isinstance(obj, (list, tuple, enum.EnumMeta)) else [obj]
 
 
 def _get_trigger(model, machine, trigger_name, *args, **kwargs):
@@ -105,10 +107,21 @@ class State(object):
                 unhandled/invalid triggers should raise an exception
 
         """
-        self.name = name
+        self._name = name
         self.ignore_invalid_triggers = ignore_invalid_triggers
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
+
+    @property
+    def name(self):
+        if isinstance(self._name, enum.Enum):
+            return self._name.name
+        else:
+            return self._name
+
+    @property
+    def value(self):
+        return self._name
 
     def enter(self, event_data):
         """ Triggered when a state is entered. """
@@ -330,7 +343,11 @@ class EventData(object):
         Attributes:
             model (object): The updated model which gets the updated state assigned to its attribute `state`.
         """
-        self.state = self.machine.get_state(model.state)
+        state_name = model.state
+        if isinstance(model.state, enum.Enum):
+            state_name = model.state.name
+
+        self.state = self.machine.get_state(state_name)
 
     def __repr__(self):
         return "<%s('%s', %s)@%s>" % (type(self).__name__, self.state,
@@ -383,7 +400,12 @@ class Event(object):
         """ Internal trigger function called by the ``Machine`` instance. This should not
         be called directly but via the public method ``Machine.trigger``.
         """
-        state = self.machine.get_state(model.state)
+        if isinstance(model.state, enum.Enum):
+            state_name = model.state.name
+        else:
+            state_name = model.state
+
+        state = self.machine.get_state(state_name)
         if state.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
                                                                state.name)
@@ -703,12 +725,20 @@ class Machine(object):
         return model.state == state
 
     def set_state(self, state, model=None):
-        """ Set the current state. """
+        """
+            Set the current state.
+        Args:
+            state (str or Enum): value of setted state
+        """
         if isinstance(state, string_types):
             state = self.get_state(state)
+        elif isinstance(state, enum.Enum):
+            state = self.get_state(state.name)
+
         models = self.models if model is None else listify(model)
+
         for mod in models:
-            mod.state = state.name
+            mod.state = state.value
 
     def add_state(self, *args, **kwargs):
         """ Alias for add_states. """
@@ -743,8 +773,9 @@ class Machine(object):
             ignore = self.ignore_invalid_triggers
 
         states = listify(states)
+
         for state in states:
-            if isinstance(state, string_types):
+            if isinstance(state, string_types) or isinstance(state, enum.Enum):
                 state = self._create_state(
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore, **kwargs)
@@ -761,7 +792,7 @@ class Machine(object):
                 self.add_transition('to_%s' % state, self.wildcard_all, state)
 
     def _add_model_to_state(self, state, model):
-        self._checked_assignment(model, 'is_%s' % state.name, partial(self.is_state, state.name, model))
+        self._checked_assignment(model, 'is_%s' % state.name, partial(self.is_state, state.value, model))
 
         # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
         # except if they are already mentioned in 'on_enter/exit' of the defined state
@@ -829,11 +860,11 @@ class Machine(object):
         if isinstance(source, string_types):
             source = list(self.states.keys()) if source == self.wildcard_all else [source]
         else:
-            source = [s.name if self._has_state(s) else s for s in listify(source)]
+            source = [s.name if self._has_state(s) or isinstance(s, enum.Enum) else s for s in listify(source)]
 
         for state in source:
             _dest = state if dest == self.wildcard_same else dest
-            if _dest and self._has_state(_dest):
+            if _dest and self._has_state(_dest) or isinstance(_dest, enum.Enum):
                 _dest = _dest.name
             _trans = self._create_transition(state, _dest, conditions, unless, before,
                                              after, prepare, **kwargs)
