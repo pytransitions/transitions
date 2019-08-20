@@ -16,7 +16,6 @@ except ImportError:
 import inspect
 import itertools
 import logging
-import warnings
 import enum
 
 from collections import OrderedDict, defaultdict, deque

@@ -73,7 +73,6 @@ class NestedState(State):
     """
 
     def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, parent=None, initial=None):
-        self._name = name
         self._initial = initial
         self._parent = None
         self.parent = parent
@@ -116,6 +115,10 @@ class NestedState(State):
     @name.setter
     def name(self, value):
         self._name = value
+
+    @property
+    def value(self):
+        return self.name if isinstance(self._name, string_types) else _super(NestedState).value
 
     def is_substate_of(self, state_name):
         """Check whether this state is a substate of a state named `state_name`
