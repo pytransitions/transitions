@@ -10,9 +10,8 @@ from copy import copy, deepcopy
 from functools import partial
 import logging
 from six import string_types
-import enum
 
-from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
+from ..core import Machine, Transition, State, Event, listify, MachineError, EventData, Enum
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -74,6 +73,9 @@ class NestedState(State):
     """
 
     def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, parent=None, initial=None):
+        if parent is not None and isinstance(name, Enum):
+            raise AttributeError("NestedState does not support nested enumerations.")
+
         self._initial = initial
         self._parent = None
         self.parent = parent
@@ -135,9 +137,9 @@ class NestedState(State):
         """
 
         temp_state = self
-        while not temp_state.name == state_name and temp_state.level > 0:
+        while not temp_state.value == state_name and temp_state.level > 0:
             temp_state = temp_state.parent
-        return temp_state.name == state_name
+        return temp_state.value == state_name
 
     def exit_nested(self, event_data, target_state):
         """ Tracks child states to exit when the states is exited itself. This should not
@@ -280,7 +282,7 @@ class HierarchicalMachine(Machine):
                 assert self._has_state(value)
             state = value
         else:
-            state_name = value.name if isinstance(value, enum.Enum) else value
+            state_name = value.name if isinstance(value, Enum) else value
             if state_name not in self.states:
                 self.add_state(state_name)
             state = self.get_state(state_name)
@@ -349,14 +351,14 @@ class HierarchicalMachine(Machine):
         new_states = []
         ignore = ignore_invalid_triggers
         remap = {} if remap is None else remap
-        parent = self.get_state(parent) if isinstance(parent, (string_types, enum.Enum)) else parent
+        parent = self.get_state(parent) if isinstance(parent, (string_types, Enum)) else parent
 
         if ignore is None:
             ignore = self.ignore_invalid_triggers
         for state in states:
             tmp_states = []
             # other state representations are handled almost like in the base class but a parent parameter is added
-            if isinstance(state, (string_types, enum.Enum)):
+            if isinstance(state, (string_types, Enum)):
                 if state in remap:
                     continue
                 tmp_states.append(self._create_state(state, on_enter=on_enter, on_exit=on_exit, parent=parent,

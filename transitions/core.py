@@ -13,10 +13,20 @@ except ImportError:
     # python2
     pass
 
+try:
+    # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
+    from enum import Enum, EnumMeta
+except ImportError:
+    # If enum is not available, create dummy classes for type checks
+    class Enum:
+        pass
+
+    class EnumMeta:
+        pass
+
 import inspect
 import itertools
 import logging
-import enum
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
@@ -37,7 +47,7 @@ def listify(obj):
     if obj is None:
         return []
 
-    return obj if isinstance(obj, (list, tuple, enum.EnumMeta)) else [obj]
+    return obj if isinstance(obj, (list, tuple, EnumMeta)) else [obj]
 
 
 def _get_trigger(model, machine, trigger_name, *args, **kwargs):
@@ -114,7 +124,7 @@ class State(object):
 
     @property
     def name(self):
-        if isinstance(self._name, enum.Enum):
+        if isinstance(self._name, Enum):
             return self._name.name
         else:
             return self._name
@@ -636,7 +646,7 @@ class Machine(object):
                 assert self._has_state(value)
             self._initial = value.name
         else:
-            state_name = value.name if isinstance(value, enum.Enum) else value
+            state_name = value.name if isinstance(value, Enum) else value
             if state_name not in self.states:
                 self.add_state(state_name)
             self._initial = state_name
@@ -701,7 +711,7 @@ class Machine(object):
 
     def get_state(self, state):
         """ Return the State instance with the passed name. """
-        if isinstance(state, enum.Enum):
+        if isinstance(state, Enum):
             state = state.name
         if state not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
@@ -767,7 +777,7 @@ class Machine(object):
         states = listify(states)
 
         for state in states:
-            if isinstance(state, (string_types, enum.Enum)):
+            if isinstance(state, (string_types, Enum)):
                 state = self._create_state(
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore, **kwargs)
@@ -852,11 +862,11 @@ class Machine(object):
         if isinstance(source, string_types):
             source = list(self.states.keys()) if source == self.wildcard_all else [source]
         else:
-            source = [s.name if self._has_state(s) or isinstance(s, enum.Enum) else s for s in listify(source)]
+            source = [s.name if self._has_state(s) or isinstance(s, Enum) else s for s in listify(source)]
 
         for state in source:
             _dest = state if dest == self.wildcard_same else dest
-            if _dest and self._has_state(_dest) or isinstance(_dest, enum.Enum):
+            if _dest and self._has_state(_dest) or isinstance(_dest, Enum):
                 _dest = _dest.name
             _trans = self._create_transition(state, _dest, conditions, unless, before,
                                              after, prepare, **kwargs)
