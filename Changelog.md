@@ -3,6 +3,7 @@
 ## 0.7.1 ()
 
 - Extended `add_ordered_transitions` documentation
+- Feature #334: Added Enum (Python 3.4+: `enum` Python 2.7: `enum34`) support (thanks @artofhuman and @justinttl)
 
 ## 0.7.0 (August 2019)
 

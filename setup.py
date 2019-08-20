@@ -7,7 +7,8 @@ with open('transitions/version.py') as f:
 
 with codecs.open('README.md', 'r', 'utf-8') as f:
     # cut the badges from the description and also the TOC which is currently not working on PyPi
-    long_description = ''.join(f.readlines()[49:])
+    long_description = ''.join(f.readlines()[51:])
+    assert long_description[:3] == '## '  # Description should start with a headline (## Quickstart)
 
 if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
     import setuptools

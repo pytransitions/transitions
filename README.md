@@ -26,6 +26,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
     - [States](#states)
         - [Callbacks](#state-callbacks)
         - [Checking state](#checking-state)
+        - [Enumerations](#enum-state)
     - [Transitions](#transitions)
         - [Automatic transitions](#automatic-transitions-for-all-states)
         - [Transitioning from multiple states](#transitioning-from-multiple-states)
@@ -317,7 +318,6 @@ machine = Machine(lump, states=['A', 'B', 'C'])
 
 Now, any time `lump` transitions to state `A`, the `on_enter_A()` method defined in the `Matter` class will fire.
 
-#### Checking state
 You can always check the current state of the model by either:
 
 - inspecting the `.state` attribute, or
@@ -335,6 +335,38 @@ lump.is_solid()
 machine.get_state(lump.state).name
 >>> 'solid'
 ```
+
+#### <a name="enum-state"></a>Enumerations
+
+So far we have seen how we can give state names and use these names to work with our state machine. If you favour stricter typing and more IDE code completion (or you just can't type 'sesquipedalophobia' any longer because the word scares you) using [Enumerations](https://docs.python.org/3/library/enum.html) might be what you are looking for:
+
+```python
+import enum  # Python 2.7 users need to have 'enum34' installed
+from transitions import Machine
+
+class States(enum.Enum):
+    ERROR = 0
+    RED = 1
+    YELLOW = 2
+    GREEN = 3
+
+transitions = [['proceed', States.RED, States.YELLOW],
+               ['proceed', States.YELLOW, States.GREEN],
+               ['error', '*', States.ERROR]]
+
+m = Machine(states=States, transitions=transitions, initial=States.RED)
+assert m.is_RED()
+assert m.state is States.RED
+state = m.get_state(States.RED)  # get transitions.State object
+print(state.name)  # >>> RED
+m.proceed()
+m.proceed()
+assert m.is_GREEN()
+m.error()
+assert m.state is States.ERROR
+```
+
+You can mix enums and strings if you like (e.g. `[States.RED, 'ORANGE', States.YELLOW, States.GREEN]`) but note that internally, `transitions` will still handle states by name (`enum.Enum.name`). Thus, it is not possible to have the states `'GREEN'` and `States.GREEN` at the same time.
 
 ### <a name="transitions"></a>Transitions
 Some of the above examples already illustrate the use of transitions in passing, but here we'll explore them in more detail.
@@ -1120,6 +1152,15 @@ machine.is_C() # checks for specific states
 >>> False
 machine.is_C(allow_substates=True)
 >>> True
+```
+
+You can use enumerations in HSMs as well but `enum` support is currently limited to the root level as model state enums lack hierarchical information. An attempt of nesting an `Enum` will raise an `AttributeError` in `NestedState`.
+
+```python
+# will work
+states = [States.RED, States.YELLOW, {'name': States.GREEN, 'children': ['tick', 'tock']}]
+# will raise an AttributeError
+states = ['A', {'name': 'B', 'children': States}]
 ```
 
 #### Reuse of previously created HSMs
