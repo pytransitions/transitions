@@ -10,6 +10,7 @@ from copy import copy, deepcopy
 from functools import partial
 import logging
 from six import string_types
+import enum
 
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData
 
@@ -95,7 +96,10 @@ class NestedState(State):
     def initial(self):
         """ When this state is entered it will automatically enter
             the child with this name if not None. """
-        return self.name + NestedState.separator + self._initial if self._initial else self._initial
+        try:
+            return self.name + NestedState.separator + self._initial if self._initial else self._initial
+        except TypeError:  # we assume an Enum here
+            return self.name + NestedState.separator + self._initial.name
 
     @initial.setter
     def initial(self, value):
@@ -110,7 +114,9 @@ class NestedState(State):
     @property
     def name(self):
         """ The computed name of this state. """
-        return (self.parent.name + NestedState.separator + self._name) if self.parent else self._name
+        if self.parent:
+            return self.parent.name + NestedState.separator + _super(NestedState, self).name
+        return _super(NestedState, self).name
 
     @name.setter
     def name(self, value):
@@ -118,7 +124,7 @@ class NestedState(State):
 
     @property
     def value(self):
-        return self.name if isinstance(self._name, string_types) else _super(NestedState).value
+        return self.name if isinstance(self._name, string_types) else _super(NestedState, self).value
 
     def is_substate_of(self, state_name):
         """Check whether this state is a substate of a state named `state_name`
@@ -215,7 +221,7 @@ class NestedTransition(Transition):
         source_state = machine.get_state(model.state)
         lvl = source_state.exit_nested(event_data, dest_state)
         event_data.machine.set_state(self.dest, model)
-        event_data.update(model)
+        event_data.update(dest_state)
         dest_state.enter_nested(event_data, lvl)
 
     # Prevent deep copying of callback lists since these include either references to callable or
@@ -274,9 +280,10 @@ class HierarchicalMachine(Machine):
                 assert self._has_state(value)
             state = value
         else:
-            if value not in self.states:
-                self.add_state(value)
-            state = self.get_state(value)
+            state_name = value.name if isinstance(value, enum.Enum) else value
+            if state_name not in self.states:
+                self.add_state(state_name)
+            state = self.get_state(state_name)
         if state.initial:
             self.initial = state.initial
         else:
@@ -342,14 +349,14 @@ class HierarchicalMachine(Machine):
         new_states = []
         ignore = ignore_invalid_triggers
         remap = {} if remap is None else remap
-        parent = self.get_state(parent) if isinstance(parent, string_types) else parent
+        parent = self.get_state(parent) if isinstance(parent, (string_types, enum.Enum)) else parent
 
         if ignore is None:
             ignore = self.ignore_invalid_triggers
         for state in states:
             tmp_states = []
             # other state representations are handled almost like in the base class but a parent parameter is added
-            if isinstance(state, string_types):
+            if isinstance(state, (string_types, enum.Enum)):
                 if state in remap:
                     continue
                 tmp_states.append(self._create_state(state, on_enter=on_enter, on_exit=on_exit, parent=parent,
