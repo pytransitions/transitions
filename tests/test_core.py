@@ -3,7 +3,6 @@ try:
 except ImportError:
     pass
 
-import warnings
 import sys
 import enum
 
@@ -1013,13 +1012,16 @@ class TestTransitions(TestCase):
 
 
 class TestEnumsAsStates(TestCase):
+
+    machine_cls = Machine
+
     class States(enum.Enum):
         RED = 1
         YELLOW = 2
         GREEN = 3
 
     def test_pass_enums_as_states(self):
-        m = Machine(states=self.States, initial=self.States.YELLOW)
+        m = self.machine_cls(states=self.States, initial=self.States.YELLOW)
 
         assert m.state == self.States.YELLOW
         assert m.is_RED() is False
@@ -1034,7 +1036,7 @@ class TestEnumsAsStates(TestCase):
         assert m.is_GREEN() is False
 
     def test_transitions(self):
-        m = Machine(states=self.States, initial=self.States.RED)
+        m = self.machine_cls(states=self.States, initial=self.States.RED)
         m.add_transition('switch_to_yellow', self.States.RED, self.States.YELLOW)
         m.add_transition('switch_to_green', 'YELLOW', 'GREEN')
 
@@ -1051,7 +1053,7 @@ class TestEnumsAsStates(TestCase):
             {'trigger': 'switch_to_green', 'source': 'YELLOW', 'dest': 'GREEN'},
         ]
 
-        m = Machine(states=self.States, initial=self.States.RED, transitions=transitions)
+        m = self.machine_cls(states=self.States, initial=self.States.RED, transitions=transitions)
         m.switch_to_yellow()
         assert m.is_YELLOW()
 
@@ -1059,12 +1061,12 @@ class TestEnumsAsStates(TestCase):
         assert m.is_GREEN()
 
     def test_pass_state_instances_instead_of_names(self):
-        state_A = State(self.States.YELLOW)
-        state_B = State(self.States.GREEN)
+        state_A = self.machine_cls.state_cls(self.States.YELLOW)
+        state_B = self.machine_cls.state_cls(self.States.GREEN)
 
         states = [state_A, state_B]
 
-        m = Machine(states=states, initial=state_A)
+        m = self.machine_cls(states=states, initial=state_A)
         assert m.state == self.States.YELLOW
 
         m.add_transition('advance', state_A, state_B)
@@ -1076,10 +1078,10 @@ class TestEnumsAsStates(TestCase):
             ONE = 1
             TWO = 2
 
-        class Staff(object):
-            def __init__(self):
+        class Stuff(object):
+            def __init__(self, machine_cls):
                 self.state = None
-                self.machine = Machine(states=States, initial=States.ONE, model=self)
+                self.machine = machine_cls(states=States, initial=States.ONE, model=self)
 
                 self.machine.add_transition('advance', States.ONE, States.TWO)
                 self.machine.add_transition('reverse', States.TWO, States.ONE)
@@ -1092,7 +1094,7 @@ class TestEnumsAsStates(TestCase):
             def goodbye(self):
                 self.message = 'Goodbye'
 
-        s = Staff()
+        s = Stuff(self.machine_cls)
         s.advance()
 
         assert s.is_TWO()
