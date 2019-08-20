@@ -13,7 +13,6 @@ from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState as State
 from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
-from .test_core import TestEnumsAsStates
 from .utils import Stuff
 
 try:
@@ -520,17 +519,6 @@ class TestTransitions(TestsCore):
         s.internal()
         self.assertEqual(s.state, 'A')
         self.assertEqual(s.level, 2)
-
-
-class TestNestedStateEnums(TestEnumsAsStates):
-
-    machine_cls = MachineFactory.get_predefined(nested=True)
-
-    def test_nested_enums(self):
-        states = ['A', 'B', {'name': 'C', 'children': self.States, 'initial': self.States.GREEN}]
-        m = self.machine_cls(states=states, initial='A')
-        m.to_C()
-        self.assertEqual(m.state, self.States.GREEN)
 
 
 @skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
