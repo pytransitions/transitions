@@ -280,7 +280,7 @@ class Transition(object):
     def _change_state(self, event_data):
         event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
-        event_data.update(event_data.model)
+        event_data.update(event_data.model.state)
         event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
@@ -337,17 +337,15 @@ class EventData(object):
         self.error = None
         self.result = False
 
-    def update(self, model):
-        """ Updates the current State of a model to accurately reflect the Machine.
+    def update(self, state):
+        """ Updates the EventData object with the passed state.
 
         Attributes:
-            model (object): The updated model which gets the updated state assigned to its attribute `state`.
+            state (State or str or Enum): The state object or string to assign to EventData.
         """
-        state_name = model.state
-        if isinstance(model.state, enum.Enum):
-            state_name = model.state.name
 
-        self.state = self.machine.get_state(state_name)
+        if not isinstance(state, State):
+            self.state = self.machine.get_state(state)
 
     def __repr__(self):
         return "<%s('%s', %s)@%s>" % (type(self).__name__, self.state,
@@ -400,12 +398,7 @@ class Event(object):
         """ Internal trigger function called by the ``Machine`` instance. This should not
         be called directly but via the public method ``Machine.trigger``.
         """
-        if isinstance(model.state, enum.Enum):
-            state_name = model.state.name
-        else:
-            state_name = model.state
-
-        state = self.machine.get_state(state_name)
+        state = self.machine.get_state(model.state)
         if state.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
                                                                state.name)
@@ -643,9 +636,10 @@ class Machine(object):
                 assert self._has_state(value)
             self._initial = value.name
         else:
-            if value not in self.states:
-                self.add_state(value)
-            self._initial = value
+            state_name = value.name if isinstance(value, enum.Enum) else value
+            if state_name not in self.states:
+                self.add_state(state_name)
+            self._initial = state_name
 
     @property
     def has_queue(self):
@@ -707,6 +701,8 @@ class Machine(object):
 
     def get_state(self, state):
         """ Return the State instance with the passed name. """
+        if isinstance(state, enum.Enum):
+            state = state.name
         if state not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state]
@@ -730,11 +726,7 @@ class Machine(object):
         Args:
             state (str or Enum): value of setted state
         """
-        if isinstance(state, string_types):
-            state = self.get_state(state)
-        elif isinstance(state, enum.Enum):
-            state = self.get_state(state.name)
-
+        state = self.get_state(state)
         models = self.models if model is None else listify(model)
 
         for mod in models:
@@ -775,7 +767,7 @@ class Machine(object):
         states = listify(states)
 
         for state in states:
-            if isinstance(state, string_types) or isinstance(state, enum.Enum):
+            if isinstance(state, (string_types, enum.Enum)):
                 state = self._create_state(
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore, **kwargs)
