@@ -727,10 +727,7 @@ print(lump.state)
 
 ### <a name="execution-order"></a>Callback resolution and execution order
 
-As you have probably already realized, the standard way of passing callbacks to states and transitions is by name.
-When processing callbacks, Transitions will use the name to retrieve the related callback from the model.
-If the method cannot be retrieved and it contains dots, Transitions will treat the name as a path to a module function and try to import it.
-Alternatively, you can pass callables such as (bound) functions directly.
+As you have probably already realized, the standard way of passing callbacks to states and transitions is by name. When processing callbacks, `transitions` will use the name to retrieve the related callback from the model. If the method cannot be retrieved and it contains dots, Transitions will treat the name as a path to a module function and try to import it. Alternatively, you can pass callables such as (bound) functions directly. As mentioned earlier, you can also pass lists/tuples of callbacks to the callback parameters. Callbacks will be executed in the order they were added.
 
 ```python
 from transitions import Machine
