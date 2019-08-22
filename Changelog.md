@@ -4,6 +4,7 @@
 
 - Extended `add_ordered_transitions` documentation
 - Feature #334: Added Enum (Python 3.4+: `enum` Python 2.7: `enum34`) support (thanks @artofhuman and @justinttl)
+- Replaced test framework `nosetests` with `pytest` (thanks @artofhuman)
 
 ## 0.7.0 (August 2019)
 
