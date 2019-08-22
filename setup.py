@@ -18,11 +18,8 @@ extras_require = {'diagrams': ['pygraphviz']}
 
 extra_setuptools_args = {}
 if 'setuptools' in sys.modules:
-    extras_require['test'] = ['nose>=0.10.1']
-    tests_require.append('nose')
-    extra_setuptools_args = dict(
-        test_suite='nose.collector',
-    )
+    extras_require['test'] = ['pytest']
+    tests_require.append('pytest')
 
 setup(
     name="transitions",

@@ -20,7 +20,7 @@ install:
 build: off
 
 test_script:
-  - "%PYTHON%\\python.exe -m nose --with-coverage --with-doctest"
+  - "%PYTHON%\\python.exe -m pytest --doctest-modules --cov transitions/"
 
 #after_test:
 #  # This step builds your wheels.
