@@ -136,15 +136,13 @@ class State(object):
     def enter(self, event_data):
         """ Triggered when a state is entered. """
         _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
-        for handle in self.on_enter:
-            event_data.machine.callback(handle, event_data)
+        event_data.machine.callbacks(self.on_enter, event_data)
         _LOGGER.info("%sEntered state %s", event_data.machine.name, self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
-        for handle in self.on_exit:
-            event_data.machine.callback(handle, event_data)
+        event_data.machine.callbacks(self.on_exit, event_data)
         _LOGGER.info("%sExited state %s", event_data.machine.name, self.name)
 
     def add_callback(self, trigger, func):
@@ -264,21 +262,6 @@ class Transition(object):
                 return False
         return True
 
-    def _prepare_state_change(self, event_data):
-        for func in self.prepare:
-            event_data.machine.callback(func, event_data)
-            _LOGGER.debug("Executed callback '%s' before conditions.", func)
-
-    def _before_state_change(self, event_data):
-        for func in itertools.chain(event_data.machine.before_state_change, self.before):
-            event_data.machine.callback(func, event_data)
-            _LOGGER.debug("%sExecuted callback '%s' before transition.", event_data.machine.name, func)
-
-    def _after_state_change(self, event_data):
-        for func in itertools.chain(self.after, event_data.machine.after_state_change):
-            event_data.machine.callback(func, event_data)
-            _LOGGER.debug("%sExecuted callback '%s' after transition.", event_data.machine.name, func)
-
     def execute(self, event_data):
         """ Execute the transition.
         Args:
@@ -289,15 +272,20 @@ class Transition(object):
         _LOGGER.debug("%sInitiating transition from state %s to state %s...",
                       event_data.machine.name, self.source, self.dest)
 
-        self._prepare_state_change(event_data)
+        event_data.machine.callbacks(self.prepare, event_data)
+        _LOGGER.debug("%sExecuted callbacks before conditions.", event_data.machine.name)
 
         if not self._eval_conditions(event_data):
             return False
 
-        self._before_state_change(event_data)
+        event_data.machine.callbacks(itertools.chain(event_data.machine.before_state_change, self.before), event_data)
+        _LOGGER.debug("%sExecuted callback before transition.", event_data.machine.name)
+
         if self.dest:  # if self.dest is None this is an internal transition with no actual state change
             self._change_state(event_data)
-        self._after_state_change(event_data)
+
+        event_data.machine.callbacks(itertools.chain(self.after, event_data.machine.after_state_change), event_data)
+        _LOGGER.debug("%sExecuted callback after transition.", event_data.machine.name)
         return True
 
     def _change_state(self, event_data):
@@ -436,9 +424,8 @@ class Event(object):
         return self._process(event_data)
 
     def _process(self, event_data):
-        for func in self.machine.prepare_event:
-            self.machine.callback(func, event_data)
-            _LOGGER.debug("Executed machine preparation callback '%s' before conditions.", func)
+        self.machine.callbacks(self.machine.prepare_event, event_data)
+        _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
 
         try:
             for trans in self.transitions[event_data.state.name]:
@@ -450,9 +437,9 @@ class Event(object):
             event_data.error = err
             raise
         finally:
-            for func in self.machine.finalize_event:
-                self.machine.callback(func, event_data)
-                _LOGGER.debug("Executed machine finalize callback '%s'.", func)
+            self.machine.callbacks(self.machine.finalize_event, event_data)
+            _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
+
         return event_data.result
 
     def __repr__(self):
@@ -1023,6 +1010,12 @@ class Machine(object):
             bool The truth value of all triggers combined with AND
         """
         return all([getattr(model, trigger)(*args, **kwargs) for model in self.models])
+
+    def callbacks(self, funcs, event_data):
+        """ Triggers a list of callbacks """
+        for func in funcs:
+            self.callback(func, event_data)
+            _LOGGER.info("%sExecuted callback '%s'", self.name, func)
 
     def callback(self, func, event_data):
         """ Trigger a callback function with passed event_data parameters. In case func is a string,
