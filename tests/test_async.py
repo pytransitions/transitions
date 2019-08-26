@@ -1,7 +1,7 @@
 import asyncio
 from unittest.mock import MagicMock
-
 from transitions.extensions.asyncio import AsyncMachine
+
 from .test_core import TestTransitions
 
 
