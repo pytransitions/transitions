@@ -233,7 +233,6 @@ class NestedGraph(Graph):
         except KeyError:
             subgraph = _get_subgraph(self.fsm_graph, 'cluster_' + state)
             style_attr = self.fsm_graph.style_attributes.get('graph', {}).get(style)
-            d = self.fsm_graph.string()
             subgraph.graph_attr.update(style_attr)
 
     def set_previous_transition(self, src, dst):

@@ -106,7 +106,7 @@ class LockedMachine(Machine):
         """ Extends `transitions.core.Machine.add_model` by `model_context` keyword.
         Args:
             model (list or object): A model (list) to be managed by the machine.
-            initial (string or State): The initial state of the passed model[s].
+            initial (str, Enum or State): The initial state of the passed model[s].
             model_context (list or object): If passed, assign the context (list) to the machines
                 model specific context map.
         """

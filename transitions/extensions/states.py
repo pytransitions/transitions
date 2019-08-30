@@ -129,7 +129,7 @@ class Volatile(State):
     """ Adds scopes/temporal variables to the otherwise persistent state objects.
     Attributes:
         volatile_cls (cls): Class of the temporal object to be initiated.
-        volatile_hook (string): Model attribute name which will contain the volatile instance.
+        volatile_hook (str): Model attribute name which will contain the volatile instance.
     """
 
     def __init__(self, *args, **kwargs):

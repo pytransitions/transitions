@@ -327,13 +327,13 @@ class HierarchicalMachine(Machine):
                   ignore_invalid_triggers=None, parent=None, remap=None):
         """ Parses passed value to build a nested state structure recursively.
         Args:
-            states (list, string, dict, or State): a list, a State instance, the
+            states (list, str, dict, or State): a list, a State instance, the
                 name of a new state, or a dict with keywords to pass on to the
                 State initializer. If a list, each element can be of any of the
                 latter three types.
-            on_enter (string or list): callbacks to trigger when the state is
+            on_enter (str or list): callbacks to trigger when the state is
                 entered. Only valid if first argument is string.
-            on_exit (string or list): callbacks to trigger when the state is
+            on_exit (str or list): callbacks to trigger when the state is
                 exited. Only valid if first argument is string.
             ignore_invalid_triggers: when True, any calls to trigger methods
                 that are not valid for the present state (e.g., calling an
@@ -343,7 +343,7 @@ class HierarchicalMachine(Machine):
                 argument defined at the Machine level, and is in turn
                 overridden by any ignore_invalid_triggers explicitly
                 passed in an individual state's initialization arguments.
-            parent (NestedState or string): parent state for nested states.
+            parent (NestedState or str): parent state for nested states.
             remap (dict): reassigns transitions named `key from nested machines to parent state `value`.
         Returns: list of new `NestedState` objects
         """

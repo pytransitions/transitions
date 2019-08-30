@@ -106,11 +106,11 @@ class State(object):
                  ignore_invalid_triggers=None):
         """
         Args:
-            name (string): The name of the state
-            on_enter (string, list): Optional callable(s) to trigger when a
+            name (str): The name of the state
+            on_enter (str or list): Optional callable(s) to trigger when a
                 state is entered. Can be either a string providing the name of
                 a callable, or a list of strings.
-            on_exit (string, list): Optional callable(s) to trigger when a
+            on_exit (str or list): Optional callable(s) to trigger when a
                 state is exited. Can be either a string providing the name of a
                 callable, or a list of strings.
             ignore_invalid_triggers (Boolean): Optional flag to indicate if
@@ -150,9 +150,9 @@ class State(object):
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
         Args:
-            trigger (string): The type of triggering event. Must be one of
+            trigger (str): The type of triggering event. Must be one of
                 'enter' or 'exit'.
-            func (string): The name of the callback function.
+            func (str): The name of the callback function.
         """
         callback_list = getattr(self, 'on_' + trigger)
         callback_list.append(func)
@@ -174,7 +174,7 @@ class Condition(object):
     def __init__(self, func, target=True):
         """
         Args:
-            func (string): Name of the condition-checking callable
+            func (str): Name of the condition-checking callable
             target (bool): Indicates the target state--i.e., when True,
                 the condition-checking callback should return True to pass,
                 and when False, the callback should return False to pass.
@@ -296,9 +296,9 @@ class Transition(object):
     def add_callback(self, trigger, func):
         """ Add a new before, after, or prepare callback.
         Args:
-            trigger (string): The type of triggering event. Must be one of
+            trigger (str): The type of triggering event. Must be one of
                 'before', 'after' or 'prepare'.
-            func (string): The name of the callback function.
+            func (str): The name of the callback function.
         """
         callback_list = getattr(self, trigger)
         callback_list.append(func)
@@ -351,7 +351,7 @@ class EventData(object):
         """ Updates the EventData object with the passed state.
 
         Attributes:
-            state (State or str or Enum): The state object or string to assign to EventData.
+            state (State, str or Enum): The state object, enum member or string to assign to EventData.
         """
 
         if not isinstance(state, State):
@@ -370,7 +370,7 @@ class Event(object):
     def __init__(self, name, machine):
         """
         Args:
-            name (string): The name of the event, which is also the name of the
+            name (str): The name of the event, which is also the name of the
                 triggering callable (e.g., 'advance' implies an advance()
                 method).
             machine (Machine): The current Machine instance.
@@ -448,9 +448,9 @@ class Event(object):
     def add_callback(self, trigger, func):
         """ Add a new before or after callback to all available transitions.
         Args:
-            trigger (string): The type of triggering event. Must be one of
+            trigger (str): The type of triggering event. Must be one of
                 'before', 'after' or 'prepare'.
-            func (string): The name of the callback function.
+            func (str): The name of the callback function.
         """
         for trans in itertools.chain(*self.transitions.values()):
             trans.add_callback(trigger, func)
@@ -503,10 +503,10 @@ class Machine(object):
                 the current Machine instance will be used the model (i.e., all
                 triggering events will be attached to the Machine itself). Note that an empty list
                 is treated like no model.
-            states (list): A list of valid states. Each element can be either a
-                string or a State instance. If string, a new generic State
-                instance will be created that has the same name as the string.
-            initial (string or State): The initial state of the passed model[s].
+            states (list or Enum): A list or enumeration of valid states. Each list element can be either a
+                string, an enum member or a State instance. If string or enum member, a new generic State
+                instance will be created that is named according to the string or enum member's name.
+            initial (str, Enum or State): The initial state of the passed model[s].
             transitions (list): An optional list of transitions. Each element
                 is a dictionary of named arguments to be passed onto the
                 Transition initializer.
@@ -750,13 +750,12 @@ class Machine(object):
                    ignore_invalid_triggers=None, **kwargs):
         """ Add new state(s).
         Args:
-            states (list, string, dict, or State): a list, a State instance, the
-                name of a new state, or a dict with keywords to pass on to the
-                State initializer. If a list, each element can be of any of the
-                latter three types.
-            on_enter (string or list): callbacks to trigger when the state is
+            states (list, str, dict, Enum or State): a list, a State instance, the
+                name of a new state, an enumeration (member) or a dict with keywords to pass on to the
+                State initializer. If a list, each element can be a string, State or enumeration member.
+            on_enter (str or list): callbacks to trigger when the state is
                 entered. Only valid if first argument is string.
-            on_exit (string or list): callbacks to trigger when the state is
+            on_exit (str or list): callbacks to trigger when the state is
                 exited. Only valid if first argument is string.
             ignore_invalid_triggers: when True, any calls to trigger methods
                 that are not valid for the present state (e.g., calling an
@@ -828,29 +827,29 @@ class Machine(object):
                        unless=None, before=None, after=None, prepare=None, **kwargs):
         """ Create a new Transition instance and add it to the internal list.
         Args:
-            trigger (string): The name of the method that will trigger the
+            trigger (str): The name of the method that will trigger the
                 transition. This will be attached to the currently specified
                 model (e.g., passing trigger='advance' will create a new
                 advance() method in the model that triggers the transition.)
-            source(string or list): The name of the source state--i.e., the state we
+            source(str or list): The name of the source state--i.e., the state we
                 are transitioning away from. This can be a single state, a
                 list of states or an asterisk for all states.
-            dest (string): The name of the destination State--i.e., the state
+            dest (str): The name of the destination State--i.e., the state
                 we are transitioning into. This can be a single state or an
                 equal sign to specify that the transition should be reflexive
                 so that the destination will be the same as the source for
                 every given source. If dest is None, this transition will be
                 an internal transition (exit/enter callbacks won't be processed).
-            conditions (string or list): Condition(s) that must pass in order
+            conditions (str or list): Condition(s) that must pass in order
                 for the transition to take place. Either a list providing the
                 name of a callable, or a list of callables. For the transition
                 to occur, ALL callables must return True.
-            unless (string, list): Condition(s) that must return False in order
+            unless (str or list): Condition(s) that must return False in order
                 for the transition to occur. Behaves just like conditions arg
                 otherwise.
-            before (string or list): Callables to call before the transition.
-            after (string or list): Callables to call after the transition.
-            prepare (string or list): Callables to call when the trigger is activated
+            before (str or list): Callables to call before the transition.
+            after (str or list): Callables to call after the transition.
+            prepare (str or list): Callables to call when the trigger is activated
             **kwargs: Additional arguments which can be passed to the created transition.
                 This is useful if you plan to extend Machine.Transition and require more parameters.
         """
@@ -895,23 +894,23 @@ class Machine(object):
                 transitions. E.g., ['A', 'B', 'C'] will generate transitions
                 for A --> B, B --> C, and C --> A (if loop is True). If states
                 is None, all states in the current instance will be used.
-            trigger (string): The name of the trigger method that advances to
+            trigger (str): The name of the trigger method that advances to
                 the next state in the sequence.
             loop (boolean): Whether or not to add a transition from the last
                 state to the first state.
             loop_includes_initial (boolean): If no initial state was defined in
                 the machine, setting this to True will cause the _initial state
                 placeholder to be included in the added transitions.
-            conditions (string or list): Condition(s) that must pass in order
+            conditions (str or list): Condition(s) that must pass in order
                 for the transition to take place. Either a list providing the
                 name of a callable, or a list of callables. For the transition
                 to occur, ALL callables must return True.
-            unless (string, list): Condition(s) that must return False in order
+            unless (str or list): Condition(s) that must return False in order
                 for the transition to occur. Behaves just like conditions arg
                 otherwise.
-            before (string or list): Callables to call before the transition.
-            after (string or list): Callables to call after the transition.
-            prepare (string or list): Callables to call when the trigger is activated
+            before (str or list): Callables to call before the transition.
+            after (str or list): Callables to call after the transition.
+            prepare (str or list): Callables to call when the trigger is activated
             **kwargs: Additional arguments which can be passed to the created transition.
                 This is useful if you plan to extend Machine.Transition and require more parameters.
         """
@@ -955,9 +954,9 @@ class Machine(object):
     def get_transitions(self, trigger="", source="*", dest="*"):
         """ Return the transitions from the Machine.
         Args:
-            trigger (string): Trigger name of the transition.
-            source (string): Limits removal to transitions from a certain state.
-            dest (string): Limits removal to transitions to a certain state.
+            trigger (str): Trigger name of the transition.
+            source (str): Limits removal to transitions from a certain state.
+            dest (str): Limits removal to transitions to a certain state.
         """
         if trigger:
             events = (self.events[trigger], )
@@ -976,9 +975,9 @@ class Machine(object):
     def remove_transition(self, trigger, source="*", dest="*"):
         """ Removes a transition from the Machine and all models.
         Args:
-            trigger (string): Trigger name of the transition.
-            source (string): Limits removal to transitions from a certain state.
-            dest (string): Limits removal to transitions to a certain state.
+            trigger (str): Trigger name of the transition.
+            source (str): Limits removal to transitions from a certain state.
+            dest (str): Limits removal to transitions to a certain state.
         """
         source = listify(source) if source != "*" else source
         dest = listify(dest) if dest != "*" else dest
@@ -1016,7 +1015,7 @@ class Machine(object):
             the callable will be resolved from the passed model in event_data. This function is not intended to
             be called directly but through state and transition callback definitions.
         Args:
-            func (string, callable): The callback function.
+            func (str or callable): The callback function.
                 1. First, if the func is callable, just call it
                 2. Second, we try to import string assuming it is a path to a func
                 3. Fallback to a model attribute
@@ -1036,7 +1035,7 @@ class Machine(object):
         """ Converts a model's method name or a path to a callable into a callable.
             If func is not a string it will be returned unaltered.
         Args:
-            func (string, callable): Method name or a path to a callable
+            func (str or callable): Method name or a path to a callable
             event_data (EventData): Currently processed event
         Returns:
             callable function resolved from string or func

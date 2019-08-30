@@ -85,7 +85,7 @@ class Graph(object):
     def generate(self, title=None, roi_state=None):
         """ Generate a DOT graph with graphviz
         Args:
-            roi_state (string): Optional, show only custom states and edges from roi_state
+            roi_state (str): Optional, show only custom states and edges from roi_state
         """
         if not pgv:  # pragma: no cover
             raise Exception('AGraph diagram requires graphviz')
@@ -121,8 +121,8 @@ class Graph(object):
     def draw(graph, filename, format=None, prog='dot', args=''):
         """ Generates and saves an image of the state machine using graphviz.
         Args:
-            filename (string): path and name of image output
-            format (string): Optional format of the output file
+            filename (str): path and name of image output
+            format (str): Optional format of the output file
         Returns:
 
         """
