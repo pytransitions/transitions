@@ -46,6 +46,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Hierarchical State Machine](#hsm)
         - [Threading](#threading)
         - [State features](#state-features)
+        - [Django](#django-support)
     - [Bug reports etc.](#bug-reports)
 
 
@@ -1356,6 +1357,11 @@ class VerboseMachine(Machine):
         return MyState(*args, **kwargs)
 
 ```
+
+#### <a name="django-support"></a> Using transitions together with Django
+
+Christian Ledermann developed `django-transitions`, a module dedicated to streamline the work with `transitions` and Django. The source code is also hosted on [Github](https://github.com/PrimarySite/django-transitions). Have a look at [the documentation](https://django-transitions.readthedocs.io/en/latest/) for usage examples.
+
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
 For bug reports and other issues, please open an issue on GitHub.
