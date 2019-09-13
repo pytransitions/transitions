@@ -1,10 +1,14 @@
 # Changelog
 
-## 0.7.1 ()
+## 0.7.1 (September 2019)
 
-- Extended `add_ordered_transitions` documentation
+Release 0.7.1 is a minor release and contains several documentation improvements and a new feature:
+
 - Feature #334: Added Enum (Python 3.4+: `enum` Python 2.7: `enum34`) support (thanks @artofhuman and @justinttl)
 - Replaced test framework `nosetests` with `pytest` (thanks @artofhuman)
+- Extended `add_ordered_transitions` documentation in `Readme.md`
+- Collected code snippets from earlier discussions in `examples/Frequently asked questions.ipynb`
+- Improved stripping of `long_description` in `setup.py` (thanks @artofhuman) 
 
 ## 0.7.0 (August 2019)
 
