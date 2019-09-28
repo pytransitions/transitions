@@ -104,3 +104,33 @@ class TestAsync(TestTransitions):
 
         assert m1.is_C()
         assert m2.is_C()
+
+
+async def test_callback_order():
+
+    finished = []
+
+    class Machine(AsyncMachine):
+        async def before(self):
+            await asyncio.sleep(0.1)
+            finished.append(2)
+
+        async def after(self):
+            await asyncio.sleep(0.1)
+            finished.append(3)
+
+    async def after_state_change():
+        finished.append(4)
+
+    async def before_state_change():
+        finished.append(1)
+
+    m = Machine(
+        states=['start', 'end'],
+        after_state_change=after_state_change,
+        before_state_change=before_state_change,
+        initial='start',
+    )
+    m.add_transition('transit', 'start', 'end', after='after', before='before')
+    await m.transit()
+    assert finished == [1, 2, 3, 4]
