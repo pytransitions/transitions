@@ -105,6 +105,22 @@ class TestEnumsAsStates(TestCase):
         assert s.is_ONE()
         assert s.message == 'Goodbye'
 
+    def test_str_enum(self):
+        class States(str, enum.Enum):
+            ONE = "one"
+            TWO = "two"
+
+        class Stuff(object):
+            def __init__(self, machine_cls):
+                self.state = None
+                self.machine = machine_cls(states=States, initial=States.ONE, model=self)
+                self.machine.add_transition("advance", States.ONE, States.TWO)
+
+        s = Stuff(self.machine_cls)
+        assert s.is_ONE()
+        s.advance()
+        assert s.is_TWO()
+
 
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):

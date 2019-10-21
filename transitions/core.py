@@ -858,7 +858,7 @@ class Machine(object):
             for model in self.models:
                 self._add_trigger_to_model(trigger, model)
 
-        if isinstance(source, string_types):
+        if isinstance(source, string_types) and not isinstance(source, Enum):
             source = list(self.states.keys()) if source == self.wildcard_all else [source]
         else:
             source = [s.name if self._has_state(s) or isinstance(s, Enum) else s for s in listify(source)]
