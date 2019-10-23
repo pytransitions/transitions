@@ -1,3 +1,4 @@
+from enum import Enum
 from six import string_types, iteritems
 from functools import partial
 import itertools
@@ -67,7 +68,7 @@ class MarkupMachine(Machine):
         markup_states = []
         for state in states:
             s_def = _convert(state, self.state_attributes, self.skip_references)
-            s_def['name'] = getattr(state, '_name', state.name)
+            s_def['name'] = state.name
             if getattr(state, 'children', False):
                 s_def['children'] = self._convert_states(state.children)
             markup_states.append(s_def)
@@ -153,7 +154,9 @@ def _convert(obj, attributes, skip):
         val = getattr(obj, key, False)
         if not val:
             continue
-        if isinstance(val, string_types):
+        if isinstance(val, Enum):
+            s[key] = val.name
+        elif isinstance(val, string_types):
             s[key] = val
         else:
             try:

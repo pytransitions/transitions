@@ -164,7 +164,7 @@ class GraphMachine(MarkupMachine):
             grph = self.graph_cls(self, title=title if title is not None else self.title)
             self.model_graphs[model] = grph
             try:
-                self.model_graphs[model].set_node_style(model.state, 'active')
+                self.model_graphs[model].set_node_style(model.state.name, 'active')
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:
