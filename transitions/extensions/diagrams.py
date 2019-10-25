@@ -3,6 +3,7 @@ from transitions.extensions.markup import MarkupMachine
 
 import warnings
 import logging
+from enum import Enum
 from functools import partial
 
 _LOGGER = logging.getLogger(__name__)
@@ -164,7 +165,10 @@ class GraphMachine(MarkupMachine):
             grph = self.graph_cls(self, title=title if title is not None else self.title)
             self.model_graphs[model] = grph
             try:
-                self.model_graphs[model].set_node_style(model.state.name, 'active')
+                if isinstance(model.state, Enum):
+                    self.model_graphs[model].set_node_style(model.state.name, 'active')
+                else:
+                    self.model_graphs[model].set_node_style(model.state, 'active')
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:

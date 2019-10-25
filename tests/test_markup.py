@@ -3,13 +3,18 @@ try:
 except ImportError:
     pass
 
+try:
+    import enum
+except ImportError:
+    enum = None
+
 from transitions.extensions.markup import MarkupMachine, rep
 from transitions.extensions.factory import HierarchicalMarkupMachine
 from .utils import Stuff
 from functools import partial
 
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 try:
     from unittest.mock import MagicMock
@@ -158,3 +163,23 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
         self.machine_cls = HierarchicalMarkupMachine
         self.num_trans = len(self.transitions)
         self.num_auto = self.num_trans + 9**2
+
+
+@skipIf(enum is None, "enum is not available")
+class TestMarkupMachineEnum(TestMarkupMachine):
+    class States(enum.Enum):
+        A = 1
+        B = 2
+        C = 3
+        D = 4
+
+    def setUp(self):
+        self.machine_cls = MarkupMachine
+        self.states = TestMarkupMachineEnum.States
+        self.transitions = [
+            {'trigger': 'walk', 'source': self.states.A, 'dest': self.states.B},
+            {'trigger': 'run', 'source': self.states.B, 'dest': self.states.C},
+            {'trigger': 'sprint', 'source': self.states.C, 'dest': self.states.D}
+        ]
+        self.num_trans = len(self.transitions)
+        self.num_auto = self.num_trans + len(self.states)**2

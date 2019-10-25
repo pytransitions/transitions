@@ -1,8 +1,8 @@
-from enum import Enum
 from six import string_types, iteritems
 from functools import partial
 import itertools
 import importlib
+from enum import Enum
 from collections import defaultdict
 
 from ..core import Machine
@@ -68,7 +68,10 @@ class MarkupMachine(Machine):
         markup_states = []
         for state in states:
             s_def = _convert(state, self.state_attributes, self.skip_references)
-            s_def['name'] = state.name
+            if isinstance(state, Enum):
+                s_def['name'] = state.name
+            else:
+                s_def['name'] = getattr(state, '_name', state.name)
             if getattr(state, 'children', False):
                 s_def['children'] = self._convert_states(state.children)
             markup_states.append(s_def)
