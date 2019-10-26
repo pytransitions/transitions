@@ -94,7 +94,7 @@ class State(object):
     Attributes:
         name (str): State name which is also assigned to the model(s).
         on_enter (list): Callbacks executed when a state is entered.
-        on_exit (list): Callbacks executed when a state is entered.
+        on_exit (list): Callbacks executed when a state is exited.
         ignore_invalid_triggers (bool): Indicates if unhandled/invalid triggers should raise an exception.
     """
 
