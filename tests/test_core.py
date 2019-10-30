@@ -774,6 +774,13 @@ class TestTransitions(TestCase):
         m = Machine(model=model)
         self.assertEqual(model.trigger(5), 5)
 
+        def raise_key_error():
+            raise KeyError
+
+        self.stuff.machine.add_transition('do_raises_keyerror', '*', 'C', before=raise_key_error)
+        with self.assertRaises(KeyError):
+            self.stuff.trigger('do_raises_keyerror')
+
     def test_get_triggers(self):
         states = ['A', 'B', 'C']
         transitions = [['a2b', 'A', 'B'],

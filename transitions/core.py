@@ -62,10 +62,10 @@ def _get_trigger(model, machine, trigger_name, *args, **kwargs):
         bool: True if a transitions has been conducted or the trigger event has been queued.
     """
     try:
-        return machine.events[trigger_name].trigger(model, *args, **kwargs)
+        event = machine.events[trigger_name]
     except KeyError:
-        pass
-    raise AttributeError("Do not know event named '%s'." % trigger_name)
+        raise AttributeError("Do not know event named '%s'." % trigger_name)
+    return event.trigger(model, *args, **kwargs)
 
 
 def _prep_ordered_arg(desired_length, arguments=None):
