@@ -47,6 +47,19 @@ class TestEnumsAsStates(TestCase):
         assert m.is_YELLOW() is False
         assert m.is_GREEN() is True
 
+    def test_if_enum_has_string_behavior(self):
+        class States(str, enum.Enum):
+            __metaclass__ = enum.EnumMeta
+
+            RED = 'red'
+            YELLOW = 'yellow'
+
+        m = self.machine_cls(states=States, auto_transitions=False, initial=States.RED)
+        m.add_transition('switch_to_yellow', States.RED, States.YELLOW)
+
+        m.switch_to_yellow()
+        assert m.is_YELLOW() is True
+
     def test_property_initial(self):
         transitions = [
             {'trigger': 'switch_to_yellow', 'source': self.States.RED, 'dest': self.States.YELLOW},
