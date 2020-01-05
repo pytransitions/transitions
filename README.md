@@ -319,6 +319,8 @@ machine = Machine(lump, states=['A', 'B', 'C'])
 
 Now, any time `lump` transitions to state `A`, the `on_enter_A()` method defined in the `Matter` class will fire.
 
+#### <a name="checking-state"></a>Checking state
+
 You can always check the current state of the model by either:
 
 - inspecting the `.state` attribute, or
@@ -334,6 +336,15 @@ lump.is_gas()
 lump.is_solid()
 >>> True
 machine.get_state(lump.state).name
+>>> 'solid'
+```
+
+If you'd like you track it using a different attribute, you could do that using the `model_attribute` argument while initializing the `Machine`.
+
+```python
+lump = Matter()
+machine = Machine(lump, states=['solid', 'liquid', 'gas'],  model='matter_state', initial='solid')
+lump.matter_state
 >>> 'solid'
 ```
 
@@ -911,6 +922,20 @@ machine = Machine(states=states, transitions=transitions, add_self=False)
 machine.add_model(Matter())
 >>> "MachineError: No initial state configured for machine, must specify when adding model."
 machine.add_model(Matter(), initial='liquid')
+```
+
+Models with multiple states could attach multiple machines using different `model_attribute` values:
+
+```python
+lump = Matter()
+
+lump.state
+>>> 'solid'
+lump.shipping_state
+>>> 'delivered'
+
+matter_machine = Machine(lump, model_field='state', **kwargs)
+shipment_machine = Machine(lump, model_field='shipping_state', **kwargs)
 ```
 
 ### Logging

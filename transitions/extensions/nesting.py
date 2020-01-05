@@ -220,7 +220,7 @@ class NestedTransition(Transition):
         machine = event_data.machine
         model = event_data.model
         dest_state = machine.get_state(self.dest)
-        source_state = machine.get_state(model.state)
+        source_state = machine.get_model_state(model)
         lvl = source_state.exit_nested(event_data, dest_state)
         event_data.machine.set_state(self.dest, model)
         event_data.update(dest_state)
@@ -245,13 +245,13 @@ class NestedEvent(Event):
     """ An event type to work with nested states. """
 
     def _trigger(self, model, *args, **kwargs):
-        state = self.machine.get_state(model.state)
+        state = self.machine.get_model_state(model)
         while state.parent and state.name not in self.transitions:
             state = state.parent
         if state.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
-                                                               model.state)
-            if self.machine.get_state(model.state).ignore_invalid_triggers:
+                                                               self.machine.get_model_state(model))
+            if self.machine.get_model_state(model).ignore_invalid_triggers:
                 _LOGGER.warning(msg)
             else:
                 raise MachineError(msg)
@@ -319,9 +319,9 @@ class HierarchicalMachine(Machine):
 
         """
         if not allow_substates:
-            return model.state == state_name
+            return self._get_model_state_value(model) == state_name
 
-        return self.get_state(model.state).is_substate_of(state_name)
+        return self.get_model_state(model).is_substate_of(state_name)
 
     def _traverse(self, states, on_enter=None, on_exit=None,
                   ignore_invalid_triggers=None, parent=None, remap=None):
@@ -515,6 +515,6 @@ class HierarchicalMachine(Machine):
             state_name (str): Name of the destination state.
         """
 
-        event = EventData(self.get_state(model.state), Event('to', self), self,
+        event = EventData(self.get_model_state(model), Event('to', self), self,
                           model, args=args, kwargs=kwargs)
-        self._create_transition(model.state, state_name).execute(event)
+        self._create_transition(self._get_model_state_value(model), state_name).execute(event)
