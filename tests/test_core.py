@@ -34,7 +34,7 @@ class TestTransitions(TestCase):
     def tearDown(self):
         pass
 
-    def test_init_machine_with_hella_arguments(self):
+    def test_init_machine_with_hello_arguments(self):
         states = [
             State('State1'),
             'State2',
@@ -1015,6 +1015,40 @@ class TestTransitions(TestCase):
         m.model.move()
         self.assertEqual(m.model.state, 'A')
         self.assertEqual(m.model.level, 2)
+
+    def test_dynamic_model_state_attribute(self):
+        class Model:
+            def __init__(self):
+                self.status = None
+
+        m = Machine(Model(), states=['A', 'B'], initial='A', model_attribute='status')
+        self.assertEqual(m.model.status, 'A')
+        m.add_transition('move', 'A', 'B')
+        m.model.move()
+        self.assertEqual(m.model.status, 'B')
+
+    def test_multiple_machines_per_model(self):
+        class Model:
+            def __init__(self):
+                self.state_a = None
+                self.state_b = None
+
+        instance = Model()
+        machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='state_a')
+        machine_a.add_transition('melt', 'A', 'B')
+        machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='state_b')
+        machine_b.add_transition('freeze', 'B', 'A')
+
+        self.assertEqual(instance.state_a, 'A')
+        self.assertEqual(instance.state_b, 'B')
+
+        instance.melt()
+        self.assertEqual(instance.state_a, 'B')
+        self.assertEqual(instance.state_b, 'B')
+
+        instance.freeze()
+        self.assertEqual(instance.state_b, 'A')
+        self.assertEqual(instance.state_a, 'B')
 
 
 class TestWarnings(TestCase):

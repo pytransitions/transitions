@@ -105,10 +105,10 @@ class MarkupMachine(Machine):
 
     def _convert_models(self):
         models = []
-        for m in self.models:
-            model_def = dict(state=m.state)
-            model_def['name'] = m.name if hasattr(m, 'name') else str(id(m))
-            model_def['class-name'] = 'self' if m == self else m.__module__ + "." + m.__class__.__name__
+        for model in self.models:
+            model_def = dict(state=self._get_model_state_value(model))
+            model_def['name'] = model.name if hasattr(model, 'name') else str(id(model))
+            model_def['class-name'] = 'self' if model == self else model.__module__ + "." + model.__class__.__name__
             models.append(model_def)
         return models
 

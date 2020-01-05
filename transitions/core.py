@@ -290,7 +290,7 @@ class Transition(object):
     def _change_state(self, event_data):
         event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
-        event_data.update(event_data.model.state)
+        event_data.update(event_data.machine.get_model_state(event_data.model).value)
         event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
@@ -408,7 +408,7 @@ class Event(object):
         """ Internal trigger function called by the ``Machine`` instance. This should not
         be called directly but via the public method ``Machine.trigger``.
         """
-        state = self.machine.get_state(model.state)
+        state = self.machine.get_model_state(model)
         if state.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
                                                                state.name)
@@ -496,7 +496,7 @@ class Machine(object):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', **kwargs):
         """
         Args:
             model (object or list): The object(s) whose states we want to manage. If 'self',
@@ -570,6 +570,7 @@ class Machine(object):
         self.after_state_change = after_state_change
         self.finalize_event = finalize_event
         self.name = name + ": " if name is not None else ""
+        self.model_attribute = model_attribute
 
         self.models = []
 
@@ -728,7 +729,13 @@ class Machine(object):
         Returns:
             bool: Whether the model's current state is state.
         """
-        return model.state == state
+        return self._get_model_state_value(model) == state
+
+    def _get_model_state_value(self, model):
+        return getattr(model, self.model_attribute)
+
+    def get_model_state(self, model):
+        return self.get_state(self._get_model_state_value(model))
 
     def set_state(self, state, model=None):
         """
@@ -739,8 +746,8 @@ class Machine(object):
         state = self.get_state(state)
         models = self.models if model is None else listify(model)
 
-        for mod in models:
-            mod.state = state.value
+        for model in models:
+            setattr(model, self.model_attribute, state.value)
 
     def add_state(self, *args, **kwargs):
         """ Alias for add_states. """
@@ -853,6 +860,7 @@ class Machine(object):
             **kwargs: Additional arguments which can be passed to the created transition.
                 This is useful if you plan to extend Machine.Transition and require more parameters.
         """
+        assert trigger != self.model_attribute, "Trigger name cannot be same as model attribute name."
         if trigger not in self.events:
             self.events[trigger] = self._create_event(trigger, self)
             for model in self.models:
