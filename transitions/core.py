@@ -290,7 +290,7 @@ class Transition(object):
     def _change_state(self, event_data):
         event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
-        event_data.update(event_data.machine.get_model_state(event_data.model).value)
+        event_data.update(getattr(event_data.model, event_data.machine.model_attribute))
         event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
@@ -729,13 +729,10 @@ class Machine(object):
         Returns:
             bool: Whether the model's current state is state.
         """
-        return self._get_model_state_value(model) == state
-
-    def _get_model_state_value(self, model):
-        return getattr(model, self.model_attribute)
+        return getattr(model, self.model_attribute) == state
 
     def get_model_state(self, model):
-        return self.get_state(self._get_model_state_value(model))
+        return self.get_state(getattr(model, self.model_attribute))
 
     def set_state(self, state, model=None):
         """

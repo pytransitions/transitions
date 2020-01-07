@@ -319,7 +319,7 @@ class HierarchicalMachine(Machine):
 
         """
         if not allow_substates:
-            return self._get_model_state_value(model) == state_name
+            return getattr(model, self.model_attribute) == state_name
 
         return self.get_model_state(model).is_substate_of(state_name)
 
@@ -517,4 +517,4 @@ class HierarchicalMachine(Machine):
 
         event = EventData(self.get_model_state(model), Event('to', self), self,
                           model, args=args, kwargs=kwargs)
-        self._create_transition(self._get_model_state_value(model), state_name).execute(event)
+        self._create_transition(getattr(model, self.model_attribute), state_name).execute(event)

@@ -164,7 +164,7 @@ class GraphMachine(MarkupMachine):
             grph = self.graph_cls(self, title=title if title is not None else self.title)
             self.model_graphs[model] = grph
             try:
-                self.model_graphs[model].set_node_style(self._get_model_state_value(model), 'active')
+                self.model_graphs[model].set_node_style(getattr(model, self.model_attribute), 'active')
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:
@@ -172,7 +172,7 @@ class GraphMachine(MarkupMachine):
         except KeyError:
             _ = self._get_graph(model, title, force_new=True)
             m = self.model_graphs[model]
-        m.roi_state = self._get_model_state_value(model) if show_roi else None
+        m.roi_state = getattr(model, self.model_attribute) if show_roi else None
         return m.get_graph(title=title)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
