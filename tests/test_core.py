@@ -34,7 +34,7 @@ class TestTransitions(TestCase):
     def tearDown(self):
         pass
 
-    def test_init_machine_with_hello_arguments(self):
+    def test_init_machine_with_hella_arguments(self):
         states = [
             State('State1'),
             'State2',
