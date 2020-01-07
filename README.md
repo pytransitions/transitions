@@ -934,8 +934,8 @@ lump.state
 lump.shipping_state
 >>> 'delivered'
 
-matter_machine = Machine(lump, model_field='state', **kwargs)
-shipment_machine = Machine(lump, model_field='shipping_state', **kwargs)
+matter_machine = Machine(lump, model_attribute='state', **kwargs)
+shipment_machine = Machine(lump, model_attribute='shipping_state', **kwargs)
 ```
 
 ### Logging
