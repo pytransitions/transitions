@@ -743,8 +743,8 @@ class Machine(object):
         state = self.get_state(state)
         models = self.models if model is None else listify(model)
 
-        for model in models:
-            setattr(model, self.model_attribute, state.value)
+        for mod in models:
+            setattr(mod, self.model_attribute, state.value)
 
     def add_state(self, *args, **kwargs):
         """ Alias for add_states. """
@@ -857,7 +857,8 @@ class Machine(object):
             **kwargs: Additional arguments which can be passed to the created transition.
                 This is useful if you plan to extend Machine.Transition and require more parameters.
         """
-        assert trigger != self.model_attribute, "Trigger name cannot be same as model attribute name."
+        if trigger == self.model_attribute:
+            raise ValueError("Trigger name cannot be same as model attribute name.")
         if trigger not in self.events:
             self.events[trigger] = self._create_event(trigger, self)
             for model in self.models:
