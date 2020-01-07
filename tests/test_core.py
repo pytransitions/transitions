@@ -1013,12 +1013,17 @@ class TestTransitions(TestCase):
         class Model:
             def __init__(self):
                 self.status = None
+                self.state = 'some_value'
 
         m = Machine(Model(), states=['A', 'B'], initial='A', model_attribute='status')
         self.assertEqual(m.model.status, 'A')
+        self.assertEqual(m.model.state, 'some_value')
+
         m.add_transition('move', 'A', 'B')
         m.model.move()
+
         self.assertEqual(m.model.status, 'B')
+        self.assertEqual(m.model.state, 'some_value')
 
     def test_multiple_machines_per_model(self):
         class Model:
