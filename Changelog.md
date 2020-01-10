@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.2 (January 2020)
+
+Release 0.7.2 is a minor release and contains bugfixes and and a new feature
+
+- Bugfix #386: Fix transitions for enums with str behavior (thanks @artofhuman)
+- Bugfix #378: Don't mask away KeyError when executing a transition (thanks @facundofc)
+- Feature #387: Add support for dynamic model state attribute (thanks @v1k45)
+
 ## 0.7.1 (September 2019)
 
 Release 0.7.1 is a minor release and contains several documentation improvements and a new feature:
