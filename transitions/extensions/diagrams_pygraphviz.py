@@ -8,6 +8,8 @@
 
 import logging
 from .nesting import NestedState
+from .diagrams import BaseGraph
+
 try:
     import pygraphviz as pgv
 except ImportError:  # pragma: no cover
@@ -22,17 +24,11 @@ _LOGGER.addHandler(logging.NullHandler())
 _super = super
 
 
-class Graph(object):
+class Graph(BaseGraph):
     """ Graph creation for transitions.core.Machine.
         Attributes:
             machine (object): Reference to the related machine.
     """
-
-    def __init__(self, machine, title=None):
-        self.machine = machine
-        self.fsm_graph = None
-        self.roi_state = None
-        self.generate(title)
 
     def _add_nodes(self, states, container):
         for state in states:
@@ -53,21 +49,10 @@ class Graph(object):
             else:
                 container.add_edge(src, dst, **edge_attr)
 
-    def _transition_label(self, tran):
-        edge_label = tran.get('label', tran['trigger'])
-        if 'dest' not in tran:
-            edge_label += " [internal]"
-        if self.machine.show_conditions and any(prop in tran for prop in ['conditions', 'unless']):
-            x = '{edge_label} [{conditions}]'.format(
-                edge_label=edge_label,
-                conditions=' & '.join(tran.get('conditions', []) + ['!' + u for u in tran.get('unless', [])]),
-            )
-            return x
-        return edge_label
-
     def generate(self, title=None):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object """
         if not pgv:  # pragma: no cover
+            import pygraphviz
             raise Exception('AGraph diagram requires pygraphviz')
 
         title = '' if not title else title
@@ -116,19 +101,6 @@ class Graph(object):
             return filtered
         else:
             return self.fsm_graph
-
-    def _convert_state_attributes(self, state):
-        label = state.get('label', state['name'])
-        if self.machine.show_state_attributes:
-            if 'tags' in state:
-                label += ' [' + ', '.join(state['tags']) + ']'
-            if 'on_enter' in state:
-                label += '\l- enter:\l  + ' + '\l  + '.join(state['on_enter'])
-            if 'on_exit' in state:
-                label += '\l- exit:\l  + ' + '\l  + '.join(state['on_exit'])
-            if 'timeout' in state:
-                label += '\l- timeout(' + state['timeout'] + 's)  -> (' + ', '.join(state['on_timeout']) + ')'
-        return label
 
     def set_node_style(self, state, style):
         node = self.fsm_graph.get_node(state)

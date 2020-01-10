@@ -541,11 +541,11 @@ class TestWithGraphTransitions(TestTransitions):
         State.separator = '/'
         machine = GraphMachine('self', states, initial='A',
                                auto_transitions=False,
-                               ignore_invalid_triggers=True)
+                               ignore_invalid_triggers=True, use_pygraphviz=False)
         machine.add_ordered_transitions(trigger='next_state')
         machine.next_state()
         self.assertEqual(machine.state, 'B')
-        target = tempfile.NamedTemporaryFile()
+        target = tempfile.NamedTemporaryFile(suffix='.png')
         machine.get_graph().draw(target.name, prog='dot')
         self.assertTrue(getsize(target.name) > 0)
         target.close()

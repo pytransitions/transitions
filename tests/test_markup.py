@@ -3,18 +3,24 @@ try:
 except ImportError:
     pass
 
+from transitions.core import Enum
 from transitions.extensions.markup import MarkupMachine, rep
 from transitions.extensions.factory import HierarchicalMarkupMachine
 from .utils import Stuff
 from functools import partial
 
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 try:
     from unittest.mock import MagicMock
 except ImportError:
     from mock import MagicMock
+
+try:
+    import enum
+except ImportError:
+    enum = None
 
 
 class SimpleModel(object):
@@ -94,9 +100,8 @@ class TestMarkupMachine(TestCase):
     def test_markup_self(self):
         m1 = self.machine_cls(states=self.states, transitions=self.transitions, initial='A')
         m1.walk()
-        # print(m1.markup)
         m2 = self.machine_cls(markup=m1.markup)
-        self.assertEqual(m1.state, m2.state)
+        self.assertTrue(m1.state == m2.state or m1.state.name == m2.state)
         self.assertEqual(len(m1.models), len(m2.models))
         self.assertEqual(sorted(m1.states.keys()), sorted(m2.states.keys()))
         self.assertEqual(sorted(m1.events.keys()), sorted(m2.events.keys()))
@@ -108,11 +113,12 @@ class TestMarkupMachine(TestCase):
         model1 = SimpleModel()
         m1 = self.machine_cls(model1, states=self.states, transitions=self.transitions, initial='A')
         model1.walk()
+        print(m1.markup)
         m2 = self.machine_cls(markup=m1.markup)
         model2 = m2.models[0]
         self.assertIsInstance(model2, SimpleModel)
         self.assertEqual(len(m1.models), len(m2.models))
-        self.assertEqual(model1.state, model2.state)
+        self.assertTrue(model1.state == model2.state or model1.state.name == model2.state)
         self.assertEqual(sorted(m1.states.keys()), sorted(m2.states.keys()))
         self.assertEqual(sorted(m1.events.keys()), sorted(m2.events.keys()))
 
@@ -158,3 +164,24 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
         self.machine_cls = HierarchicalMarkupMachine
         self.num_trans = len(self.transitions)
         self.num_auto = self.num_trans + 9**2
+
+
+@skipIf(enum is None, "enum is not available")
+class TestMarkupMachineEnum(TestMarkupMachine):
+
+    class States(Enum):
+        A = 1
+        B = 2
+        C = 3
+        D = 4
+
+    def setUp(self):
+        self.machine_cls = MarkupMachine
+        self.states = TestMarkupMachineEnum.States
+        self.transitions = [
+            {'trigger': 'walk', 'source': self.states.A, 'dest': self.states.B},
+            {'trigger': 'run', 'source': self.states.B, 'dest': self.states.C},
+            {'trigger': 'sprint', 'source': self.states.C, 'dest': self.states.D}
+        ]
+        self.num_trans = len(self.transitions)
+        self.num_auto = self.num_trans + len(self.states)**2

@@ -269,7 +269,6 @@ class TestDiagramsNested(TestDiagrams):
         self.assertEqual(len(nodes), 3)
 
     def test_internal(self):
-        self.use_pygraphviz = True
         states = ['A', 'B']
         transitions = [['go', 'A', 'B'],
                        dict(trigger='fail', source='A', dest=None, conditions=['failed']),

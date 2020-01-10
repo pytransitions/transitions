@@ -97,6 +97,14 @@ class TestTransitions(TestCase):
         m.sprint()
         self.assertEqual(m.state, 'D')
 
+    def test_add_states(self):
+        s = self.stuff
+        s.machine.add_state('X')
+        s.machine.add_state('Y')
+        s.machine.add_state('Z')
+        event = s.machine.events['to_{0}'.format(s.state)]
+        self.assertEqual(1, len(event.transitions['X']))
+
     def test_transitioning(self):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'B')

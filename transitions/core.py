@@ -791,10 +791,14 @@ class Machine(object):
             self.states[state.name] = state
             for model in self.models:
                 self._add_model_to_state(state, model)
-        # Add automatic transitions after all states have been created
-        if self.auto_transitions:
-            for state in self.states.keys():
-                self.add_transition('to_%s' % state, self.wildcard_all, state)
+            if self.auto_transitions:
+                for a_state in self.states.keys():
+                    # add all states as sources to auto transitions 'to_<state>' with dest <state>
+                    if a_state == state.name:
+                        self.add_transition('to_%s' % a_state, self.wildcard_all, a_state)
+                    # add auto transition with source <state> to <a_state>
+                    else:
+                        self.add_transition('to_%s' % a_state, state.name, a_state)
 
     def _add_model_to_state(self, state, model):
         self._checked_assignment(model, 'is_%s' % state.name, partial(self.is_state, state.value, model))

@@ -2,9 +2,8 @@ from six import string_types, iteritems
 from functools import partial
 import itertools
 import importlib
-from collections import defaultdict
 
-from ..core import Machine
+from ..core import Machine, Enum
 import numbers
 
 
@@ -67,8 +66,12 @@ class MarkupMachine(Machine):
         markup_states = []
         for state in states:
             s_def = _convert(state, self.state_attributes, self.skip_references)
-            s_def['name'] = getattr(state, '_name', state.name)
-            if getattr(state, 'children', False):
+            state_name = state._name
+            if isinstance(state_name, Enum):
+                s_def['name'] = state_name.name
+            else:
+                s_def['name'] = state_name
+            if getattr(state, 'children', []):
                 s_def['children'] = self._convert_states(state.children)
             markup_states.append(s_def)
         return markup_states
@@ -106,7 +109,8 @@ class MarkupMachine(Machine):
     def _convert_models(self):
         models = []
         for model in self.models:
-            model_def = dict(state=getattr(model, self.model_attribute))
+            state = getattr(model, self.model_attribute)
+            model_def = dict(state=state.name if isinstance(state, Enum) else state)
             model_def['name'] = model.name if hasattr(model, 'name') else str(id(model))
             model_def['class-name'] = 'self' if model == self else model.__module__ + "." + model.__class__.__name__
             models.append(model_def)

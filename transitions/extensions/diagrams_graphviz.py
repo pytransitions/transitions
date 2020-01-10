@@ -12,6 +12,7 @@ from collections import defaultdict
 from os.path import splitext
 
 from .nesting import NestedState
+from .diagrams import BaseGraph
 try:
     import graphviz as pgv
 except ImportError:  # pragma: no cover
@@ -26,18 +27,15 @@ _LOGGER.addHandler(logging.NullHandler())
 _super = super
 
 
-class Graph(object):
+class Graph(BaseGraph):
     """ Graph creation for transitions.core.Machine.
         Attributes:
             machine (object): Reference to the related machine.
     """
 
     def __init__(self, machine, title=None):
-        self.machine = machine
-        self.roi_state = None
-        self.custom_styles = None
         self.reset_styling()
-        self.generate(title)
+        _super(Graph, self).__init__(machine, title)
 
     def set_previous_transition(self, src, dst):
         self.custom_styles['edge'][src][dst] = 'previous'
@@ -69,18 +67,6 @@ class Graph(object):
             for dst, labels in dests.items():
                 style = self.custom_styles['edge'][src][dst]
                 container.edge(src, dst, label=' | '.join(labels), **self.machine.style_attributes['edge'][style])
-
-    def _transition_label(self, tran):
-        edge_label = tran.get('label', tran['trigger'])
-        if 'dest' not in tran:
-            edge_label += " [internal]"
-        if self.machine.show_conditions and any(prop in tran for prop in ['conditions', 'unless']):
-            x = '{edge_label} [{conditions}]'.format(
-                edge_label=edge_label,
-                conditions=' & '.join(tran.get('conditions', []) + ['!' + u for u in tran.get('unless', [])]),
-            )
-            return x
-        return edge_label
 
     def generate(self, title=None, roi_state=None):
         """ Generate a DOT graph with graphviz
@@ -133,21 +119,8 @@ class Graph(object):
             graph.render(filename, format=format if format else 'png', cleanup=True)
         except TypeError:
             if format is None:
-                raise ValueError("Paramter 'format' must not be None when filename is no valid file path.")
+                raise ValueError("Parameter 'format' must not be None when filename is no valid file path.")
             filename.write(graph.pipe(format))
-
-    def _convert_state_attributes(self, state):
-        label = state.get('label', state['name'])
-        if self.machine.show_state_attributes:
-            if 'tags' in state:
-                label += ' [' + ', '.join(state['tags']) + ']'
-            if 'on_enter' in state:
-                label += '\l- enter:\l  + ' + '\l  + '.join(state['on_enter'])
-            if 'on_exit' in state:
-                label += '\l- exit:\l  + ' + '\l  + '.join(state['on_exit'])
-            if 'timeout' in state:
-                label += '\l- timeout(' + state['timeout'] + 's)  -> (' + ', '.join(state['on_timeout']) + ')'
-        return label
 
 
 class NestedGraph(Graph):

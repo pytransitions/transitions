@@ -125,7 +125,15 @@ class GraphMachine(MarkupMachine):
         # keep 'auto_transitions_markup' for backwards compatibility
         kwargs['auto_transitions_markup'] = kwargs.pop('show_auto_transitions', False)
         self.model_graphs = {}
-        self.graph_cls = self._init_graphviz_engine(kwargs.pop('use_pygraphviz', True))
+
+        # determine graph engine; if pygraphviz cannot be imported, fall back to graphviz
+        use_pygraphviz = kwargs.pop('use_pygraphviz', True)
+        if use_pygraphviz:
+            try:
+                import pygraphviz
+            except ImportError:
+                use_pygraphviz = False
+        self.graph_cls = self._init_graphviz_engine(use_pygraphviz)
 
         _LOGGER.debug("Using graph engine %s", self.graph_cls)
         _super(GraphMachine, self).__init__(*args, **kwargs)
@@ -205,3 +213,37 @@ class GraphMachine(MarkupMachine):
                                                   before=before, after=after, prepare=prepare, **kwargs)
         for model in self.models:
             model.get_graph(force_new=True)
+
+
+class BaseGraph(object):
+
+    def __init__(self, machine, title=None):
+        self.machine = machine
+        self.fsm_graph = None
+        self.roi_state = None
+        self.generate(title)
+
+    def _convert_state_attributes(self, state):
+        label = state.get('label', state['name'])
+        if self.machine.show_state_attributes:
+            if 'tags' in state:
+                label += ' [' + ', '.join(state['tags']) + ']'
+            if 'on_enter' in state:
+                label += '\l- enter:\l  + ' + '\l  + '.join(state['on_enter'])
+            if 'on_exit' in state:
+                label += '\l- exit:\l  + ' + '\l  + '.join(state['on_exit'])
+            if 'timeout' in state:
+                label += '\l- timeout(' + state['timeout'] + 's)  -> (' + ', '.join(state['on_timeout']) + ')'
+        return label
+
+    def _transition_label(self, tran):
+        edge_label = tran.get('label', tran['trigger'])
+        if 'dest' not in tran:
+            edge_label += " [internal]"
+        if self.machine.show_conditions and any(prop in tran for prop in ['conditions', 'unless']):
+            x = '{edge_label} [{conditions}]'.format(
+                edge_label=edge_label,
+                conditions=' & '.join(tran.get('conditions', []) + ['!' + u for u in tran.get('unless', [])]),
+            )
+            return x
+        return edge_label
