@@ -12,7 +12,7 @@ install:
   - pip install -r requirements_test.txt
 script: pytest --doctest-modules --cov transitions/
 after_success:
-  - coveralls --config_file .coveragerc
+  - coveralls --ignore-errors --config_file .coveragerc
 addons:
   apt:
     packages:
