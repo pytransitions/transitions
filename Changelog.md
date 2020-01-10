@@ -11,7 +11,7 @@ Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+ 
 
 ## 0.7.2 (January 2020)
 
-Release 0.7.2 is a minor release and contains bugfixes and and a new feature
+Release 0.7.2 is a minor release and contains bugfixes and and a new feature:
 
 - Bugfix #386: Fix transitions for enums with str behavior (thanks @artofhuman)
 - Bugfix #378: Don't mask away KeyError when executing a transition (thanks @facundofc)
