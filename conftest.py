@@ -1,5 +1,7 @@
-import sys
-
 collect_ignore = []
-if sys.version_info[0] < 3:
+
+try:
+    import asyncio
+    import contextvars
+except ImportError:
     collect_ignore.append("tests/test_async.py")
