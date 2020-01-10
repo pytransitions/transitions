@@ -10,9 +10,9 @@ install:
   - pip install -r requirements.txt
   - pip install -r requirements_diagrams.txt
   - pip install -r requirements_test.txt
-script: pytest # --doctest-modules --cov transitions/
-#after_success:
-#  - coveralls --config_file .coveragerc
+script: pytest --doctest-modules --cov transitions/
+after_success:
+  - coveralls --config_file .coveragerc
 addons:
   apt:
     packages:
