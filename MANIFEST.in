@@ -4,7 +4,8 @@ include .coveragerc
 include .pylintrc
 include LICENSE
 include MANIFEST
-include tox.ini
+include *.ini
+include conftest.py
 
 recursive-include examples *.ipynb
 recursive-include tests *.py

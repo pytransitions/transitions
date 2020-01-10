@@ -96,7 +96,7 @@ class DummyModel(object):
     pass
 
 
-class TestContext(object):
+class SomeContext(object):
     def __init__(self, event_list):
         self._event_list = event_list
 
