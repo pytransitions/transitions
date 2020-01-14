@@ -343,7 +343,7 @@ If you'd like you track it using a different attribute, you could do that using 
 
 ```python
 lump = Matter()
-machine = Machine(lump, states=['solid', 'liquid', 'gas'],  model='matter_state', initial='solid')
+machine = Machine(lump, states=['solid', 'liquid', 'gas'],  model_attribute='matter_state', initial='solid')
 lump.matter_state
 >>> 'solid'
 ```
