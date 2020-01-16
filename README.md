@@ -762,8 +762,18 @@ model.by_name()
 model.by_reference()
 model.imported()
 ```
-The callback resolution is done in `Machine.resolve_callbacks`.
+The callback resolution is done in `Machine.resolve_callable`.
 This method can be overridden in case more complex callback resolution strategies are required.
+
+
+**example**
+```python
+class MachineBase(Machine):
+    @staticmethod
+    def resolve_callable(func, event_data):
+        # manipulate arguments here
+        super(MachineBase, MachineBase).resolve_callable(func, event_data)
+```
 
 In summary, callbacks on transitions are executed in the following order:
 
