@@ -766,12 +766,12 @@ The callback resolution is done in `Machine.resolve_callable`.
 This method can be overridden in case more complex callback resolution strategies are required.
 
 
-**example**
+**Example**
 ```python
 class MachineBase(Machine):
     @staticmethod
     def resolve_callable(func, event_data):
-        # manipulate arguments here
+        # manipulate arguments here and return func, or super() if no manipulation is done.
         super(MachineBase, MachineBase).resolve_callable(func, event_data)
 ```
 
