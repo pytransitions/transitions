@@ -768,11 +768,11 @@ This method can be overridden in case more complex callback resolution strategie
 
 **Example**
 ```python
-class MachineBase(Machine):
+class CustomMachine(Machine):
     @staticmethod
     def resolve_callable(func, event_data):
         # manipulate arguments here and return func, or super() if no manipulation is done.
-        super(MachineBase, MachineBase).resolve_callable(func, event_data)
+        super(CustomMachine, CustomMachine).resolve_callable(func, event_data)
 ```
 
 In summary, callbacks on transitions are executed in the following order:
