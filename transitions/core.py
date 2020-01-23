@@ -1048,10 +1048,12 @@ class Machine(object):
         """
         if isinstance(func, string_types):
             try:
-                if isinstance(getattr(type(event_data.model), func), property):
+                pointer = getattr(type(event_data.model), func)
+                if isinstance(pointer, property):
                     # `func` is a property, generate a callable from it
                     def predicate():
-                        return func
+                        return pointer.fget(event_data.model)
+
                     return predicate
             except AttributeError:
                 pass
