@@ -62,8 +62,9 @@ class Graph(BaseGraph):
         self.fsm_graph.edge_attr.update(self.machine.style_attributes['edge']['default'])
 
         # For each state, draw a circle
-        self._add_nodes(self.machine._markup.get('states', []), self.fsm_graph)
-        self._add_edges(self.machine._markup.get('transitions', []), self.fsm_graph)
+        markup = self.machine.get_markup_config()
+        self._add_nodes(markup.get('states', []), self.fsm_graph)
+        self._add_edges(markup.get('transitions', []), self.fsm_graph)
 
         setattr(self.fsm_graph, 'style_attributes', self.machine.style_attributes)
 

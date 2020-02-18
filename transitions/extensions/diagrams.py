@@ -229,11 +229,11 @@ class BaseGraph(object):
             if 'tags' in state:
                 label += ' [' + ', '.join(state['tags']) + ']'
             if 'on_enter' in state:
-                label += '\l- enter:\l  + ' + '\l  + '.join(state['on_enter'])
+                label += r'\l- enter:\l  + ' + r'\l  + '.join(state['on_enter'])
             if 'on_exit' in state:
-                label += '\l- exit:\l  + ' + '\l  + '.join(state['on_exit'])
+                label += r'\l- exit:\l  + ' + r'\l  + '.join(state['on_exit'])
             if 'timeout' in state:
-                label += '\l- timeout(' + state['timeout'] + 's)  -> (' + ', '.join(state['on_timeout']) + ')'
+                label += r'\l- timeout(' + state['timeout'] + 's)  -> (' + ', '.join(state['on_timeout']) + ')'
         return label
 
     def _transition_label(self, tran):
