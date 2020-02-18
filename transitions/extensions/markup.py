@@ -17,6 +17,7 @@ class MarkupMachine(Machine):
         self._markup = kwargs.pop('markup', {})
         self._auto_transitions_markup = kwargs.pop('auto_transitions_markup', False)
         self.skip_references = True
+        self._needs_update = True
 
         if self._markup:
             models_markup = self._markup.pop('models', [])
@@ -48,19 +49,28 @@ class MarkupMachine(Machine):
     @property
     def markup(self):
         self._markup['models'] = self._convert_models()
+        return self.get_markup_config()
+
+    # the only reason why this not part of markup property is that pickle
+    # has issues with properties during __setattr__ (self.markup is not set)
+    def get_markup_config(self):
+        if self._needs_update:
+            self._markup['transitions'] = self._convert_transitions()
+            self._markup['states'] = self._convert_states([s for s in self.states.values()
+                                                           if not getattr(s, 'parent', False)])  # get only root states in HSMs
+            self._needs_update = False
         return self._markup
 
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None, **kwargs):
         super(MarkupMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
                                                   before=before, after=after, prepare=prepare, **kwargs)
-        self._markup['transitions'] = self._convert_transitions()
+        self._needs_update = True
 
     def add_states(self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs):
         super(MarkupMachine, self).add_states(states, on_enter=on_enter, on_exit=on_exit,
                                               ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
-        self._markup['states'] = self._convert_states([s for s in self.states.values()
-                                                       if not getattr(s, 'parent', False)])
+        self._needs_update = True
 
     def _convert_states(self, states):
         markup_states = []
@@ -127,6 +137,13 @@ class MarkupMachine(Machine):
             if state_name in self.states:
                 return True
         return False
+
+    @classmethod
+    def _identify_callback(self, name):
+        callback_type, target = super(MarkupMachine, self)._identify_callback(name)
+        if callback_type:
+            self._needs_update = True
+        return callback_type, target
 
 
 def rep(func, skip_references=False):

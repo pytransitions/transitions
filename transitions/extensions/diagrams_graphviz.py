@@ -84,8 +84,9 @@ class Graph(BaseGraph):
         fsm_graph.graph_attr.update(**self.machine.machine_attributes)
         # For each state, draw a circle
         try:
-            states = self.machine._markup.get('states', [])
-            transitions = self.machine._markup.get('transitions', [])
+            markup = self.machine.get_markup_config()
+            states = markup.get('states', [])
+            transitions = markup.get('transitions', [])
             if roi_state:
                 transitions = [t for t in transitions
                                if t['source'] == roi_state or self.custom_styles['edge'][t['source']][t['dest']]]

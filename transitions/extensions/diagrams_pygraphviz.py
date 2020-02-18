@@ -52,7 +52,6 @@ class Graph(BaseGraph):
     def generate(self, title=None):
         """ Generate a DOT graph with pygraphviz, returns an AGraph object """
         if not pgv:  # pragma: no cover
-            import pygraphviz
             raise Exception('AGraph diagram requires pygraphviz')
 
         title = '' if not title else title
