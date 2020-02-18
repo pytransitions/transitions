@@ -381,6 +381,17 @@ class TestTransitions(TestCase):
         m.next_state()
         self.assertEqual(m.state, 'beginning')
 
+        # Partial state machine without the initial state
+        m = Machine('self', states, initial='beginning')
+        m.add_ordered_transitions(['middle', 'end'])
+        self.assertEqual(m.state, 'beginning')
+        with self.assertRaises(MachineError):
+            m.next_state()
+        m.to_middle()
+        for s in ('end', 'middle', 'end'):
+            m.next_state()
+            self.assertEqual(m.state, s)
+
     def test_ordered_transition_error(self):
         m = Machine(states=['A'], initial='A')
         with self.assertRaises(ValueError):

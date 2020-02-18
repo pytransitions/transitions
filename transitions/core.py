@@ -910,7 +910,9 @@ class Machine(object):
                 state to the first state.
             loop_includes_initial (boolean): If no initial state was defined in
                 the machine, setting this to True will cause the _initial state
-                placeholder to be included in the added transitions.
+                placeholder to be included in the added transitions. This argument
+                has no effect if the states argument is passed without the
+                initial state included.
             conditions (str or list): Condition(s) that must pass in order
                 for the transition to take place. Either a list providing the
                 name of a callable, or a list of callables. For the transition
@@ -939,8 +941,13 @@ class Machine(object):
         after = _prep_ordered_arg(len_transitions, after)
         prepare = _prep_ordered_arg(len_transitions, prepare)
         # reorder list so that the initial state is actually the first one
-        idx = states.index(self._initial)
-        states = states[idx:] + states[:idx]
+        try:
+            idx = states.index(self._initial)
+            states = states[idx:] + states[:idx]
+            first_in_loop = states[0 if loop_includes_initial else 1]
+        except ValueError:
+            # since initial is not part of states it shouldn't be part of the loop either
+            first_in_loop = states[0]
 
         for i in range(0, len(states) - 1):
             self.add_transition(trigger, states[i], states[i + 1],
@@ -953,7 +960,7 @@ class Machine(object):
         if loop:
             self.add_transition(trigger, states[-1],
                                 # omit initial if not loop_includes_initial
-                                states[0 if loop_includes_initial else 1],
+                                first_in_loop,
                                 conditions=conditions[-1],
                                 unless=unless[-1],
                                 before=before[-1],

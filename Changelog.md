@@ -7,6 +7,7 @@ Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+ 
 - Feature: Introduced `AsyncMachine` (see discussion #259)
 - Bugfix: Auto transitions are added multiple times when add_states is called more than once
 - Bugfix: Convert state._name from `Enum` into strings in `MarkupMachine` when necessary
+- Bugfix #392: Allow `Machine.add_ordered_transitions` to be called without the initial state (thanks @mkaranki and @facundofc)
 - `GraphMachine` now attempts to fall back to `graphviz` when importing `pygraphviz` fails
 
 ## 0.7.2 (January 2020)
