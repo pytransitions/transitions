@@ -36,7 +36,8 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Queued transitions](#queued-transitions)
         - [Conditional transitions](#conditional-transitions)
         - [Callbacks](#transition-callbacks)
-    - [Callback resolution and execution order](#execution-order)
+    - [Callable resolution](#resolution)
+    - [Callback execution order](#execution-order)
     - [Passing data](#passing-data)
     - [Alternative initialization patterns](#alternative-initialization-patterns)
     - [Logging](#logging)
@@ -114,6 +115,7 @@ class NarcolepticSuperhero(object):
         """ Dear Diary, today I saved Mr. Whiskers. Again. """
         self.kittens_rescued += 1
 
+    @property
     def is_exhausted(self):
         """ Basically a coin toss. """
         return random.random() < 0.5
@@ -343,7 +345,7 @@ If you'd like you track it using a different attribute, you could do that using 
 
 ```python
 lump = Matter()
-machine = Machine(lump, states=['solid', 'liquid', 'gas'],  model='matter_state', initial='solid')
+machine = Machine(lump, states=['solid', 'liquid', 'gas'],  model_attribute='matter_state', initial='solid')
 lump.matter_state
 >>> 'solid'
 ```
@@ -668,9 +670,13 @@ class Matter(object):
     heat = False
     attempts = 0
     def count_attempts(self): self.attempts += 1
-    def is_really_hot(self): return self.heat
     def heat_up(self): self.heat = random.random() < 0.25
     def stats(self): print('It took you %i attempts to melt the lump!' %self.attempts)
+
+    @property
+    def is_really_hot(self):
+        return self.heat
+    
 
 states=['solid', 'liquid', 'gas', 'plasma']
 
@@ -737,13 +743,15 @@ print(lump.state)
 >>> initial
 ```
 
-### <a name="execution-order"></a>Callback resolution and execution order
+### <a name="resolution"></a>Callable resolution
 
-As you have probably already realized, the standard way of passing callbacks to states and transitions is by name. When processing callbacks, `transitions` will use the name to retrieve the related callback from the model. If the method cannot be retrieved and it contains dots, Transitions will treat the name as a path to a module function and try to import it. Alternatively, you can pass callables such as (bound) functions directly. As mentioned earlier, you can also pass lists/tuples of callbacks to the callback parameters. Callbacks will be executed in the order they were added.
+As you have probably already realized, the standard way of passing callables to states, conditions and transitions is by name. When processing callbacks and conditions, `transitions` will use their name to retrieve the related callable from the model. If the method cannot be retrieved and it contains dots, `transitions` will treat the name as a path to a module function and try to import it. Alternatively, you can pass properties and callables such as (bound) functions directly. As mentioned earlier, you can also pass lists/tuples of callables names to the callback parameters. Callbacks will be executed in the order they were added.
 
 ```python
 from transitions import Machine
 from mod import imported_func
+
+import random
 
 
 class Model(object):
@@ -751,19 +759,37 @@ class Model(object):
     def a_callback(self):
         imported_func()
 
+    @property
+    def a_property(self):
+        """ Basically a coin toss. """
+        return random.random() < 0.5
+
 
 model = Model()
 machine = Machine(model=model, states=['A'], initial='A')
-machine.add_transition('by_name', 'A', 'A', after='a_callback')
-machine.add_transition('by_reference', 'A', 'A', after=model.a_callback)
+machine.add_transition('by_name', 'A', 'A', conditions='a_property', after='a_callback')
+machine.add_transition('by_reference', 'A', 'A', unless=['a_property'], after=model.a_callback)
 machine.add_transition('imported', 'A', 'A', after='mod.imported_func')
 
 model.by_name()
 model.by_reference()
 model.imported()
 ```
-The callback resolution is done in `Machine.resolve_callbacks`.
-This method can be overridden in case more complex callback resolution strategies are required.
+
+The callable resolution is done in `Machine.resolve_callable`.
+This method can be overridden in case more complex callable resolution strategies are required.
+
+
+**Example**
+```python
+class CustomMachine(Machine):
+    @staticmethod
+    def resolve_callable(func, event_data):
+        # manipulate arguments here and return func, or super() if no manipulation is done.
+        super(CustomMachine, CustomMachine).resolve_callable(func, event_data)
+```
+
+### <a name="execution-order"></a>Callback execution order
 
 In summary, callbacks on transitions are executed in the following order:
 

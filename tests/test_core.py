@@ -138,7 +138,8 @@ class TestTransitions(TestCase):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'B', conditions='this_passes')
         s.machine.add_transition('advance', 'B', 'C', unless=['this_fails'])
-        s.machine.add_transition('advance', 'C', 'D', unless=['this_fails',
+        s.machine.add_transition('advance', 'C', 'D', unless=['property_that_fails',
+                                                              'this_fails',
                                                               'this_passes'])
         s.advance()
         self.assertEqual(s.state, 'B')

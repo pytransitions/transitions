@@ -1055,15 +1055,26 @@ class Machine(object):
 
     @staticmethod
     def resolve_callable(func, event_data):
-        """ Converts a model's method name or a path to a callable into a callable.
+        """ Converts a model's property name, method name or a path to a callable into a callable.
             If func is not a string it will be returned unaltered.
         Args:
-            func (str or callable): Method name or a path to a callable
+            func (str or callable): Property name, method name or a path to a callable
             event_data (EventData): Currently processed event
         Returns:
             callable function resolved from string or func
         """
         if isinstance(func, string_types):
+            try:
+                pointer = getattr(type(event_data.model), func)
+                if isinstance(pointer, property):
+                    # `func` is a property, generate a callable from it
+                    def predicate():
+                        return pointer.fget(event_data.model)
+
+                    return predicate
+            except AttributeError:
+                pass
+
             try:
                 func = getattr(event_data.model, func)
             except AttributeError:

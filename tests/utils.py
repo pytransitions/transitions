@@ -78,6 +78,10 @@ class Stuff(object):
     def on_enter_F(self):
         self.message = "I am F!"
 
+    @property
+    def property_that_fails(self):
+        return not self.this_fails_by_default(True)
+
 
 class InheritedStuff(Machine):
 
