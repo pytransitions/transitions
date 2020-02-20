@@ -1,10 +1,11 @@
 # Changelog
 
-## 0.8.0 (January 2020)
+## 0.8.0 (February 2020)
 
 Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+ and some bugfixes
 
 - Feature: Introduced `AsyncMachine` (see discussion #259)
+- Feature #390: String callbacks can now point to properties and attributes (thanks @jsenecal)
 - Bugfix: Auto transitions are added multiple times when add_states is called more than once
 - Bugfix: Convert state._name from `Enum` into strings in `MarkupMachine` when necessary
 - Bugfix #392: Allow `Machine.add_ordered_transitions` to be called without the initial state (thanks @mkaranki and @facundofc)
