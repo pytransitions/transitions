@@ -3,6 +3,9 @@ from transitions import Machine
 
 class Stuff(object):
 
+    is_false = False
+    is_True = True
+
     def __init__(self, states=None, machine_cls=Machine, extra_kwargs={}):
 
         self.state = None
@@ -80,7 +83,7 @@ class Stuff(object):
 
     @property
     def property_that_fails(self):
-        return not self.this_fails_by_default(True)
+        return self.is_false
 
 
 class InheritedStuff(Machine):

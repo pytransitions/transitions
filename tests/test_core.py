@@ -138,8 +138,7 @@ class TestTransitions(TestCase):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'B', conditions='this_passes')
         s.machine.add_transition('advance', 'B', 'C', unless=['this_fails'])
-        s.machine.add_transition('advance', 'C', 'D', unless=['property_that_fails',
-                                                              'this_fails',
+        s.machine.add_transition('advance', 'C', 'D', unless=['this_fails',
                                                               'this_passes'])
         s.advance()
         self.assertEqual(s.state, 'B')
@@ -147,6 +146,14 @@ class TestTransitions(TestCase):
         self.assertEqual(s.state, 'C')
         s.advance()
         self.assertEqual(s.state, 'C')
+
+    def test_uncallable_callbacks(self):
+        s = self.stuff
+        s.machine.add_transition('advance', 'A', 'B', conditions=['property_that_fails', 'is_false'])
+        # make sure parameters passed by trigger events can be handled
+        s.machine.add_transition('advance', 'A', 'C', before=['property_that_fails', 'is_false'])
+        s.advance(level='MaximumSpeed')
+        self.assertTrue(s.is_C())
 
     def test_conditions_with_partial(self):
         def check(result):

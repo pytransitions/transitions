@@ -745,7 +745,7 @@ print(lump.state)
 
 ### <a name="resolution"></a>Callable resolution
 
-As you have probably already realized, the standard way of passing callables to states, conditions and transitions is by name. When processing callbacks and conditions, `transitions` will use their name to retrieve the related callable from the model. If the method cannot be retrieved and it contains dots, `transitions` will treat the name as a path to a module function and try to import it. Alternatively, you can pass properties and callables such as (bound) functions directly. As mentioned earlier, you can also pass lists/tuples of callables names to the callback parameters. Callbacks will be executed in the order they were added.
+As you have probably already realized, the standard way of passing callables to states, conditions and transitions is by name. When processing callbacks and conditions, `transitions` will use their name to retrieve the related callable from the model. If the method cannot be retrieved and it contains dots, `transitions` will treat the name as a path to a module function and try to import it. Alternatively, you can pass names of properties or attributes. They will be wrapped into functions but cannot receive event data for obvious reasons. You can also pass callables such as (bound) functions directly. As mentioned earlier, you can also pass lists/tuples of callables names to the callback parameters. Callbacks will be executed in the order they were added.
 
 ```python
 from transitions import Machine
@@ -764,11 +764,13 @@ class Model(object):
         """ Basically a coin toss. """
         return random.random() < 0.5
 
+    an_attribute = False
+
 
 model = Model()
 machine = Machine(model=model, states=['A'], initial='A')
 machine.add_transition('by_name', 'A', 'A', conditions='a_property', after='a_callback')
-machine.add_transition('by_reference', 'A', 'A', unless=['a_property'], after=model.a_callback)
+machine.add_transition('by_reference', 'A', 'A', unless=['a_property', 'an_attribute'], after=model.a_callback)
 machine.add_transition('imported', 'A', 'A', after='mod.imported_func')
 
 model.by_name()

@@ -1065,18 +1065,11 @@ class Machine(object):
         """
         if isinstance(func, string_types):
             try:
-                pointer = getattr(type(event_data.model), func)
-                if isinstance(pointer, property):
-                    # `func` is a property, generate a callable from it
-                    def predicate():
-                        return pointer.fget(event_data.model)
-
-                    return predicate
-            except AttributeError:
-                pass
-
-            try:
                 func = getattr(event_data.model, func)
+                if not callable(func):  # if a property or some other not callable attribute was passed
+                    def func_wrapper(*args, **kwargs):
+                        return func
+                    return func_wrapper
             except AttributeError:
                 try:
                     mod, name = func.rsplit('.', 1)
