@@ -604,10 +604,10 @@ class Machine(object):
             if mod not in self.models:
                 self._checked_assignment(mod, 'trigger', partial(_get_trigger, mod, self))
 
-                for trigger, _ in self.events.items():
+                for trigger in self.events:
                     self._add_trigger_to_model(trigger, mod)
 
-                for _, state in self.states.items():
+                for state in self.states.values():
                     self._add_model_to_state(state, mod)
 
                 self.set_state(initial, model=mod)
@@ -738,9 +738,10 @@ class Machine(object):
         """
             Set the current state.
         Args:
-            state (str or Enum): value of setted state
+            state (str or Enum or State): value of setted state
         """
-        state = self.get_state(state)
+        if not isinstance(state, State):
+            state = self.get_state(state)
         models = self.models if model is None else listify(model)
 
         for mod in models:
