@@ -9,8 +9,8 @@ import sys
 import tempfile
 from os.path import getsize
 
-from transitions.extensions import MachineFactory
-from transitions.extensions.nesting import NestedState as State
+from transitions.extensions.nested import NestedState as State
+from transitions.extensions.nested import NestedMachine as Machine
 from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
 from .utils import Stuff
@@ -38,7 +38,7 @@ class TestTransitions(TestsCore):
     def setUp(self):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
-        machine_cls = MachineFactory.get_predefined(nested=True)
+        machine_cls = Machine
         self.stuff = Stuff(states, machine_cls)
 
     def tearDown(self):
@@ -182,7 +182,7 @@ class TestTransitions(TestsCore):
     def test_add_custom_state(self):
         s = self.stuff
         s.machine.add_states([{'name': 'E', 'children': ['1', '2']}])
-        s.machine.add_state('3', parent='E')
+        s.machine.add_state('E%s3' % State.separator)
         s.machine.add_transition('go', '*', 'E%s1' % State.separator)
         s.machine.add_transition('walk', '*', 'E%s3' % State.separator)
         s.machine.add_transition('run', 'E', 'C{0}3{0}a'.format(State.separator))
@@ -248,7 +248,8 @@ class TestTransitions(TestsCore):
                                            'C{0}3'.format(State.separator)], 'C{0}3{0}a'.format(State.separator))
         s.machine.add_transition('rise', 'C%s3' % State.separator, 'C%s1' % State.separator)
         s.machine.add_transition('fast', 'A', 'C{0}3{0}a'.format(State.separator))
-        for state in s.machine.states.values():
+
+        for state in s.machine.get_nested_states():
             state.on_enter.append('increase_level')
             state.on_exit.append('decrease_level')
 
