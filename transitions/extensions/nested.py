@@ -1,4 +1,5 @@
 from transitions.core import State, Machine, Transition, Event, listify, EventData, _get_trigger
+from transitions.extensions.nesting import FunctionWrapper
 
 from collections import OrderedDict
 import logging
@@ -13,10 +14,11 @@ _LOGGER.addHandler(logging.NullHandler())
 class NestedEvent(Event):
 
     def _trigger(self, model, state_name, *args, **kwargs):
-        substates = state_name.split(self.machine.state_cls.separator)
-        state_name = substates.pop(0)
-        while substates and state_name not in self.transitions:
-            state_name += self.machine.state_cls.separator + substates.pop(0)
+        separator = self.machine.state_cls.separator
+        state_name = state_name.split(separator)
+        while state_name and separator.join(state_name) not in self.transitions:
+            state_name.pop()
+        state_name = separator.join(state_name)
         if state_name in self.transitions:
             state = self.machine.get_state(state_name)
             event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
@@ -56,7 +58,11 @@ class NestedState(State):
         self.states = OrderedDict()
 
     def add_substate(self, state):
-        self.states[state.name] = state
+        self.add_substates(state)
+
+    def add_substates(self, states):
+        for state in listify(states):
+            self.states[state.name] = state
 
 
 class NestedTransition(Transition):
@@ -64,13 +70,15 @@ class NestedTransition(Transition):
     def _change_state(self, event_data):
         model = event_data.model
         machine = event_data.machine
-        src_state = event_data.state
-        src_name = machine.get_local_name(src_state, join=False)
+        src_name = machine.get_local_name(getattr(model, machine.model_attribute), join=False)
         dst_name = machine.get_local_name(self.dest, join=False)
-        root = []
-        while dst_name and src_name and src_name[0] == dst_name[0]:
-            root.append(src_name.pop(0))
-            dst_name.pop(0)
+        if src_name == dst_name:
+            root = src_name[:-1]
+        else:
+            root = []
+            while dst_name and src_name and src_name[0] == dst_name[0]:
+                root.append(src_name.pop(0))
+                dst_name.pop(0)
         dest_name = self._root_nested(root, event_data)
         event_data.machine.set_state(dest_name, event_data.model)
         event_data.update(dest_name)
@@ -80,7 +88,8 @@ class NestedTransition(Transition):
             with event_data.machine(state_path.pop(0)):
                 return self._root_nested(state_path, event_data)
         else:
-            src_name = event_data.machine.get_local_name(event_data.state, join=False)
+            src_name = event_data.machine.get_local_name(getattr(event_data.model, event_data.machine.model_attribute),
+                                                         join=False)
             dst_name = event_data.machine.get_local_name(self.dest, join=False)
             if src_name:
                 with event_data.machine(src_name.pop(0)):
@@ -88,6 +97,8 @@ class NestedTransition(Transition):
             if dst_name:
                 with event_data.machine(dst_name.pop(0)):
                     dest_name = self._enter_nested(dst_name, event_data)
+            else:
+                dest_name = event_data.machine.get_global_name()
             return dest_name
 
     def _exit_nested(self, state_path, event_data):
@@ -149,6 +160,9 @@ class NestedMachine(Machine):
                     if transitions:
                         self.add_transitions(transitions)
                     self.add_states(state_children)
+            elif isinstance(state, NestedState):
+                self.states[state.name] = state
+                self._init_state(state)
 
     def _init_state(self, state):
         for model in self.models:
@@ -162,9 +176,14 @@ class NestedMachine(Machine):
                         self.add_transition('to_%s' % state_name, self.wildcard_all, state_name)
                     else:
                         self.add_transition('to_%s' % a_state, parent, a_state)
+            for substate in state.states.values():
+                self._init_state(substate)
 
-    def get_nested_triggers(self):
-        triggers = list(self.events.keys())
+    def get_nested_triggers(self, dest=None):
+        if dest:
+            triggers = super(NestedMachine, self).get_triggers(dest)
+        else:
+            triggers = list(self.events.keys())
         for state in self.states.values():
             with self(state.name):
                 triggers.extend(self.get_nested_triggers())
@@ -177,46 +196,34 @@ class NestedMachine(Machine):
                 states.extend(self.get_nested_states())
         return states
 
-    def add_model(self, model, initial=None):
-        """ Register a model with the state machine, initializing triggers and callbacks. """
-        models = listify(model)
-
-        if initial is None:
-            if self.initial is None:
-                raise ValueError("No initial state configured for machine, must specify when adding model.")
-            else:
-                initial = self.initial
-
-        for mod in models:
-            mod = self if mod == 'self' else mod
-            if mod not in self.models:
-                self._checked_assignment(mod, 'trigger', partial(_get_trigger, mod, self))
-
-                for trigger in self.get_nested_triggers():
-                    self._add_trigger_to_model(trigger, mod)
-
-                for state in self.states.values():
-                    self._add_model_to_state(state, mod)
-
-                self.set_state(initial, model=mod)
-                self.models.append(mod)
-
     def _add_model_to_state(self, state, model):
         name = self.get_global_name(state)
-        self._checked_assignment(model, 'is_%s' % name, partial(self.is_state, state.value, model))
-        # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
-        # except if they are already mentioned in 'on_enter/exit' of the defined state
-        for callback in self.state_cls.dynamic_methods:
-            method = "{0}_{1}".format(callback, name)
-            if hasattr(model, method) and inspect.ismethod(getattr(model, method)) and \
-                    method not in getattr(state, callback):
-                state.add_callback(callback[3:], method)
+        if self.state_cls.separator == '_' or self.state_cls.separator not in name:
+            self._checked_assignment(model, 'is_%s' % name, partial(self.is_state, state.value, model))
+            # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
+            # except if they are already mentioned in 'on_enter/exit' of the defined state
+            for callback in self.state_cls.dynamic_methods:
+                method = "{0}_{1}".format(callback, name)
+                if hasattr(model, method) and inspect.ismethod(getattr(model, method)) and \
+                        method not in getattr(state, callback):
+                    state.add_callback(callback[3:], method)
         with self(state.name):
             for state in self.states.values():
                 self._add_model_to_state(state, model)
 
     def _add_trigger_to_model(self, trigger, model):
-        self._checked_assignment(model, trigger, partial(self._trigger_event, model, trigger))
+        trig_func = partial(self._trigger_event, model, trigger)
+        # FunctionWrappers are only necessary if a custom separator is used
+        if trigger.startswith('to_') and NestedState.separator != '_':
+            path = trigger[3:].split(NestedState.separator)
+            if hasattr(model, 'to_' + path[0]):
+                # add path to existing function wrapper
+                getattr(model, 'to_' + path[0]).add(trig_func, path[1:])
+            else:
+                # create a new function wrapper
+                self._checked_assignment(model, 'to_' + path[0], FunctionWrapper(trig_func, path[1:]))
+        else:
+            self._checked_assignment(model, trigger, trig_func)
 
     def _trigger_event(self, model, trigger, *args, **kwargs):
         state_name = getattr(model, self.model_attribute)
@@ -229,6 +236,35 @@ class NestedMachine(Machine):
             with self(state_name):
                 res = self._trigger_event(model, trigger, *args, **kwargs)
         return res
+
+    def is_state(self, state_name, model, allow_substates=False):
+        current_name = getattr(model, self.model_attribute)
+        if not allow_substates:
+            return current_name == state_name
+        return current_name.startswith(state_name)
+
+    def add_model(self, model, initial=None):
+        """ Extends transitions.core.Machine.add_model by applying a custom 'to' function to
+            the added model.
+        """
+        super(NestedMachine, self).add_model(model, initial=initial)
+        models = listify(model)
+        initial_name = getattr(models[0] if models[0] != 'self' else self, self.model_attribute)
+        initial_state = self.get_state(initial_name)
+        while initial_state.initial:
+            initial_name += self.state_cls.separator + initial_state.initial
+            initial_state = initial_state.states[initial_state.initial]
+
+        for mod in models:
+            mod = self if mod == 'self' else mod
+            self.set_state(initial_name, mod)
+            # TODO: Remove 'mod != self' in 0.7.0
+            if hasattr(mod, 'to') and mod != self:
+                _LOGGER.warning("%sModel already has a 'to'-method. It will NOT "
+                                "be overwritten by NestedMachine", self.name)
+            else:
+                to_func = partial(self.to_state, mod)
+                setattr(mod, 'to', to_func)
 
     def get_global_name(self, state=None, join=True):
         if isinstance(state, State):
@@ -265,26 +301,27 @@ class NestedMachine(Machine):
         for mod in models:
             setattr(mod, self.model_attribute, state)
 
-    def get_state(self, state):
+    def get_state(self, state, hint=None):
         """ Return the State instance with the passed name. """
         if isinstance(state, string_types):
             state = state.split(self.state_cls.separator)
-
+        if not hint:
+            hint = state.copy()
         if len(state) > 1:
             child = state.pop(0)
             try:
                 with self(child):
-                    return self.get_state(state)
+                    return self.get_state(state, hint)
             except KeyError:
-                return self.get_global_state(state)
+                return self.get_global_state(hint)
         elif state[0] not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state[0]]
 
     def get_global_state(self, state):
         states = self._stack[0][1] if self._stack else self.states
-        domains = [s[0].name for s in self._stack] + [self.scoped.name] + state
-        for sco in domains[1:]:
+        domains = state
+        for sco in domains:
             states = states[sco].states
         return states
 
@@ -302,6 +339,20 @@ class NestedMachine(Machine):
 
         return self
 
+    def get_triggers(self, *args):
+        """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """
+        # add parents to state set
+        triggers = []
+        for state_name in args:
+            state_path = state_name.split(self.state_cls.separator)
+            root = state_path[0]
+            while state_path:
+                triggers.extend(super(NestedMachine, self).get_triggers(self.state_cls.separator.join(state_path)))
+                with self(root):
+                    triggers.extend(self.get_nested_triggers(self.state_cls.separator.join(state_path)))
+                state_path.pop()
+        return triggers
+
     def __enter__(self):
         self._stack.append((self.scoped, self.states, self.events))
         self.scoped, self.states, self.events = self._next_scope
@@ -310,6 +361,16 @@ class NestedMachine(Machine):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.scoped, self.states, self.events = self._stack.pop()
 
+    def to_state(self, model, state_name, *args, **kwargs):
+        """ Helper function to add go to states in case a custom state separator is used.
+        Args:
+            model (class): The model that should be used.
+            state_name (str): Name of the destination state.
+        """
+
+        event = EventData(self.get_model_state(model), Event('to', self), self,
+                          model, args=args, kwargs=kwargs)
+        self._create_transition(getattr(model, self.model_attribute), state_name).execute(event)
 
 # state = {
 #     'name': 'B',

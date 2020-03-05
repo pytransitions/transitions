@@ -82,11 +82,13 @@ class TestTransitions(TestsCore):
     def test_init_machine_with_nested_states(self):
         a = State('A')
         b = State('B')
-        b_1 = State('1', parent=b)
-        b_2 = State('2', parent=b)
+        b_1 = State('1')
+        b_2 = State('2')
+        b.add_substates([b_1, b_2])
         m = self.stuff.machine_cls(states=[a, b])
-        self.assertEqual(b_1.name, 'B{0}1'.format(state_separator))
+        self.assertEqual(m.states['B'].states['1'], b_1)
         m.to("B{0}1".format(state_separator))
+        self.assertEqual(m.state, "B{0}1".format(state_separator))
 
     def test_property_initial(self):
         # Define with list of dictionaries
@@ -455,6 +457,7 @@ class TestTransitions(TestsCore):
         machine.to_C.s3.a()  # enter C↦a; enter C↦3↦a;
         self.assertEqual(machine.state, 'C{0}3{0}a'.format(State.separator))
         machine.to('C{0}2'.format(State.separator))  # exit C↦3↦a, exit C↦3, enter C↦2
+        self.assertEqual(machine.state, 'C{0}2'.format(State.separator))
         machine.reset()  # exit C↦2; reset C has been overwritten by C↦3
         self.assertEqual(machine.state, 'C')
         machine.reset()  # exit C, enter A
@@ -464,8 +467,7 @@ class TestTransitions(TestsCore):
         class Model(object):
             pass
         s1, s2 = Model(), Model()
-        m = MachineFactory.get_predefined(nested=True)(model=[s1, s2], states=['A', 'B', 'C'],
-                                                       initial='A')
+        m = Machine(model=[s1, s2], states=['A', 'B', 'C'], initial='A')
         self.assertEqual(len(m.models), 2)
         m.add_transition('advance', 'A', 'B')
         self.assertNotEqual(s1.advance, s2.advance)
