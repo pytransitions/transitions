@@ -1,6 +1,6 @@
 from transitions import Machine
 from transitions.extensions.states import *
-from transitions.extensions.factory import LockedHierarchicalGraphMachine
+from transitions.extensions import MachineFactory
 from time import sleep
 
 from unittest import TestCase
@@ -179,8 +179,10 @@ class TestStatesDiagramsLockedNested(TestDiagramsLockedNested):
 
     def setUp(self):
 
+        machine_cls = MachineFactory.get_predefined(locked=True, nested=True, graph=True)
+
         @add_state_features(Error, Timeout, Volatile)
-        class CustomMachine(LockedHierarchicalGraphMachine):
+        class CustomMachine(machine_cls):
             pass
 
         super(TestStatesDiagramsLockedNested, self).setUp()

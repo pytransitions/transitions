@@ -28,7 +28,7 @@ def heavy_processing():
 
 
 def heavy_checking():
-    time.sleep(1)
+    time.sleep(0.5)
     return False
 
 
@@ -79,7 +79,6 @@ class TestLockedTransitions(TestCore):
         logger.info('Check if state transition done...')
         # Thread will release lock before Transition is finished
         res = self.stuff.is_D()
-        time.sleep(0.5)
         self.assertTrue(res)
 
     def test_pickle(self):

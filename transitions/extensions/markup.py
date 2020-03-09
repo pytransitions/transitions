@@ -56,8 +56,7 @@ class MarkupMachine(Machine):
     def get_markup_config(self):
         if self._needs_update:
             self._markup['transitions'] = self._convert_transitions()
-            self._markup['states'] = self._convert_states([s for s in self.states.values()
-                                                           if not getattr(s, 'parent', False)])  # get only root states in HSMs
+            self._markup['states'] = self._convert_states([s for s in self.states.values()])  # get only root states in HSMs
             self._needs_update = False
         return self._markup
 
@@ -81,8 +80,8 @@ class MarkupMachine(Machine):
                 s_def['name'] = state_name.name
             else:
                 s_def['name'] = state_name
-            if getattr(state, 'children', []):
-                s_def['children'] = self._convert_states(state.children)
+            if getattr(state, 'states', []):
+                s_def['children'] = self._convert_states(state.states.values())
             markup_states.append(s_def)
         return markup_states
 
@@ -134,8 +133,11 @@ class MarkupMachine(Machine):
     def _is_auto_transition(self, event):
         if event.name.startswith('to_') and len(event.transitions) == len(self.states):
             state_name = event.name[len('to_'):]
-            if state_name in self.states:
+            try:
+                _ = self.get_state(state_name)
                 return True
+            except ValueError:
+                pass
         return False
 
     @classmethod

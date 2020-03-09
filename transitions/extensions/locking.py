@@ -63,6 +63,19 @@ class PicklableLock(object):
         self.lock.__exit__(exc_type, exc_val, exc_tb)
 
 
+class IdentManager:
+
+    def __init__(self):
+        self.current = 0
+
+    def __enter__(self):
+        self.current = get_ident()
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.current = 0
+
+
 class LockedEvent(Event):
     """ An event type which uses the parent's machine context map when triggered. """
 
@@ -72,7 +85,7 @@ class LockedEvent(Event):
         # noinspection PyProtectedMember
         # LockedMachine._locked should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
-        if self.machine._locked != get_ident():
+        if self.machine._ident.current != get_ident():
             with nested(*self.machine.model_context_map[model]):
                 return _super(LockedEvent, self).trigger(model, *args, **kwargs)
         else:
@@ -90,14 +103,14 @@ class LockedMachine(Machine):
     event_cls = LockedEvent
 
     def __init__(self, *args, **kwargs):
-        self._locked = 0
+        self._ident = IdentManager()
 
         try:
             self.machine_context = listify(kwargs.pop('machine_context'))
         except KeyError:
             self.machine_context = [PicklableLock()]
 
-        self.machine_context.append(self)
+        self.machine_context.append(self._ident)
         self.model_context_map = defaultdict(list)
 
         _super(LockedMachine, self).__init__(*args, **kwargs)
@@ -156,14 +169,8 @@ class LockedMachine(Machine):
                 state.add_callback(prefix, callback)
 
     def _locked_method(self, func, *args, **kwargs):
-        if self._locked != get_ident():
+        if self._ident.current != get_ident():
             with nested(*self.machine_context):
                 return func(*args, **kwargs)
         else:
             return func(*args, **kwargs)
-
-    def __enter__(self):
-        self._locked = get_ident()
-
-    def __exit__(self, *exc):
-        self._locked = 0

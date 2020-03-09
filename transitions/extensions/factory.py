@@ -10,7 +10,7 @@
 from ..core import Machine
 
 from .nesting import HierarchicalMachine, NestedTransition, NestedEvent
-from .locking import LockedMachine, LockedEvent
+from .locking import LockedMachine
 from .diagrams import GraphMachine, TransitionGraphSupport
 from .markup import MarkupMachine
 
@@ -42,14 +42,6 @@ class NestedGraphTransition(TransitionGraphSupport, NestedTransition):
     pass
 
 
-class LockedNestedEvent(LockedEvent, NestedEvent):
-    """
-        An event type to be used with (subclasses of) `LockedHierarchicalMachine`
-        and `LockedHierarchicalGraphMachine`.
-    """
-    pass
-
-
 class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine):
     pass
 
@@ -67,7 +59,7 @@ class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
         A threadsafe hierarchical machine.
     """
 
-    event_cls = LockedNestedEvent
+    event_cls = NestedEvent
 
 
 class LockedGraphMachine(GraphMachine, LockedMachine):
@@ -83,7 +75,7 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedMachine, HierarchicalMa
     """
 
     transition_cls = NestedGraphTransition
-    event_cls = LockedNestedEvent
+    event_cls = NestedEvent
 
 
 # 3d tuple (graph, nested, locked)

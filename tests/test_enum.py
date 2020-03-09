@@ -139,7 +139,7 @@ class TestNestedStateEnums(TestEnumsAsStates):
         # and nesting
         states = ['A', 'B',
                   {'name': 'C', 'children': self.States, 'initial': self.States.GREEN}]
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             # NestedState will raise an error when parent is not None and state name is an enum
             # Initializing this would actually work but `m.to_A()` would raise an error in get_state(m.state)
             # as Machine is not aware of the location of States.GREEN

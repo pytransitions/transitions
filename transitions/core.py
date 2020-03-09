@@ -50,24 +50,6 @@ def listify(obj):
     return obj if isinstance(obj, (list, tuple, EnumMeta)) else [obj]
 
 
-def _get_trigger(model, machine, trigger_name, *args, **kwargs):
-    """Convenience function added to the model to trigger events by name.
-    Args:
-        model (object): Model with assigned event trigger.
-        machine (Machine): The machine containing the evaluated events.
-        trigger_name (str): Name of the trigger to be called.
-        *args: Variable length argument list which is passed to the triggered event.
-        **kwargs: Arbitrary keyword arguments which is passed to the triggered event.
-    Returns:
-        bool: True if a transitions has been conducted or the trigger event has been queued.
-    """
-    try:
-        event = machine.events[trigger_name]
-    except KeyError:
-        raise AttributeError("Do not know event named '%s'." % trigger_name)
-    return event.trigger(model, *args, **kwargs)
-
-
 def _prep_ordered_arg(desired_length, arguments=None):
     """Ensure list of arguments passed to add_ordered_transitions has the proper length.
     Expands the given arguments and apply same condition, callback
@@ -602,7 +584,7 @@ class Machine(object):
         for mod in models:
             mod = self if mod == 'self' else mod
             if mod not in self.models:
-                self._checked_assignment(mod, 'trigger', partial(_get_trigger, mod, self))
+                self._checked_assignment(mod, 'trigger', partial(self._get_trigger, mod))
 
                 for trigger in self.events:
                     self._add_trigger_to_model(trigger, mod)
@@ -644,7 +626,7 @@ class Machine(object):
             if value.name not in self.states:
                 self.add_state(value)
             else:
-                assert self._has_state(value)
+                _ = self._has_state(value, raise_error=True)
             self._initial = value.name
         else:
             state_name = value.name if isinstance(value, Enum) else value
@@ -821,6 +803,23 @@ class Machine(object):
     def _add_trigger_to_model(self, trigger, model):
         self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
 
+    def _get_trigger(self, model, trigger_name, *args, **kwargs):
+        """Convenience function added to the model to trigger events by name.
+        Args:
+            model (object): Model with assigned event trigger.
+            machine (Machine): The machine containing the evaluated events.
+            trigger_name (str): Name of the trigger to be called.
+            *args: Variable length argument list which is passed to the triggered event.
+            **kwargs: Arbitrary keyword arguments which is passed to the triggered event.
+        Returns:
+            bool: True if a transitions has been conducted or the trigger event has been queued.
+        """
+        try:
+            event = self.events[trigger_name]
+        except KeyError:
+            raise AttributeError("Do not know event named '%s'." % trigger_name)
+        return event.trigger(model, *args, **kwargs)
+
     def get_triggers(self, *args):
         """ Collects all triggers FROM certain states.
         Args:
@@ -872,12 +871,20 @@ class Machine(object):
         if source == self.wildcard_all:
             source = list(self.states.keys())
         else:
-            source = [s.name if self._has_state(s) or isinstance(s, Enum) else s for s in listify(source)]
+            # states are checked lazily which means we will only raise exceptions when the passed state
+            # is a State object because of potential confusion (see issue #155 for more details)
+            source = [s.name if isinstance(s, State) and self._has_state(s, raise_error=True) or hasattr(s, 'name') else
+                      s for s in listify(source)]
 
         for state in source:
-            _dest = state if dest == self.wildcard_same else dest
-            if _dest and self._has_state(_dest) or isinstance(_dest, Enum):
-                _dest = _dest.name
+            if dest == self.wildcard_same:
+                _dest = state
+            elif dest:
+                if isinstance(dest, State):
+                    _ = self._has_state(dest, raise_error=True)
+                _dest = dest.name if hasattr(dest, 'name') else dest
+            else:
+                _dest = None
             _trans = self._create_transition(state, _dest, conditions, unless, before,
                                              after, prepare, **kwargs)
             self.events[trigger].add_transition(_trans)
@@ -1083,14 +1090,12 @@ class Machine(object):
                                          "model nor imported from a module." % func)
         return func
 
-    def _has_state(self, state):
-        if isinstance(state, State):
-            if state in self.states.values():
-                return True
-            else:
-                raise ValueError('State %s has not been added to the machine' % state.name)
-        else:
-            return False
+    def _has_state(self, state, raise_error=False):
+        found = state in self.states.values()
+        if not found and raise_error:
+            msg = 'State %s has not been added to the machine' % (state.name if hasattr(state, 'name') else state)
+            raise ValueError(msg)
+        return found
 
     def _process(self, trigger):
 

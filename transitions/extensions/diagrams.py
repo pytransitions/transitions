@@ -123,7 +123,8 @@ class GraphMachine(MarkupMachine):
         self.show_state_attributes = kwargs.pop('show_state_attributes', False)
         # in MarkupMachine this switch is called 'with_auto_transitions'
         # keep 'auto_transitions_markup' for backwards compatibility
-        kwargs['auto_transitions_markup'] = kwargs.pop('show_auto_transitions', False)
+        kwargs['auto_transitions_markup'] = kwargs.get('auto_transitions_markup', False) or \
+            kwargs.pop('show_auto_transitions', False)
         self.model_graphs = {}
 
         # determine graph engine; if pygraphviz cannot be imported, fall back to graphviz

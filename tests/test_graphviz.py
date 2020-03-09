@@ -77,7 +77,7 @@ class TestDiagrams(TestTransitions):
             self.assertIsNotNone(getattr(m, re.match(r'\[label=([^\]]+)\]', e).group(1)))
 
         # write diagram to temp file
-        target = tempfile.NamedTemporaryFile(suffix='.png')
+        target = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         graph.draw(target.name, format='png', prog='dot')
         self.assertTrue(os.path.getsize(target.name) > 0)
         # backwards compatibility check
@@ -86,6 +86,7 @@ class TestDiagrams(TestTransitions):
 
         # cleanup temp file
         target.close()
+        os.unlink(target.name)
 
     def test_add_custom_state(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
@@ -220,7 +221,7 @@ class TestDiagramsNested(TestDiagrams):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D',    # + 1 edge
              'conditions': 'is_fast'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'},   # + 1 edge
-            {'trigger': 'reset', 'source': '*', 'dest': 'A'}]    # + 10 (8 nodes; 2 cluster) edges = 14
+            {'trigger': 'reset', 'source': '*', 'dest': 'A'}]    # + 4 edges (from base state) = 8
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
@@ -231,7 +232,7 @@ class TestDiagramsNested(TestDiagrams):
 
         _, nodes, edges = self.parse_dot(graph)
 
-        self.assertEqual(len(edges), 14)
+        self.assertEqual(len(edges), 8)
         # Test that graph properties match the Machine
         self.assertEqual(set(m.states.keys()) - set(['C', 'C%s1' % NestedState.separator]),
                          set(nodes) - set(['C_anchor', 'C%s1_anchor' % NestedState.separator]))
@@ -239,7 +240,7 @@ class TestDiagramsNested(TestDiagrams):
         m.run()
 
         # write diagram to temp file
-        target = tempfile.NamedTemporaryFile(suffix='.png')
+        target = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         m.get_graph().draw(target.name, prog='dot')
         self.assertTrue(os.path.getsize(target.name) > 0)
         # backwards compatibility check
@@ -248,6 +249,7 @@ class TestDiagramsNested(TestDiagrams):
 
         # cleanup temp file
         target.close()
+        os.unlink(target.name)
 
     def test_roi(self):
         class Model:

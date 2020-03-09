@@ -5,7 +5,7 @@ except ImportError:
 
 from transitions.core import Enum
 from transitions.extensions.markup import MarkupMachine, rep
-from transitions.extensions.factory import HierarchicalMarkupMachine
+from transitions.extensions import MachineFactory
 from .utils import Stuff
 from functools import partial
 
@@ -95,7 +95,7 @@ class TestMarkupMachine(TestCase):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
         self.num_trans = len(self.transitions)
-        self.num_auto = self.num_trans + len(self.states)**2
+        self.num_auto = len(self.states) ** 2
 
     def test_markup_self(self):
         m1 = self.machine_cls(states=self.states, transitions=self.transitions, initial='A')
@@ -113,7 +113,6 @@ class TestMarkupMachine(TestCase):
         model1 = SimpleModel()
         m1 = self.machine_cls(model1, states=self.states, transitions=self.transitions, initial='A')
         model1.walk()
-        print(m1.markup)
         m2 = self.machine_cls(markup=m1.markup)
         model2 = m2.models[0]
         self.assertIsInstance(model2, SimpleModel)
@@ -138,15 +137,16 @@ class TestMarkupMachine(TestCase):
                               auto_transitions_markup=True)
 
         self.assertEqual(len(m1.markup.get('transitions')), self.num_trans)
-        self.assertEqual(len(m2.markup.get('transitions')), self.num_auto)
+        self.assertEqual(len(m2.markup.get('transitions')), self.num_trans + self.num_auto)
         m1.add_transition('go', 'A', 'B')
         m2.add_transition('go', 'A', 'B')
-        self.assertEqual(len(m1.markup.get('transitions')), self.num_trans + 1)
-        self.assertEqual(len(m2.markup.get('transitions')), self.num_auto + 1)
+        self.num_trans += 1
+        self.assertEqual(len(m1.markup.get('transitions')), self.num_trans)
+        self.assertEqual(len(m2.markup.get('transitions')), self.num_trans + self.num_auto)
         m1.auto_transitions_markup = True
         m2.auto_transitions_markup = False
-        self.assertEqual(len(m1.markup.get('transitions')), self.num_auto + 1)
-        self.assertEqual(len(m2.markup.get('transitions')), self.num_trans + 1)
+        self.assertEqual(len(m1.markup.get('transitions')), self.num_trans + self.num_auto)
+        self.assertEqual(len(m2.markup.get('transitions')), self.num_trans)
 
 
 class TestMarkupHierarchicalMachine(TestMarkupMachine):
@@ -161,9 +161,9 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
         ]
 
-        self.machine_cls = HierarchicalMarkupMachine
+        self.machine_cls = MachineFactory.get_predefined(nested=True, graph=True)
         self.num_trans = len(self.transitions)
-        self.num_auto = self.num_trans + 9**2
+        self.num_auto = len(self.states) * 9
 
 
 @skipIf(enum is None, "enum is not available")
@@ -184,4 +184,4 @@ class TestMarkupMachineEnum(TestMarkupMachine):
             {'trigger': 'sprint', 'source': self.states.C, 'dest': self.states.D}
         ]
         self.num_trans = len(self.transitions)
-        self.num_auto = self.num_trans + len(self.states)**2
+        self.num_auto = len(self.states)**2

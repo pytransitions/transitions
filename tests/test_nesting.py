@@ -8,9 +8,11 @@ except ImportError:
 import sys
 import tempfile
 from os.path import getsize
+from os import unlink
 
-from transitions.extensions.nested import NestedState as State
-from transitions.extensions.nested import NestedMachine as Machine
+from transitions.extensions.nesting import NestedState as State
+from transitions.extensions import MachineFactory
+
 from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
 from .utils import Stuff
@@ -38,7 +40,7 @@ class TestTransitions(TestsCore):
     def setUp(self):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
-        machine_cls = Machine
+        machine_cls = MachineFactory.get_predefined(nested=True)
         self.stuff = Stuff(states, machine_cls)
 
     def tearDown(self):
@@ -133,13 +135,30 @@ class TestTransitions(TestsCore):
         m.sprint()
         self.assertEqual(m.state, 'D')
 
+    def test_nested_definitions(self):
+        state = {
+            'name': 'B',
+            'children': ['1', '2'],
+            'transitions': [['jo', '1', '2']],
+            'initial': '2'
+        }
+        m = self.stuff.machine_cls(initial='A', states=['A', state],
+                                   transitions=[['go', 'A', 'B'], ['go', 'B_2', 'B_1']])
+        self.assertTrue(m.is_A())
+        m.go()
+        self.assertEqual(m.state, 'B{0}2'.format(m.state_cls.separator))
+        m.go()
+        self.assertEqual(m.state, 'B{0}1'.format(m.state_cls.separator))
+        m.jo()
+
     def test_transitioning(self):
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'B')
         s.machine.add_transition('advance', 'B', 'C')
         s.machine.add_transition('advance', 'C', 'D')
         s.machine.add_transition('reset', '*', 'A')
-        self.assertEqual(len(s.machine.events['reset'].transitions['C%s1' % State.separator]), 1)
+        self.assertEqual(len(s.machine.events['reset'].transitions), 6)
+        self.assertEqual(len(s.machine.events['reset'].transitions['C']), 1)
         s.advance()
         self.assertEqual(s.state, 'B')
         self.assertFalse(s.is_A())
@@ -251,7 +270,8 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('rise', 'C%s3' % State.separator, 'C%s1' % State.separator)
         s.machine.add_transition('fast', 'A', 'C{0}3{0}a'.format(State.separator))
 
-        for state in s.machine.get_nested_states():
+        for state_name in s.machine.get_nested_state_names():
+            state = s.machine.get_state(state_name)
             state.on_enter.append('increase_level')
             state.on_exit.append('decrease_level')
 
@@ -409,6 +429,11 @@ class TestTransitions(TestsCore):
         self.assertEqual(s.state, state)
         # backwards compatibility check (can be removed in 0.7)
         self.assertEqual(s.state, state)
+        for state_name in s.machine.get_nested_state_names():
+            event_name = 'to_{0}'.format(state_name)
+            num_base_states = len(s.machine.states)
+            self.assertTrue(event_name in s.machine.events)
+            self.assertEqual(len(s.machine.events[event_name].transitions), num_base_states)
 
     def test_example_one(self):
         State.separator = '_'
@@ -467,7 +492,7 @@ class TestTransitions(TestsCore):
         class Model(object):
             pass
         s1, s2 = Model(), Model()
-        m = Machine(model=[s1, s2], states=['A', 'B', 'C'], initial='A')
+        m = self.stuff.machine_cls(model=[s1, s2], states=['A', 'B', 'C'], initial='A')
         self.assertEqual(len(m.models), 2)
         m.add_transition('advance', 'A', 'B')
         self.assertNotEqual(s1.advance, s2.advance)
@@ -548,7 +573,8 @@ class TestWithGraphTransitions(TestTransitions):
         machine.add_ordered_transitions(trigger='next_state')
         machine.next_state()
         self.assertEqual(machine.state, 'B')
-        target = tempfile.NamedTemporaryFile(suffix='.png')
+        target = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         machine.get_graph().draw(target.name, prog='dot')
         self.assertTrue(getsize(target.name) > 0)
         target.close()
+        unlink(target.name)
