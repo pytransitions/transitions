@@ -208,11 +208,11 @@ class TestTransitions(TestsCore):
         s.machine.add_transition('walk', '*', 'E%s3' % State.separator)
         s.machine.add_transition('run', 'E', 'C{0}3{0}a'.format(State.separator))
         s.go()
-        self.assertEqual(s.state, 'E{0}1'.format(State.separator))
+        self.assertEqual('E{0}1'.format(State.separator), s.state)
         s.walk()
-        self.assertEqual(s.state, 'E{0}3'.format(State.separator))
+        self.assertEqual('E{0}3'.format(State.separator), s.state)
         s.run()
-        self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
+        self.assertEqual('C{0}3{0}a'.format(State.separator), s.state)
 
     def test_enter_exit_nested_state(self):
         mock = MagicMock()
@@ -276,21 +276,21 @@ class TestTransitions(TestsCore):
             state.on_exit.append('decrease_level')
 
         s.advance()
-        self.assertEqual(s.state, 'C%s3' % State.separator)
-        self.assertEqual(s.level, 2)
-        self.assertEqual(s.transitions, 3)  # exit A; enter C,3
+        self.assertEqual('C%s3' % State.separator, s.state)
+        self.assertEqual(2, s.level)
+        self.assertEqual(3, s.transitions)  # exit A; enter C,3
         s.lower()
         self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
-        self.assertEqual(s.level, 3)
-        self.assertEqual(s.transitions, 4)  # enter a
+        self.assertEqual(3, s.level)
+        self.assertEqual(4, s.transitions)  # enter a
         s.rise()
-        self.assertEqual(s.state, 'C%s1' % State.separator)
-        self.assertEqual(s.level, 2)
-        self.assertEqual(s.transitions, 7)  # exit a, 3; enter 1
+        self.assertEqual('C%s1' % State.separator, s.state)
+        self.assertEqual(2, s.level)
+        self.assertEqual(7, s.transitions)  # exit a, 3; enter 1
         s.reverse()
-        self.assertEqual(s.state, 'A')
-        self.assertEqual(s.level, 1)
-        self.assertEqual(s.transitions, 10)  # exit 1, C; enter A
+        self.assertEqual('A', s.state)
+        self.assertEqual(1, s.level)
+        self.assertEqual(10, s.transitions)  # exit 1, C; enter A
         s.fast()
         self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
         self.assertEqual(s.level, 3)
@@ -316,21 +316,21 @@ class TestTransitions(TestsCore):
                                                  'seventh']}, 'eighth', 'ninth']
         m = self.stuff.machine_cls(states=states)
         m.add_ordered_transitions()
-        self.assertEqual(m.state, 'initial')
+        self.assertEqual('initial', m.state)
         m.next_state()
-        self.assertEqual(m.state, 'first')
-        m.next_state()
-        m.next_state()
-        self.assertEqual(m.state, 'first{0}third'.format(State.separator))
+        self.assertEqual('first', m.state)
         m.next_state()
         m.next_state()
-        self.assertEqual(m.state, 'first{0}fourth{0}fifth'.format(State.separator))
+        self.assertEqual('first{0}third'.format(State.separator), m.state)
         m.next_state()
         m.next_state()
-        self.assertEqual(m.state, 'first{0}seventh'.format(State.separator))
+        self.assertEqual('first{0}fourth{0}fifth'.format(State.separator), m.state)
         m.next_state()
         m.next_state()
-        self.assertEqual(m.state, 'ninth')
+        self.assertEqual('first{0}seventh'.format(State.separator), m.state)
+        m.next_state()
+        m.next_state()
+        self.assertEqual('ninth', m.state)
 
         # Include initial state in loop
         m = self.stuff.machine_cls('self', states)
@@ -484,9 +484,9 @@ class TestTransitions(TestsCore):
         machine.to('C{0}2'.format(State.separator))  # exit C↦3↦a, exit C↦3, enter C↦2
         self.assertEqual(machine.state, 'C{0}2'.format(State.separator))
         machine.reset()  # exit C↦2; reset C has been overwritten by C↦3
-        self.assertEqual(machine.state, 'C')
+        self.assertEqual('C', machine.state)
         machine.reset()  # exit C, enter A
-        self.assertEqual(machine.state, 'A')
+        self.assertEqual('A', machine.state)
 
     def test_multiple_models(self):
         class Model(object):

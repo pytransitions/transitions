@@ -4,8 +4,9 @@ from collections import OrderedDict
 import logging
 from six import string_types
 import inspect
-from functools import partial
+from functools import partial, reduce
 import copy
+from collections import defaultdict
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -14,6 +15,20 @@ _LOGGER.addHandler(logging.NullHandler())
 # without it, Python 3.0 - 3.3 will not support pickling
 # https://github.com/pytransitions/transitions/issues/236
 _super = super
+
+
+def get_prefix(lists, omit=None):
+    if len(lists) == 1:
+        return lists
+    cp = sorted(lists, key=len)
+    res = []
+    for idx, elem in enumerate(cp[0]):
+        for l in cp[1:]:
+            if l[idx] != elem:
+                return res
+        if elem != omit:
+            res.append(elem)
+    return res
 
 
 class FunctionWrapper(object):
@@ -53,28 +68,51 @@ class FunctionWrapper(object):
         return self._func(*args, **kwargs)
 
 
+def _resolve_order(state_tree):
+    s = state_tree
+    q = []
+    res = []
+    p = []
+    while True:
+        for k in reversed(list(s.keys())):
+            pk = p + [k]
+            res.append(pk)
+            if s[k]:
+                q.append((pk, s[k]))
+        if not q:
+            break
+        p, s = q.pop(0)
+    return reversed(res)
+
+
 class NestedEvent(Event):
 
-    def _trigger(self, model, state_name, machine, *args, **kwargs):
-        separator = machine.state_cls.separator
-        state_name = state_name.split(separator)
-        while state_name and separator.join(state_name) not in self.transitions:
-            state_name.pop()
-        state_name = separator.join(state_name)
-        if state_name in self.transitions:
-            state = machine.get_state(state_name)
-            event_data = EventData(state, self, machine, model, args=args, kwargs=kwargs)
-            return self._process(event_data, state_name)
-        else:
-            return None
+    def _trigger(self, model, state_tree, machine, prefix, *args, **kwargs):
+        ordered_states = _resolve_order(state_tree)
+        done = []
+        res = None
+        for state_path in ordered_states:
+            state_name = machine.state_cls.separator.join(state_path)
+            if state_name not in done and state_name in self.transitions:
+                state = machine.get_state(state_name)
+                event_data = EventData(state, self, machine, model, args=args, kwargs=kwargs)
+                event_data.source_name = state_name
+                event_data.source_path = copy.copy(state_path)
+                res = self._process(event_data)
+                if res:
+                    elems = state_path
+                    while elems:
+                        done.append(machine.state_cls.separator.join(elems))
+                        elems.pop()
+        return res
 
-    def _process(self, event_data, state_name):
+    def _process(self, event_data):
         machine = event_data.machine
         machine.callbacks(event_data.machine.prepare_event, event_data)
         _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", machine.name)
 
         try:
-            for trans in self.transitions[state_name]:
+            for trans in self.transitions[event_data.source_name]:
                 event_data.transition = trans
                 if trans.execute(event_data):
                     event_data.result = True
@@ -92,12 +130,13 @@ class NestedState(State):
 
     separator = '_'
 
-    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, initial=None, parent=None):
+    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, initial=None):
         _super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
                                            ignore_invalid_triggers=ignore_invalid_triggers)
         self.initial = initial
         self.events = {}
         self.states = OrderedDict()
+        self.exit_stack = defaultdict(list)
 
     def add_substate(self, state):
         self.add_substates(state)
@@ -106,61 +145,110 @@ class NestedState(State):
         for state in listify(states):
             self.states[state.name] = state
 
+    def exit(self, event_data):
+        for state in self.exit_stack[event_data.model]:
+            self.states[state].exit(event_data)
+        self.exit_stack[event_data.model] = []
+        _super(NestedState, self).exit(event_data)
+
 
 class NestedTransition(Transition):
 
+    @staticmethod
+    def _build_state_tree(model_states, res, separator):
+        if isinstance(model_states, list):
+            for state in model_states:
+                NestedTransition._build_state_tree(state, res, separator)
+        else:
+            if isinstance(model_states, Enum):
+                res[model_states.name] = {}  # since enum cannot be nested we do not need an OrderedDict here
+            else:
+                tmp = res
+                for elem in model_states.split(separator):
+                    if elem not in tmp:
+                        tmp[elem] = OrderedDict()
+                    tmp = tmp[elem]
+
+    @staticmethod
+    def _build_state_list(state_tree, separator, prefix=[]):
+        res = []
+        for key, value in state_tree.items():
+            if value:
+                res.append(NestedTransition._build_state_list(value, separator, prefix=prefix + [key]))
+            else:
+                return separator.join(prefix + [key])
+        return res if len(res) > 1 else res[0]
+
     def _change_state(self, event_data):
-        model = event_data.model
         machine = event_data.machine
-        src_name = machine.get_local_name(getattr(model, machine.model_attribute), join=False)
-        dst_name = machine.get_local_name(self.dest, join=False)
-        if src_name == dst_name:
-            root = src_name[:-1]
+        dst_name_path = machine.get_local_name(self.dest, join=False)
+        _ = machine.get_state(dst_name_path)
+        model_states = listify(getattr(event_data.model, machine.model_attribute))
+        state_tree = OrderedDict()
+        self._build_state_tree(model_states, state_tree, machine.state_cls.separator)
+        scope = machine.get_global_name(join=False)
+        scoped_tree = state_tree
+        for elem in scope:
+            scoped_tree = scoped_tree[elem]
+        self._change_nested(event_data, scoped_tree, dst_name_path)
+        model_states = self._build_state_list(state_tree, machine.state_cls.separator)
+        with machine():
+            event_data.machine.set_state(model_states, event_data.model)
+            event_data.state = machine.get_states(listify(model_states))
+
+    def _change_nested(self, event_data, state_tree, dst_name_path):
+        machine = event_data.machine
+        src_name_path = event_data.source_path
+        if src_name_path == dst_name_path:
+            root = src_name_path[:-1]  # exit and enter the same state
         else:
             root = []
-            while dst_name and src_name and src_name[0] == dst_name[0]:
-                root.append(src_name.pop(0))
-                dst_name.pop(0)
-        dest_name = self._root_nested(root, src_name, dst_name, event_data)
-        with machine():
-            event_data.machine.set_state(dest_name, event_data.model)
-        event_data.update(dest_name)
-
-    def _root_nested(self, state_path, src_name, dst_name, event_data):
-        if state_path:
-            with event_data.machine(state_path.pop(0)):
-                return self._root_nested(state_path, src_name, dst_name, event_data)
-        else:
-            if src_name:
-                with event_data.machine(src_name.pop(0)):
-                    self._exit_nested(src_name, event_data)
-            if dst_name:
-                # check if state actually exists
-                _ = event_data.machine.get_state(event_data.machine.state_cls.separator.join(dst_name))
-                with event_data.machine(dst_name.pop(0)):
-                    dest_name = self._enter_nested(dst_name, event_data)
+            while dst_name_path and src_name_path and src_name_path[0] == dst_name_path[0]:
+                root.append(src_name_path.pop(0))
+                dst_name_path.pop(0)
+        if src_name_path:
+            if root:
+                parent = machine.get_state(machine.state_cls.separator.join(root))
+                parent.states[src_name_path[0]].exit(event_data)
+                parent.exit_stack[event_data.model].remove(src_name_path[0])
             else:
-                dest_name = event_data.machine.get_global_name()
-            return dest_name
+                machine.get_state(machine.state_cls.separator.join(root + [src_name_path[0]])).exit(event_data)
 
-    def _exit_nested(self, state_path, event_data):
-        if state_path:
-            with event_data.machine(state_path.pop(0)):
-                self._exit_nested(state_path, event_data)
-        event_data.machine.scoped.exit(event_data)
+        new_states = OrderedDict()
+        if dst_name_path:
+            dest_name = self._enter_nested(root + [dst_name_path[0]], dst_name_path[1:], [], None, event_data)
+            NestedTransition._build_state_tree(listify(dest_name), new_states, machine.state_cls.separator)
 
-    def _enter_nested(self, state_path, event_data):
+        state_root = reduce(dict.get, root, state_tree)
+        for key in state_root:
+            del state_root[key]
+
+        for new_key, value in new_states.items():
+            state_root[new_key] = value
+            break
+
+    def _enter_nested(self, root, dest, prefix, parent, event_data):
+        if root:
+            state_name = root.pop(0)
+            parent = event_data.machine.scoped
+            with event_data.machine(state_name):
+                return self._enter_nested(root, dest, [state_name], parent, event_data)
         state = event_data.machine.scoped
         state.enter(event_data)
-        if state_path:
-            state_name = state_path.pop(0)
+        if parent != event_data.machine:
+            parent.exit_stack[event_data.model].append(state.name)
+        if dest:
+            state_name = dest.pop(0)
             with event_data.machine(state_name):
-                return self._enter_nested(state_path, event_data)
+                return self._enter_nested([], dest, prefix + [state_name], state, event_data)
         elif state.initial:
-            with event_data.machine(state.initial):
-                return self._enter_nested([], event_data)
+            entered_states = []
+            for intial_state in listify(state.initial):
+                with event_data.machine(intial_state):
+                    entered_states.append(self._enter_nested([], [], prefix + [intial_state], state, event_data))
+            return entered_states if len(entered_states) > 1 else entered_states[0]
         else:
-            return event_data.machine.get_global_name()
+            return event_data.machine.state_cls.separator.join(prefix)
 
 
 class HierarchicalMachine(Machine):
@@ -210,13 +298,18 @@ class HierarchicalMachine(Machine):
                 state = state.copy()  # prevent messing with the initially passed dict
                 remap = state.pop('remap', None)
                 state_children = state.pop('children', [])
+                state_parallel = state.pop('parallel', [])
                 transitions = state.pop('transitions', [])
                 new_state = self._create_state(**state)
                 self.states[new_state.name] = new_state
                 self._init_state(new_state)
                 remapped_transitions = []
                 with self(new_state.name):
-                    self.add_states(state_children, remap=remap, **kwargs)
+                    if state_parallel:
+                        self.add_states(state_parallel, remap=remap, **kwargs)
+                        new_state.initial = [s['name'] for s in state_parallel]
+                    else:
+                        self.add_states(state_children, remap=remap, **kwargs)
                     if remap is not None:
                         drop_event = []
                         for evt in self.events.values():
@@ -366,7 +459,7 @@ class HierarchicalMachine(Machine):
 
     def trigger_event(self, model, trigger, *args, **kwargs):
         with self():
-            res = self._trigger_event(model, trigger, *args, **kwargs)
+            res = self._trigger_event(model, trigger, None, *args, **kwargs)
         if res is None:
             state_name = getattr(model, self.model_attribute)
             msg = "%sCan't trigger event %s from state %s!" % (self.name, trigger, state_name)
@@ -380,16 +473,19 @@ class HierarchicalMachine(Machine):
                 raise MachineError(msg)
         return res
 
-    def _trigger_event(self, model, trigger, *args, **kwargs):
-        state_name = getattr(model, self.model_attribute)
-        state_name = self.get_local_name(state_name)
-        res = None
-        if state_name:
-            with self(state_name):
-                res = self._trigger_event(model, trigger, *args, **kwargs)
-        if not res and trigger in self.events:
-            res = self.events[trigger]._trigger(model, state_name, self, *args, **kwargs)
-        return res
+    def _trigger_event(self, model, trigger, state_tree, *args, **kwargs):
+        if state_tree is None:
+            state_tree = OrderedDict()
+            NestedTransition._build_state_tree(listify(getattr(model, self.model_attribute)),
+                                               state_tree, self.state_cls.separator)
+        res = {}
+        for key, value in state_tree.items():
+            if value:
+                with self(key):
+                    res[key] = self._trigger_event(model, trigger, value, *args, **kwargs)
+            if not res.get(key, None) and trigger in self.events:
+                res[key] = self.events[trigger]._trigger(model, state_tree, self, [], *args, **kwargs)
+        return None if not res or all([v is None for v in res.values()]) else any(res.values())
 
     def is_state(self, state_name, model, allow_substates=False):
         current_name = getattr(model, self.model_attribute)
@@ -406,15 +502,9 @@ class HierarchicalMachine(Machine):
         initial_name = getattr(models[0], self.model_attribute)
         if hasattr(initial_name, 'name'):
             initial_name = initial_name.name
-        initial_state = self.get_state(initial_name)
-        if initial_state.initial:
-            while initial_state.initial:
-                initial_name += self.state_cls.separator + initial_state.initial
-                initial_state = initial_state.states[initial_state.initial]
-            for mod in models:
-                self.set_state(initial_name, mod)
-
+        initial_states = self._resolve_initial(models, initial_name.split(self.state_cls.separator))
         for mod in models:
+            self.set_state(initial_states, mod)
             # TODO: Remove 'mod != self' in 0.7.0
             if hasattr(mod, 'to') and mod != self:
                 _LOGGER.warning("%sModel already has a 'to'-method. It will NOT "
@@ -422,6 +512,26 @@ class HierarchicalMachine(Machine):
             else:
                 to_func = partial(self.to_state, mod)
                 setattr(mod, 'to', to_func)
+
+    def _resolve_initial(self, models, state_name_path, prefix=[], parent=None):
+        if state_name_path:
+            state_name = state_name_path.pop(0)
+            parent = self.scoped
+            if parent != self:
+                for mod in models:
+                    parent.exit_stack[mod].append(state_name)
+            with self(state_name):
+                return self._resolve_initial(models, state_name_path, prefix=prefix + [state_name], parent=parent)
+        if self.scoped.initial:
+            entered_states = []
+            parent = self.scoped
+            for initial_state_name in listify(self.scoped.initial):
+                for mod in models:
+                    parent.exit_stack[mod].append(initial_state_name)
+                with self(initial_state_name):
+                    entered_states.append(self._resolve_initial(models, [], prefix=prefix + [initial_state_name], parent=parent))
+            return entered_states if len(entered_states) > 1 else entered_states[0]
+        return self.state_cls.separator.join(prefix)
 
     def get_global_name(self, state=None, join=True):
         local_stack = [s[0] for s in self._stack] + [self.scoped]
@@ -431,7 +541,7 @@ class HierarchicalMachine(Machine):
             if isinstance(state, State):
                 state = state.name
             domains = self._get_global_name(state, domains)
-        return self.state_cls.separator.join(domains) if join else domains[1:]
+        return self.state_cls.separator.join(domains) if join else domains
 
     def _get_global_name(self, state=None, domains=[]):
         domains.append(state)
@@ -440,10 +550,10 @@ class HierarchicalMachine(Machine):
         else:
             for child in self.states:
                 with self(child):
-                    domains = self._global_name(state, domains)
+                    domains = self._get_global_name(state, domains)
                     if domains:
                         return [child] + domains
-            return []
+            return domains
 
     def get_local_name(self, state_name, join=True):
         if isinstance(state_name, Enum):
@@ -463,13 +573,18 @@ class HierarchicalMachine(Machine):
             domains.pop(0)
         return self.state_cls.separator.join(state_name) if join else state_name
 
-    def set_state(self, state, model=None):
-        state_name = state
-        state = self.get_state(state_name)
-        value = state.value if isinstance(state.value, Enum) else state_name
+    def set_state(self, states, model=None):
+        values = [self._set_state(value) for value in listify(states)]
         models = self.models if model is None else listify(model)
         for mod in models:
-            setattr(mod, self.model_attribute, value)
+            setattr(mod, self.model_attribute, values if len(values) > 1 else values[0])
+
+    def _set_state(self, state_name):
+        if isinstance(state_name, list):
+            return [self._set_state(value) for value in state_name]
+        else:
+            a_state = self.get_state(state_name)
+            return a_state.value if isinstance(a_state.value, Enum) else state_name
 
     def get_state(self, state, hint=None):
         """ Return the State instance with the passed name. """
@@ -478,6 +593,7 @@ class HierarchicalMachine(Machine):
         elif isinstance(state, string_types):
             state = state.split(self.state_cls.separator)
         if not hint:
+            state = copy.copy(state)
             hint = copy.copy(state)
         if len(state) > 1:
             child = state.pop(0)
@@ -489,6 +605,15 @@ class HierarchicalMachine(Machine):
         elif state[0] not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state[0]]
+
+    def get_states(self, states):
+        res = []
+        for state in states:
+            if isinstance(state, list):
+                res.append(self.get_states(state))
+            else:
+                res.append(self.get_state(state))
+        return res
 
     def get_global_state(self, state):
         states = self._stack[0][1] if self._stack else self.states
@@ -572,6 +697,12 @@ class HierarchicalMachine(Machine):
             state_name (str): Name of the destination state.
         """
 
-        event = EventData(self.get_model_state(model), Event('to', self), self,
+        current_state = getattr(model, self.model_attribute)
+        if isinstance(current_state, list):
+            raise MachineError("Cannot use 'to_state' from parallel state")
+
+        event = EventData(self.get_state(current_state), Event('to', self), self,
                           model, args=args, kwargs=kwargs)
-        self._create_transition(getattr(model, self.model_attribute), state_name).execute(event)
+        event.source_name = current_state
+        event.source_path = current_state.split(self.state_cls.separator)
+        self._create_transition(current_state, state_name).execute(event)
