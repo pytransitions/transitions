@@ -10,8 +10,8 @@ import logging
 from functools import partial
 from collections import defaultdict
 from os.path import splitext
+import copy
 
-from .nesting import NestedState
 from .diagrams import BaseGraph
 try:
     import graphviz as pgv
@@ -85,15 +85,36 @@ class Graph(BaseGraph):
         # For each state, draw a circle
         try:
             markup = self.machine.get_markup_config()
-            states = markup.get('states', [])
-            transitions = markup.get('transitions', [])
+            q = [([], markup)]
+            states = []
+            transitions = []
+            while q:
+                prefix, scope = q.pop(0)
+                for transition in scope.get('transitions', []):
+                    if prefix:
+                        t = copy.copy(transition)
+                        t['source'] = self.machine.state_cls.separator.join(prefix + [t['source']])
+                        t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
+                    else:
+                        t = transition
+                    transitions.append(t)
+                for state in scope.get('states', []):
+                    if prefix:
+                        s = copy.copy(state)
+                        s['name'] = self.machine.state_cls.separator.join(prefix + [s['name']])
+                    else:
+                        s = state
+                    states.append(s)
+                    if state.get('children', []):
+                        q.append((prefix + [state['name']], state))
+
             if roi_state:
                 transitions = [t for t in transitions
                                if t['source'] == roi_state or self.custom_styles['edge'][t['source']][t['dest']]]
                 state_names = [t for trans in transitions
                                for t in [trans['source'], trans.get('dest', trans['source'])]]
                 state_names += [k for k, style in self.custom_styles['node'].items() if style]
-                states = _filter_states(states, state_names)
+                states = _filter_states(states, state_names, self.machine.state_cls)
             self._add_nodes(states, fsm_graph)
             self._add_edges(transitions, fsm_graph)
         except KeyError:
@@ -131,6 +152,11 @@ class NestedGraph(Graph):
         self._cluster_states = []
         _super(NestedGraph, self).__init__(*args, **kwargs)
 
+    def set_previous_transition(self, src, dst):
+        src_name = self._get_global_name(src.split(self.machine.state_cls.separator))
+        dst_name = self._get_global_name(dst.split(self.machine.state_cls.separator))
+        _super(NestedGraph, self).set_previous_transition(src_name, dst_name)
+
     def _add_nodes(self, states, container, prefix=''):
 
         for state in states:
@@ -147,7 +173,7 @@ class NestedGraph(Graph):
                     with sub.subgraph(name=cluster_name + '_root',
                                       graph_attr={'label': '', 'color': 'None', 'rank': 'min'}) as root:
                         root.node(name + "_anchor", shape='point', fillcolor='black', width='0.1')
-                    self._add_nodes(state['children'], sub, prefix=prefix + state['name'] + NestedState.separator)
+                    self._add_nodes(state['children'], sub, prefix=prefix + state['name'] + self.machine.state_cls.separator)
             else:
                 style = self.custom_styles['node'][name]
                 container.node(name, label=label, **self.machine.style_attributes['node'][style])
@@ -208,14 +234,14 @@ class NestedGraph(Graph):
                 container.edge(attr.pop('source'), attr.pop('dest'), **attr)
 
 
-def _filter_states(states, state_names, prefix=None):
+def _filter_states(states, state_names, state_cls, prefix=None):
     prefix = prefix or []
     result = []
     for state in states:
         pref = prefix + [state['name']]
         if 'children' in state:
-            state['children'] = _filter_states(state['children'], state_names, prefix=pref)
+            state['children'] = _filter_states(state['children'], state_names, state_cls, prefix=pref)
             result.append(state)
-        elif NestedState.separator.join(pref) in state_names:
+        elif getattr(state_cls, 'separator', '_').join(pref) in state_names:
             result.append(state)
     return result

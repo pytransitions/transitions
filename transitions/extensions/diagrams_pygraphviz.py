@@ -7,6 +7,8 @@
 """
 
 import logging
+import copy
+
 from .nesting import NestedState
 from .diagrams import BaseGraph
 
@@ -62,8 +64,31 @@ class Graph(BaseGraph):
 
         # For each state, draw a circle
         markup = self.machine.get_markup_config()
-        self._add_nodes(markup.get('states', []), self.fsm_graph)
-        self._add_edges(markup.get('transitions', []), self.fsm_graph)
+        q = [([], markup)]
+        states = []
+        transitions = []
+        while q:
+            prefix, scope = q.pop(0)
+            for transition in scope.get('transitions', []):
+                if prefix:
+                    t = copy.copy(transition)
+                    t['source'] = self.machine.state_cls.separator.join(prefix + [t['source']])
+                    t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
+                else:
+                    t = transition
+                transitions.append(t)
+            for state in scope.get('states', []):
+                if prefix:
+                    s = copy.copy(state)
+                    s['name'] = self.machine.state_cls.separator.join(prefix + [s['name']])
+                else:
+                    s = state
+                states.append(s)
+                if state.get('children', []):
+                    q.append((prefix + [state['name']], state))
+
+        self._add_nodes(states, self.fsm_graph)
+        self._add_edges(transitions, self.fsm_graph)
 
         setattr(self.fsm_graph, 'style_attributes', self.machine.style_attributes)
 
@@ -208,6 +233,8 @@ class NestedGraph(Graph):
             subgraph.graph_attr.update(style_attr)
 
     def set_previous_transition(self, src, dst):
+        src = self._get_global_name(src.split(self.machine.state_cls.separator))
+        dst = self._get_global_name(dst.split(self.machine.state_cls.separator))
         try:
             edge = self.fsm_graph.get_edge(src, dst)
         except KeyError:
