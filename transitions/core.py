@@ -88,7 +88,7 @@ class State(object):
                  ignore_invalid_triggers=None):
         """
         Args:
-            name (str): The name of the state
+            name (str or Enum): The name of the state
             on_enter (str or list): Optional callable(s) to trigger when a
                 state is entered. Can be either a string providing the name of
                 a callable, or a list of strings.
@@ -200,9 +200,11 @@ class Transition(object):
             but only if condition checks have been successful.
     """
 
-    # A list of dynamic methods which can be resolved by a ``Machine`` instance for convenience functions.
     dynamic_methods = ['before', 'after', 'prepare']
+    """ A list of dynamic methods which can be resolved by a ``Machine`` instance for convenience functions. """
     condition_cls = Condition
+    """ The class used to wrap condition checks. Can be replaced to alter condition resolution behaviour
+        (e.g. OR instead of AND for 'conditions' or AND instead of OR for 'unless') """
 
     def __init__(self, source, dest, conditions=None, unless=None, before=None,
                  after=None, prepare=None):
@@ -720,7 +722,8 @@ class Machine(object):
         """
             Set the current state.
         Args:
-            state (str or Enum or State): value of setted state
+            state (str or Enum or State): value of state to be set
+            model (optional[object]): targeted model; if not set, all models will be set to 'state'
         """
         if not isinstance(state, State):
             state = self.get_state(state)
@@ -1075,7 +1078,7 @@ class Machine(object):
             try:
                 func = getattr(event_data.model, func)
                 if not callable(func):  # if a property or some other not callable attribute was passed
-                    def func_wrapper(*args, **kwargs):
+                    def func_wrapper(*_, **__):  # properties cannot process parameters
                         return func
                     return func_wrapper
             except AttributeError:
