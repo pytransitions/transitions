@@ -26,12 +26,10 @@ class MarkupMachine(Machine):
                 self._add_markup_model(m)
         else:
             super(MarkupMachine, self).__init__(*args, **kwargs)
-            self._markup['initial'] = self.initial
             self._markup['before_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
             self._markup['after_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
             self._markup['prepare_event'] = [x for x in (rep(f) for f in self.prepare_event) if x]
             self._markup['finalize_event'] = [x for x in (rep(f) for f in self.finalize_event) if x]
-            self._markup['name'] = "" if not self.name else self.name[:-2]
             self._markup['send_event'] = self.send_event
             self._markup['auto_transitions'] = self.auto_transitions
             self._markup['ignore_invalid_triggers'] = self.ignore_invalid_triggers
@@ -44,7 +42,7 @@ class MarkupMachine(Machine):
     @auto_transitions_markup.setter
     def auto_transitions_markup(self, value):
         self._auto_transitions_markup = value
-        self._markup['transitions'] = self._convert_transitions()
+        self._needs_update = True
 
     @property
     def markup(self):
@@ -55,8 +53,7 @@ class MarkupMachine(Machine):
     # has issues with properties during __setattr__ (self.markup is not set)
     def get_markup_config(self):
         if self._needs_update:
-            self._markup['transitions'] = self._convert_transitions()
-            self._markup['states'] = self._convert_states([s for s in self.states.values()])  # get only root states in HSMs
+            self._convert_states_and_transitions(self._markup)
             self._needs_update = False
         return self._markup
 
@@ -71,22 +68,31 @@ class MarkupMachine(Machine):
                                               ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
         self._needs_update = True
 
-    def _convert_states(self, states):
-        markup_states = []
-        for state in states:
+    def _convert_states_and_transitions(self, root):
+        state = getattr(self, 'scoped', self)
+        if state.initial:
+            root['initial'] = state.initial
+        if state == self and state.name:
+            root['name'] = self.name[:-2]
+        self._convert_transitions(root)
+        self._convert_states(root)
+
+    def _convert_states(self, root):
+        key = 'states' if getattr(self, 'scoped', self) == self else 'children'
+        root[key] = []
+        for state_name, state in self.states.items():
             s_def = _convert(state, self.state_attributes, self.skip_references)
-            state_name = state._name
             if isinstance(state_name, Enum):
                 s_def['name'] = state_name.name
             else:
                 s_def['name'] = state_name
             if getattr(state, 'states', []):
-                s_def['children'] = self._convert_states(state.states.values())
-            markup_states.append(s_def)
-        return markup_states
+                with self(state_name):
+                    self._convert_states_and_transitions(s_def)
+            root[key].append(s_def)
 
-    def _convert_transitions(self):
-        markup_transitions = []
+    def _convert_transitions(self, root):
+        root['transitions'] = []
         for event in self.events.values():
             if self._omit_auto_transitions(event):
                 continue
@@ -103,8 +109,7 @@ class MarkupMachine(Machine):
                         t_def['conditions'] = con
                     if unl:
                         t_def['unless'] = unl
-                    markup_transitions.append(t_def)
-        return markup_transitions
+                    root['transitions'].append(t_def)
 
     def _add_markup_model(self, markup):
         initial = markup.get('state', None)
