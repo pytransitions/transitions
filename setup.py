@@ -1,9 +1,7 @@
 import codecs
 import sys
 from setuptools import setup, find_packages
-
-with open('transitions/version.py') as f:
-    exec(f.read())
+from transitions.version import __version__
 
 with codecs.open('README.md', 'r', 'utf-8') as f:
     import re
@@ -13,9 +11,6 @@ with codecs.open('README.md', 'r', 'utf-8') as f:
 
     long_description = re.sub(regex, "## Quickstart", readme, 1)
     assert long_description[:13] == '## Quickstart'  # Description should start with a headline (## Quickstart)
-
-if len(set(('test', 'easy_install')).intersection(sys.argv)) > 0:
-    import setuptools
 
 tests_require = ['dill', 'graphviz', 'pygraphviz']
 extras_require = {'diagrams': ['pygraphviz']}

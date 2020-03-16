@@ -46,6 +46,7 @@ A lightweight, object-oriented state machine implementation in Python. Compatibl
         - [Diagrams](#diagrams)
         - [Hierarchical State Machine](#hsm)
         - [Threading](#threading)
+        - [Async](#async)
         - [State features](#state-features)
         - [Django](#django-support)
     - [Bug reports etc.](#bug-reports)
@@ -1014,9 +1015,11 @@ Even though the core of transitions is kept lightweight, there are a variety of 
 - **Diagrams** to visualize the current state of a machine
 - **Hierarchical State Machines** for nesting and reuse
 - **Threadsafe Locks** for parallel execution
+- **Async callbacks** for asynchronous execution
 - **Custom States** for extended state-related behaviour
 
-There are two mechanisms to retrieve a state machine instance with the desired features enabled. The first approach makes use of the convenience `factory` with the three parameters `graph`, `nested` and `locked` set to `True` if the certain feature is required:
+There are two mechanisms to retrieve a state machine instance with the desired features enabled.
+The first approach makes use of the convenience `factory` with the four parameters `graph`, `nested`, `locked` or `asyncio` set to `True` if the feature is required:
 
 ```python
 from transitions.extensions import MachineFactory
@@ -1024,6 +1027,7 @@ from transitions.extensions import MachineFactory
 # create a machine with mixins
 diagram_cls = MachineFactory.get_predefined(graph=True)
 nested_locked_cls = MachineFactory.get_predefined(nested=True, locked=True)
+async_machine_cls = MachineFactory.get_predefined(asyncio=True)
 
 # create instances from these classes
 # instances can be used like simple machines
@@ -1031,18 +1035,22 @@ machine1 = diagram_cls(model, state, transitions...)
 machine2 = nested_locked_cls(model, state, transitions)
 ```
 
-This approach targets experimental use since in this case the underlying classes do not have to be known. However, classes can also be directly imported from `transitions.extensions`. The naming scheme is as follows:
+This approach targets experimental use since in this case the underlying classes do not have to be known.
+However, classes can also be directly imported from `transitions.extensions`. The naming scheme is as follows:
 
-|                                | Diagrams | Nested | Locked |
-| -----------------------------: | :------: | :----: | :----: |
-| Machine                        | ✘        | ✘      | ✘      |
-| GraphMachine                   | ✓        | ✘      | ✘      |
-| HierarchicalMachine            | ✘        | ✓      | ✘      |
-| LockedMachine                  | ✘        | ✘      | ✓      |
-| HierarchicalGraphMachine       | ✓        | ✓      | ✘      |
-| LockedGraphMachine             | ✓        | ✘      | ✓      |
-| LockedHierarchicalMachine      | ✘        | ✓      | ✓      |
-| LockedHierarchicalGraphMachine | ✓        | ✓      | ✓      |
+|                                | Diagrams | Nested | Locked | Asyncio |
+| -----------------------------: | :------: | :----: | :----: | :---: |
+| Machine                        | ✘        | ✘      | ✘      | ✘ |
+| GraphMachine                   | ✓        | ✘      | ✘      | ✘ |
+| HierarchicalMachine            | ✘        | ✓      | ✘      | ✘ |
+| LockedMachine                  | ✘        | ✘      | ✓      | ✘ |
+| HierarchicalGraphMachine       | ✓        | ✓      | ✘      | ✘ |
+| LockedGraphMachine             | ✓        | ✘      | ✓      | ✘ |
+| LockedHierarchicalMachine      | ✘        | ✓      | ✓      | ✘ |
+| LockedHierarchicalGraphMachine | ✓        | ✓      | ✓      | ✘ |
+| AsyncMachine                   | ✘        | ✘      | ✘      | ✓ |
+| AsyncGraphMachine              | ✓        | ✘      | ✘      | ✓ |   
+
 
 To use a full featured state machine, one could write:
 
@@ -1308,7 +1316,7 @@ machine = Machine(states=states, initial='A', machine_context=[lock1, lock2])
 Any contexts via `machine_model` will be shared between all models registered with the `Machine`.
 Per-model contexts can be added as well:
 
-```
+```python
 lock3 = RLock()
 
 machine.add_model(model, model_context=lock3)
@@ -1316,6 +1324,95 @@ machine.add_model(model, model_context=lock3)
 
 It's important that all user-provided context managers are re-entrant since the state machine will call them multiple
 times, even in the context of a single trigger invocation.
+
+
+#### <a name="async"></a> Using async callbacks
+
+If you are using Python 3.7 or later, you can use `AsyncMachine` to work with asynchronous callbacks.
+You can mix synchronous and asynchronous callbacks if you like but this may have undesired side effects.
+Note that events need to be awaited and the event loop must also be handled by you.
+
+```python
+from transitions.extensions.asyncio import AsyncMachine
+import asyncio
+import time
+
+
+class AsyncModel:
+
+    def prepare_model(self):
+        print("I am synchronous.")
+        self.start_time = time.time()
+
+    async def before_change(self):
+        print("I am asynchronous and will block now for 100 milliseconds.")
+        await asyncio.sleep(0.1)
+        print("I am done waiting.")
+
+    def sync_before_change(self):
+        print("I am synchronous and will block the event loop (what I probably shouldn't)")
+        time.sleep(0.1)
+        print("I am done waiting synchronously.")
+
+    def after_change(self):
+        print(f"I am synchronous again. Execution took {int((time.time() - self.start_time) * 1000)} ms.")
+
+
+transition = dict(trigger="start", source="Start", dest="Done", prepare="prepare_model",
+                  before=["before_change"] * 5 + ["sync_before_change"],
+                  after="after_change")  # execute before function in asynchronously 5 times
+model = AsyncModel()
+machine = AsyncMachine(model, states=["Start", "Done"], transitions=[transition], initial='Start')
+
+asyncio.get_event_loop().run_until_complete(model.start())
+# >>> I am synchronous.
+#     I am asynchronous and will block now for 100 milliseconds.
+#     I am asynchronous and will block now for 100 milliseconds.
+#     I am asynchronous and will block now for 100 milliseconds.
+#     I am asynchronous and will block now for 100 milliseconds.
+#     I am asynchronous and will block now for 100 milliseconds.
+#     I am synchronous and will block the event loop (what I probably shouldn't)
+#     I am done waiting synchronously.
+#     I am done waiting.
+#     I am done waiting.
+#     I am done waiting.
+#     I am done waiting.
+#     I am done waiting.
+#     I am synchronous again. Execution took 101 ms.
+assert model.is_Done()
+```
+
+So, why do you need to use Python 3.7 or later you may ask.
+Async support has been introduced earlier.
+`AsyncMachine` makes use of `contextvars` to handle running callbacks when new events arrive before a transition
+has been finished:
+
+```python
+async def await_never_return():
+    await asyncio.sleep(100)
+    raise ValueError("That took too long!")
+
+async def fix():
+    await m2.fix()
+
+m1 = AsyncMachine(states=['A', 'B', 'C'], initial='A', name="m1")
+m2 = AsyncMachine(states=['A', 'B', 'C'], initial='A', name="m2")
+m2.add_transition(trigger='go', source='A', dest='B', before=await_never_return)
+m2.add_transition(trigger='fix', source='A', dest='C')
+m1.add_transition(trigger='go', source='A', dest='B', after='go')
+m1.add_transition(trigger='go', source='B', dest='C', after=fix)
+asyncio.get_event_loop().run_until_complete(asyncio.gather(m2.go(), m1.go()))
+
+assert m1.state == m2.state
+```
+
+This example illustrates actually two things:
+First, that 'go' called in m1's transition from `A` to be `B` is not cancelled and second, calling `m2.fix()` will
+halt the transition attempt of m2 from `A` to `B` by executing 'fix' from `A` to `C`.
+This separation would not be possible without `contextvars`.
+Note that `prepare` and `conditions` are NOT treated as ongoing transitions.
+This means that after `conditions` have been evaluated, a transition is executed even though another event already happened.
+Tasks will only be cancelled when run as a `before` callback or later.
 
 #### <a name="state-features"></a>Adding features to states
 

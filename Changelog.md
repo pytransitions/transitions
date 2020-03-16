@@ -2,9 +2,10 @@
 
 ## 0.8.0 (February 2020)
 
-Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+ and some bugfixes
+Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+, parallel state support and some bugfixes
 
-- Feature: Introduced `AsyncMachine` (see discussion #259)
+- Feature: `HierarchicalStateMachine` has been rewritten to support parallel states. Please have a look at the ReadMe.md to check what has changed.
+- Feature: Introduced `AsyncMachine` (see discussion #259); note that async HSMs are not yet supported
 - Feature #390: String callbacks can now point to properties and attributes (thanks @jsenecal)
 - Bugfix: Auto transitions are added multiple times when add_states is called more than once
 - Bugfix: Convert state._name from `Enum` into strings in `MarkupMachine` when necessary
