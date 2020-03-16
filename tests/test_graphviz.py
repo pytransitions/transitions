@@ -166,9 +166,10 @@ class TestDiagrams(TestTransitions):
         else:
             dot_string = g1.source
         try:
-            self.assertRegex(dot_string, r'A\s+->A\s+\[label="reflexive | fixed \[internal\]"\]')
+            self.assertRegex(dot_string, r'A\s+->\s*A\s+\[label="(fixed|reflexive)')
         except AttributeError:  # Python 2 backwards compatibility
-            self.assertRegexpMatches(dot_string, 'A\s+->A\s+\[label="reflexive | fixed \[internal\]"\]')
+
+            self.assertRegexpMatches(dot_string, r'A\s+->\s*A\s+\[label="(fixed|reflexive)')
 
     def test_roi(self):
         m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A', use_pygraphviz=self.use_pygraphviz)
