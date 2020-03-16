@@ -109,12 +109,15 @@ class AsyncTransition(Transition):
         # cancel running tasks since the transition will happen
         machine = event_data.machine
         model = event_data.model
-        if model in machine._tasks and not machine._tasks[model].done():
-            if not is_subtask.get():
-                machine._tasks[model].cancel()
+        if model in machine.async_tasks and not machine.async_tasks[model].done():
+            parent = machine.async_tasks[model]
+            check = is_subtask.get()
+            if parent != check:
+                machine.async_tasks[model].cancel()
         else:
-            is_subtask.set(True)
-            machine._tasks[model] = asyncio.current_task()
+            current = asyncio.current_task()
+            is_subtask.set(current)
+            machine.async_tasks[model] = current
 
         await event_data.machine.callbacks(itertools.chain(event_data.machine.before_state_change, self.before), event_data)
         _LOGGER.debug("%sExecuted callback before transition.", event_data.machine.name)
@@ -127,6 +130,10 @@ class AsyncTransition(Transition):
         return True
 
     async def _change_state(self, event_data):
+        if hasattr(event_data.machine, "model_graphs"):
+            graph = event_data.machine.model_graphs[event_data.model]
+            graph.reset_styling()
+            graph.set_previous_transition(self.source, self.dest)
         await event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
         event_data.update(event_data.model.state)
@@ -219,7 +226,7 @@ class AsyncMachine(Machine):
     state_cls = AsyncState
     transition_cls = AsyncTransition
     event_cls = AsyncEvent
-    _tasks = {}
+    async_tasks = {}
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.

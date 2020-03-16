@@ -13,6 +13,14 @@ from .nesting import HierarchicalMachine, NestedTransition, NestedEvent
 from .locking import LockedMachine
 from .diagrams import GraphMachine, TransitionGraphSupport
 from .markup import MarkupMachine
+try:
+    from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
+except (ImportError, SyntaxError):
+    class AsyncMachine:  # Mocks for Python version 3.6 and earlier
+        pass
+
+    class AsyncTransition:
+        pass
 
 
 class MachineFactory(object):
@@ -22,7 +30,7 @@ class MachineFactory(object):
 
     # get one of the predefined classes which fulfill the criteria
     @staticmethod
-    def get_predefined(graph=False, nested=False, locked=False):
+    def get_predefined(graph=False, nested=False, locked=False, asyncio=False):
         """ A function to retrieve machine classes by required functionality.
         Args:
             graph (bool): Whether the returned class should contain graph support.
@@ -31,7 +39,10 @@ class MachineFactory(object):
 
         Returns (class): A machine class with the specified features.
         """
-        return _CLASS_MAP[(graph, nested, locked)]
+        try:
+            return _CLASS_MAP[(graph, nested, locked, asyncio)]
+        except KeyError:
+            raise ValueError("Feature combination not (yet) supported")
 
 
 class NestedGraphTransition(TransitionGraphSupport, NestedTransition):
@@ -78,14 +89,21 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedMachine, HierarchicalMa
     event_cls = NestedEvent
 
 
-# 3d tuple (graph, nested, locked)
+class AsyncGraphMachine(GraphMachine, AsyncMachine):
+
+    transition_cls = AsyncTransition
+
+
+# 4d tuple (graph, nested, locked, async)
 _CLASS_MAP = {
-    (False, False, False): Machine,
-    (False, False, True): LockedMachine,
-    (False, True, False): HierarchicalMachine,
-    (False, True, True): LockedHierarchicalMachine,
-    (True, False, False): GraphMachine,
-    (True, False, True): LockedGraphMachine,
-    (True, True, False): HierarchicalGraphMachine,
-    (True, True, True): LockedHierarchicalGraphMachine
+    (False, False, False, False): Machine,
+    (False, False, True, False): LockedMachine,
+    (False, True, False, False): HierarchicalMachine,
+    (False, True, True, False): LockedHierarchicalMachine,
+    (True, False, False, False): GraphMachine,
+    (True, False, True, False): LockedGraphMachine,
+    (True, True, False, False): HierarchicalGraphMachine,
+    (True, True, True, False): LockedHierarchicalGraphMachine,
+    (False, False, False, True): AsyncMachine,
+    (True, False, False, True): AsyncGraphMachine
 }

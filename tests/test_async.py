@@ -1,5 +1,6 @@
+from transitions.extensions import MachineFactory
+
 try:
-    from transitions.extensions.asyncio import AsyncMachine
     import asyncio
 except (ImportError, SyntaxError):
     asyncio = None
@@ -34,7 +35,8 @@ class TestAsync(TestTransitions):
 
     def setUp(self):
         super(TestAsync, self).setUp()
-        self.machine = AsyncMachine(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
+        self.machine_cls = MachineFactory.get_predefined(asyncio=True)
+        self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
     def test_async_machine_cb(self):
         mock = MagicMock()
@@ -88,19 +90,33 @@ class TestAsync(TestTransitions):
 
     def test_multiple_models(self):
         async def fix():
-            if not m2.is_B():
-                await m2.fix()
+            await m2.fix()
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-        m1 = AsyncMachine(states=['A', 'B', 'C'], initial='A')
-        m2 = AsyncMachine(states=['A', 'B', 'C'], initial='A')
-        m2.add_transition(trigger='go', source='A', dest='B', conditions=self.await_never_return)
+        m1 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m1")
+        m2 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m2")
+        m2.add_transition(trigger='go', source='A', dest='B', before=self.await_never_return)
         m2.add_transition(trigger='fix', source='A', dest='C', conditions=self.await_true)
         m1.add_transition(trigger='go', source='A', dest='B', conditions=self.await_true, after='go')
         m1.add_transition(trigger='go', source='B', dest='C', after=fix)
-        loop.run_until_complete(asyncio.gather(m1.go()))
+        loop.run_until_complete(asyncio.gather(m2.go(), m1.go()))
 
         assert m1.is_C()
         assert m2.is_C()
+
+
+class AsyncGraphMachine(TestAsync):
+
+    def setUp(self):
+        super(TestAsync, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(graph=True, asyncio=True)
+        self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
+
+# class TestHierarchicalAsync(TestAsync):
+#
+#     def setUp(self):
+#         super(TestAsync, self).setUp()
+#         self.machine_cls = MachineFactory.get_predefined(nested=True, asyncio=True)
+#         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')

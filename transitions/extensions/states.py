@@ -99,14 +99,14 @@ class Timeout(State):
             timer.setDaemon(True)
             timer.start()
             self.runner[id(event_data.model)] = timer
-        super(Timeout, self).enter(event_data)
+        return super(Timeout, self).enter(event_data)
 
     def exit(self, event_data):
         """ Extends `transitions.core.State.exit` by canceling a timer for the current model. """
         timer = self.runner.get(id(event_data.model), None)
         if timer is not None and timer.is_alive():
             timer.cancel()
-        super(Timeout, self).exit(event_data)
+        return super(Timeout, self).exit(event_data)
 
     def _process_timeout(self, event_data):
         _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
@@ -164,6 +164,7 @@ class Volatile(State):
 def add_state_features(*args):
     """ State feature decorator. Should be used in conjunction with a custom Machine class. """
     def _class_decorator(cls):
+
         class CustomState(type('CustomState', args, {}), cls.state_cls):
             """ The decorated State. It is based on the State class used by the decorated Machine. """
             pass
