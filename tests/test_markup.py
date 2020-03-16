@@ -165,6 +165,22 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
         self.num_trans = len(self.transitions)
         self.num_auto = len(self.states) * 9
 
+    def test_nested_definitions(self):
+        states = [{'name': 'A'},
+                  {'name': 'B'},
+                  {'name': 'C',
+                   'children': [
+                       {'name': '1'},
+                       {'name': '2'}],
+                   'transitions': [
+                       {'trigger': 'go',
+                        'source': '1',
+                        'dest': '2'}],
+                   'initial': '2'}]
+        machine = self.machine_cls(states=states, initial='A', auto_transitions=False, name='TestMachine')
+        markup = {k: v for k, v in machine.markup.items() if v and k != 'models'}
+        self.assertEqual(dict(initial='A', states=states, name='TestMachine'), markup)
+
 
 @skipIf(enum is None, "enum is not available")
 class TestMarkupMachineEnum(TestMarkupMachine):

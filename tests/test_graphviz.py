@@ -161,6 +161,11 @@ class TestDiagrams(TestTransitions):
         m.add_transition('reflexive', 'A', '=')
         m.add_transition('fixed', 'A', None)
         g1 = m.get_graph()
+        if self.use_pygraphviz:
+            dot_string = g1.string()
+        else:
+            dot_string = g1.source
+        self.assertRegex(dot_string, r'A\s+->A\s+\[label="reflexive | fixed \[internal\]"\]')
 
     def test_roi(self):
         m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A', use_pygraphviz=self.use_pygraphviz)
@@ -300,6 +305,59 @@ class TestDiagramsNested(TestDiagrams):
         _, nodes, edges = self.parse_dot(m.get_graph())
         self.assertEqual(len(nodes), 3)
         self.assertEqual(len([e for e in edges if re.match(internal_only_once, e)]), 3)
+
+    def test_nested_notebook(self):
+        states = [{'name': 'caffeinated',
+                   'on_enter': 'do_x',
+                   'children': ['dithering', 'running'],
+                   'transitions': [['walk', 'dithering', 'running'],
+                                   ['drink', 'dithering', '=']],
+                   },
+                  {'name': 'standing', 'on_enter': ['do_x', 'do_y'], 'on_exit': 'do_z'},
+                  {'name': 'walking', 'tags': ['accepted', 'pending'], 'timeout': 5, 'on_timeout': 'do_z'}]
+
+        transitions = [
+            ['walk', 'standing', 'walking'],
+            ['go', 'standing', 'walking'],
+            ['stop', 'walking', 'standing'],
+            {'trigger': 'drink', 'source': '*',
+             'dest': 'caffeinated{0}dithering'.format(self.machine_cls.state_cls.separator),
+             'conditions': 'is_hot', 'unless': 'is_too_hot'},
+            ['relax', 'caffeinated', 'standing'],
+            ['sip', 'standing', 'caffeinated']
+        ]
+
+        @add_state_features(Timeout, Tags)
+        class CustomStateMachine(self.machine_cls):
+
+            def is_hot(self):
+                return True
+
+            def is_too_hot(self):
+                return False
+
+            def do_x(self):
+                pass
+
+            def do_z(self):
+                pass
+
+        extra_args = dict(auto_transitions=False, initial='standing', title='Mood Matrix',
+                          show_conditions=True, show_state_attributes=True, use_pygraphviz=self.use_pygraphviz)
+        machine = CustomStateMachine(states=states, transitions=transitions, **extra_args)
+        g1 = machine.get_graph()
+        # dithering should have 4 'drink' edges, a) from walking, b) from initial, c) from running and d) from itself
+        if self.use_pygraphviz:
+            dot_string = g1.string()
+        else:
+            dot_string = g1.source
+        count = re.findall('-> "?caffeinated{0}dithering"?'.format(machine.state_cls.separator), dot_string)
+        self.assertEqual(4, len(count))
+        self.assertTrue(True)
+        machine.drink()
+        machine.drink()
+        g1 = machine.get_graph()
+        self.assertIsNotNone(g1)
 
 
 @skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
