@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from collections import OrderedDict, defaultdict
 import copy
 from functools import partial, reduce
