@@ -185,7 +185,7 @@ lump = Matter()
 You can initialize a (_minimal_) working state machine bound to `lump` like this:
 
 ```python
-from transitions import Machine
+from transitions import Machine, State
 machine = Machine(model=lump, states=['solid', 'liquid', 'gas', 'plasma'], initial='solid')
 
 # Lump now has state!
