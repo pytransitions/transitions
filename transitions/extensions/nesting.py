@@ -346,6 +346,9 @@ class HierarchicalMachine(Machine):
             state_name = to_scope.split(self.state_cls.separator)[0]
             state = self.states[state_name]
             to_scope = (state, state.states, state.events)
+        elif isinstance(to_scope, Enum):
+            state = self.states[to_scope.name]
+            to_scope = (state, state.states, state.events)
         elif to_scope is None:
             if self._stack:
                 to_scope = self._stack[0]
@@ -417,8 +420,6 @@ class HierarchicalMachine(Machine):
             elif isinstance(state, Enum):
                 if remap is not None and state.name in remap:
                     return
-                if self.scoped != self:
-                    raise ValueError("HierarchicalMachine does not support nested enumerations.")
                 new_state = self._create_state(state)
                 if state.name in self.states:
                     raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
@@ -788,7 +789,7 @@ class HierarchicalMachine(Machine):
             entered_states = []
             for initial_state_name in listify(self.scoped.initial):
                 with self(initial_state_name):
-                    entered_states.append(self._resolve_initial(models, [], prefix=prefix + [initial_state_name]))
+                    entered_states.append(self._resolve_initial(models, [], prefix=prefix + [self.scoped.name]))
             return entered_states if len(entered_states) > 1 else entered_states[0]
         return self.state_cls.separator.join(prefix)
 

@@ -353,7 +353,8 @@ lump.matter_state
 
 #### <a name="enum-state"></a>Enumerations
 
-So far we have seen how we can give state names and use these names to work with our state machine. If you favour stricter typing and more IDE code completion (or you just can't type 'sesquipedalophobia' any longer because the word scares you) using [Enumerations](https://docs.python.org/3/library/enum.html) might be what you are looking for:
+So far we have seen how we can give state names and use these names to work with our state machine.
+If you favour stricter typing and more IDE code completion (or you just can't type 'sesquipedalophobia' any longer because the word scares you) using [Enumerations](https://docs.python.org/3/library/enum.html) might be what you are looking for:
 
 ```python
 import enum  # Python 2.7 users need to have 'enum34' installed
@@ -381,7 +382,8 @@ m.error()
 assert m.state is States.ERROR
 ```
 
-You can mix enums and strings if you like (e.g. `[States.RED, 'ORANGE', States.YELLOW, States.GREEN]`) but note that internally, `transitions` will still handle states by name (`enum.Enum.name`). Thus, it is not possible to have the states `'GREEN'` and `States.GREEN` at the same time.
+You can mix enums and strings if you like (e.g. `[States.RED, 'ORANGE', States.YELLOW, States.GREEN]`) but note that internally, `transitions` will still handle states by name (`enum.Enum.name`).
+Thus, it is not possible to have the states `'GREEN'` and `States.GREEN` at the same time.
 
 ### <a name="transitions"></a>Transitions
 Some of the above examples already illustrate the use of transitions in passing, but here we'll explore them in more detail.
@@ -1052,12 +1054,11 @@ However, classes can also be directly imported from `transitions.extensions`. Th
 | AsyncGraphMachine              | ✓        | ✘      | ✘      | ✓ |   
 
 
-To use a full featured state machine, one could write:
+To use a feature-rich state machine, one could write:
 
 ```python
 from transitions.extensions import LockedHierarchicalGraphMachine as Machine
 
-#enable ALL the features!
 machine = Machine(model, states, transitions)
 ```
 
@@ -1223,17 +1224,19 @@ machine.is_C(allow_substates=True)
 >>> True
 ```
 
-You can use enumerations in HSMs as well but `enum` support is currently limited to the root level as model state enums lack hierarchical information.
-An attempt of nesting an `Enum` will raise an `AttributeError` in `NestedState`.
+*new in 0.8.0*
+You can use enumerations in HSMs as well but keep in mind that `Enum` are compared by value.
+If you have a value more than once in a state tree those states cannot be distinguished.
 
 ```python
-# will work
 states = [States.RED, States.YELLOW, {'name': States.GREEN, 'children': ['tick', 'tock']}]
-# will raise an AttributeError
-states = ['A', {'name': 'B', 'children': States}]
+states = ['A', {'name': 'B', 'children': States, 'initial': States.GREEN}, States.GREEN]
+machine = HierarchicalMachine(states=states)
+machine.to_B()
+machine.is_GREEN()  # returns True even though the actual state is B_GREEN
 ```
 
-*Since 0.8.0*
+*new in 0.8.0*
 `HierarchicalMachine` has been rewritten from scratch to support parallel states and better isolation of nested states.
 This involves some tweaks based on community feedback.
 To get an idea of processing order and configuration have a look at the following example:
@@ -1282,7 +1285,10 @@ Transitions defined in substates will be evaluated first (e.g. `C_1_a` is left b
 
 #### Reuse of previously created HSMs
 
-Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them. Be aware that this will *embed* the passed machine's states. This means if your states had been altered *before*, this change will be persistent. 
+Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
+Before *0.8.0*, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
+However, since *0.8.0* states are just **referenced** which means changes in one machine's states will influence the other instance.
+Note that events and transitions are also copied by reference and will be shared by both instanced if you do not use the `remap` keyword.
 
 ```python
 count_states = ['1', '2', '3', 'done']
@@ -1315,9 +1321,14 @@ collector.done()  # collector.state == counting_done
 collector.wait()  # collector.state == waiting
 ```
 
-If a `HierarchicalStateMachine` is passed with the `children` keyword, the initial state of this machine will be assigned to the new parent state. In the above example we see that entering `counting` will also enter `counting_1`. If this is undesired behaviour and the machine should rather halt in the parent state, the user can pass `initial` as `False` like `{'name': 'counting', 'children': counter, 'initial': False}`.
+If a `HierarchicalStateMachine` is passed with the `children` keyword, the initial state of this machine will be assigned to the new parent state.
+In the above example we see that entering `counting` will also enter `counting_1`.
+If this is undesired behaviour and the machine should rather halt in the parent state, the user can pass `initial` as `False` like `{'name': 'counting', 'children': counter, 'initial': False}`.
 
-Sometimes you want such an embedded state collection to 'return' which means after it is done it should exit and transit to one of your states. To achieve this behaviour you can remap state transitions. In the example above we would like the counter to return if the state `done` was reached. This is done as follows:
+Sometimes you want such an embedded state collection to 'return' which means after it is done it should exit and transit to one of your super states.
+To achieve this behaviour you can remap state transitions.
+In the example above we would like the counter to return if the state `done` was reached.
+This is done as follows:
 
 ```python
 states = ['waiting', 'collecting', {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}]
@@ -1330,13 +1341,15 @@ collector.state
 >>> 'waiting' # be aware that 'counting_done' will be removed from the state machine
 ```
 
-If a reused state machine does not have a final state, you can of course add the transitions manually. If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'waiting']` to achieve the same behaviour.
+As mentioned above, using `remap` will **copy** events and transitions since they could not be valid in the original state machine.
+If a reused state machine does not have a final state, you can of course add the transitions manually.
+If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'waiting']` to achieve the same behaviour.
 
-Note that the `HierarchicalMachine` will not integrate the machine instance itself but the states and transitions by creating copies of them. This way you are able to continue using your previously created instance without interfering with the embedded version.
 
 #### <a name="threading"></a> Threadsafe(-ish) State Machine
 
-In cases where event dispatching is done in threads, one can use either `LockedMachine` or `LockedHierarchicalMachine` where **function access** (!sic) is secured with reentrant locks. This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
+In cases where event dispatching is done in threads, one can use either `LockedMachine` or `LockedHierarchicalMachine` where **function access** (!sic) is secured with reentrant locks.
+This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
 
 ```python
 from transitions.extensions import LockedMachine as Machine

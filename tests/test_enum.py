@@ -135,12 +135,14 @@ class TestNestedStateEnums(TestEnumsAsStates):
         # self.assertEqual(m.state, self.States.GREEN)
 
     def test_nested_enums(self):
-        # Nested enums are currently not support since model.state does not contain any information about parents
-        # and nesting
-        states = ['A', 'B',
+        states = ['A', self.States.GREEN,
                   {'name': 'C', 'children': self.States, 'initial': self.States.GREEN}]
-        with self.assertRaises(ValueError):
-            # NestedState will raise an error when parent is not None and state name is an enum
-            # Initializing this would actually work but `m.to_A()` would raise an error in get_state(m.state)
-            # as Machine is not aware of the location of States.GREEN
-            m = self.machine_cls(states=states, initial='C')
+        m1 = self.machine_cls(states=states, initial='C')
+        m2 = self.machine_cls(states=states, initial='A')
+        self.assertEqual(m1.state, self.States.GREEN)
+        self.assertTrue(m1.is_GREEN())  # even though it is actually C_GREEN
+        m2.to_GREEN()
+        self.assertTrue(m2.is_C_GREEN())  # even though it is actually just GREEN
+        self.assertEqual(m1.state, m2.state)
+        m1.to_A()
+        self.assertNotEqual(m1.state, m2.state)
