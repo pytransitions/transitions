@@ -9,11 +9,10 @@
 from copy import copy, deepcopy
 from functools import partial
 import logging
-
 from six import string_types
 
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData, Enum
-from ..extensions.nesting import FunctionWrapper
+from .nesting import FunctionWrapper
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -430,6 +429,10 @@ class HierarchicalMachine(Machine):
         while self._buffered_transitions:
             args = self._buffered_transitions.pop(0)
             self.add_transition(**args)
+
+    def get_nested_state_names(self):
+        """ Returns all states of the state machine. """
+        return self.states
 
     def get_triggers(self, *args):
         """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """

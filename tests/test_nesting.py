@@ -10,7 +10,7 @@ import tempfile
 from os.path import getsize
 from os import unlink
 
-from transitions.extensions.nesting import NestedState as State
+from transitions.extensions.nesting import NestedState
 from transitions.extensions import MachineFactory
 
 from unittest import skipIf
@@ -28,7 +28,8 @@ try:
 except ImportError:  # pragma: no cover
     pgv = None
 
-state_separator = State.separator
+
+default_separator = NestedState.separator
 
 
 class Dummy(object):
@@ -38,14 +39,14 @@ class Dummy(object):
 class TestTransitions(TestsCore):
 
     def setUp(self):
-        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
-                  'D', 'E', 'F']
-        machine_cls = MachineFactory.get_predefined(nested=True)
-        self.stuff = Stuff(states, machine_cls)
+        self.states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
+                       'D', 'E', 'F']
+        self.machine_cls = MachineFactory.get_predefined(nested=True)
+        self.state_cls = NestedState
+        self.stuff = Stuff(self.states, self.machine_cls)
 
     def tearDown(self):
-        State.separator = state_separator
-        pass
+        self.state_cls.separator = default_separator
 
     def test_add_model(self):
         model = Dummy()
@@ -62,7 +63,7 @@ class TestTransitions(TestsCore):
 
     def test_init_machine_with_hella_arguments(self):
         states = [
-            State('State1'),
+            self.state_cls('State1'),
             'State2',
             {
                 'name': 'State3',
@@ -82,6 +83,7 @@ class TestTransitions(TestsCore):
         self.assertEqual(s.message, 'Hello World!')
 
     def test_init_machine_with_nested_states(self):
+        State = self.state_cls
         a = State('A')
         b = State('B')
         b_1 = State('1')
@@ -89,8 +91,8 @@ class TestTransitions(TestsCore):
         b.add_substates([b_1, b_2])
         m = self.stuff.machine_cls(states=[a, b])
         self.assertEqual(m.states['B'].states['1'], b_1)
-        m.to("B{0}1".format(state_separator))
-        self.assertEqual(m.state, "B{0}1".format(state_separator))
+        m.to("B{0}1".format(State.separator))
+        self.assertEqual(m.state, "B{0}1".format(State.separator))
 
     def test_property_initial(self):
         # Define with list of dictionaries
@@ -109,6 +111,7 @@ class TestTransitions(TestsCore):
         self.assertEqual(m.initial, 'initial')
 
     def test_transition_definitions(self):
+        State = self.state_cls
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
         # Define with list of dictionaries
         transitions = [
@@ -180,6 +183,7 @@ class TestTransitions(TestsCore):
         self.assertEqual(s.state, 'C')
 
     def test_multiple_add_transitions_from_state(self):
+        State = self.state_cls
         s = self.stuff
         s.machine.add_transition(
             'advance', 'A', 'B', conditions=['this_fails'])
@@ -201,6 +205,7 @@ class TestTransitions(TestsCore):
         self.assertEqual(m.state, 'B')
 
     def test_add_custom_state(self):
+        State = self.state_cls
         s = self.stuff
         s.machine.add_states([{'name': 'E', 'children': ['1', '2']}])
         s.machine.add_state('E%s3' % State.separator)
@@ -215,6 +220,7 @@ class TestTransitions(TestsCore):
         self.assertEqual('C{0}3{0}a'.format(State.separator), s.state)
 
     def test_enter_exit_nested_state(self):
+        State = self.state_cls
         mock = MagicMock()
 
         def callback():
@@ -232,6 +238,7 @@ class TestTransitions(TestsCore):
         self.assertEqual(mock.call_count, 3)
 
     def test_state_change_listeners(self):
+        State = self.state_cls
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'C%s1' % State.separator)
         s.machine.add_transition('reverse', 'C', 'A')
@@ -262,6 +269,7 @@ class TestTransitions(TestsCore):
         self.assertTrue(s.message.startswith('So long'))
 
     def test_enter_exit_nested(self):
+        State = self.state_cls
         s = self.stuff
         s.machine.add_transition('advance', 'A', 'C{0}3'.format(State.separator))
         s.machine.add_transition('reverse', 'C', 'A')
@@ -312,6 +320,7 @@ class TestTransitions(TestsCore):
         self.assertEqual(s.transitions, 24)  # exit A; enter C, 3, a
 
     def test_ordered_transitions(self):
+        State = self.state_cls
         states = [{'name': 'first', 'children': ['second', 'third', {'name': 'fourth', 'children': ['fifth', 'sixth']},
                                                  'seventh']}, 'eighth', 'ninth']
         m = self.stuff.machine_cls(states=states)
@@ -397,13 +406,13 @@ class TestTransitions(TestsCore):
         self.assertEqual(m.after_change.call_count, 2)
 
     def test_with_custom_separator(self):
-        State.separator = '.'
+        self.state_cls.separator = '.'
         self.setUp()
         self.test_enter_exit_nested()
         self.setUp()
         self.test_state_change_listeners()
         self.test_nested_auto_transitions()
-        State.separator = '.' if sys.version_info[0] < 3 else u'↦'
+        self.state_cls.separator = '.' if sys.version_info[0] < 3 else u'↦'
         self.setUp()
         self.test_enter_exit_nested()
         self.setUp()
@@ -411,7 +420,7 @@ class TestTransitions(TestsCore):
         self.test_nested_auto_transitions()
 
     def test_with_slash_separator(self):
-        State.separator = '/'
+        self.state_cls.separator = '/'
         self.setUp()
         self.test_enter_exit_nested()
         self.setUp()
@@ -421,6 +430,7 @@ class TestTransitions(TestsCore):
         self.test_ordered_transitions()
 
     def test_nested_auto_transitions(self):
+        State = self.state_cls
         s = self.stuff
         s.to_C()
         self.assertEqual(s.state, 'C')
@@ -436,6 +446,7 @@ class TestTransitions(TestsCore):
             self.assertEqual(len(s.machine.events[event_name].transitions), num_base_states)
 
     def test_example_one(self):
+        State = self.state_cls
         State.separator = '_'
         states = ['standing', 'walking', {'name': 'caffeinated', 'children': ['dithering', 'running']}]
         transitions = [['walk', 'standing', 'walking'],
@@ -463,6 +474,7 @@ class TestTransitions(TestsCore):
         machine.on_enter_caffeinated_running('callback_method')
 
     def test_example_two(self):
+        State = self.state_cls
         State.separator = '.' if sys.version_info[0] < 3 else u'↦'
         states = ['A', 'B',
                   {'name': 'C', 'children': ['1', '2',
@@ -509,35 +521,37 @@ class TestTransitions(TestsCore):
         m = self.stuff.machine_cls(states=states, initial='A')
 
     def test_intial_state(self):
+        separator = self.state_cls.separator
         states = [{'name': 'A', 'children': ['1', '2'], 'initial': '2'},
                   {'name': 'B', 'initial': '2',
                    'children': ['1', {'name': '2', 'initial': 'a',
                                       'children': ['a', 'b']}]}]
         transitions = [['do', 'A', 'B'],
-                       ['do', 'B{0}2'.format(state_separator),
-                        'B{0}1'.format(state_separator)]]
+                       ['do', 'B{0}2'.format(separator),
+                        'B{0}1'.format(separator)]]
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
-        self.assertEqual(m.state, 'A{0}2'.format(state_separator))
+        self.assertEqual(m.state, 'A{0}2'.format(separator))
         m.do()
-        self.assertEqual(m.state, 'B{0}2{0}a'.format(state_separator))
+        self.assertEqual(m.state, 'B{0}2{0}a'.format(separator))
         self.assertTrue(m.is_B(allow_substates=True))
         m.do()
-        self.assertEqual(m.state, 'B{0}1'.format(state_separator))
+        self.assertEqual(m.state, 'B{0}1'.format(separator))
 
     def test_get_triggers(self):
+        seperator = self.state_cls.separator
         states = ['standing', 'walking', {'name': 'caffeinated', 'children': ['dithering', 'running']}]
         transitions = [
             ['walk', 'standing', 'walking'],
             ['go', 'standing', 'walking'],
             ['stop', 'walking', 'standing'],
-            {'trigger': 'drink', 'source': '*', 'dest': 'caffeinated_dithering',
+            {'trigger': 'drink', 'source': '*', 'dest': 'caffeinated{0}dithering'.format(seperator),
              'conditions': 'is_hot', 'unless': 'is_too_hot'},
-            ['walk', 'caffeinated_dithering', 'caffeinated_running'],
+            ['walk', 'caffeinated{0}dithering'.format(seperator), 'caffeinated{0}running'.format(seperator)],
             ['relax', 'caffeinated', 'standing']
         ]
 
         machine = self.stuff.machine_cls(states=states, transitions=transitions, auto_transitions=False)
-        trans = machine.get_triggers('caffeinated{0}dithering'.format(state_separator))
+        trans = machine.get_triggers('caffeinated{0}dithering'.format(seperator))
         self.assertEqual(len(trans), 3)
         self.assertTrue('relax' in trans)
 
@@ -553,14 +567,15 @@ class TestTransitions(TestsCore):
 class TestWithGraphTransitions(TestTransitions):
 
     def setUp(self):
-        State.separator = state_separator
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
 
         machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
+        self.state_cls = machine_cls.state_cls
         self.stuff = Stuff(states, machine_cls)
 
     def test_ordered_with_graph(self):
+        State = self.state_cls
         GraphMachine = MachineFactory.get_predefined(graph=True, nested=True)
 
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2',

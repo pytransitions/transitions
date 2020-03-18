@@ -214,10 +214,12 @@ class TestMultipleContexts(TestCore):
 class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
 
     def setUp(self):
-        NestedState.separator = '_'
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
-        self.stuff = Stuff(states, machine_cls=MachineFactory.get_predefined(locked=True, nested=True))
+        self.machine_cls = MachineFactory.get_predefined(locked=True, nested=True)
+        self.state_cls = self.machine_cls.state_cls
+        self.state_cls.separator = '_'
+        self.stuff = Stuff(states, machine_cls=self.machine_cls)
         self.stuff.heavy_processing = heavy_processing
         self.stuff.machine.add_transition('forward', '*', 'B', before='heavy_processing')
 
