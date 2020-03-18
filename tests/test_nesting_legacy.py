@@ -1,5 +1,11 @@
 from .test_nesting import TestTransitions, Stuff
-from transitions.extensions.nesting_legacy import HierarchicalMachine, NestedState
+from .test_reuse import TestTransitions as TestReuse
+from transitions.extensions.nesting_legacy import HierarchicalMachine
+
+try:
+    from unittest.mock import MagicMock
+except ImportError:
+    from mock import MagicMock
 
 
 class TestNestedLegacy(TestTransitions):
@@ -8,7 +14,7 @@ class TestNestedLegacy(TestTransitions):
         super(TestNestedLegacy, self).setUp()
         self.machine_cls = HierarchicalMachine
         self.stuff = Stuff(self.states, self.machine_cls)
-        self.state_cls = NestedState
+        self.state_cls = self.machine_cls.state_cls
 
     def test_add_custom_state(self):
         s = self.stuff
@@ -51,3 +57,53 @@ class TestNestedLegacy(TestTransitions):
 
     def test_nested_definitions(self):
         pass
+
+
+class TestReuseLegacy(TestReuse):
+
+    def setUp(self):
+        super(TestReuseLegacy, self).setUp()
+        self.machine_cls = HierarchicalMachine
+        self.stuff = Stuff(self.states, self.machine_cls)
+        self.state_cls = self.machine_cls.state_cls
+
+    def test_reuse_self_reference(self):
+        separator = self.state_cls.separator
+
+        class Nested(self.machine_cls):
+
+            def __init__(self, parent):
+                self.parent = parent
+                self.mock = MagicMock()
+                states = ['1', '2']
+                transitions = [{'trigger': 'finish', 'source': '*', 'dest': '2', 'after': self.print_msg}]
+                super(Nested, self).__init__(states=states, transitions=transitions, initial='1')
+
+            def print_msg(self):
+                self.mock()
+                self.parent.print_top()
+
+        class Top(self.machine_cls):
+
+            def print_msg(self):
+                self.mock()
+
+            def __init__(self):
+                self.nested = Nested(self)
+                self.mock = MagicMock()
+
+                states = ['A', {'name': 'B', 'children': self.nested}]
+                transitions = [dict(trigger='print_top', source='*', dest='=', after=self.print_msg),
+                               dict(trigger='to_nested', source='*', dest='B{0}1'.format(separator))]
+
+                super(Top, self).__init__(states=states, transitions=transitions, initial='A')
+
+        top_machine = Top()
+        self.assertEqual(top_machine, top_machine.nested.parent)
+
+        top_machine.to_nested()
+        top_machine.finish()
+        self.assertTrue(top_machine.mock.called)
+        self.assertTrue(top_machine.nested.mock.called)
+        self.assertIsNot(top_machine.nested.get_state('2').on_enter,
+                         top_machine.get_state('B{0}2'.format(separator)).on_enter)

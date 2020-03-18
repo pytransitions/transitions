@@ -5,8 +5,8 @@ except ImportError:
 
 from transitions import MachineError
 from transitions.extensions import MachineFactory
-from transitions.extensions.nesting import NestedState as State
 from .utils import Stuff
+from .test_nesting import default_separator
 
 from unittest import TestCase
 
@@ -15,22 +15,19 @@ try:
 except ImportError:
     from mock import MagicMock
 
-nested_separator = State.separator
-
 
 class TestTransitions(TestCase):
 
     def setUp(self):
-        states = ['A', 'B',
-                  {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
-                  'D', 'E', 'F']
+        self.states = ['A', 'B',
+                       {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
+                       'D', 'E', 'F']
         self.machine_cls = MachineFactory.get_predefined(nested=True)
-        self.stuff = Stuff(states, self.machine_cls)
-
-    def tearDown(self):
-        pass
+        self.state_cls = self.machine_cls.state_cls
+        self.stuff = Stuff(self.states, self.machine_cls)
 
     def test_blueprint_reuse(self):
+        State = self.state_cls
         states = ['1', '2', '3']
         transitions = [
             {'trigger': 'increase', 'source': '1', 'dest': '2'},
@@ -82,6 +79,7 @@ class TestTransitions(TestCase):
         self.assertEqual(parent.state, 'c')
 
     def test_blueprint_remap(self):
+        State = self.state_cls
         states = ['1', '2', '3', 'finished']
         transitions = [
             {'trigger': 'increase', 'source': '1', 'dest': '2'},
@@ -157,12 +155,13 @@ class TestTransitions(TestCase):
         m.to_B.A()
 
     def test_custom_separator(self):
-        State.separator = '.'
+        self.state_cls.separator = '.'
         self.tearDown()
         self.setUp()
         self.test_wrong_nesting()
 
     def test_example_reuse(self):
+        State = self.state_cls
         count_states = ['1', '2', '3', 'done']
         count_trans = [
             ['increase', '1', '2'],
@@ -240,11 +239,12 @@ class TestTransitions(TestCase):
 
         m_model = Model()
         m = self.machine_cls(m_model, states=["A", "B", {"name": "NEST", "children": ms}])
-        m_model.to('NEST%sC' % State.separator)
+        m_model.to('NEST%sC' % self.state_cls.separator)
         m_model.go()
         self.assertTrue(m_model.prepared)
 
     def test_reuse_self_reference(self):
+        separator = self.state_cls.separator
 
         class Nested(self.machine_cls):
 
@@ -270,7 +270,7 @@ class TestTransitions(TestCase):
 
                 states = ['A', {'name': 'B', 'children': self.nested}]
                 transitions = [dict(trigger='print_top', source='*', dest='=', after=self.print_msg),
-                               dict(trigger='to_nested', source='*', dest='B{0}1'.format(State.separator))]
+                               dict(trigger='to_nested', source='*', dest='B{0}1'.format(separator))]
 
                 super(Top, self).__init__(states=states, transitions=transitions, initial='A')
 
@@ -282,4 +282,4 @@ class TestTransitions(TestCase):
         self.assertTrue(top_machine.mock.called)
         self.assertTrue(top_machine.nested.mock.called)
         self.assertIs(top_machine.nested.get_state('2').on_enter,
-                      top_machine.get_state('B{0}2'.format(State.separator)).on_enter)
+                      top_machine.get_state('B{0}2'.format(separator)).on_enter)
