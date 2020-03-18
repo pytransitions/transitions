@@ -196,7 +196,7 @@ lump.state
 >>> 'solid'
 ```
 
-I say “minimal”, because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined... yet!
+I say "minimal", because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined... yet!
 
 Let's try again.
 
@@ -1224,7 +1224,7 @@ machine.is_C(allow_substates=True)
 >>> True
 ```
 
-*new in 0.8.0*
+*new in 0.8.0*  
 You can use enumerations in HSMs as well but keep in mind that `Enum` are compared by value.
 If you have a value more than once in a state tree those states cannot be distinguished.
 
@@ -1236,7 +1236,7 @@ machine.to_B()
 machine.is_GREEN()  # returns True even though the actual state is B_GREEN
 ```
 
-*new in 0.8.0*
+*new in 0.8.0*  
 `HierarchicalMachine` has been rewritten from scratch to support parallel states and better isolation of nested states.
 This involves some tweaks based on community feedback.
 To get an idea of processing order and configuration have a look at the following example:
@@ -1277,7 +1277,7 @@ When using `parallel` instead of `children`, `transitions` will enter all states
 Which substate to enter is defined by `initial` which should *always* point to a direct substate.
 A novel feature is to define local transitions by passing the `transitions` keyword in a state definition.
 The above defined transition `['go', 'a', 'b']` is only valid in `C_1`.
-While you can reference substates as done `['go', '2_z', '2_x']` you cannot reference parent states directly in locally defined transitions.
+While you can reference substates as done in `['go', '2_z', '2_x']` you cannot reference parent states directly in locally defined transitions.
 When a parent state is exited, its children will also be exited.
 In addition to the processing order of transitions known from `Machine` where transitions are considered in the order they were added, `HierarchicalMachine` considers hierarchy as well.
 Transitions defined in substates will be evaluated first (e.g. `C_1_a` is left before `C_2_z`) and transitions defined with wildcard `*` will (for now) only add transitions to root states (in this example `A`, `B`, `C`)
@@ -1288,7 +1288,7 @@ Transitions defined in substates will be evaluated first (e.g. `C_1_a` is left b
 Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
 Before *0.8.0*, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
 However, since *0.8.0* states are just **referenced** which means changes in one machine's states will influence the other instance.
-Note that events and transitions are also copied by reference and will be shared by both instanced if you do not use the `remap` keyword.
+Note that events and transitions are also copied by reference and will be shared by both instances if you do not use the `remap` keyword.
 
 ```python
 count_states = ['1', '2', '3', 'done']
