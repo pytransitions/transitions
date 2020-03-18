@@ -246,6 +246,9 @@ You can initialize and modify States in a number of ways. Specifically, you can:
 The following snippets illustrate several ways to achieve the same goal:
 
 ```python
+# import Machine and State class
+from transitions import State
+
 # Create a list of 3 states to pass to the Machine
 # initializer. We can mix types; in this case, we
 # pass one State, one string, and one dict.
@@ -264,7 +267,6 @@ solid = State('solid')
 liquid = State('liquid')
 gas = State('gas')
 machine.add_states([solid, liquid, gas])
-
 ```
 
 States are initialized *once* when added to the machine and will persist until they are removed from it. In other words: if you alter the attributes of a state object, this change will NOT be reset the next time you enter that state. Have a look at how to [extend state features](#state-features) in case you require some other behaviour.
