@@ -1,5 +1,6 @@
 from transitions import Transition
 from transitions.extensions.markup import MarkupMachine
+from transitions.core import listify
 
 import warnings
 import logging
@@ -139,12 +140,6 @@ class GraphMachine(MarkupMachine):
         _LOGGER.debug("Using graph engine %s", self.graph_cls)
         _super(GraphMachine, self).__init__(*args, **kwargs)
 
-        # Create graph at beginning
-        for model in self.models:
-            if hasattr(model, 'get_graph'):
-                raise AttributeError('Model already has a get_graph attribute. Graph retrieval cannot be bound.')
-            setattr(model, 'get_graph', partial(self._get_graph, model))
-            _ = model.get_graph(title=self.title, force_new=True)  # initialises graph
         # for backwards compatibility assign get_combined_graph to get_graph
         # if model is not the machine
         if not hasattr(self, 'get_graph'):
@@ -198,6 +193,16 @@ class GraphMachine(MarkupMachine):
         _LOGGER.info('Returning graph of the first model. In future releases, this '
                      'method will return a combined graph of all models.')
         return self._get_graph(self.models[0], title, force_new, show_roi)
+
+    def add_model(self, model, initial=None):
+        models = listify(model)
+        super(GraphMachine, self).add_model(models, initial)
+        for mod in models:
+            mod = self if mod == 'self' else mod
+            if hasattr(mod, 'get_graph'):
+                raise AttributeError('Model already has a get_graph attribute. Graph retrieval cannot be bound.')
+            setattr(mod, 'get_graph', partial(self._get_graph, mod))
+            _ = mod.get_graph(title=self.title, force_new=True)  # initialises graph
 
     def add_states(self, states, on_enter=None, on_exit=None,
                    ignore_invalid_triggers=None, **kwargs):

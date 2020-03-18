@@ -1,5 +1,6 @@
-from .test_nesting import TestTransitions, Stuff
+from .test_nesting import TestTransitions, Stuff, default_separator
 from .test_reuse import TestTransitions as TestReuse
+from .test_enum import TestNestedStateEnums
 from transitions.extensions.nesting_legacy import HierarchicalMachine
 
 try:
@@ -107,3 +108,22 @@ class TestReuseLegacy(TestReuse):
         self.assertTrue(top_machine.nested.mock.called)
         self.assertIsNot(top_machine.nested.get_state('2').on_enter,
                          top_machine.get_state('B{0}2'.format(separator)).on_enter)
+
+
+class TestLegacyNestedEnum(TestNestedStateEnums):
+
+    def setUp(self):
+        super(TestLegacyNestedEnum, self).setUp()
+        self.machine_cls = HierarchicalMachine
+        self.machine_cls.state_cls.separator = default_separator
+
+    def test_nested_enums(self):
+        # Nested enums are currently not support since model.state does not contain any information about parents
+        # and nesting
+        states = ['A', 'B',
+                  {'name': 'C', 'children': self.States, 'initial': self.States.GREEN}]
+        with self.assertRaises(AttributeError):
+            # NestedState will raise an error when parent is not None and state name is an enum
+            # Initializing this would actually work but `m.to_A()` would raise an error in get_state(m.state)
+            # as Machine is not aware of the location of States.GREEN
+            m = self.machine_cls(states=states, initial='C')

@@ -11,13 +11,12 @@ from transitions.extensions import MachineFactory
 @skipIf(enum is None, "enum is not available")
 class TestEnumsAsStates(TestCase):
 
-    machine_cls = MachineFactory.get_predefined()
-
     def setUp(self):
         class States(enum.Enum):
             RED = 1
             YELLOW = 2
             GREEN = 3
+        self.machine_cls = MachineFactory.get_predefined()
         self.States = States
 
     def test_pass_enums_as_states(self):
@@ -122,7 +121,9 @@ class TestEnumsAsStates(TestCase):
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):
 
-    machine_cls = MachineFactory.get_predefined(nested=True)
+    def setUp(self):
+        super(TestNestedStateEnums, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(nested=True)
 
     def test_root_enums(self):
         states = [self.States.RED, self.States.YELLOW,
@@ -132,7 +133,6 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertTrue(m.is_GREEN_tick())
         m.to_RED()
         self.assertTrue(m.state is self.States.RED)
-        # self.assertEqual(m.state, self.States.GREEN)
 
     def test_nested_enums(self):
         states = ['A', self.States.GREEN,

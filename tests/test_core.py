@@ -50,7 +50,7 @@ class TestTransitions(TestCase):
              }
         ]
         s = Stuff()
-        m = Machine(model=s, states=states, transitions=transitions, initial='State2')
+        m = s.machine_cls(model=s, states=states, transitions=transitions, initial='State2')
         s.advance()
         self.assertEqual(s.message, 'Hello World!')
 
@@ -68,11 +68,11 @@ class TestTransitions(TestCase):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
-        m = Machine(states=states, transitions=transitions, initial='A')
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         self.assertEqual(m.initial, 'A')
-        m = Machine(states=states, transitions=transitions, initial='C')
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='C')
         self.assertEqual(m.initial, 'C')
-        m = Machine(states=states, transitions=transitions)
+        m = self.stuff.machine_cls(states=states, transitions=transitions)
         self.assertEqual(m.initial, 'initial')
 
     def test_transition_definitions(self):

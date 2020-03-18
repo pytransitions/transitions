@@ -8,7 +8,8 @@ except (ImportError, SyntaxError):
 
 from unittest.mock import MagicMock
 from unittest import skipIf
-from .test_core import TestTransitions
+from .test_core import TestTransitions, MachineError
+from .utils import DummyModel
 
 
 @skipIf(asyncio is None, "AsyncMachine requires asyncio and contextvars suppport")
@@ -105,6 +106,87 @@ class TestAsync(TestTransitions):
         assert m1.is_C()
         assert m2.is_C()
         loop.close()
+
+    def test_async_callback_arguments(self):
+
+        async def process(should_fail=True):
+            if should_fail is not False:
+                raise ValueError("should_fail has been set")
+
+        self.machine.on_enter_B(process)
+        with self.assertRaises(ValueError):
+            asyncio.run(self.machine.go())
+        asyncio.run(self.machine.to_A())
+        asyncio.run(self.machine.go(should_fail=False))
+
+    def test_async_callback_event_data(self):
+
+        state_a = self.machine_cls.state_cls('A')
+        state_b = self.machine_cls.state_cls('B')
+
+        def sync_condition(event_data):
+            return event_data.state == state_a
+
+        async def process(event_data):
+            self.assertEqual(event_data.state, state_b)
+
+        m = self.machine_cls(states=[state_a, state_b], initial='A', send_event=True)
+        m.add_transition('go', 'A', 'B', conditions=sync_condition, after=process)
+        m.add_transition('go', 'B', 'A', conditions=sync_condition)
+        asyncio.run(m.go())
+        self.assertTrue(m.is_B())
+        asyncio.run(m.go())
+        self.assertTrue(m.is_B())
+
+    def test_async_invalid_triggers(self):
+        asyncio.run(self.machine.to_B())
+        with self.assertRaises(MachineError):
+            asyncio.run(self.machine.go())
+        self.machine.ignore_invalid_triggers = True
+        asyncio.run(self.machine.go())
+        self.assertTrue(self.machine.is_B())
+
+    def test_async_dispatch(self):
+        model1 = DummyModel()
+        model2 = DummyModel()
+        model3 = DummyModel()
+
+        machine = self.machine_cls(model=None, states=['A', 'B', 'C'], transitions=[['go', 'A', 'B'],
+                                                                                    ['go', 'B', 'C'],
+                                                                                    ['go', 'C', 'A']], initial='A')
+        machine.add_model(model1)
+        machine.add_model(model2, initial='B')
+        machine.add_model(model3, initial='C')
+        asyncio.run(machine.dispatch('go'))
+        self.assertTrue(model1.is_B())
+        self.assertEqual('C', model2.state)
+        self.assertEqual(machine.initial, model3.state)
+
+    def test_queued(self):
+        states = ['A', 'B', 'C', 'D']
+        # Define with list of dictionaries
+
+        async def change_state(machine):
+            self.assertEqual(machine.state, 'A')
+            if machine.has_queue:
+                await machine.run(machine=machine)
+                self.assertEqual(machine.state, 'A')
+            else:
+                with self.assertRaises(MachineError):
+                    await machine.run(machine=machine)
+
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B', 'before': change_state},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+
+        m = self.machine_cls(states=states, transitions=transitions, initial='A')
+        asyncio.run(m.walk(machine=m))
+        self.assertEqual(m.state, 'B')
+        m = self.machine_cls(states=states, transitions=transitions, initial='A', queued=True)
+        asyncio.run(m.walk(machine=m))
+        self.assertEqual(m.state, 'C')
 
 
 class AsyncGraphMachine(TestAsync):

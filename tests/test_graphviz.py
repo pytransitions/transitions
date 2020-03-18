@@ -3,7 +3,7 @@ try:
 except ImportError:
     pass
 
-from .utils import Stuff
+from .utils import Stuff, DummyModel
 from .test_core import TestTransitions
 
 from transitions.extensions import MachineFactory
@@ -87,6 +87,13 @@ class TestDiagrams(TestTransitions):
         # cleanup temp file
         target.close()
         os.unlink(target.name)
+
+    def test_transition_custom_model(self):
+        m = self.machine_cls(model=None, states=self.states, transitions=self.transitions, initial='A',
+                             auto_transitions=False, title='a test', use_pygraphviz=self.use_pygraphviz)
+        model = DummyModel()
+        m.add_model(model)
+        model.walk()
 
     def test_add_custom_state(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
