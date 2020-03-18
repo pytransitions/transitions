@@ -102,9 +102,9 @@ class TestAsync(TestTransitions):
         m1.add_transition(trigger='go', source='A', dest='B', conditions=self.await_true, after='go')
         m1.add_transition(trigger='go', source='B', dest='C', after=fix)
         loop.run_until_complete(asyncio.gather(m2.go(), m1.go()))
-
         assert m1.is_C()
         assert m2.is_C()
+        loop.close()
 
 
 class AsyncGraphMachine(TestAsync):

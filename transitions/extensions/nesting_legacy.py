@@ -13,6 +13,7 @@ import logging
 from six import string_types
 
 from ..core import Machine, Transition, State, Event, listify, MachineError, EventData, Enum
+from ..extensions.nesting import FunctionWrapper
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -21,43 +22,6 @@ _LOGGER.addHandler(logging.NullHandler())
 # without it, Python 3.0 - 3.3 will not support pickling
 # https://github.com/pytransitions/transitions/issues/236
 _super = super
-
-
-class FunctionWrapper(object):
-    """ A wrapper to enable transitions' convenience function to_<state> for nested states.
-        This allows to call model.to_A.s1.C() in case a custom separator has been chosen."""
-    def __init__(self, func, path):
-        """
-        Args:
-            func: Function to be called at the end of the path.
-            path: If path is an empty string, assign function
-        """
-        if path:
-            self.add(func, path)
-            self._func = None
-        else:
-            self._func = func
-
-    def add(self, func, path):
-        """ Assigns a `FunctionWrapper` as an attribute named like the next segment of the substates
-            path.
-        Args:
-            func (callable): Function to be called at the end of the path.
-            path (string): Remaining segment of the substate path.
-        """
-        if path:
-            name = path[0]
-            if name[0].isdigit():
-                name = 's' + name
-            if hasattr(self, name):
-                getattr(self, name).add(func, path[1:])
-            else:
-                setattr(self, name, FunctionWrapper(func, path[1:]))
-        else:
-            self._func = func
-
-    def __call__(self, *args, **kwargs):
-        return self._func(*args, **kwargs)
 
 
 class NestedState(State):

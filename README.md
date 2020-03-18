@@ -1031,7 +1031,7 @@ async_machine_cls = MachineFactory.get_predefined(asyncio=True)
 
 # create instances from these classes
 # instances can be used like simple machines
-machine1 = diagram_cls(model, state, transitions...)
+machine1 = diagram_cls(model, state, transitions)
 machine2 = nested_locked_cls(model, state, transitions)
 ```
 
@@ -1113,8 +1113,10 @@ Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a m
 
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
-Transitions includes an extension module which allows to nest states. This allows to create contexts and to model cases where states are related to certain subtasks in the state machine. To create a nested state, either import `NestedState` from transitions or use a dictionary with the initialization arguments `name` and `children`. Optionally, `initial` can be used to define a sub state to transit to, when the nested state
- is entered.
+Transitions includes an extension module which allows to nest states.
+This allows to create contexts and to model cases where states are related to certain subtasks in the state machine.
+To create a nested state, either import `NestedState` from transitions or use a dictionary with the initialization arguments `name` and `children`.
+Optionally, `initial` can be used to define a sub state to transit to, when the nested state is entered.
 
 ```python
 from transitions.extensions import HierarchicalMachine as Machine
@@ -1164,9 +1166,17 @@ transitions = [
 # ...
 ```
 
-Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`. Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine. This means a substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be referred to as `foo_bar_baz` and so on. When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates. Third, nested states can overwrite transition behaviour of their parents. If a transition is not known to the current state it will be delegated to its parent.
+Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`.
+Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine.
+This means a substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be referred to as `foo_bar_baz` and so on.
+When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates.
+Third, nested states can overwrite transition behaviour of their parents.
+If a transition is not known to the current state it will be delegated to its parent.
 
-In some cases underscore as a separator is not sufficient. For instance if state names consists of more than one word and a concatenated naming such as `state_A_name_state_C` would be confusing. Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks). You can even use unicode characters if you use python 3:
+In some cases underscore as a separator is not sufficient.
+For instance if state names consists of more than one word and a concatenated naming such as `state_A_name_state_C` would be confusing.
+Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks).
+You can even use unicode characters if you use python 3:
 
 ```python
 from transitions.extensions.nesting import NestedState
@@ -1199,7 +1209,7 @@ machine.state
 # s.on_enter('C↦3↦a', 'callback_method')
 ```
 
-Instead of `to_C_3_a()` auto transition is called as `to_C.s3.a()`. If your substate starts with a digit, transitions adds a prefix 's' ('3' becomes 's3') to the auto transition `FunctionWrapper` to comply with the attribute naming scheme of python.
+Instead of `to_C_3_a()` auto transition is called as `to_C.s3.a()`. If your substate starts with a digit, transitions adds a prefix 's' ('3' becomes 's3') to the auto transition `FunctionWrapper` to comply with the attribute naming scheme of Python.
 If interactive completion is not required, `to('C↦3↦a')` can be called directly. Additionally, `on_enter/exit_<<state name>>` is replaced with `on_enter/exit(state_name, callback)`.
 
 To check whether the current state is a substate of a specific state `is_state` supports the keyword `allow_substates`:
@@ -1213,7 +1223,8 @@ machine.is_C(allow_substates=True)
 >>> True
 ```
 
-You can use enumerations in HSMs as well but `enum` support is currently limited to the root level as model state enums lack hierarchical information. An attempt of nesting an `Enum` will raise an `AttributeError` in `NestedState`.
+You can use enumerations in HSMs as well but `enum` support is currently limited to the root level as model state enums lack hierarchical information.
+An attempt of nesting an `Enum` will raise an `AttributeError` in `NestedState`.
 
 ```python
 # will work
@@ -1221,6 +1232,53 @@ states = [States.RED, States.YELLOW, {'name': States.GREEN, 'children': ['tick',
 # will raise an AttributeError
 states = ['A', {'name': 'B', 'children': States}]
 ```
+
+*Since 0.8.0*
+`HierarchicalMachine` has been rewritten from scratch to support parallel states and better isolation of nested states.
+This involves some tweaks based on community feedback.
+To get an idea of processing order and configuration have a look at the following example:
+
+```python
+from transitions.extensions.nesting import HierarchicalMachine
+import logging
+states = ['A', 'B', {'name': 'C', 'parallel': [{'name': '1', 'children': ['a', 'b', 'c'], 'initial': 'a',
+                                                'transitions': [['go', 'a', 'b']]},
+                                               {'name': '2', 'children': ['x', 'y', 'z'], 'initial': 'z'}],
+                      'transitions': [['go', '2_z', '2_x']]}]
+
+transitions = [['reset', 'C_1_b', 'B']]
+logging.basicConfig(level=logging.INFO)
+machine = HierarchicalMachine(states=states, transitions=transitions, initial='A')
+machine.to_C()
+# INFO:transitions.extensions.nesting:Exited state A
+# INFO:transitions.extensions.nesting:Entered state C
+# INFO:transitions.extensions.nesting:Entered state C_1
+# INFO:transitions.extensions.nesting:Entered state C_2
+# INFO:transitions.extensions.nesting:Entered state C_1_a
+# INFO:transitions.extensions.nesting:Entered state C_2_z
+machine.go()
+# INFO:transitions.extensions.nesting:Exited state C_1_a
+# INFO:transitions.extensions.nesting:Entered state C_1_b
+# INFO:transitions.extensions.nesting:Exited state C_2_z
+# INFO:transitions.extensions.nesting:Entered state C_2_x
+machine.reset()
+# INFO:transitions.extensions.nesting:Exited state C_1_b
+# INFO:transitions.extensions.nesting:Exited state C_2_x
+# INFO:transitions.extensions.nesting:Exited state C_1
+# INFO:transitions.extensions.nesting:Exited state C_2
+# INFO:transitions.extensions.nesting:Exited state C
+# INFO:transitions.extensions.nesting:Entered state B
+```
+
+When using `parallel` instead of `children`, `transitions` will enter all states of the passed list at the same time.
+Which substate to enter is defined by `initial` which should *always* point to a direct substate.
+A novel feature is to define local transitions by passing the `transitions` keyword in a state definition.
+The above defined transition `['go', 'a', 'b']` is only valid in `C_1`.
+While you can reference substates as done `['go', '2_z', '2_x']` you cannot reference parent states directly in locally defined transitions.
+When a parent state is exited, its children will also be exited.
+In addition to the processing order of transitions known from `Machine` where transitions are considered in the order they were added, `HierarchicalMachine` considers hierarchy as well.
+Transitions defined in substates will be evaluated first (e.g. `C_1_a` is left before `C_2_z`) and transitions defined with wildcard `*` will (for now) only add transitions to root states (in this example `A`, `B`, `C`)
+
 
 #### Reuse of previously created HSMs
 

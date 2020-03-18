@@ -188,7 +188,6 @@ class NestedState(State):
         self.initial = initial
         self.events = {}
         self.states = OrderedDict()
-        self.exit_stack = defaultdict(list)
 
     def add_substate(self, state):
         """ Adds a state as a substate.
@@ -205,12 +204,21 @@ class NestedState(State):
         for state in listify(states):
             self.states[state.name] = state
 
+    def enter(self, event_data):
+        """ Triggered when a state is entered. """
+        _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name,
+                      self.separator.join(event_data.scope + [self.name]))
+        event_data.machine.callbacks(self.on_enter, event_data)
+        _LOGGER.info("%sEntered state %s", event_data.machine.name,
+                     self.separator.join(event_data.scope + [self.name]))
+
     def exit(self, event_data):
         """ Triggered when a state is exited. """
-        for state in self.exit_stack[event_data.model]:
-            self.states[state].exit(event_data)
-        self.exit_stack[event_data.model] = []
-        _super(NestedState, self).exit(event_data)
+        _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name,
+                      self.separator.join(event_data.scope + [self.name]))
+        event_data.machine.callbacks(self.on_exit, event_data)
+        _LOGGER.info("%sExited state %s", event_data.machine.name,
+                     self.separator.join(event_data.scope + [self.name]))
 
 
 class NestedTransition(Transition):
@@ -235,11 +243,7 @@ class NestedTransition(Transition):
         model_states = listify(getattr(event_data.model, machine.model_attribute))
         state_tree = OrderedDict()
         _build_state_tree(model_states, state_tree, machine.state_cls.separator)
-        scope = machine.get_global_name(join=False)
-        scoped_tree = state_tree
-        for elem in scope:
-            scoped_tree = scoped_tree[elem]
-        self._change_nested(event_data, scoped_tree, dst_name_path)
+        self._change_nested(event_data, state_tree, dst_name_path)
         model_states = _build_state_list(state_tree, machine.state_cls.separator)
         with machine():
             event_data.machine.set_state(model_states, event_data.model)
@@ -247,6 +251,7 @@ class NestedTransition(Transition):
 
     def _change_nested(self, event_data, state_tree, dst_name_path):
         machine = event_data.machine
+        scope = machine.get_global_name(join=False)
         src_name_path = event_data.source_path
         if src_name_path == dst_name_path:
             root = src_name_path[:-1]  # exit and enter the same state
@@ -255,49 +260,57 @@ class NestedTransition(Transition):
             while dst_name_path and src_name_path and src_name_path[0] == dst_name_path[0]:
                 root.append(src_name_path.pop(0))
                 dst_name_path.pop(0)
+        scoped_tree = reduce(dict.get, scope + root, state_tree)
         if src_name_path:
-            if root:
-                parent = machine.get_state(machine.state_cls.separator.join(root))
-                parent.states[src_name_path[0]].exit(event_data)
-                parent.exit_stack[event_data.model].remove(src_name_path[0])
-            else:
-                machine.get_state(machine.state_cls.separator.join(root + [src_name_path[0]])).exit(event_data)
-
-        new_states = OrderedDict()
+            for state in _resolve_order(scoped_tree):
+                state_name = machine.state_cls.separator.join(scope + root + state)
+                event_data.scope = scope + root + state[:-1]
+                machine.get_state(state_name).exit(event_data)
         if dst_name_path:
-            dest_name = self._enter_nested(root + [dst_name_path[0]], dst_name_path[1:], [], None, event_data)
-            _build_state_tree(listify(dest_name), new_states, machine.state_cls.separator)
+            new_states = self._enter_nested(root, dst_name_path, scope + root, event_data)
+        else:
+            new_states = OrderedDict()
 
-        state_root = reduce(dict.get, root, state_tree)
-        for key in state_root:
-            del state_root[key]
+        for key in scoped_tree:
+            del scoped_tree[key]
 
         for new_key, value in new_states.items():
-            state_root[new_key] = value
+            scoped_tree[new_key] = value
             break
 
-    def _enter_nested(self, root, dest, prefix, parent, event_data):
+    def _enter_nested(self, root, dest, prefix_path, event_data):
         if root:
             state_name = root.pop(0)
-            parent = event_data.machine.scoped
             with event_data.machine(state_name):
-                return self._enter_nested(root, dest, [state_name], parent, event_data)
-        state = event_data.machine.scoped
-        state.enter(event_data)
-        if parent != event_data.machine:
-            parent.exit_stack[event_data.model].append(state.name)
-        if dest:
+                return self._enter_nested(root, dest, prefix_path, event_data)
+        elif dest:
+            new_states = OrderedDict()
             state_name = dest.pop(0)
             with event_data.machine(state_name):
-                return self._enter_nested([], dest, prefix + [state_name], state, event_data)
-        elif state.initial:
-            entered_states = []
-            for intial_state in listify(state.initial):
-                with event_data.machine(intial_state):
-                    entered_states.append(self._enter_nested([], [], prefix + [intial_state], state, event_data))
-            return entered_states if len(entered_states) > 1 else entered_states[0]
+                event_data.scope = prefix_path
+                event_data.machine.scoped.enter(event_data)
+                new_states[state_name] = self._enter_nested([], dest, prefix_path + [state_name], event_data)
+            return new_states
+        elif event_data.machine.scoped.initial:
+            new_states = OrderedDict()
+            q = []
+            prefix = prefix_path
+            scoped_tree = new_states
+            initial_states = [event_data.machine.scoped.states[i] for i in listify(event_data.machine.scoped.initial)]
+            while True:
+                event_data.scope = prefix
+                for state in initial_states:
+                    state.enter(event_data)
+                    scoped_tree[state.name] = OrderedDict()
+                    if state.initial:
+                        q.append((scoped_tree[state.name], prefix + [state.name],
+                                  [state.states[i] for i in listify(state.initial)]))
+                if not q:
+                    break
+                scoped_tree, prefix, initial_states = q.pop(0)
+            return new_states
         else:
-            return event_data.machine.state_cls.separator.join(prefix)
+            return {}
 
     # Prevent deep copying of callback lists since these include either references to callable or
     # strings. Deep copying a method reference would lead to the creation of an entire new (model) object
@@ -766,23 +779,16 @@ class HierarchicalMachine(Machine):
             for substate in self.states.values():
                 self._init_state(substate)
 
-    def _resolve_initial(self, models, state_name_path, prefix=[], parent=None):
+    def _resolve_initial(self, models, state_name_path, prefix=[]):
         if state_name_path:
             state_name = state_name_path.pop(0)
-            parent = self.scoped
-            if parent != self:
-                for mod in models:
-                    parent.exit_stack[mod].append(state_name)
             with self(state_name):
-                return self._resolve_initial(models, state_name_path, prefix=prefix + [state_name], parent=parent)
+                return self._resolve_initial(models, state_name_path, prefix=prefix + [state_name])
         if self.scoped.initial:
             entered_states = []
-            parent = self.scoped
             for initial_state_name in listify(self.scoped.initial):
-                for mod in models:
-                    parent.exit_stack[mod].append(initial_state_name)
                 with self(initial_state_name):
-                    entered_states.append(self._resolve_initial(models, [], prefix=prefix + [initial_state_name], parent=parent))
+                    entered_states.append(self._resolve_initial(models, [], prefix=prefix + [initial_state_name]))
             return entered_states if len(entered_states) > 1 else entered_states[0]
         return self.state_cls.separator.join(prefix)
 
