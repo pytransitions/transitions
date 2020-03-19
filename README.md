@@ -1283,6 +1283,14 @@ While you can reference substates as done in `['go', '2_z', '2_x']` you cannot r
 When a parent state is exited, its children will also be exited.
 In addition to the processing order of transitions known from `Machine` where transitions are considered in the order they were added, `HierarchicalMachine` considers hierarchy as well.
 Transitions defined in substates will be evaluated first (e.g. `C_1_a` is left before `C_2_z`) and transitions defined with wildcard `*` will (for now) only add transitions to root states (in this example `A`, `B`, `C`)
+Starting with *0.8.0* nested states can be added directly and will issue the creation of parent states on-the-fly:
+
+```python
+m = HierarchicalMachine(states=['A'], initial='A')
+m.add_state('B_1_a')
+m.to_B_1()
+assert m.is_B(allow_substates=True)
+```
 
 
 #### Reuse of previously created HSMs

@@ -277,8 +277,6 @@ class AsyncMachine(Machine):
             else:
                 raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
 
-        # ToDo: test for has_queue
-        # process queued events
         self._transition_queue.append(trigger)
         # another entry in the queue implies a running transition; skip immediate execution
         if len(self._transition_queue) > 1:

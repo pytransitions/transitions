@@ -506,32 +506,19 @@ class HierarchicalMachine(Machine):
         if state:
             if isinstance(state, State):
                 state = state.name
-            domains = self._get_global_name(state, domains)
+            if state in self.states:
+                domains.append(state)
+            else:
+                raise ValueError("State '{0}' not found in local states.".format(state))
         return self.state_cls.separator.join(domains) if join else domains
 
-    def get_global_state(self, state):
-        states = self._stack[0][1] if self._stack else self.states
-        domains = state
-        for sco in domains:
-            states = states[sco].states
-        return states
-
     def get_local_name(self, state_name, join=True):
-        if isinstance(state_name, Enum):
-            state_name = state_name.name
-        elif isinstance(state_name, State):
-            if state_name == self.scoped:
-                return '' if join else []
-            state_name = self.get_global_name(state_name)
         state_name = state_name.split(self.state_cls.separator)
         local_stack = [s[0] for s in self._stack] + [self.scoped]
         local_stack_start = len(local_stack) - local_stack[::-1].index(self)
         domains = [s.name for s in local_stack[local_stack_start:]]
         if domains and state_name and state_name[0] != domains[0]:
             return self.state_cls.separator.join(state_name) if join else state_name
-        while domains and state_name and state_name[0] == domains[0]:
-            state_name.pop(0)
-            domains.pop(0)
         return self.state_cls.separator.join(state_name) if join else state_name
 
     def get_nested_state_names(self):
@@ -715,18 +702,6 @@ class HierarchicalMachine(Machine):
         else:
             self._checked_assignment(model, trigger, trig_func)
 
-    def _get_global_name(self, state=None, domains=[]):
-        domains.append(state)
-        if state in self.states:
-            return domains
-        else:
-            for child in self.states:
-                with self(child):
-                    domains = self._get_global_name(state, domains)
-                    if domains:
-                        return [child] + domains
-            return domains
-
     def _get_trigger(self, model, trigger_name, *args, **kwargs):
         """Convenience function added to the model to trigger events by name.
         Args:
@@ -757,7 +732,7 @@ class HierarchicalMachine(Machine):
         if not found:
             for a_state in self.states:
                 with self(a_state):
-                    if self.has_state(state):
+                    if self._has_state(state):
                         return True
         if not found and raise_error:
             msg = 'State %s has not been added to the machine' % (state.name if hasattr(state, 'name') else state)

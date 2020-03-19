@@ -35,7 +35,8 @@ def heavy_checking():
 class TestLockedTransitions(TestCore):
 
     def setUp(self):
-        self.stuff = Stuff(machine_cls=MachineFactory.get_predefined(locked=True))
+        self.machine_cls = MachineFactory.get_predefined(locked=True)
+        self.stuff = Stuff(machine_cls=self.machine_cls)
         self.stuff.heavy_processing = heavy_processing
         self.stuff.machine.add_transition('forward', 'A', 'B', before='heavy_processing')
 
@@ -175,7 +176,8 @@ class TestMultipleContexts(TestCore):
         self.c3 = SomeContext(event_list=self.event_list)
         self.c4 = SomeContext(event_list=self.event_list)
 
-        self.stuff = Stuff(machine_cls=MachineFactory.get_predefined(locked=True), extra_kwargs={
+        self.machine_cls = MachineFactory.get_predefined(locked=True)
+        self.stuff = Stuff(machine_cls=self.machine_cls, extra_kwargs={
             'machine_context': [self.c1, self.c2]
         })
         self.stuff.machine.add_model(self.s1, model_context=[self.c3, self.c4])

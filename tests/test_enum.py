@@ -146,3 +146,8 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertEqual(m1.state, m2.state)
         m1.to_A()
         self.assertNotEqual(m1.state, m2.state)
+
+    def test_initial_enum(self):
+        m1 = self.machine_cls(states=self.States, initial=self.States.GREEN)
+        self.assertEqual(self.States.GREEN, m1.state)
+        self.assertEqual(m1.state.name, self.States.GREEN.name)

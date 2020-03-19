@@ -62,10 +62,7 @@ class NestedState(State):
     def initial(self):
         """ When this state is entered it will automatically enter
             the child with this name if not None. """
-        try:
-            return self.name + NestedState.separator + self._initial if self._initial else self._initial
-        except TypeError:  # we assume an Enum here
-            return self.name + NestedState.separator + self._initial.name
+        return self.name + NestedState.separator + self._initial if self._initial else self._initial
 
     @initial.setter
     def initial(self, value):

@@ -59,6 +59,9 @@ class TestNestedLegacy(TestTransitions):
     def test_nested_definitions(self):
         pass
 
+    def test_add_nested_state(self):
+        pass  # not supported by legacy machine
+
 
 class TestReuseLegacy(TestReuse):
 

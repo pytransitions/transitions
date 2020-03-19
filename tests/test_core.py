@@ -28,8 +28,10 @@ def on_exit_B(event):
 
 
 class TestTransitions(TestCase):
+
     def setUp(self):
         self.stuff = Stuff()
+        self.machine_cls = Machine
 
     def tearDown(self):
         pass
@@ -1081,6 +1083,11 @@ class TestTransitions(TestCase):
         instance.freeze()
         self.assertEqual(instance.state_b, 'A')
         self.assertEqual(instance.state_a, 'B')
+
+    def test_initial_not_registered(self):
+        m1 = self.machine_cls(states=['A', 'B'], initial=self.machine_cls.state_cls('C'))
+        self.assertTrue(m1.is_C())
+        self.assertTrue('C' in m1.states)
 
 
 class TestWarnings(TestCase):

@@ -127,11 +127,18 @@ class TestAsync(TestTransitions):
         def sync_condition(event_data):
             return event_data.state == state_a
 
-        async def process(event_data):
+        async def async_conditions(event_data):
+            return event_data.state == state_a
+
+        async def async_callback(event_data):
+            self.assertEqual(event_data.state, state_b)
+
+        def sync_callback(event_data):
             self.assertEqual(event_data.state, state_b)
 
         m = self.machine_cls(states=[state_a, state_b], initial='A', send_event=True)
-        m.add_transition('go', 'A', 'B', conditions=sync_condition, after=process)
+        m.add_transition('go', 'A', 'B', conditions=[sync_condition, async_conditions],
+                         after=[sync_callback, async_callback])
         m.add_transition('go', 'B', 'A', conditions=sync_condition)
         asyncio.run(m.go())
         self.assertTrue(m.is_B())
@@ -175,6 +182,16 @@ class TestAsync(TestTransitions):
                 with self.assertRaises(MachineError):
                     await machine.run(machine=machine)
 
+        async def raise_machine_error(event_data):
+            self.assertTrue(event_data.machine.has_queue)
+            await event_data.model.to_A()
+            event_data.machine._queued = False
+            await event_data.model.to_C()
+
+        async def raise_exception(event_data):
+            await event_data.model.to_C()
+            raise ValueError("Clears queue")
+
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B', 'before': change_state},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
@@ -187,6 +204,16 @@ class TestAsync(TestTransitions):
         m = self.machine_cls(states=states, transitions=transitions, initial='A', queued=True)
         asyncio.run(m.walk(machine=m))
         self.assertEqual(m.state, 'C')
+        m = self.machine_cls(states=states, initial='A', queued=True, send_event=True,
+                             before_state_change=raise_machine_error)
+        with self.assertRaises(MachineError):
+            asyncio.run(m.to_C())
+        m = self.machine_cls(states=states, initial='A', queued=True, send_event=True)
+        m.add_transition('go', 'A', 'B', after='go')
+        m.add_transition('go', 'B', 'C', before=raise_exception)
+        with self.assertRaises(ValueError):
+            asyncio.run(m.go())
+        self.assertEqual('B', m.state)
 
 
 class AsyncGraphMachine(TestAsync):

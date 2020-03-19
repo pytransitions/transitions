@@ -15,7 +15,7 @@ from transitions.extensions import MachineFactory
 
 from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
-from .utils import Stuff
+from .utils import Stuff, DummyModel
 
 try:
     from unittest.mock import MagicMock
@@ -88,7 +88,8 @@ class TestTransitions(TestsCore):
         b = State('B')
         b_1 = State('1')
         b_2 = State('2')
-        b.add_substates([b_1, b_2])
+        b.add_substate(b_1)
+        b.add_substates([b_2])
         m = self.stuff.machine_cls(states=[a, b])
         self.assertEqual(m.states['B'].states['1'], b_1)
         m.to("B{0}1".format(State.separator))
@@ -218,6 +219,16 @@ class TestTransitions(TestsCore):
         self.assertEqual('E{0}3'.format(State.separator), s.state)
         s.run()
         self.assertEqual('C{0}3{0}a'.format(State.separator), s.state)
+
+    def test_add_nested_state(self):
+        m = self.machine_cls(states=['A'], initial='A')
+        m.add_state('B{0}1{0}a'.format(self.state_cls.separator))
+        self.assertIn('B', m.states)
+        self.assertIn('1', m.states['B'].states)
+        self.assertIn('a', m.states['B'].states['1'].states)
+
+        with self.assertRaises(ValueError):
+            m.add_state(m.states['A'])
 
     def test_enter_exit_nested_state(self):
         State = self.state_cls
@@ -562,6 +573,26 @@ class TestTransitions(TestsCore):
         self.assertEqual(s.state, 'A')
         self.assertEqual(s.level, 2)
 
+    def test_transition_with_unknown_state(self):
+        s = self.stuff
+        with self.assertRaises(ValueError):
+            s.machine.add_transition('next', 'A', s.machine.state_cls('X'))
+
+    def test_skip_to_override(self):
+        mock = MagicMock()
+        class Model:
+
+            def to(self):
+                mock()
+
+        model1 = Model()
+        model2 = DummyModel()
+        machine = self.machine_cls([model1, model2], states=['A', 'B'], initial='A')
+        model1.to()
+        model2.to('B')
+        self.assertTrue(mock.called)
+        self.assertTrue(model2.is_B())
+
 
 @skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
 class TestWithGraphTransitions(TestTransitions):
@@ -570,9 +601,9 @@ class TestWithGraphTransitions(TestTransitions):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
 
-        machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
-        self.state_cls = machine_cls.state_cls
-        self.stuff = Stuff(states, machine_cls)
+        self.machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
+        self.state_cls = self.machine_cls.state_cls
+        self.stuff = Stuff(states, self.machine_cls)
 
     def test_ordered_with_graph(self):
         State = self.state_cls
