@@ -23,7 +23,7 @@ if 'setuptools' in sys.modules:
 setup(
     name="transitions",
     version=__version__,
-    description="A lightweight, object-oriented Python state machine implementation.",
+    description="A lightweight, object-oriented Python state machine implementation with many extensions.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='Tal Yarkoni',
@@ -51,6 +51,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     **extra_setuptools_args
 )

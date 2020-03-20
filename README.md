@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 <!--[![Name](Image)](Link)-->
 
-A lightweight, object-oriented state machine implementation in Python. Compatible with Python 2.7+ and 3.0+.
+A lightweight, object-oriented state machine implementation in Python with many extensions. Compatible with Python 2.7+ and 3.0+.
 
 ## Installation
 
