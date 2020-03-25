@@ -237,7 +237,8 @@ class AsyncMachine(Machine):
         Returns:
             bool The truth value of all triggers combined with AND
         """
-        await asyncio.gather(*[getattr(model, trigger)(*args, **kwargs) for model in self.models])
+        results = await asyncio.gather(*[getattr(model, trigger)(*args, **kwargs) for model in self.models])
+        return all(results)
 
     async def callbacks(self, funcs, event_data):
         """ Triggers a list of callbacks """
