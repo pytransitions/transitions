@@ -151,3 +151,11 @@ class TestNestedStateEnums(TestEnumsAsStates):
         m1 = self.machine_cls(states=self.States, initial=self.States.GREEN)
         self.assertEqual(self.States.GREEN, m1.state)
         self.assertEqual(m1.state.name, self.States.GREEN.name)
+
+
+@skipIf(enum is None, "enum is not available")
+class TestEnumWithGraph(TestEnumsAsStates):
+
+    def setUp(self):
+        super(TestEnumWithGraph, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(graph=True)

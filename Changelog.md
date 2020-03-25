@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1 ()
+
+Release 0.8.1 is a minor release of bugfixes in the diagram extension
+
+- Bugfix #400: Fix style initialization when initial state is an `Enum` (thanks @kbinpgh)
+
 ## 0.8.0 (March 2020)
 
 Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+, parallel state support and some bugfixes
