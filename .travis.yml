@@ -10,7 +10,7 @@ install:
   - pip install python-coveralls 'coverage<5'
   - pip install -r requirements.txt
   - pip install -r requirements_diagrams.txt
-  - pip install -r requirements_test.txt
+  - pip install -U -r requirements_test.txt
 script: pytest -nauto --doctest-modules --cov transitions/
 after_success:
   - coveralls --ignore-errors --config_file .coveragerc
