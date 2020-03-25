@@ -12,6 +12,7 @@ from os import unlink
 
 from transitions.extensions.nesting import NestedState
 from transitions.extensions import MachineFactory
+from transitions.core import Enum
 
 from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
@@ -592,6 +593,16 @@ class TestTransitions(TestsCore):
         model2.to('B')
         self.assertTrue(mock.called)
         self.assertTrue(model2.is_B())
+
+    def test_duplicate_states(self):
+        with self.assertRaises(ValueError):
+            self.machine_cls(states=['A', 'A'])
+
+    def test_duplicate_states_from_enum_members(self):
+        class Foo(Enum):
+            A = 1
+        with self.assertRaises(ValueError):
+            self.machine_cls(states=[Foo.A, Foo.A])
 
 
 @skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
