@@ -12,6 +12,7 @@ from os import unlink
 
 from transitions.extensions.nesting import NestedState
 from transitions.extensions import MachineFactory
+from transitions.core import Enum
 
 from unittest import skipIf
 from .test_core import TestTransitions as TestsCore
@@ -229,6 +230,23 @@ class TestTransitions(TestsCore):
 
         with self.assertRaises(ValueError):
             m.add_state(m.states['A'])
+
+    def test_add_nested_enums_as_nested_state(self):
+        from transitions.extensions.nesting_legacy import HierarchicalMachine
+        if self.machine_cls is HierarchicalMachine:
+            self.skipTest("Converting enums to nested states is not supported on the legacy HierarchicalMachine")
+
+        class Foo(Enum):
+            A = 0
+            B = 1
+
+        class Bar(Enum):
+            FOO = Foo
+            C = 2
+
+        m = self.stuff.machine_cls(states=Bar, initial='A')
+
+        self.assertEqual(sorted(m.states['FOO'].states.keys()), ['A', 'B'])
 
     def test_enter_exit_nested_state(self):
         State = self.state_cls
