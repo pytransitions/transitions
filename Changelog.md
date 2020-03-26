@@ -2,9 +2,10 @@
 
 ## 0.8.1 ()
 
-Release 0.8.1 is a minor release of bugfixes in the diagram extension
+Release 0.8.1 is a minor release of bugfixes in the diagram and async extension
 
 - Bugfix #400: Fix style initialization when initial state is an `Enum` (thanks @kbinpgh)
+- Bugfix #403: AsyncMachine.dispatch now returns a boolean as expected (thanks @thedrow)
 
 ## 0.8.0 (March 2020)
 
