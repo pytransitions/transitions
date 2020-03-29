@@ -1089,6 +1089,12 @@ class TestTransitions(TestCase):
         self.assertTrue(m1.is_C())
         self.assertTrue('C' in m1.states)
 
+    def test_trigger_name_cannot_be_equal_to_model_attribute(self):
+        m = self.machine_cls(states=['A', 'B'])
+
+        with self.assertRaises(ValueError):
+            m.add_transition(m.model_attribute, "A", "B")
+
 
 class TestWarnings(TestCase):
     def test_warning(self):
