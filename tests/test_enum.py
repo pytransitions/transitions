@@ -152,6 +152,17 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertEqual(self.States.GREEN, m1.state)
         self.assertEqual(m1.state.name, self.States.GREEN.name)
 
+    def test_duplicate_states(self):
+        with self.assertRaises(ValueError):
+            self.machine_cls(states=['A', 'A'])
+
+    def test_duplicate_states_from_enum_members(self):
+        class Foo(enum.Enum):
+            A = 1
+
+        with self.assertRaises(ValueError):
+            self.machine_cls(states=[Foo.A, Foo.A])
+
 
 @skipIf(enum is None, "enum is not available")
 class TestEnumWithGraph(TestEnumsAsStates):
