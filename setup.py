@@ -1,7 +1,9 @@
 import codecs
 import sys
 from setuptools import setup, find_packages
-from transitions.version import __version__
+
+with open('transitions/version.py') as f:
+    exec(f.read())
 
 with codecs.open('README.md', 'r', 'utf-8') as f:
     import re
