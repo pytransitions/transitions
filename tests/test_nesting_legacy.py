@@ -1,5 +1,6 @@
 from .test_nesting import TestNestedTransitions, TestSeparatorsBase, Stuff, default_separator, test_states
-from .test_reuse import TestReuse as TestReuse
+from .test_reuse import TestReuse as TestReuse, TestReuseSeparatorBase
+from .test_reuse import test_states as reuse_states
 from .test_enum import TestNestedStateEnums
 from transitions.extensions.nesting_legacy import HierarchicalMachine, NestedState
 
@@ -12,15 +13,17 @@ except ImportError:
 class TestNestedLegacySeparatorDefault(TestSeparatorsBase):
 
     def setUp(self):
+
         class CustomLegacyState(NestedState):
             separator = self.separator
 
         class CustomLegacyMachine(HierarchicalMachine):
             state_cls = CustomLegacyState
 
+        self.states = test_states
         self.state_cls = CustomLegacyState
         self.machine_cls = CustomLegacyMachine
-        self.stuff = Stuff(test_states, self.machine_cls)
+        self.stuff = Stuff(self.states, self.machine_cls)
         self.state_cls = self.machine_cls.state_cls
 
     def test_ordered_with_graph(self):
@@ -87,6 +90,27 @@ class TestNestedLegacy(TestNestedTransitions):
 
     def test_add_nested_state(self):
         pass  # not supported by legacy machine
+
+
+class TestReuseLegacySeparatorDefault(TestReuseSeparatorBase):
+
+    def setUp(self):
+
+        class CustomLegacyState(NestedState):
+            separator = self.separator
+
+        class CustomLegacyMachine(HierarchicalMachine):
+            state_cls = CustomLegacyState
+
+        self.states = reuse_states
+        self.state_cls = CustomLegacyState
+        self.machine_cls = CustomLegacyMachine
+        self.stuff = Stuff(self.states, self.machine_cls)
+        self.state_cls = self.machine_cls.state_cls
+
+
+class TestReuseLegacySeparatorDefault(TestReuseLegacySeparatorDefault):
+    separator = '.'
 
 
 class TestReuseLegacy(TestReuse):
