@@ -62,7 +62,7 @@ class NestedState(State):
     def initial(self):
         """ When this state is entered it will automatically enter
             the child with this name if not None. """
-        return self.name + NestedState.separator + self._initial if self._initial else self._initial
+        return self.name + self.separator + self._initial if self._initial else self._initial
 
     @initial.setter
     def initial(self, value):
@@ -78,7 +78,7 @@ class NestedState(State):
     def name(self):
         """ The computed name of this state. """
         if self.parent:
-            return self.parent.name + NestedState.separator + _super(NestedState, self).name
+            return self.parent.name + self.separator + _super(NestedState, self).name
         return _super(NestedState, self).name
 
     @name.setter
@@ -358,12 +358,12 @@ class HierarchicalMachine(Machine):
                 tmp_states.extend(copied_states)
                 for trigger, event in state.events.items():
                     if trigger.startswith('to_'):
-                        path = trigger[3:].split(NestedState.separator)
+                        path = trigger[3:].split(self.state_cls.separator)
                         # do not copy auto_transitions since they would not be valid anymore;
                         # trigger and destination do not exist in the new environment
                         if path[0] in remap:
                             continue
-                        ppath = parent.name.split(NestedState.separator)
+                        ppath = parent.name.split(self.state_cls.separator)
                         path = ['to_' + ppath[0]] + ppath[1:] + path
                         trigger = '.'.join(path)
                     # (deep) copy transitions and
@@ -375,14 +375,14 @@ class HierarchicalMachine(Machine):
                             # unexpected behaviour in the parent machine
                             if src in remap:
                                 continue
-                            dst = parent.name + NestedState.separator + transition.dest\
+                            dst = parent.name + self.state_cls.separator + transition.dest\
                                 if transition.dest not in remap else remap[transition.dest]
                             conditions, unless = [], []
                             for cond in transition.conditions:
                                 # split a list in two lists based on the accessors (cond.target) truth value
                                 (unless, conditions)[cond.target].append(cond.func)
                             self._buffered_transitions.append({'trigger': trigger,
-                                                               'source': parent.name + NestedState.separator + src,
+                                                               'source': parent.name + self.state_cls.separator + src,
                                                                'dest': dst,
                                                                'conditions': conditions,
                                                                'unless': unless,
@@ -445,8 +445,8 @@ class HierarchicalMachine(Machine):
 
     def _add_trigger_to_model(self, trigger, model):
         # FunctionWrappers are only necessary if a custom separator is used
-        if trigger.startswith('to_') and NestedState.separator != '_':
-            path = trigger[3:].split(NestedState.separator)
+        if trigger.startswith('to_') and self.state_cls.separator != '_':
+            path = trigger[3:].split(self.state_cls.separator)
             trig_func = partial(self.events[trigger].trigger, model)
             if hasattr(model, 'to_' + path[0]):
                 # add path to existing function wrapper

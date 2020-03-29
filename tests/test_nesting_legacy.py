@@ -1,7 +1,7 @@
-from .test_nesting import TestNestedTransitions, TestSeparatorsBase, Stuff, default_separator
+from .test_nesting import TestNestedTransitions, TestSeparatorsBase, Stuff, default_separator, test_states
 from .test_reuse import TestReuse as TestReuse
 from .test_enum import TestNestedStateEnums
-from transitions.extensions.nesting_legacy import HierarchicalMachine
+from transitions.extensions.nesting_legacy import HierarchicalMachine, NestedState
 
 try:
     from unittest.mock import MagicMock
@@ -10,14 +10,28 @@ except ImportError:
 
 
 class TestNestedLegacySeparatorDefault(TestSeparatorsBase):
-    pass
+
+    def setUp(self):
+        class CustomLegacyState(NestedState):
+            separator = self.separator
+
+        class CustomLegacyMachine(HierarchicalMachine):
+            state_cls = CustomLegacyState
+
+        self.state_cls = CustomLegacyState
+        self.machine_cls = CustomLegacyMachine
+        self.stuff = Stuff(test_states, self.machine_cls)
+        self.state_cls = self.machine_cls.state_cls
+
+    def test_ordered_with_graph(self):
+        pass
 
 
-class TestNestedLegacySeparatorDot(TestSeparatorsBase):
+class TestNestedLegacySeparatorDot(TestNestedLegacySeparatorDefault):
     separator = '.'
 
 
-class TestNestedLegacySeparatorSlash(TestSeparatorsBase):
+class TestNestedLegacySeparatorSlash(TestNestedLegacySeparatorDefault):
     separator = '/'
 
 
