@@ -4,11 +4,9 @@ except ImportError:
     pass
 
 from .utils import Stuff
-from .test_graphviz import TestDiagrams, TestDiagramsNested, NestedState
+from .test_graphviz import TestDiagrams, TestDiagramsNested
 from transitions.extensions.states import add_state_features, Timeout, Tags
 from unittest import skipIf
-import tempfile
-import os
 
 try:
     # Just to skip tests if graphviz not installed
@@ -24,34 +22,6 @@ class PygraphvizTest(TestDiagrams):
 
     def setUp(self):
         super(PygraphvizTest, self).setUp()
-
-    # def test_diagram(self):
-    #     m = self.machine_cls(states=self.states, transitions=self.transitions, use_pygraphviz=self.use_pygraphviz,
-    #                          initial='A', auto_transitions=False, title='a test')
-    #     graph = m.get_graph()
-    #     self.assertIsNotNone(graph)
-    #     self.assertTrue(graph.directed)
-    #
-    #     # Test that graph properties match the Machine
-    #     self.assertEqual(
-    #         set(m.states.keys()), set([n.name for n in graph.nodes()]))
-    #     triggers = set([n.attr['label'] for n in graph.edges()])
-    #     for t in triggers:
-    #         t = edge_label_from_transition_label(t)
-    #         self.assertIsNotNone(getattr(m, t))
-    #
-    #     self.assertEqual(len(graph.edges()), len(self.transitions))
-    #
-    #     # write diagram to temp file
-    #     target = tempfile.NamedTemporaryFile()
-    #     graph.draw(target.name, prog='dot')
-    #     self.assertTrue(os.path.getsize(target.name) > 0)
-    #
-    #     # cleanup temp file
-    #     target.close()
-    #
-    #     graph = m.get_graph(force_new=True, title=False)
-    #     self.assertEqual("", graph.graph_attr['label'])
 
     def test_if_multiple_edges_are_supported(self):
         transitions = [
