@@ -200,10 +200,10 @@ class TestAsync(TestTransitions):
 
         m = self.machine_cls(states=states, transitions=transitions, initial='A')
         asyncio.run(m.walk(machine=m))
-        self.assertEqual(m.state, 'B')
+        self.assertEqual('B', m.state)
         m = self.machine_cls(states=states, transitions=transitions, initial='A', queued=True)
         asyncio.run(m.walk(machine=m))
-        self.assertEqual(m.state, 'C')
+        self.assertEqual('C', m.state)
         m = self.machine_cls(states=states, initial='A', queued=True, send_event=True,
                              before_state_change=raise_machine_error)
         with self.assertRaises(MachineError):
@@ -223,9 +223,38 @@ class AsyncGraphMachine(TestAsync):
         self.machine_cls = MachineFactory.get_predefined(graph=True, asyncio=True)
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
-# class TestHierarchicalAsync(TestAsync):
-#
-#     def setUp(self):
-#         super(TestAsync, self).setUp()
-#         self.machine_cls = MachineFactory.get_predefined(nested=True, asyncio=True)
-#         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
+
+class TestHierarchicalAsync(TestAsync):
+
+    def setUp(self):
+        super(TestAsync, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(nested=True, asyncio=True)
+        self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
+
+    def test_nested_async(self):
+        mock = MagicMock()
+
+        async def sleep_mock():
+            await asyncio.sleep(0.1)
+            mock()
+
+        states = ['A', 'B', {'name': 'C', 'children': ['1', {'name': '2', 'children': ['a', 'b'], 'initial': 'a'},
+                                                       '3'], 'initial': '2'}]
+        transitions = [{'trigger': 'go', 'source': 'A', 'dest': 'C',
+                        'after': [sleep_mock] * 100}]
+        machine = self.machine_cls(states=states, transitions=transitions, initial='A')
+        asyncio.run(machine.go())
+        self.assertEqual('C{0}2{0}a'.format(machine.state_cls.separator), machine.state)
+        self.assertEqual(100, mock.call_count)
+
+    def test_parallel_async(self):
+        states = ['A', 'B', {'name': 'P',
+                             'parallel': [
+                                 {'name': '1', 'children': ['a'], 'initial': 'a'},
+                                 {'name': '2', 'children': ['b', 'c'], 'initial': 'b'},
+                                 {'name': '3', 'children': ['x', 'y', 'z'], 'initial': 'y'}]}]
+        machine = self.machine_cls(states=states, initial='A')
+        asyncio.run(machine.to_P())
+        self.assertEqual(['P{0}1{0}a'.format(machine.state_cls.separator),
+                          'P{0}2{0}b'.format(machine.state_cls.separator),
+                          'P{0}3{0}y'.format(machine.state_cls.separator)], machine.state)

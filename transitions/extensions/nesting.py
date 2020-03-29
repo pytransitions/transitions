@@ -19,19 +19,21 @@ _super = super
 
 
 # converts a list of current states into a hierarchical state tree
-def _build_state_tree(model_states, res, separator):
+def _build_state_tree(model_states, separator, tree=None):
+    tree = tree if tree is not None else OrderedDict()
     if isinstance(model_states, list):
         for state in model_states:
-            _build_state_tree(state, res, separator)
+            _ = _build_state_tree(state, separator, tree)
     else:
         if isinstance(model_states, Enum):
-            res[model_states.name] = {}  # since enum cannot be nested we do not need an OrderedDict here
+            tree[model_states.name] = {}  # since enum cannot be nested we do not need an OrderedDict here
         else:
-            tmp = res
+            tmp = tree
             for elem in model_states.split(separator):
                 if elem not in tmp:
                     tmp[elem] = OrderedDict()
                 tmp = tmp[elem]
+    return tree
 
 
 # converts a hierarchical tree into a list of current states
@@ -106,44 +108,45 @@ class NestedEvent(Event):
         This subclass is NOT compatible with simple Machine instances.
     """
 
-    def trigger(self, model, state_tree, machine, *args, **kwargs):
+    def trigger(self, _model, _machine, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes. NOTE: This should only
         be called by HierarchicalMachine instances.
         Args:
-            model (object): model object to
-            state_tree (dict): resolved (parallel) model state
-            machine (HierarchicalMachine): Since NestedEvents can be used in multiple machine instances, this one
-                                           will be used to determine the current state separator.
+            _model (object): model object to
+            _machine (HierarchicalMachine): Since NestedEvents can be used in multiple machine instances, this one
+                                            will be used to determine the current state separator.
             args and kwargs: Optional positional or named arguments that will
                 be passed onto the EventData object, enabling arbitrary state
                 information to be passed on to downstream triggered functions.
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        func = partial(self._trigger, model, state_tree, machine, *args, **kwargs)
+        func = partial(self._trigger, _model, _machine, *args, **kwargs)
         # pylint: disable=protected-access
         # noinspection PyProtectedMember
         # Machine._process should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
-        return machine._process(func)
+        return _machine._process(func)
 
-    def _trigger(self, model, state_tree, machine, *args, **kwargs):
+    def _trigger(self, _model, _machine, *args, **kwargs):
+        state_tree = _build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
+        state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
         ordered_states = _resolve_order(state_tree)
         done = []
         res = None
         for state_path in ordered_states:
-            state_name = machine.state_cls.separator.join(state_path)
+            state_name = _machine.state_cls.separator.join(state_path)
             if state_name not in done and state_name in self.transitions:
-                state = machine.get_state(state_name)
-                event_data = EventData(state, self, machine, model, args=args, kwargs=kwargs)
+                state = _machine.get_state(state_name)
+                event_data = EventData(state, self, _machine, _model, args=args, kwargs=kwargs)
                 event_data.source_name = state_name
                 event_data.source_path = copy.copy(state_path)
                 res = self._process(event_data)
                 if res:
                     elems = state_path
                     while elems:
-                        done.append(machine.state_cls.separator.join(elems))
+                        done.append(_machine.state_cls.separator.join(elems))
                         elems.pop()
         return res
 
@@ -188,6 +191,7 @@ class NestedState(State):
         self.initial = initial
         self.events = {}
         self.states = OrderedDict()
+        self._scope = []
 
     def add_substate(self, state):
         """ Adds a state as a substate.
@@ -204,21 +208,19 @@ class NestedState(State):
         for state in listify(states):
             self.states[state.name] = state
 
-    def enter(self, event_data):
-        """ Triggered when a state is entered. """
-        _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name,
-                      self.separator.join(event_data.scope + [self.name]))
-        event_data.machine.callbacks(self.on_enter, event_data)
-        _LOGGER.info("%sEntered state %s", event_data.machine.name,
-                     self.separator.join(event_data.scope + [self.name]))
+    def scoped_enter(self, event_data, scope=[]):
+        self._scope = scope
+        self.enter(event_data)
+        self._scope = []
 
-    def exit(self, event_data):
-        """ Triggered when a state is exited. """
-        _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name,
-                      self.separator.join(event_data.scope + [self.name]))
-        event_data.machine.callbacks(self.on_exit, event_data)
-        _LOGGER.info("%sExited state %s", event_data.machine.name,
-                     self.separator.join(event_data.scope + [self.name]))
+    def scoped_exit(self, event_data, scope=[]):
+        self._scope = scope
+        self.exit(event_data)
+        self._scope = []
+
+    @property
+    def name(self):
+        return self.separator.join(self._scope + [_super(NestedState, self).name])
 
 
 class NestedTransition(Transition):
@@ -236,21 +238,13 @@ class NestedTransition(Transition):
             but only if condition checks have been successful.
     """
 
-    def _change_state(self, event_data):
+    def _resolve_transition(self, event_data):
         machine = event_data.machine
         dst_name_path = machine.get_local_name(self.dest, join=False)
         _ = machine.get_state(dst_name_path)
         model_states = listify(getattr(event_data.model, machine.model_attribute))
-        state_tree = OrderedDict()
-        _build_state_tree(model_states, state_tree, machine.state_cls.separator)
-        self._change_nested(event_data, state_tree, dst_name_path)
-        model_states = _build_state_list(state_tree, machine.state_cls.separator)
-        with machine():
-            event_data.machine.set_state(model_states, event_data.model)
-            event_data.state = machine.get_states(listify(model_states))
+        state_tree = _build_state_tree(model_states, machine.state_cls.separator)
 
-    def _change_nested(self, event_data, state_tree, dst_name_path):
-        machine = event_data.machine
         scope = machine.get_global_name(join=False)
         src_name_path = event_data.source_path
         if src_name_path == dst_name_path:
@@ -260,16 +254,19 @@ class NestedTransition(Transition):
             while dst_name_path and src_name_path and src_name_path[0] == dst_name_path[0]:
                 root.append(src_name_path.pop(0))
                 dst_name_path.pop(0)
+
         scoped_tree = reduce(dict.get, scope + root, state_tree)
+        exit_partials = []
         if src_name_path:
-            for state in _resolve_order(scoped_tree):
-                state_name = machine.state_cls.separator.join(scope + root + state)
-                event_data.scope = scope + root + state[:-1]
-                machine.get_state(state_name).exit(event_data)
+            for state_name in _resolve_order(scoped_tree):
+                cb = partial(machine.get_state(root + state_name).scoped_exit,
+                             event_data,
+                             scope + root + state_name[:-1])
+                exit_partials.append(cb)
         if dst_name_path:
-            new_states = self._enter_nested(root, dst_name_path, scope + root, event_data)
+            new_states, enter_partials = self._enter_nested(root, dst_name_path, scope + root, event_data)
         else:
-            new_states = OrderedDict()
+            new_states, enter_partials = {}, []
 
         for key in scoped_tree:
             del scoped_tree[key]
@@ -277,6 +274,16 @@ class NestedTransition(Transition):
         for new_key, value in new_states.items():
             scoped_tree[new_key] = value
             break
+
+        return state_tree, exit_partials, enter_partials
+
+    def _change_state(self, event_data):
+        state_tree, exit_partials, enter_partials = self._resolve_transition(event_data)
+        for func in exit_partials:
+            func()
+        self._update_model(event_data, state_tree)
+        for func in enter_partials:
+            func()
 
     def _enter_nested(self, root, dest, prefix_path, event_data):
         if root:
@@ -287,12 +294,12 @@ class NestedTransition(Transition):
             new_states = OrderedDict()
             state_name = dest.pop(0)
             with event_data.machine(state_name):
-                event_data.scope = prefix_path
-                event_data.machine.scoped.enter(event_data)
-                new_states[state_name] = self._enter_nested([], dest, prefix_path + [state_name], event_data)
-            return new_states
+                new_states[state_name], new_enter = self._enter_nested([], dest, prefix_path + [state_name], event_data)
+                enter_partials = [partial(event_data.machine.scoped.scoped_enter, event_data, prefix_path)] + new_enter
+            return new_states, enter_partials
         elif event_data.machine.scoped.initial:
             new_states = OrderedDict()
+            enter_partials = []
             q = []
             prefix = prefix_path
             scoped_tree = new_states
@@ -300,7 +307,7 @@ class NestedTransition(Transition):
             while True:
                 event_data.scope = prefix
                 for state in initial_states:
-                    state.enter(event_data)
+                    enter_partials.append(partial(state.scoped_enter, event_data, prefix))
                     scoped_tree[state.name] = OrderedDict()
                     if state.initial:
                         q.append((scoped_tree[state.name], prefix + [state.name],
@@ -308,9 +315,17 @@ class NestedTransition(Transition):
                 if not q:
                     break
                 scoped_tree, prefix, initial_states = q.pop(0)
-            return new_states
+            return new_states, enter_partials
         else:
-            return {}
+            return {}, []
+
+    @staticmethod
+    def _update_model(event_data, tree):
+        model_states = _build_state_list(tree, event_data.machine.state_cls.separator)
+        with event_data.machine():
+            event_data.machine.set_state(model_states, event_data.model)
+            states = event_data.machine.get_states(listify(model_states))
+            event_data.state = states[0] if len(states) == 1 else states
 
     # Prevent deep copying of callback lists since these include either references to callable or
     # strings. Deep copying a method reference would lead to the creation of an entire new (model) object
@@ -640,14 +655,14 @@ class HierarchicalMachine(Machine):
         event.source_path = current_state.split(self.state_cls.separator)
         self._create_transition(current_state, state_name).execute(event)
 
-    def trigger_event(self, model, trigger, *args, **kwargs):
+    def trigger_event(self, _model, _trigger, *args, **kwargs):
         """ Processes events recursively and forwards arguments if suitable events are found.
         This function is usually bound to models with model and trigger arguments already
         resolved as a partial. Execution will halt when a nested transition has been executed
         successfully.
         Args:
-            model (object): targeted model
-            trigger (str): event name
+            _model (object): targeted model
+            _trigger (str): event name
             *args: positional parameters passed to the event and its callbacks
             **kwargs: keyword arguments passed to the event and its callbacks
         Returns:
@@ -658,19 +673,8 @@ class HierarchicalMachine(Machine):
                           is still considered valid.
         """
         with self():
-            res = self._trigger_event(model, trigger, None, *args, **kwargs)
-        if res is None:
-            state_name = getattr(model, self.model_attribute)
-            msg = "%sCan't trigger event %s from state %s!" % (self.name, trigger, state_name)
-            state = self.get_state(state_name)
-            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
-                else self.ignore_invalid_triggers
-            if ignore:
-                _LOGGER.warning(msg)
-                return False
-            else:
-                raise MachineError(msg)
-        return res
+            res = self._trigger_event(_model, _trigger, None, *args, **kwargs)
+        return self._check_event_result(res, _model, _trigger)
 
     def _add_model_to_state(self, state, model):
         name = self.get_global_name(state)
@@ -704,6 +708,20 @@ class HierarchicalMachine(Machine):
                 self._checked_assignment(model, 'to_' + path[0], FunctionWrapper(trig_func, path[1:]))
         else:
             self._checked_assignment(model, trigger, trig_func)
+
+    def _check_event_result(self, res, model, trigger):
+        if res is None:
+            state_name = getattr(model, self.model_attribute)
+            msg = "%sCan't trigger event %s from state %s!" % (self.name, trigger, state_name)
+            state = self.get_state(state_name)
+            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
+                else self.ignore_invalid_triggers
+            if ignore:
+                _LOGGER.warning(msg)
+                res = False
+            else:
+                raise MachineError(msg)
+        return res
 
     def _get_trigger(self, model, trigger_name, *args, **kwargs):
         """Convenience function added to the model to trigger events by name.
@@ -778,15 +796,14 @@ class HierarchicalMachine(Machine):
             a_state = self.get_state(state_name)
             return a_state.value if isinstance(a_state.value, Enum) else state_name
 
-    def _trigger_event(self, model, trigger, state_tree, *args, **kwargs):
-        if state_tree is None:
-            state_tree = OrderedDict()
-            _build_state_tree(listify(getattr(model, self.model_attribute)), state_tree, self.state_cls.separator)
+    def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
+        if _state_tree is None:
+            _state_tree = _build_state_tree(listify(getattr(_model, self.model_attribute)), self.state_cls.separator)
         res = {}
-        for key, value in state_tree.items():
+        for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    res[key] = self._trigger_event(model, trigger, value, *args, **kwargs)
-            if not res.get(key, None) and trigger in self.events:
-                res[key] = self.events[trigger].trigger(model, state_tree, self, *args, **kwargs)
+                    res[key] = self._trigger_event(_model, _trigger, value, *args, **kwargs)
+            if not res.get(key, None) and _trigger in self.events:
+                res[key] = self.events[_trigger].trigger(_model, self, *args, **kwargs)
         return None if not res or all([v is None for v in res.values()]) else any(res.values())

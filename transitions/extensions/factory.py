@@ -15,11 +15,18 @@ from .diagrams import GraphMachine, TransitionGraphSupport
 from .markup import MarkupMachine
 try:
     from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
+    from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
 except (ImportError, SyntaxError):
     class AsyncMachine:  # Mocks for Python version 3.6 and earlier
         pass
 
     class AsyncTransition:
+        pass
+
+    class HierarchicalAsyncMachine:
+        pass
+
+    class NestedAsyncTransition:
         pass
 
 
@@ -94,6 +101,11 @@ class AsyncGraphMachine(GraphMachine, AsyncMachine):
     transition_cls = AsyncTransition
 
 
+class HierarchicalAsyncGraphMachine(GraphMachine, HierarchicalAsyncMachine):
+
+    transition_cls = NestedAsyncTransition
+
+
 # 4d tuple (graph, nested, locked, async)
 _CLASS_MAP = {
     (False, False, False, False): Machine,
@@ -105,5 +117,7 @@ _CLASS_MAP = {
     (True, True, False, False): HierarchicalGraphMachine,
     (True, True, True, False): LockedHierarchicalGraphMachine,
     (False, False, False, True): AsyncMachine,
-    (True, False, False, True): AsyncGraphMachine
+    (True, False, False, True): AsyncGraphMachine,
+    (False, True, False, True): HierarchicalAsyncMachine,
+    (False, True, False, True): HierarchicalAsyncGraphMachine
 }
