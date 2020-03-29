@@ -244,9 +244,13 @@ class TestTransitions(TestsCore):
             FOO = Foo
             C = 2
 
-        m = self.stuff.machine_cls(states=Bar, initial='A')
+        m = self.stuff.machine_cls(states=Bar, initial=Bar.C)
 
         self.assertEqual(sorted(m.states['FOO'].states.keys()), ['A', 'B'])
+
+        m.to_FOO_A()
+        self.assertFalse(m.is_C())
+        self.assertTrue(m.is_FOO_A())
 
     def test_enter_exit_nested_state(self):
         State = self.state_cls
