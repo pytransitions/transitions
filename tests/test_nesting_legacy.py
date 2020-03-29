@@ -1,4 +1,4 @@
-from .test_nesting import TestNestedTransitions, Stuff, default_separator
+from .test_nesting import TestNestedTransitions, TestSeparatorsBase, Stuff, default_separator
 from .test_reuse import TestReuse as TestReuse
 from .test_enum import TestNestedStateEnums
 from transitions.extensions.nesting_legacy import HierarchicalMachine
@@ -7,6 +7,18 @@ try:
     from unittest.mock import MagicMock
 except ImportError:
     from mock import MagicMock
+
+
+class TestNestedLegacySeparatorDefault(TestSeparatorsBase):
+    pass
+
+
+class TestNestedLegacySeparatorDot(TestSeparatorsBase):
+    separator = '.'
+
+
+class TestNestedLegacySeparatorSlash(TestSeparatorsBase):
+    separator = '/'
 
 
 class TestNestedLegacy(TestNestedTransitions):
