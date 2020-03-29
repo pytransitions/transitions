@@ -553,12 +553,15 @@ class HierarchicalMachine(Machine):
             try:
                 with self(child):
                     return self.get_state(state, hint)
-            except KeyError:
-                with self():
-                    state = self
-                    for elem in hint:
-                        state = state.states[elem]
-                return state
+            except (KeyError, ValueError):
+                try:
+                    with self():
+                        state = self
+                        for elem in hint:
+                            state = state.states[elem]
+                        return state
+                except KeyError:
+                    raise ValueError("State '%s' is not a registered state." % self.state_cls.separator.join(hint))
         elif state[0] not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state[0]]
@@ -691,8 +694,8 @@ class HierarchicalMachine(Machine):
     def _add_trigger_to_model(self, trigger, model):
         trig_func = partial(self.trigger_event, model, trigger)
         # FunctionWrappers are only necessary if a custom separator is used
-        if trigger.startswith('to_') and NestedState.separator != '_':
-            path = trigger[3:].split(NestedState.separator)
+        if trigger.startswith('to_') and self.state_cls.separator != '_':
+            path = trigger[3:].split(self.state_cls.separator)
             if hasattr(model, 'to_' + path[0]):
                 # add path to existing function wrapper
                 getattr(model, 'to_' + path[0]).add(trig_func, path[1:])

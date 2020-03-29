@@ -8,8 +8,7 @@ from threading import Thread
 import logging
 
 from transitions.extensions import MachineFactory
-from transitions.extensions.nesting import NestedState
-from .test_nesting import TestTransitions as TestsNested
+from .test_nesting import TestNestedTransitions as TestsNested
 from .test_core import TestTransitions as TestCore
 from .utils import Stuff, DummyModel, SomeContext
 

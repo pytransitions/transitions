@@ -5,8 +5,9 @@ except ImportError:
 
 from transitions import MachineError
 from transitions.extensions import MachineFactory
+from transitions.extensions.nesting import NestedState
+
 from .utils import Stuff
-from .test_nesting import default_separator
 
 from unittest import TestCase
 
@@ -16,12 +17,62 @@ except ImportError:
     from mock import MagicMock
 
 
-class TestTransitions(TestCase):
+test_states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
+               'D', 'E', 'F']
+
+
+class TestReuseSeparatorBase(TestCase):
+    separator = '_'
 
     def setUp(self):
-        self.states = ['A', 'B',
-                       {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
-                       'D', 'E', 'F']
+
+        class CustomState(NestedState):
+            separator = self.separator
+
+        class CustomMachine(MachineFactory.get_predefined(nested=True)):
+            state_cls = CustomState
+
+        self.states = test_states
+        self.machine_cls = CustomMachine
+        self.state_cls = self.machine_cls.state_cls
+        self.stuff = Stuff(self.states, self.machine_cls)
+
+    def test_wrong_nesting(self):
+
+        correct = ['A', {'name': 'B', 'children': self.stuff.machine}]
+        wrong_type = ['A', {'name': 'B', 'children': self.stuff}]
+        siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}]
+        collision = ['A', {'name': 'B', 'children': ['A', self.stuff.machine]}]
+
+        m = self.machine_cls(states=correct)
+        if m.state_cls.separator != '_':
+            m.to_B.C.s3.a()
+        else:
+            m.to_B_C_3_a()
+
+        with self.assertRaises(ValueError):
+            m = self.machine_cls(states=wrong_type)
+
+        with self.assertRaises(ValueError):
+            m = self.machine_cls(states=collision)
+
+        m = self.machine_cls(states=siblings)
+        if m.state_cls.separator != '_':
+            m.to_B.s1()
+            m.to_B.A()
+        else:
+            m.to_B_1()
+            m.to_B_A()
+
+
+class TestReuseSeparatorDot(TestReuseSeparatorBase):
+    separator = '.'
+
+
+class TestReuse(TestCase):
+
+    def setUp(self):
+        self.states = test_states
         self.machine_cls = MachineFactory.get_predefined(nested=True)
         self.state_cls = self.machine_cls.state_cls
         self.stuff = Stuff(self.states, self.machine_cls)
@@ -70,7 +121,7 @@ class TestTransitions(TestCase):
         walker.to_A()
         self.assertEqual(walker.state, 'A')
         walker.calc()
-        self.assertEqual(walker.state, 'C_1')
+        self.assertEqual(walker.state, 'C{0}1'.format(State.separator))
 
     def test_blueprint_initial_false(self):
         child = self.machine_cls(states=['A', 'B'], initial='A')
@@ -133,32 +184,6 @@ class TestTransitions(TestCase):
         walker.done()
         self.assertEqual(walker.state, 'A')
         self.assertFalse('C.finished' in walker.states)
-
-    def test_wrong_nesting(self):
-
-        correct = ['A', {'name': 'B', 'children': self.stuff.machine}]
-        wrong_type = ['A', {'name': 'B', 'children': self.stuff}]
-        siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}]
-        collision = ['A', {'name': 'B', 'children': ['A', self.stuff.machine]}]
-
-        m = self.machine_cls(states=correct)
-        m.to_B.C.s3.a()
-
-        with self.assertRaises(ValueError):
-            m = self.machine_cls(states=wrong_type)
-
-        with self.assertRaises(ValueError):
-            m = self.machine_cls(states=collision)
-
-        m = self.machine_cls(states=siblings)
-        m.to_B.s1()
-        m.to_B.A()
-
-    def test_custom_separator(self):
-        self.state_cls.separator = '.'
-        self.tearDown()
-        self.setUp()
-        self.test_wrong_nesting()
 
     def test_example_reuse(self):
         State = self.state_cls

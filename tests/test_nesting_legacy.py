@@ -1,5 +1,5 @@
-from .test_nesting import TestTransitions, Stuff, default_separator
-from .test_reuse import TestTransitions as TestReuse
+from .test_nesting import TestNestedTransitions, Stuff, default_separator
+from .test_reuse import TestReuse as TestReuse
 from .test_enum import TestNestedStateEnums
 from transitions.extensions.nesting_legacy import HierarchicalMachine
 
@@ -9,7 +9,7 @@ except ImportError:
     from mock import MagicMock
 
 
-class TestNestedLegacy(TestTransitions):
+class TestNestedLegacy(TestNestedTransitions):
 
     def setUp(self):
         super(TestNestedLegacy, self).setUp()

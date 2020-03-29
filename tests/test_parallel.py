@@ -12,7 +12,7 @@ from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState as State
 
 from unittest import skipIf
-from .test_nesting import TestTransitions as TestNested
+from .test_nesting import TestNestedTransitions as TestNested
 
 from .utils import Stuff
 
