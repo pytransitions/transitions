@@ -7,7 +7,7 @@ import logging
 
 from six import string_types
 
-from ..core import State, Machine, Transition, Event, listify, MachineError, Enum, EventData
+from ..core import State, Machine, Transition, Event, listify, MachineError, Enum, EnumMeta, EventData
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -415,6 +415,9 @@ class HierarchicalMachine(Machine):
     def add_states(self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs):
         remap = kwargs.pop('remap', None)
         for state in listify(states):
+            if isinstance(state, Enum) and isinstance(state.value, EnumMeta):
+                state = {'name': state.name, 'children': state.value}
+
             if isinstance(state, string_types):
                 if remap is not None and state in remap:
                     return
