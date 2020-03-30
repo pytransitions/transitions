@@ -1,11 +1,15 @@
 # Changelog
 
-## 0.8.1 ()
+## 0.8.1 (April 2020)
 
-Release 0.8.1 is a minor release of bugfixes in the diagram and async extension
+Release 0.8.1 is a minor release of HSM improvements and bugfixes in the diagram and async extension
 
+- Feature: Introduced experimental `HierarchicalAsync(Graph)Machine`
+- Feature #405: Support for nested Enums in `HierarchicalMachine` (thanks @thedrow)
 - Bugfix #400: Fix style initialization when initial state is an `Enum` (thanks @kbinpgh)
 - Bugfix #403: AsyncMachine.dispatch now returns a boolean as expected (thanks @thedrow)
+- Increased coverage (thanks @thedrow)
+- Introduced `xdist` for parallel testing with `pytest` (thanks @thedrow)
 
 ## 0.8.0 (March 2020)
 
