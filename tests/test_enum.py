@@ -151,3 +151,40 @@ class TestNestedStateEnums(TestEnumsAsStates):
         m1 = self.machine_cls(states=self.States, initial=self.States.GREEN)
         self.assertEqual(self.States.GREEN, m1.state)
         self.assertEqual(m1.state.name, self.States.GREEN.name)
+
+    def test_add_nested_enums_as_nested_state(self):
+        from transitions.extensions.nesting_legacy import HierarchicalMachine
+        if self.machine_cls is HierarchicalMachine:
+            self.skipTest("Converting enums to nested states is not supported on the legacy HierarchicalMachine")
+
+        class Foo(enum.Enum):
+            A = 0
+            B = 1
+
+        class Bar(enum.Enum):
+            FOO = Foo
+            C = 2
+
+        m = self.machine_cls(states=Bar, initial=Bar.C)
+
+        self.assertEqual(sorted(m.states['FOO'].states.keys()), ['A', 'B'])
+
+        m.to_FOO_A()
+        self.assertFalse(m.is_C())
+        self.assertTrue(m.is_FOO_A())
+
+
+@skipIf(enum is None, "enum is not available")
+class TestEnumsAsStatesWithGraph(TestEnumsAsStates):
+
+    def setUp(self):
+        super(TestEnumsAsStatesWithGraph, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(graph=True)
+
+
+@skipIf(enum is None, "enum is not available")
+class TestNestedStateGraphEnums(TestNestedStateEnums):
+
+    def setUp(self):
+        super(TestNestedStateGraphEnums, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(nested=True, graph=True)
