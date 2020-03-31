@@ -18,24 +18,6 @@ _LOGGER.addHandler(logging.NullHandler())
 _super = super
 
 
-# converts a list of current states into a hierarchical state tree
-def _build_state_tree(model_states, separator, tree=None):
-    tree = tree if tree is not None else OrderedDict()
-    if isinstance(model_states, list):
-        for state in model_states:
-            _ = _build_state_tree(state, separator, tree)
-    else:
-        if isinstance(model_states, Enum):
-            tree[model_states.name] = {}  # since enum cannot be nested we do not need an OrderedDict here
-        else:
-            tmp = tree
-            for elem in model_states.split(separator):
-                if elem not in tmp:
-                    tmp[elem] = OrderedDict()
-                tmp = tmp[elem]
-    return tree
-
-
 # converts a hierarchical tree into a list of current states
 def _build_state_list(state_tree, separator, prefix=[]):
     res = []
@@ -43,7 +25,7 @@ def _build_state_list(state_tree, separator, prefix=[]):
         if value:
             res.append(_build_state_list(value, separator, prefix=prefix + [key]))
         else:
-            return separator.join(prefix + [key])
+            res.append(separator.join(prefix + [key]))
     return res if len(res) > 1 else res[0]
 
 
@@ -130,7 +112,7 @@ class NestedEvent(Event):
         return _machine._process(func)
 
     def _trigger(self, _model, _machine, *args, **kwargs):
-        state_tree = _build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
+        state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
         state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
         ordered_states = _resolve_order(state_tree)
         done = []
@@ -243,7 +225,7 @@ class NestedTransition(Transition):
         dst_name_path = machine.get_local_name(self.dest, join=False)
         _ = machine.get_state(dst_name_path)
         model_states = listify(getattr(event_data.model, machine.model_attribute))
-        state_tree = _build_state_tree(model_states, machine.state_cls.separator)
+        state_tree = machine._build_state_tree(model_states, machine.state_cls.separator)
 
         scope = machine.get_global_name(join=False)
         src_name_path = event_data.source_path
@@ -458,7 +440,7 @@ class HierarchicalMachine(Machine):
                 with self(new_state.name):
                     if state_parallel:
                         self.add_states(state_parallel, remap=remap, **kwargs)
-                        new_state.initial = [s['name'] for s in state_parallel]
+                        new_state.initial = [s if isinstance(s, string_types) else s['name'] for s in state_parallel]
                     else:
                         self.add_states(state_children, remap=remap, **kwargs)
                     if remap is not None:
@@ -517,15 +499,24 @@ class HierarchicalMachine(Machine):
             else:
                 raise ValueError("Cannot add state of type {0}.".format(type(state).__name__))
 
+    def add_transition(self, trigger, source, dest, conditions=None,
+                       unless=None, before=None, after=None, prepare=None, **kwargs):
+        if source != self.wildcard_all:
+            source = [self.state_cls.separator.join(self._get_enum_path(s)) if isinstance(s, Enum) else s
+                      for s in listify(source)]
+        if dest != self.wildcard_same:
+            dest = self.state_cls.separator.join(self._get_enum_path(dest)) if isinstance(dest, Enum) else dest
+        _super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions,
+                                                         unless, before, after, prepare, **kwargs)
+
     def get_global_name(self, state=None, join=True):
         local_stack = [s[0] for s in self._stack] + [self.scoped]
         local_stack_start = len(local_stack) - local_stack[::-1].index(self)
         domains = [s.name for s in local_stack[local_stack_start:]]
         if state:
-            if isinstance(state, State):
-                state = state.name
-            if state in self.states:
-                domains.append(state)
+            state_name = state.name if hasattr(state, 'name') else state
+            if state_name in self.states:
+                domains.append(state_name)
             else:
                 raise ValueError("State '{0}' not found in local states.".format(state))
         return self.state_cls.separator.join(domains) if join else domains
@@ -560,7 +551,7 @@ class HierarchicalMachine(Machine):
     def get_state(self, state, hint=None):
         """ Return the State instance with the passed name. """
         if isinstance(state, Enum):
-            state = [state.name]
+            state = self._get_enum_path(state)
         elif isinstance(state, string_types):
             state = state.split(self.state_cls.separator)
         if not hint:
@@ -712,6 +703,33 @@ class HierarchicalMachine(Machine):
         else:
             self._checked_assignment(model, trigger, trig_func)
 
+    # converts a list of current states into a hierarchical state tree
+    def _build_state_tree(self, model_states, separator, tree=None):
+        tree = tree if tree is not None else OrderedDict()
+        if isinstance(model_states, list):
+            for state in model_states:
+                _ = self._build_state_tree(state, separator, tree)
+        else:
+            tmp = tree
+            if isinstance(model_states, (Enum, EnumMeta)):
+                with self():
+                    path = self._get_enum_path(model_states)
+            else:
+                path = model_states.split(separator)
+            for elem in path:
+                tmp = tmp.setdefault(elem.name if hasattr(elem, 'name') else elem, OrderedDict())
+        return tree
+
+    def _get_enum_path(self, enum_state, prefix=[]):
+        if enum_state.name in self.states and self.states[enum_state.name].value == enum_state:
+            return prefix + [enum_state.name]
+        for name in self.states:
+            with self(name):
+                res = self._get_enum_path(enum_state, prefix=prefix + [name])
+                if res:
+                    return res
+        return []
+
     def _check_event_result(self, res, model, trigger):
         if res is None:
             state_name = getattr(model, self.model_attribute)
@@ -801,7 +819,8 @@ class HierarchicalMachine(Machine):
 
     def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
         if _state_tree is None:
-            _state_tree = _build_state_tree(listify(getattr(_model, self.model_attribute)), self.state_cls.separator)
+            _state_tree = self._build_state_tree(listify(getattr(_model, self.model_attribute)),
+                                                 self.state_cls.separator)
         res = {}
         for key, value in _state_tree.items():
             if value:

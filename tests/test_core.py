@@ -620,7 +620,7 @@ class TestTransitions(TestCase):
             m.do(machine=m)
 
     def test___getattr___and_identify_callback(self):
-        m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
+        m = self.machine_cls(Stuff(), states=['A', 'B', 'C'], initial='A')
         m.add_transition('move', 'A', 'B')
         m.add_transition('move', 'B', 'C')
 

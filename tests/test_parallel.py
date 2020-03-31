@@ -3,29 +3,15 @@ try:
 except ImportError:
     pass
 
-import sys
-import tempfile
-from os.path import getsize
-from os import unlink
+from collections import OrderedDict
 
-from transitions.extensions import MachineFactory
-from transitions.extensions.nesting import NestedState as State
-
-from unittest import skipIf
+from transitions.extensions.nesting import NestedState as State, _build_state_list
 from .test_nesting import TestNestedTransitions as TestNested
-
-from .utils import Stuff
 
 try:
     from unittest.mock import MagicMock
 except ImportError:
     from mock import MagicMock
-
-try:
-    # Just to skip tests if graphviz not installed
-    import graphviz as pgv  # @UnresolvedImport
-except ImportError:  # pragma: no cover
-    pgv = None
 
 
 class TestParallel(TestNested):
@@ -95,6 +81,25 @@ class TestParallel(TestNested):
         m.switch()
         self.assertEqual(['C{0}1{0}a'.format(State.separator), 'C{0}2{0}b'.format(State.separator)], m.state)
 
+    def test_shallow_parallel(self):
+        sep = self.state_cls.separator
+        states = [
+            {
+                'name': 'P', 'parallel':
+                [
+                    '1',  # no initial state
+                    {'name': '2', 'children': ['a', 'b'], 'initial': 'b'}
+                ]
+            },
+            'X'
+        ]
+        m = self.machine_cls(states=states, initial='P')
+        self.assertEqual(['P{0}1'.format(sep), 'P{0}2{0}b'.format(sep)], m.state)
+        m.to_X()
+        self.assertEqual('X', m.state)
+        m.to_P()
+        self.assertEqual(['P{0}1'.format(sep), 'P{0}2{0}b'.format(sep)], m.state)
+
     def test_multiple(self):
         states = ['A',
                   {'name': 'B',
@@ -114,3 +119,53 @@ class TestParallel(TestNested):
                           'B{0}2{0}a'.format(State.separator)], m.state)
         m.to_A()
         self.assertEqual('A', m.state)
+
+    def test_multiple_deeper(self):
+        sep = self.state_cls.separator
+        states = ['A',
+                  {'name': 'P',
+                   'parallel': [
+                       '1',
+                       {'name': '2', 'parallel': [
+                           {'name': 'a'},
+                           {'name': 'b', 'parallel': [
+                               {'name': 'x', 'parallel': ['1', '2']}, 'y'
+                           ]}
+                       ]},
+                   ]}]
+        ref_state = ['P{0}1'.format(sep),
+                     ['P{0}2{0}a'.format(sep),
+                     [['P{0}2{0}b{0}x{0}1'.format(sep),
+                       'P{0}2{0}b{0}x{0}2'.format(sep)],
+                      'P{0}2{0}b{0}y'.format(sep)]]]
+
+        m = self.stuff.machine_cls(states=states, initial='A')
+        self.assertTrue(m.is_A())
+        m.to_P()
+        self.assertEqual(ref_state, m.state)
+        m.to_A()
+
+    def test_model_state_conversion(self):
+        sep = self.state_cls.separator
+        states = ['P{0}1'.format(sep),
+                  ['P{0}2{0}a'.format(sep),
+                   [['P{0}2{0}b{0}x{0}1'.format(sep),
+                     'P{0}2{0}b{0}x{0}2'.format(sep)],
+                    'P{0}2{0}b{0}y'.format(sep)]]]
+        tree = OrderedDict(
+            [('P', OrderedDict(
+                [('1', OrderedDict()),
+                 ('2', OrderedDict(
+                     [('a', OrderedDict()),
+                      ('b', OrderedDict(
+                          [('x', OrderedDict(
+                              [('1', OrderedDict()),
+                               ('2', OrderedDict())])),
+                           ('y', OrderedDict())]
+                      ))]
+                 ))]
+            ))]
+        )
+        m = self.machine_cls()
+        self.assertEqual(tree, m._build_state_tree(states, sep))
+        self.assertEqual(states, _build_state_list(tree, sep))

@@ -8,7 +8,8 @@ import copy
 
 from ..core import State, Condition, Transition, EventData, listify
 from ..core import Event, MachineError, Machine
-from .nesting import HierarchicalMachine, NestedState, NestedEvent, NestedTransition, _resolve_order, _build_state_tree
+from .nesting import HierarchicalMachine, NestedState, NestedEvent, NestedTransition, _resolve_order
+
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -248,7 +249,7 @@ class NestedAsyncEvent(NestedEvent):
             return False
 
     async def _trigger(self, _model, _machine, *args, **kwargs):
-        state_tree = _build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
+        state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
         state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
         ordered_states = _resolve_order(state_tree)
         done = []
@@ -418,7 +419,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
 
     async def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
         if _state_tree is None:
-            _state_tree = _build_state_tree(listify(getattr(_model, self.model_attribute)), self.state_cls.separator)
+            _state_tree = self._build_state_tree(listify(getattr(_model, self.model_attribute)), self.state_cls.separator)
         res = {}
         for key, value in _state_tree.items():
             if value:
