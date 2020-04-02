@@ -13,6 +13,7 @@ from os.path import splitext
 import copy
 
 from .diagrams import BaseGraph
+from ..core import listify
 try:
     import graphviz as pgv
 except ImportError:  # pragma: no cover
@@ -37,10 +38,9 @@ class Graph(BaseGraph):
         self.reset_styling()
         _super(Graph, self).__init__(machine, title)
 
-    def set_previous_transition(self, src, dst):
+    def set_previous_transition(self, src, dst, key=None):
         self.custom_styles['edge'][src][dst] = 'previous'
         self.set_node_style(src, 'previous')
-        self.set_node_style(dst, 'active')
 
     def set_node_style(self, state, style):
         self.custom_styles['node'][state] = style
@@ -76,49 +76,24 @@ class Graph(BaseGraph):
         if not pgv:  # pragma: no cover
             raise Exception('AGraph diagram requires graphviz')
 
-        title = '' if not title else title
+        title = self.machine.title if not title else title
 
         fsm_graph = pgv.Digraph(name=title, node_attr=self.machine.style_attributes['node']['default'],
                                 edge_attr=self.machine.style_attributes['edge']['default'],
                                 graph_attr=self.machine.style_attributes['graph']['default'])
         fsm_graph.graph_attr.update(**self.machine.machine_attributes)
+        fsm_graph.graph_attr['label'] = title
         # For each state, draw a circle
-        try:
-            markup = self.machine.get_markup_config()
-            q = [([], markup)]
-            states = []
-            transitions = []
-            while q:
-                prefix, scope = q.pop(0)
-                for transition in scope.get('transitions', []):
-                    if prefix:
-                        t = copy.copy(transition)
-                        t['source'] = self.machine.state_cls.separator.join(prefix + [t['source']])
-                        t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
-                    else:
-                        t = transition
-                    transitions.append(t)
-                for state in scope.get('states', []):
-                    if prefix:
-                        s = copy.copy(state)
-                        s['name'] = self.machine.state_cls.separator.join(prefix + [s['name']])
-                    else:
-                        s = state
-                    states.append(s)
-                    if state.get('children', []):
-                        q.append((prefix + [state['name']], state))
-
-            if roi_state:
-                transitions = [t for t in transitions
-                               if t['source'] == roi_state or self.custom_styles['edge'][t['source']][t['dest']]]
-                state_names = [t for trans in transitions
-                               for t in [trans['source'], trans.get('dest', trans['source'])]]
-                state_names += [k for k, style in self.custom_styles['node'].items() if style]
-                states = _filter_states(states, state_names, self.machine.state_cls)
-            self._add_nodes(states, fsm_graph)
-            self._add_edges(transitions, fsm_graph)
-        except KeyError:
-            _LOGGER.error("Graph creation incomplete!")
+        states, transitions = self._get_elements()
+        if roi_state:
+            transitions = [t for t in transitions
+                           if t['source'] == roi_state or self.custom_styles['edge'][t['source']][t['dest']]]
+            state_names = [t for trans in transitions
+                           for t in [trans['source'], trans.get('dest', trans['source'])]]
+            state_names += [k for k, style in self.custom_styles['node'].items() if style]
+            states = _filter_states(states, state_names, self.machine.state_cls)
+        self._add_nodes(states, fsm_graph)
+        self._add_edges(transitions, fsm_graph)
         setattr(fsm_graph, 'draw', partial(self.draw, fsm_graph))
         return fsm_graph
 
@@ -152,41 +127,44 @@ class NestedGraph(Graph):
         self._cluster_states = []
         _super(NestedGraph, self).__init__(*args, **kwargs)
 
-    def set_previous_transition(self, src, dst):
+    def set_previous_transition(self, src, dst, key=None):
         src_name = self._get_global_name(src.split(self.machine.state_cls.separator))
         dst_name = self._get_global_name(dst.split(self.machine.state_cls.separator))
-        _super(NestedGraph, self).set_previous_transition(src_name, dst_name)
+        _super(NestedGraph, self).set_previous_transition(src_name, dst_name, key)
 
-    def _add_nodes(self, states, container, prefix=''):
+    def _add_nodes(self, states, container, prefix='', default_style='default'):
 
         for state in states:
             name = prefix + state['name']
             label = self._convert_state_attributes(state)
 
-            if 'children' in state:
+            if state.get('children', []):
                 cluster_name = "cluster_" + name
                 with container.subgraph(name=cluster_name,
                                         graph_attr=self.machine.style_attributes['graph']['default']) as sub:
-                    style = self.custom_styles['node'][name]
+                    style = self.custom_styles['node'][name] or default_style
                     sub.graph_attr.update(label=label, rank='source', **self.machine.style_attributes['graph'][style])
                     self._cluster_states.append(name)
+                    is_parallel = isinstance(state.get('initial', ''), list)
+                    width = '0.0' if is_parallel else '0.1'
                     with sub.subgraph(name=cluster_name + '_root',
                                       graph_attr={'label': '', 'color': 'None', 'rank': 'min'}) as root:
-                        root.node(name + "_anchor", shape='point', fillcolor='black', width='0.1')
-                    self._add_nodes(state['children'], sub, prefix=prefix + state['name'] + self.machine.state_cls.separator)
+                        root.node(name + "_anchor", shape='point', fillcolor='black', width=width)
+                    self._add_nodes(state['children'], sub, default_style='parallel' if is_parallel else 'default',
+                                    prefix=prefix + state['name'] + self.machine.state_cls.separator)
             else:
-                style = self.custom_styles['node'][name]
+                style = self.custom_styles['node'][name] or default_style
                 container.node(name, label=label, **self.machine.style_attributes['node'][style])
 
-    def _add_edges(self, transitions, container):
+    def _add_edges(self, transitions, container, prefix=''):
         edges_attr = defaultdict(lambda: defaultdict(dict))
 
         for transition in transitions:
             # enable customizable labels
             label_pos = 'label'
-            src = transition['source']
+            src = prefix + transition['source']
             try:
-                dst = transition['dest']
+                dst = prefix + transition['dest']
             except KeyError:
                 dst = src
             if edges_attr[src][dst]:

@@ -5,6 +5,7 @@ from transitions.core import listify
 import warnings
 import logging
 from functools import partial
+import copy
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -26,8 +27,10 @@ class TransitionGraphSupport(Transition):
     def _change_state(self, event_data):
         graph = event_data.machine.model_graphs[event_data.model]
         graph.reset_styling()
-        graph.set_previous_transition(self.source, self.dest)
+        graph.set_previous_transition(self.source, self.dest, event_data.event.name)
         _super(TransitionGraphSupport, self)._change_state(event_data)  # pylint: disable=protected-access
+        for state in _flatten(listify(getattr(event_data.model, event_data.machine.model_attribute))):
+            graph.set_node_style(self.dest if hasattr(state, 'name') else state, 'active')
 
 
 class GraphMachine(MarkupMachine):
@@ -88,7 +91,13 @@ class GraphMachine(MarkupMachine):
             '': {},
             'default': {
                 'color': 'black',
-                'fillcolor': 'white'
+                'fillcolor': 'white',
+                'style': 'solid'
+            },
+            'parallel': {
+                'color': 'black',
+                'fillcolor': 'white',
+                'style': 'dotted'
             },
             'previous': {
                 'color': 'blue',
@@ -263,3 +272,47 @@ class BaseGraph(object):
                 return self._get_global_name(path)
         else:
             return self.machine.get_global_name()
+
+    def _get_elements(self):
+        states = []
+        transitions = []
+        try:
+            markup = self.machine.get_markup_config()
+            q = [([], markup)]
+
+            while q:
+                prefix, scope = q.pop(0)
+                for transition in scope.get('transitions', []):
+                    if prefix:
+                        t = copy.copy(transition)
+                        t['source'] = self.machine.state_cls.separator.join(prefix + [t['source']])
+                        t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
+                    else:
+                        t = transition
+                    transitions.append(t)
+                for state in scope.get('children', []) + scope.get('states', []):
+                    if not prefix:
+                        s = state
+                        states.append(s)
+
+                    ini = state.get('initial', [])
+                    if not isinstance(ini, list):
+                        ini = ini.name if hasattr(ini, 'name') else ini
+                        t = dict(trigger='',
+                                 source=self.machine.state_cls.separator.join(prefix + [state['name']]) + '_anchor',
+                                 dest=self.machine.state_cls.separator.join(prefix + [state['name'], ini]))
+                        transitions.append(t)
+                    if state.get('children', []):
+                        q.append((prefix + [state['name']], state))
+        except KeyError as e:
+            _LOGGER.error("Graph creation incomplete!")
+        return states, transitions
+
+
+def _flatten(item):
+    for elem in item:
+        if isinstance(elem, (list, tuple, set)):
+            for res in _flatten(elem):
+                yield res
+        else:
+            yield elem

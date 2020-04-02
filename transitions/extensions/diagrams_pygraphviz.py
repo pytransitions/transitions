@@ -61,35 +61,9 @@ class Graph(BaseGraph):
         self.fsm_graph = pgv.AGraph(label=title, **self.machine.machine_attributes)
         self.fsm_graph.node_attr.update(self.machine.style_attributes['node']['default'])
         self.fsm_graph.edge_attr.update(self.machine.style_attributes['edge']['default'])
-
-        # For each state, draw a circle
-        markup = self.machine.get_markup_config()
-        q = [([], markup)]
-        states = []
-        transitions = []
-        while q:
-            prefix, scope = q.pop(0)
-            for transition in scope.get('transitions', []):
-                if prefix:
-                    t = copy.copy(transition)
-                    t['source'] = self.machine.state_cls.separator.join(prefix + [t['source']])
-                    t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
-                else:
-                    t = transition
-                transitions.append(t)
-            for state in scope.get('states', []):
-                if prefix:
-                    s = copy.copy(state)
-                    s['name'] = self.machine.state_cls.separator.join(prefix + [s['name']])
-                else:
-                    s = state
-                states.append(s)
-                if state.get('children', []):
-                    q.append((prefix + [state['name']], state))
-
+        states, transitions = self._get_elements()
         self._add_nodes(states, self.fsm_graph)
         self._add_edges(transitions, self.fsm_graph)
-
         setattr(self.fsm_graph, 'style_attributes', self.machine.style_attributes)
 
         return self.fsm_graph
@@ -132,7 +106,7 @@ class Graph(BaseGraph):
         style_attr = self.fsm_graph.style_attributes.get('node', {}).get(style)
         node.attr.update(style_attr)
 
-    def set_previous_transition(self, src, dst):
+    def set_previous_transition(self, src, dst, key=None):
         try:
             edge = self.fsm_graph.get_edge(src, dst)
         except KeyError:
@@ -164,26 +138,25 @@ class NestedGraph(Graph):
         _super(NestedGraph, self).__init__(*args, **kwargs)
         # self.style_attributes['edge']['default']['minlen'] = 2
 
-    def _add_nodes(self, states, container, prefix=''):
+    def _add_nodes(self, states, container, prefix='', default_style='default'):
         for state in states:
             name = prefix + state['name']
             label = self._convert_state_attributes(state)
 
             if 'children' in state:
                 cluster_name = "cluster_" + name
+                is_parallel = isinstance(state.get('initial', ''), list)
                 sub = container.add_subgraph(name=cluster_name, label=label, rank='source',
-                                             **self.machine.style_attributes['graph']['default'])
+                                             **self.machine.style_attributes['graph'][default_style])
                 root_container = sub.add_subgraph(name=cluster_name + '_root', label='', color=None, rank='min')
-                # child_container = sub.add_subgraph(name=cluster_name + '_child', label='', color=None)
-                root_container.add_node(name + "_anchor", shape='point', fillcolor='black', width='0.1')
-                self._add_nodes(state['children'], sub, prefix=prefix + state['name'] + NestedState.separator)
+                width = '0' if is_parallel else '0.1'
+                root_container.add_node(name + "_anchor", shape='point', fillcolor='black', width=width)
+                self._add_nodes(state['children'], sub, prefix=prefix + state['name'] + NestedState.separator,
+                                default_style='parallel' if is_parallel else 'default')
             else:
                 container.add_node(name, label=label, shape=self.machine.style_attributes['node']['default']['shape'])
 
     def _add_edges(self, transitions, container):
-
-        # for sub in container.subgraphs_iter():
-        #     events = self._add_edges(transitions, sub)
 
         for transition in transitions:
             # enable customizable labels
@@ -232,17 +205,20 @@ class NestedGraph(Graph):
             style_attr = self.fsm_graph.style_attributes.get('graph', {}).get(style)
             subgraph.graph_attr.update(style_attr)
 
-    def set_previous_transition(self, src, dst):
+    def set_previous_transition(self, src, dst, key=None):
         src = self._get_global_name(src.split(self.machine.state_cls.separator))
         dst = self._get_global_name(dst.split(self.machine.state_cls.separator))
+        edge_attr = self.fsm_graph.style_attributes.get('edge', {}).get('previous').copy()
         try:
             edge = self.fsm_graph.get_edge(src, dst)
         except KeyError:
             _src = src
             _dst = dst
             if _get_subgraph(self.fsm_graph, 'cluster_' + src):
+                edge_attr['ltail'] = 'cluster_' + src
                 _src += '_anchor'
             if _get_subgraph(self.fsm_graph, 'cluster_' + dst):
+                edge_attr['lhead'] = "cluster_" + dst
                 _dst += '_anchor'
             try:
                 edge = self.fsm_graph.get_edge(_src, _dst)
@@ -250,10 +226,8 @@ class NestedGraph(Graph):
                 self.fsm_graph.add_edge(_src, _dst)
                 edge = self.fsm_graph.get_edge(_src, _dst)
 
-        style_attr = self.fsm_graph.style_attributes.get('edge', {}).get('previous')
-        edge.attr.update(style_attr)
+        edge.attr.update(edge_attr)
         self.set_node_style(src, 'previous')
-        self.set_node_style(dst, 'active')
 
 
 def _get_subgraph(graph, name):

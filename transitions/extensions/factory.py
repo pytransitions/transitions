@@ -119,5 +119,5 @@ _CLASS_MAP = {
     (False, False, False, True): AsyncMachine,
     (True, False, False, True): AsyncGraphMachine,
     (False, True, False, True): HierarchicalAsyncMachine,
-    (False, True, False, True): HierarchicalAsyncGraphMachine
+    (True, True, False, True): HierarchicalAsyncGraphMachine
 }
