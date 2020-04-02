@@ -8,6 +8,7 @@ Release 0.8.1 is a minor release of HSM improvements and bugfixes in the diagram
 - Feature #405: Support for nested Enums in `HierarchicalMachine` (thanks @thedrow)
 - Bugfix #400: Fix style initialization when initial state is an `Enum` (thanks @kbinpgh)
 - Bugfix #403: AsyncMachine.dispatch now returns a boolean as expected (thanks @thedrow)
+- Bugfix #413: Improve diagram output for `HierarchicalMachine` (thanks @xiaohuihui1024)
 - Increased coverage (thanks @thedrow)
 - Introduced `xdist` for parallel testing with `pytest` (thanks @thedrow)
 
