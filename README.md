@@ -1170,6 +1170,19 @@ transitions = [
 # ...
 ```
 
+Note that your previously created state object *must be* a `NestedState` or a derived class of it.
+The standard `State` class used in simple `Machine` instances lacks features required for nesting.
+
+```python
+from transitions.extensions.nesting import HierarchicalMachine, NestedState
+from transitions import  State
+m = HierarchicalMachine(states=['A'], initial='initial')
+m.add_state('B')  # fine
+m.add_state({'name': 'C'})  # also fine
+m.add_state(NestedState('D'))  # fine as well
+m.add_state(State('E'))  # does not work!
+``` 
+
 Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`.
 Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine.
 This means a substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be referred to as `foo_bar_baz` and so on.
@@ -1332,7 +1345,7 @@ collector.done()  # collector.state == counting_done
 collector.wait()  # collector.state == waiting
 ```
 
-If a `HierarchicalStateMachine` is passed with the `children` keyword, the initial state of this machine will be assigned to the new parent state.
+If a `HierarchicalMachine` is passed with the `children` keyword, the initial state of this machine will be assigned to the new parent state.
 In the above example we see that entering `counting` will also enter `counting_1`.
 If this is undesired behaviour and the machine should rather halt in the parent state, the user can pass `initial` as `False` like `{'name': 'counting', 'children': counter, 'initial': False}`.
 
@@ -1567,7 +1580,7 @@ Currently, transitions comes equipped with the following state features:
     - keyword: `hook` (string, default='scope') -- The model's attribute name fore the temporal object.
 
 You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit`. Your extension may inherit from *State* but will also work without it.
-In case you prefer to write your own custom states from scratch be aware that some state extensions *require* certain state features. `HierarchicalStateMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:
+In case you prefer to write your own custom states from scratch be aware that some state extensions *require* certain state features. `HierarchicalMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:
 
 ```python
 from transitions import Machine, State

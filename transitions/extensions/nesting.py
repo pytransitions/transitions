@@ -395,6 +395,25 @@ class HierarchicalMachine(Machine):
                                                                   prepare=prepare, **kwargs)
 
     def add_states(self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs):
+        """ Add new nested state(s).
+        Args:
+            states (list, str, dict, Enum or NestedState): a list, a NestedState instance, the
+                name of a new state, an enumeration (member) or a dict with keywords to pass on to the
+                NestedState initializer. If a list, each element can be a string, NestedState or enumeration member.
+            on_enter (str or list): callbacks to trigger when the state is
+                entered. Only valid if first argument is string.
+            on_exit (str or list): callbacks to trigger when the state is
+                exited. Only valid if first argument is string.
+            ignore_invalid_triggers: when True, any calls to trigger methods
+                that are not valid for the present state (e.g., calling an
+                a_to_b() trigger when the current state is c) will be silently
+                ignored rather than raising an invalid transition exception.
+                Note that this argument takes precedence over the same
+                argument defined at the Machine level, and is in turn
+                overridden by any ignore_invalid_triggers explicitly
+                passed in an individual state's initialization arguments.
+            **kwargs additional keyword arguments used by state mixins.
+        """
         remap = kwargs.pop('remap', None)
         for state in listify(states):
             if isinstance(state, Enum) and isinstance(state.value, EnumMeta):
@@ -496,8 +515,11 @@ class HierarchicalMachine(Machine):
                     self.events[ev.name] = ev
                 if self.scoped.initial is None:
                     self.scoped.initial = state.initial
+            elif isinstance(state, State) and not isinstance(state, NestedState):
+                raise ValueError("A passed state object must derive from NestedState! "
+                                 "A default State object is not sufficient")
             else:
-                raise ValueError("Cannot add state of type {0}.".format(type(state).__name__))
+                raise ValueError("Cannot add state of type {0}. ".format(type(state).__name__))
 
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None, **kwargs):
