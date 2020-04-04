@@ -50,6 +50,21 @@ def listify(obj):
     return obj if isinstance(obj, (list, tuple, EnumMeta)) else [obj]
 
 
+def list_to_tuple(obj):
+    """Recursively converts a list of lists into a tuple of tuples.
+
+    Args:
+        obj: instance to be converted to a tuple of tuples
+
+    Returns:
+        tuple: the converted tuple of tuples
+    """
+    if isinstance(obj, list):
+        return tuple(list_to_tuple(item) for item in obj)
+    else:
+        return obj
+
+
 def _prep_ordered_arg(desired_length, arguments=None):
     """Ensure list of arguments passed to add_ordered_transitions has the proper length.
     Expands the given arguments and apply same condition, callback

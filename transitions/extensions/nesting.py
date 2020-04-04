@@ -7,7 +7,7 @@ import logging
 
 from six import string_types
 
-from ..core import State, Machine, Transition, Event, listify, MachineError, Enum, EnumMeta, EventData
+from ..core import State, Machine, Transition, Event, listify, MachineError, Enum, EnumMeta, EventData, list_to_tuple
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -51,6 +51,7 @@ def _resolve_order(state_tree):
 class FunctionWrapper(object):
     """ A wrapper to enable transitions' convenience function to_<state> for nested states.
         This allows to call model.to_A.s1.C() in case a custom separator has been chosen."""
+
     def __init__(self, func, path):
         """
         Args:
@@ -428,9 +429,11 @@ class HierarchicalMachine(Machine):
                     try:
                         self.get_state(domains[0])
                     except ValueError:
-                        self.add_state(domains[0], on_enter=on_enter, on_exit=on_exit, ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+                        self.add_state(domains[0], on_enter=on_enter, on_exit=on_exit,
+                                       ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
                     with self(domains[0]):
-                        self.add_states(domains[1], on_enter=on_enter, on_exit=on_exit, ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+                        self.add_states(domains[1], on_enter=on_enter, on_exit=on_exit,
+                                        ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
                 else:
                     if state in self.states:
                         raise ValueError("State {0} cannot be added since it already exists.".format(state))
@@ -616,7 +619,8 @@ class HierarchicalMachine(Machine):
                 state_path = state_name.split(self.state_cls.separator)
                 root = state_path[0]
                 while state_path:
-                    triggers.extend(_super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(state_path)))
+                    triggers.extend(
+                        _super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(state_path)))
                     with self(root):
                         triggers.extend(self.get_nested_triggers(self.state_cls.separator.join(state_path)))
                     state_path.pop()
@@ -843,7 +847,8 @@ class HierarchicalMachine(Machine):
     def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
         if _state_tree is None:
             states = listify(getattr(_model, self.model_attribute))
-            cache_key = tuple(states)
+
+            cache_key = list_to_tuple(states)
             try:
                 _state_tree = self._state_tree_cache[cache_key]
             except KeyError:
