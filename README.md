@@ -921,7 +921,6 @@ lump.state
 Here you get to consolidate all state machine functionality into your existing model, which often feels more natural way than sticking all of the functionality we want in a separate standalone `Machine` instance.
 
 A machine can handle multiple models which can be passed as a list like `Machine(model=[model1, model2, ...])`.
-If you do not pass a model parameter at all, the machine will add itself as a model.
 In cases where you want to add models *as well as* the machine instance itself, you can pass the string placeholder `'self'` during initialization like `Machine(model=['self', model1, ...])`.
 You can also create a standalone machine, and register models dynamically via `machine.add_model` by passing `model=None` to the constructor.
 Remember to call `machine.remove_model` if machine is long-lasting and your models are temporary and should be garbage collected:
@@ -949,10 +948,12 @@ del lump1  # lump1 is garbage collected
 del lump2  # lump2 is garbage collected
 ```
 
-If you don't provide an initial state in the state machine constructor, you must provide one every time you add a model:
+If you don't provide an initial state in the state machine constructor, `transitions` will create and add a default state called `'initial'`.
+If you do not want a default initial state, you can pass `initial=None`.
+However, in this case you need to pass an initial state every time you add a model. 
 
 ```python
-machine = Machine(model=None, states=states, transitions=transitions)
+machine = Machine(model=None, states=states, transitions=transitions, initial=None)
 
 machine.add_model(Matter())
 >>> "MachineError: No initial state configured for machine, must specify when adding model."
