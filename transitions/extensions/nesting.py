@@ -850,4 +850,4 @@ class HierarchicalMachine(Machine):
                     res[key] = self._trigger_event(_model, _trigger, value, *args, **kwargs)
             if not res.get(key, None) and _trigger in self.events:
                 res[key] = self.events[_trigger].trigger(_model, self, *args, **kwargs)
-        return None if not res or all([v is None for v in res.values()]) else any(res.values())
+        return None if not res or all(v is None for v in res.values()) else any(res.values())
