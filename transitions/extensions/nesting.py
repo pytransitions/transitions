@@ -336,6 +336,7 @@ class HierarchicalMachine(Machine):
     def __init__(self, *args, **kwargs):
         self._stack = []
         self.scoped = self
+        self._state_tree_cache = {}
         _super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
     def __call__(self, to_scope=None):
@@ -841,8 +842,13 @@ class HierarchicalMachine(Machine):
 
     def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
         if _state_tree is None:
-            _state_tree = self._build_state_tree(listify(getattr(_model, self.model_attribute)),
-                                                 self.state_cls.separator)
+            states = listify(getattr(_model, self.model_attribute))
+            cache_key = tuple(states)
+            try:
+                _state_tree = self._state_tree_cache[cache_key]
+            except KeyError:
+                self._state_tree_cache[cache_key] = _state_tree = self._build_state_tree(states,
+                                                                                         self.state_cls.separator)
         res = {}
         for key, value in _state_tree.items():
             if value:
