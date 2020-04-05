@@ -115,7 +115,7 @@ class NestedEvent(Event):
         state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
         state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
         ordered_states = _resolve_order(state_tree)
-        done = []
+        done = set()
         res = None
         for state_path in ordered_states:
             state_name = _machine.state_cls.separator.join(state_path)
@@ -128,7 +128,7 @@ class NestedEvent(Event):
                 if res:
                     elems = state_path
                     while elems:
-                        done.append(_machine.state_cls.separator.join(elems))
+                        done.add(_machine.state_cls.separator.join(elems))
                         elems.pop()
         return res
 
