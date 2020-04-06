@@ -1167,8 +1167,11 @@ class Machine(object):
                 state = self.get_state(target)
                 return partial(state.add_callback, callback_type[3:])
 
-        # Nothing matched
-        raise AttributeError("'{}' does not exist on <Machine@{}>".format(name, id(self)))
+        try:
+            return self.__getattribute__(name)
+        except AttributeError:
+            # Nothing matched
+            raise AttributeError("'{}' does not exist on <Machine@{}>".format(name, id(self)))
 
 
 class MachineError(Exception):
