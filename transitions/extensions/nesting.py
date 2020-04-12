@@ -667,8 +667,12 @@ class HierarchicalMachine(Machine):
 
         event = EventData(self.get_state(current_state), Event('to', self), self,
                           model, args=args, kwargs=kwargs)
-        event.source_name = current_state
-        event.source_path = current_state.split(self.state_cls.separator)
+        if isinstance(current_state, Enum):
+            event.source_name = current_state.name
+            event.source_path = current_state
+        else:
+            event.source_name = current_state
+            event.source_path = current_state.split(self.state_cls.separator)
         self._create_transition(current_state, state_name).execute(event)
 
     def trigger_event(self, _model, _trigger, *args, **kwargs):
