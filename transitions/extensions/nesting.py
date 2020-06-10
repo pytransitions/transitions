@@ -417,7 +417,7 @@ class HierarchicalMachine(Machine):
         remap = kwargs.pop('remap', None)
         for state in listify(states):
             if isinstance(state, Enum) and isinstance(state.value, EnumMeta):
-                state = {'name': state.name, 'children': state.value}
+                state = {'name': state, 'children': state.value}
 
             if isinstance(state, string_types):
                 if remap is not None and state in remap:
@@ -668,12 +668,12 @@ class HierarchicalMachine(Machine):
         event = EventData(self.get_state(current_state), Event('to', self), self,
                           model, args=args, kwargs=kwargs)
         if isinstance(current_state, Enum):
-            event.source_name = current_state.name
-            event.source_path = current_state
+            event.source_path = self._get_enum_path(current_state)
+            event.source_name = self.state_cls.separator.join(event.source_path)
         else:
             event.source_name = current_state
             event.source_path = current_state.split(self.state_cls.separator)
-        self._create_transition(current_state, state_name).execute(event)
+        self._create_transition(event.source_name, state_name).execute(event)
 
     def trigger_event(self, _model, _trigger, *args, **kwargs):
         """ Processes events recursively and forwards arguments if suitable events are found.

@@ -7,6 +7,9 @@ Release 0.8.2 is a minor release and contains several bugfixes and improvements:
 - Bugfix #438: Improved testing without any optional `graphviz` package
 - Bugfix: `_check_event_result` failed when model was in parallel state
 - Bugfix #440: Only allow explicit `dest=None` in `Machine.add_transition` (not just falsy) for internal transitions (thanks @Pathfinder216)
+- Bugfix #419: Fix state creation of nested enums (thanks @thedrow)
+- PR #418: Use sets instead of lists to cache already covered transitions in nested state machines (thanks @thedrow)
+- PR #422: Improve handling of unresolved attributes for easier inheritance (thanks @thedrow)
 
 ## 0.8.1 (April 2020)
 
