@@ -754,16 +754,16 @@ class HierarchicalMachine(Machine):
 
     def _check_event_result(self, res, model, trigger):
         if res is None:
-            state_name = getattr(model, self.model_attribute)
-            msg = "%sCan't trigger event %s from state %s!" % (self.name, trigger, state_name)
-            state = self.get_state(state_name)
-            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
-                else self.ignore_invalid_triggers
-            if ignore:
-                _LOGGER.warning(msg)
-                res = False
-            else:
-                raise MachineError(msg)
+            state_names = getattr(model, self.model_attribute)
+            msg = "%sCan't trigger event '%s' from state(s) %s!" % (self.name, trigger, state_names)
+            for state_name in listify(state_names):
+                state = self.get_state(state_name)
+                ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
+                    else self.ignore_invalid_triggers
+                if not ignore:
+                    raise MachineError(msg)
+            _LOGGER.warning(msg)
+            res = False
         return res
 
     def _get_trigger(self, model, trigger_name, *args, **kwargs):

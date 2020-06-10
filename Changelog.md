@@ -5,6 +5,7 @@
 Release 0.8.2 is a minor release and contains several bugfixes and improvements:
 
 - Bugfix #438: Improved testing without any optional `graphviz` package
+- Bugfix: `_check_event_result` failed when model was in parallel state
 
 
 ## 0.8.1 (April 2020)
