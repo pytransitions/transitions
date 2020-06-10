@@ -882,7 +882,7 @@ class Machine(object):
         for state in source:
             if dest == self.wildcard_same:
                 _dest = state
-            elif dest:
+            elif dest is not None:
                 if isinstance(dest, State):
                     _ = self._has_state(dest, raise_error=True)
                 _dest = dest.name if hasattr(dest, 'name') else dest

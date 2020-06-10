@@ -129,6 +129,7 @@ class AsyncTransition(Transition):
             parent = machine.async_tasks[model]
             check = is_subtask.get()
             if parent != check:
+                _LOGGER.debug("Cancel running tasks...")
                 machine.async_tasks[model].cancel()
         else:
             current = asyncio.current_task()

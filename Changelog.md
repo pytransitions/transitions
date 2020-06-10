@@ -6,7 +6,7 @@ Release 0.8.2 is a minor release and contains several bugfixes and improvements:
 
 - Bugfix #438: Improved testing without any optional `graphviz` package
 - Bugfix: `_check_event_result` failed when model was in parallel state
-
+- Bugfix #440: Only allow explicit `dest=None` in `Machine.add_transition` (not just falsy) for internal transitions (thanks @Pathfinder216)
 
 ## 0.8.1 (April 2020)
 

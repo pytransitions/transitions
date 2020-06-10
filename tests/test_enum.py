@@ -119,6 +119,24 @@ class TestEnumsAsStates(TestCase):
         assert s.is_ONE()
         assert s.message == 'Goodbye'
 
+    def test_enum_zero(self):
+        from enum import IntEnum
+
+        class State(IntEnum):
+            FOO = 0
+            BAR = 1
+
+        transitions = [
+            ['foo', State.FOO, State.BAR],
+            ['bar', State.BAR, State.FOO]
+        ]
+
+        m = self.machine_cls(states=State, initial=State.FOO, transitions=transitions)
+        m.foo()
+        self.assertTrue(m.is_BAR())
+        m.bar()
+        self.assertTrue(m.is_FOO())
+
 
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):
