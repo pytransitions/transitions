@@ -1,8 +1,15 @@
 # Changelog
 
+## 0.8.2 ()
+
+Release 0.8.2 is a minor release and contains several bugfixes and improvements:
+
+- Bugfix #438: Improved testing without any optional `graphviz` package
+
+
 ## 0.8.1 (April 2020)
 
-Release 0.8.1 is a minor release of HSM improvements and bugfixes in the diagram and async extension
+Release 0.8.1 is a minor release of HSM improvements and bugfixes in the diagram and async extension:
 
 - Feature: Introduced experimental `HierarchicalAsync(Graph)Machine`
 - Feature #405: Support for nested Enums in `HierarchicalMachine` (thanks @thedrow)
@@ -14,7 +21,7 @@ Release 0.8.1 is a minor release of HSM improvements and bugfixes in the diagram
 
 ## 0.8.0 (March 2020)
 
-Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+, parallel state support and some bugfixes
+Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+, parallel state support and some bugfixes:
 
 - Feature: `HierarchicalMachine` has been rewritten to support parallel states. Please have a look at the ReadMe.md to check what has changed.
   + The previous version can be found in `transitions.extensions.nesting_legacy` for now

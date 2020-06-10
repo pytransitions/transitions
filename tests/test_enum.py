@@ -6,6 +6,8 @@ except ImportError:
     enum = None
 
 from transitions.extensions import MachineFactory
+from .test_pygraphviz import pgv
+from .test_graphviz import pgv as gv
 
 
 @skipIf(enum is None, "enum is not available")
@@ -242,7 +244,7 @@ class TestNestedStateEnums(TestEnumsAsStates):
         m = self.machine_cls(states=Outer, initial=Outer.O1)
 
 
-@skipIf(enum is None, "enum is not available")
+@skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
 class TestEnumWithGraph(TestEnumsAsStates):
 
     def setUp(self):
@@ -250,7 +252,7 @@ class TestEnumWithGraph(TestEnumsAsStates):
         self.machine_cls = MachineFactory.get_predefined(graph=True)
 
 
-@skipIf(enum is None, "enum is not available")
+@skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
 class TestNestedStateGraphEnums(TestNestedStateEnums):
 
     def setUp(self):

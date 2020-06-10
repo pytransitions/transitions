@@ -424,6 +424,7 @@ class TestNestedTransitions(TestTransitions):
 
     def test_skip_to_override(self):
         mock = MagicMock()
+
         class Model:
 
             def to(self):

@@ -10,6 +10,8 @@ from unittest.mock import MagicMock
 from unittest import skipIf
 from .test_core import TestTransitions, MachineError
 from .utils import DummyModel
+from .test_graphviz import pgv as gv
+from .test_pygraphviz import pgv
 
 
 @skipIf(asyncio is None, "AsyncMachine requires asyncio and contextvars suppport")
@@ -216,6 +218,7 @@ class TestAsync(TestTransitions):
         self.assertEqual('B', m.state)
 
 
+@skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class AsyncGraphMachine(TestAsync):
 
     def setUp(self):

@@ -6,6 +6,7 @@ except ImportError:
 from transitions.core import Enum
 from transitions.extensions.markup import MarkupMachine, rep
 from transitions.extensions import MachineFactory
+from transitions.extensions.factory import HierarchicalMarkupMachine
 from .utils import Stuff
 from functools import partial
 
@@ -161,7 +162,9 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
         ]
 
-        self.machine_cls = MachineFactory.get_predefined(nested=True, graph=True)
+        # MarkupMachine cannot be imported via get_predefined as of now
+        # We want to be able to run these tests without (py)graphviz
+        self.machine_cls = HierarchicalMarkupMachine
         self.num_trans = len(self.transitions)
         self.num_auto = len(self.states) * 9
 
