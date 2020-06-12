@@ -810,6 +810,13 @@ class TestTransitions(TestCase):
         with self.assertRaises(KeyError):
             self.stuff.trigger('do_raises_keyerror')
 
+        self.stuff.machine.get_model_state(self.stuff).ignore_invalid_triggers = True
+        self.stuff.trigger('should_not_raise_anything')
+        self.stuff.trigger('to_A')
+        self.assertTrue(self.stuff.is_A())
+        self.stuff.machine.ignore_invalid_triggers = True
+        self.stuff.trigger('should_not_raise_anything')
+
     def test_get_triggers(self):
         states = ['A', 'B', 'C']
         transitions = [['a2b', 'A', 'B'],

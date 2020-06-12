@@ -11,6 +11,7 @@ Release 0.8.2 is a minor release and contains several bugfixes and improvements:
 - Bugfix #428: HierarchicalGraphMachine did not find/apply styling for parallel states (thanks @xiaohuihui1024)
 - PR #418: Use sets instead of lists to cache already covered transitions in nested state machines (thanks @thedrow)
 - PR #422: Improve handling of unresolved attributes for easier inheritance (thanks @thedrow)
+- `Model.trigger` now considers the machine's and current state's `ignore_invalid_triggers` attribute and can be called with non-existing events (thanks @potens1)
 
 ## 0.8.1 (April 2020)
 

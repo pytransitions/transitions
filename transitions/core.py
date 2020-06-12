@@ -820,7 +820,12 @@ class Machine(object):
         try:
             event = self.events[trigger_name]
         except KeyError:
-            raise AttributeError("Do not know event named '%s'." % trigger_name)
+            state = self.get_model_state(model)
+            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
+                else self.ignore_invalid_triggers
+            if not ignore:
+                raise AttributeError("Do not know event named '%s'." % trigger_name)
+            return False
         return event.trigger(model, *args, **kwargs)
 
     def get_triggers(self, *args):
