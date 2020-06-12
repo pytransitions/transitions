@@ -217,6 +217,23 @@ class TestAsync(TestTransitions):
             asyncio.run(m.go())
         self.assertEqual('B', m.state)
 
+    def test_async_timeout(self):
+        from transitions.extensions.states import add_state_features
+        from transitions.extensions.asyncio import AsyncTimeout
+
+        @add_state_features(AsyncTimeout)
+        class TimeoutMachine(self.machine_cls):
+            pass
+
+        states = ['A', {'name': 'B', 'timeout': 0.2, 'on_timeout': 'to_C'}, 'C']
+        m = TimeoutMachine(states=states, initial='A')
+        asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.1)]))
+        assert m.is_B()  # timeout shouldn't be triggered
+        asyncio.run(asyncio.wait([m.to_A(), asyncio.sleep(0.2)]))
+        assert m.is_A()  # make sure timeout has been cancelled by waiting a bit longer
+        asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.3)]))
+        assert m.is_C()  # now timeout should have been processed
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class AsyncGraphMachine(TestAsync):

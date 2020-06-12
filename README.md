@@ -1608,7 +1608,25 @@ class VerboseMachine(Machine):
     def _create_state(self, *args, **kwargs):
         print("Creating a new state with machine '{0}'".format(self.name))
         return MyState(*args, **kwargs)
+```
 
+If you want to avoid threads in your `AsyncMachine` entirely, you can replace the `Timeout` state feature with `AsyncTimeout` from the `asyncio` extension:
+
+```python
+import asyncio
+from transitions.extensions.states import add_state_features
+from transitions.extensions.asyncio import AsyncTimeout, AsyncMachine
+
+@add_state_features(AsyncTimeout)
+class TimeoutMachine(AsyncMachine):
+    pass
+
+states = ['A', {'name': 'B', 'timeout': 0.2, 'on_timeout': 'to_C'}, 'C']
+m = TimeoutMachine(states=states, initial='A')
+asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.1)]))
+assert m.is_B()  # timeout shouldn't be triggered
+asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.3)]))
+assert m.is_C()   # now timeout should have been processed
 ```
 
 #### <a name="django-support"></a> Using transitions together with Django

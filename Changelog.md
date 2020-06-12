@@ -9,6 +9,7 @@ Release 0.8.2 is a minor release and contains several bugfixes and improvements:
 - Bugfix #440: Only allow explicit `dest=None` in `Machine.add_transition` (not just falsy) for internal transitions (thanks @Pathfinder216)
 - Bugfix #419: Fix state creation of nested enums (thanks @thedrow)
 - Bugfix #428: HierarchicalGraphMachine did not find/apply styling for parallel states (thanks @xiaohuihui1024)
+- Feature #429: Introduced `transitions.extensions.asyncio.AsyncTimeout` as a state decorator to avoid threads used in `transitions.extensions.state.Timeout` (thanks @potens1)
 - PR #418: Use sets instead of lists to cache already covered transitions in nested state machines (thanks @thedrow)
 - PR #422: Improve handling of unresolved attributes for easier inheritance (thanks @thedrow)
 - `Model.trigger` now considers the machine's and current state's `ignore_invalid_triggers` attribute and can be called with non-existing events (thanks @potens1)
