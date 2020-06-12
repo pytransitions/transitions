@@ -1116,7 +1116,8 @@ This produces something like this:
 
 ![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
 
-Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example.
+Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example about how to use and edit graphs.
+
 
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
@@ -1184,7 +1185,7 @@ m.add_state('B')  # fine
 m.add_state({'name': 'C'})  # also fine
 m.add_state(NestedState('D'))  # fine as well
 m.add_state(State('E'))  # does not work!
-``` 
+```
 
 Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`.
 Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine.
@@ -1193,10 +1194,13 @@ When entering a substate, `enter` will be called for all parent states. The same
 Third, nested states can overwrite transition behaviour of their parents.
 If a transition is not known to the current state it will be delegated to its parent.
 
-In some cases underscore as a separator is not sufficient.
-For instance if state names consists of more than one word and a concatenated naming such as `state_A_name_state_C` would be confusing.
-Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks).
-You can even use unicode characters if you use python 3:
+**This means that in the standard configuration, state names in HSMs MUST NOT contain underscores.**
+For `transitions` it's impossible to tell whether `machine.add_state('state_name')` should add a state named `state_name` or add a substate `name` to the state `state`.
+In some cases this is not sufficient however.
+For instance if state names consists of more than one word and you want/need to use underscore to separate them instead of `CamelCase`.
+To deal with this, you can change the character used for separation quite easily.
+You can even use fancy unicode characters if you use Python 3.
+Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks) though:
 
 ```python
 from transitions.extensions.nesting import NestedState
