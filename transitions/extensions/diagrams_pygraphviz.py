@@ -154,7 +154,7 @@ class NestedGraph(Graph):
                 self._add_nodes(state['children'], sub, prefix=prefix + state['name'] + NestedState.separator,
                                 default_style='parallel' if is_parallel else 'default')
             else:
-                container.add_node(name, label=label, shape=self.machine.style_attributes['node']['default']['shape'])
+                container.add_node(name, label=label, **self.machine.style_attributes['node'][default_style])
 
     def _add_edges(self, transitions, container):
 

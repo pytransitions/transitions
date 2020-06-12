@@ -67,6 +67,11 @@ class GraphMachine(MarkupMachine):
                 'color': 'black',
                 'peripheries': '1'
             },
+            'parallel': {
+                'color': 'black',
+                'fillcolor': 'white',
+                'style': 'dashed, rounded, filled'
+            },
             'active': {
                 'color': 'red',
                 'fillcolor': 'darksalmon',
@@ -93,11 +98,6 @@ class GraphMachine(MarkupMachine):
                 'color': 'black',
                 'fillcolor': 'white',
                 'style': 'solid'
-            },
-            'parallel': {
-                'color': 'black',
-                'fillcolor': 'white',
-                'style': 'dotted'
             },
             'previous': {
                 'color': 'blue',
