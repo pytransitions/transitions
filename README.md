@@ -231,7 +231,7 @@ lump.state
 
 Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. You don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`).
 To be more precise, your model **should not** already contain methods with the same name as event triggers since `transitions` will only attach convenience methods to your model if the spot is not already taken.
-If you want to modify that behaviour, have a look at the [FAQ](examples/Frequently asked questions.ipynb).
+If you want to modify that behaviour, have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb).
 Furthermore, there is a method called `trigger` now attached to your model (if it hasn't been there before).
 This method lets you execute transitions by name in case dynamic triggering is required.
 
