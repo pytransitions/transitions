@@ -5,6 +5,7 @@
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
 [![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.1.svg)](https://github.com/pytransitions/transitions/compare/0.8.1...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb)
 <!-- [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions) -->
 <!--[![Name](Image)](Link)-->
 
@@ -1636,9 +1637,13 @@ Christian Ledermann developed `django-transitions`, a module dedicated to stream
 
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
+
+First, congratulations! You reached the end of the documentation!
+If you want to try out `transitions` before you install it, you can do that in an interactive Jupyter notebook at mybinder.org.
+Just click this button 👉 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb).
+
 For bug reports and other issues, please open an issue on GitHub.
 
 For usage questions, post on Stack Overflow, making sure to tag your question with the `transitions` and `python` tags. Do not forget to have a look at the [extended examples](./examples)!
-
 
 For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
