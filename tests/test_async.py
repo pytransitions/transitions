@@ -28,9 +28,9 @@ class TestAsync(TestTransitions):
         return True
 
     @staticmethod
-    async def await_never_return():
-        await asyncio.sleep(100)
-        return None
+    async def cancel_soon():
+        await asyncio.sleep(1)
+        raise TimeoutError("Callback was not cancelled!")
 
     @staticmethod
     def synced_true():
@@ -100,7 +100,7 @@ class TestAsync(TestTransitions):
 
         m1 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m1")
         m2 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m2")
-        m2.add_transition(trigger='go', source='A', dest='B', before=self.await_never_return)
+        m2.add_transition(trigger='go', source='A', dest='B', before=self.cancel_soon)
         m2.add_transition(trigger='fix', source='A', dest='C', conditions=self.await_true)
         m1.add_transition(trigger='go', source='A', dest='B', conditions=self.await_true, after='go')
         m1.add_transition(trigger='go', source='B', dest='C', after=fix)
