@@ -15,8 +15,6 @@ from .nesting import HierarchicalMachine, NestedState, NestedEvent, NestedTransi
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
 
-is_subtask = contextvars.ContextVar('is_subtask', default=False)
-
 
 class AsyncState(State):
     """A persistent representation of a state managed by a ``Machine``. Callback execution is done asynchronously.
@@ -98,7 +96,7 @@ class AsyncTransition(Transition):
     condition_cls = AsyncCondition
 
     async def _eval_conditions(self, event_data):
-        res = await event_data.machine.await_all([cond.check(event_data) for cond in self.conditions])
+        res = await event_data.machine.await_all([partial(cond.check, event_data) for cond in self.conditions])
         if not all(res):
             _LOGGER.debug("%sTransition condition failed: Transition halted.", event_data.machine.name)
             return False
@@ -163,7 +161,7 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
 class AsyncEvent(Event):
     """ A collection of transitions assigned to the same trigger """
 
-    async def trigger(self, model, *args, **kwargs):
+    async def trigger(self, _model, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes. Note that `AsyncEvent` triggers must be awaited.
         Args:
@@ -173,11 +171,8 @@ class AsyncEvent(Event):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        func = partial(self._trigger, model, *args, **kwargs)
-        try:
-            return await self.machine._process(func)
-        except asyncio.CancelledError:
-            return False
+        func = partial(self._trigger, _model, *args, **kwargs)
+        return await self.machine.process_context(func, _model)
 
     async def _trigger(self, model, *args, **kwargs):
         state = self.machine.get_state(model.state)
@@ -230,10 +225,7 @@ class NestedAsyncEvent(NestedEvent):
             successfully executed (True if successful, False if not).
         """
         func = partial(self._trigger, _model, _machine, *args, **kwargs)
-        try:
-            return await _machine._process(func)
-        except asyncio.CancelledError:
-            return False
+        return await _machine.process_context(func, _model)
 
     async def _trigger(self, _model, _machine, *args, **kwargs):
         state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
@@ -309,6 +301,7 @@ class AsyncMachine(Machine):
     transition_cls = AsyncTransition
     event_cls = AsyncEvent
     async_tasks = {}
+    is_subtask = contextvars.ContextVar('is_subtask', default=False)
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.
@@ -319,12 +312,12 @@ class AsyncMachine(Machine):
         Returns:
             bool The truth value of all triggers combined with AND
         """
-        results = await self.await_all([getattr(model, trigger)(*args, **kwargs) for model in self.models])
+        results = await self.await_all([partial(getattr(model, trigger), *args, **kwargs) for model in self.models])
         return all(results)
 
     async def callbacks(self, funcs, event_data):
         """ Triggers a list of callbacks """
-        await self.await_all([event_data.machine.callback(func, event_data) for func in funcs])
+        await self.await_all([partial(event_data.machine.callback, func, event_data) for func in funcs])
 
     async def callback(self, func, event_data):
         """ Trigger a callback function with passed event_data parameters. In case func is a string,
@@ -345,20 +338,50 @@ class AsyncMachine(Machine):
             await res
 
     @staticmethod
-    async def await_all(awaitables):
-        return await asyncio.gather(*awaitables)
+    async def await_all(callables):
+        """
+        Executes callables without parameters in parallel and collects their results.
+        Args:
+            partials (list): A list of callable functions
+
+        Returns:
+            list: A list of results. Using asyncio the list will be in the same order as the passed callables.
+        """
+        return await asyncio.gather(*[func() for func in callables])
 
     def switch_model_context(self, model):
+        """
+        This method is called by an `AsyncTransition` when all conditional tests have passed and the transition will happen.
+        This requires already running tasks to be cancelled.
+        Args:
+            model (object): The currently processed model
+        """
         if model in self.async_tasks and not self.async_tasks[model].done():
             parent = self.async_tasks[model]
-            check = is_subtask.get()
-            if parent != check:
-                _LOGGER.debug("Cancel running tasks...")
-                self.async_tasks[model].cancel()
-        else:
-            current = asyncio.current_task()
-            is_subtask.set(current)
-            self.async_tasks[model] = current
+            check = self.is_subtask.get()
+            if parent == check:
+                return
+            _LOGGER.debug("Cancel running tasks...")
+            self.async_tasks[model].cancel()
+        current = asyncio.current_task()
+        self.is_subtask.set(current)
+        self.async_tasks[model] = current
+
+    async def process_context(self, func, model):
+        """
+        This function is called by an `AsyncEvent` to make callbacks processed in Event._trigger cancellable.
+        Using asyncio this will result in a try-catch block catching CancelledEvents.
+        Args:
+            func (callable): The partial of Event._trigger with all parameters already assigned
+            model (object): The currently processed model
+
+        Returns:
+            bool: returns the success state of the triggered event
+        """
+        try:
+            return await self._process(func)
+        except asyncio.CancelledError:
+            return False
 
     async def _process(self, trigger):
         # default processing
