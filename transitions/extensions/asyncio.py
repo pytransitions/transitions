@@ -301,7 +301,7 @@ class AsyncMachine(Machine):
     transition_cls = AsyncTransition
     event_cls = AsyncEvent
     async_tasks = {}
-    is_subtask = contextvars.ContextVar('is_subtask', default=False)
+    current_context = contextvars.ContextVar('current_context', default=None)
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.
@@ -356,16 +356,13 @@ class AsyncMachine(Machine):
         Args:
             model (object): The currently processed model
         """
-        if model in self.async_tasks and not self.async_tasks[model].done():
-            parent = self.async_tasks[model]
-            check = self.is_subtask.get()
-            if parent == check:
-                return
-            _LOGGER.debug("Cancel running tasks...")
-            self.async_tasks[model].cancel()
-        current = asyncio.current_task()
-        self.is_subtask.set(current)
-        self.async_tasks[model] = current
+        running_task = self.async_tasks.get(model, None)
+        current_task = self.current_context.get()
+        if  current_task != running_task:
+            if running_task is not None and running_task.done() is False:
+                _LOGGER.debug("Cancel running tasks...")
+                self.async_tasks[model].cancel()
+            self.async_tasks[model] = current_task
 
     async def process_context(self, func, model):
         """
@@ -378,10 +375,15 @@ class AsyncMachine(Machine):
         Returns:
             bool: returns the success state of the triggered event
         """
-        try:
-            return await self._process(func)
-        except asyncio.CancelledError:
-            return False
+        if self.current_context.get() is None:
+            self.current_context.set(asyncio.current_task())
+            try:
+                res = await self._process(func)
+                self.async_tasks[model] = None
+                return res
+            except asyncio.CancelledError:
+                return False
+        return await self._process(func)
 
     async def _process(self, trigger):
         # default processing
