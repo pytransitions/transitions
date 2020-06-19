@@ -109,6 +109,11 @@ class GraphMachine(MarkupMachine):
                 'fillcolor': 'darksalmon',
                 'style': 'filled'
             },
+            'parallel': {
+                'color': 'black',
+                'fillcolor': 'white',
+                'style': 'dotted'
+            }
         }
     }
 

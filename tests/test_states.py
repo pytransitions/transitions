@@ -153,7 +153,6 @@ class TestTransitions(TestCase):
         self.assertTrue(machine.is_A())
         self.assertTrue(timeout_mock.called)
 
-
     def test_volatile(self):
 
         class TemporalState(object):
