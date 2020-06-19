@@ -511,6 +511,7 @@ class AsyncTimeout(AsyncState):
 
     async def _process_timeout(self, event_data):
         _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
+        self.runner[id(event_data.model)] = None  # make sure we are not cancelled when transitioning away from state
         await event_data.machine.callbacks(self.on_timeout, event_data)
         _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
 
