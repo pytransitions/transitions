@@ -104,12 +104,14 @@ class TestAsync(TestTransitions):
         m2 = self.machine_cls(states=['A'], initial='A', name='m2')
         m1.add_transition(trigger='go', source='A', dest='B', before=self.cancel_soon)
         m1.add_transition(trigger='fix', source='A', dest='C', after=self.cancel_soon)
+        m1.add_transition(trigger='check', source='C', dest='B', conditions=self.await_false)
         m1.add_transition(trigger='reset', source='C', dest='A')
         m2.add_transition(trigger='go', source='A', dest=None, conditions=m1.is_C, after=m1.reset)
 
-        loop.run_until_complete(asyncio.gather(m1.go(),
-                                               self.call_delayed(m1.fix, 0.05),
-                                               self.call_delayed(m2.go, 0.1)))
+        loop.run_until_complete(asyncio.gather(m1.go(),  # should block before B
+                                               self.call_delayed(m1.fix, 0.05),  # should cancel task and go to C
+                                               self.call_delayed(m1.check, 0.07),  # should exit before m1.fix
+                                               self.call_delayed(m2.go, 0.1)))  # should cancel m1.fix
         assert m1.is_A()
         loop.close()
 
