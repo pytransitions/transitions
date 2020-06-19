@@ -357,12 +357,11 @@ class AsyncMachine(Machine):
             model (object): The currently processed model
         """
         running_task = self.async_tasks.get(model, None)
-        current_task = self.current_context.get()
-        if  current_task != running_task:
-            if running_task is not None:
+        if self.current_context.get() != running_task:
+            if running_task is not None and running_task.done() is False:
                 _LOGGER.debug("Cancel running tasks...")
-                self.async_tasks[model].cancel()
-            self.async_tasks[model] = current_task
+                running_task.cancel()
+            self.async_tasks[model] = self.current_context.get()
 
     async def process_context(self, func, model):
         """
@@ -378,9 +377,7 @@ class AsyncMachine(Machine):
         if self.current_context.get() is None:
             self.current_context.set(asyncio.current_task())
             try:
-                res = await self._process(func)
-                self.async_tasks[model] = None
-                return res
+                return await self._process(func)
             except asyncio.CancelledError:
                 return False
         return await self._process(func)
