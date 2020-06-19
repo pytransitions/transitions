@@ -17,3 +17,4 @@ MANIFEST
 *.bak
 pylint.log
 sandbox*
+coverage.xml
