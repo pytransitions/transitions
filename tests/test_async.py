@@ -242,6 +242,9 @@ class TestAsync(TestTransitions):
         asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.3)]))
         self.assertTrue(m.is_C())  # now timeout should have been processed
         self.assertTrue(timeout_called.called)
+        with self.assertRaises(AttributeError):
+            m.add_state('Fail', timeout=1)
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class AsyncGraphMachine(TestAsync):
@@ -286,3 +289,12 @@ class TestHierarchicalAsync(TestAsync):
         self.assertEqual(['P{0}1{0}a'.format(machine.state_cls.separator),
                           'P{0}2{0}b'.format(machine.state_cls.separator),
                           'P{0}3{0}y'.format(machine.state_cls.separator)], machine.state)
+
+
+@skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
+class AsyncHierarchicalGraphMachine(TestHierarchicalAsync):
+
+    def setUp(self):
+        super(TestHierarchicalAsync, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(graph=True, asyncio=True, nested=True)
+        self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')

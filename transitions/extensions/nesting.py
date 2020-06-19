@@ -415,6 +415,8 @@ class HierarchicalMachine(Machine):
             **kwargs additional keyword arguments used by state mixins.
         """
         remap = kwargs.pop('remap', None)
+        ignore = self.ignore_invalid_triggers if ignore_invalid_triggers is None else ignore_invalid_triggers
+
         for state in listify(states):
             if isinstance(state, Enum) and isinstance(state.value, EnumMeta):
                 state = {'name': state, 'children': state.value}
@@ -433,13 +435,15 @@ class HierarchicalMachine(Machine):
                 else:
                     if state in self.states:
                         raise ValueError("State {0} cannot be added since it already exists.".format(state))
-                    new_state = self._create_state(state)
+                    new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
+                                                   ignore_invalid_triggers=ignore, **kwargs)
                     self.states[new_state.name] = new_state
                     self._init_state(new_state)
             elif isinstance(state, Enum):
                 if remap is not None and state.name in remap:
                     return
-                new_state = self._create_state(state)
+                new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
+                                               ignore_invalid_triggers=ignore, **kwargs)
                 if state.name in self.states:
                     raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
                 self.states[new_state.name] = new_state
@@ -449,6 +453,8 @@ class HierarchicalMachine(Machine):
                     return
                 state = state.copy()  # prevent messing with the initially passed dict
                 remap = state.pop('remap', None)
+                if 'ignore_invalid_triggers' not in state:
+                    state['ignore_invalid_triggers'] = ignore
                 state_children = state.pop('children', [])
                 state_parallel = state.pop('parallel', [])
                 transitions = state.pop('transitions', [])
