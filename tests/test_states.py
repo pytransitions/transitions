@@ -139,6 +139,21 @@ class TestTransitions(TestCase):
         self.assertEqual(timeout.call_count, 2)
         self.assertEqual(notification.call_count, 2)
 
+    def test_timeout_transitioning(self):
+        timeout_mock = MagicMock()
+
+        @add_state_features(Timeout)
+        class CustomMachine(Machine):
+            pass
+
+        states = ['A', {'name': 'B', 'timeout': 0.05, 'on_timeout': ['to_A', timeout_mock]}]
+        machine = CustomMachine(states=states, initial='A')
+        machine.to_B()
+        sleep(0.1)
+        self.assertTrue(machine.is_A())
+        self.assertTrue(timeout_mock.called)
+
+
     def test_volatile(self):
 
         class TemporalState(object):
