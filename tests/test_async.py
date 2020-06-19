@@ -235,15 +235,20 @@ class TestAsync(TestTransitions):
 
         states = ['A', {'name': 'B', 'timeout': 0.2, 'on_timeout': ['to_C', timeout_called]}, 'C']
         m = TimeoutMachine(states=states, initial='A')
-        asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.1)]))
-        self.assertTrue(m.is_B())  # timeout shouldn't be triggered
-        asyncio.run(asyncio.wait([m.to_A(), asyncio.sleep(0.2)]))
-        self.assertTrue(m.is_A())  # make sure timeout has been cancelled by waiting a bit longer
-        asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.3)]))
-        self.assertTrue(m.is_C())  # now timeout should have been processed
-        self.assertTrue(timeout_called.called)
         with self.assertRaises(AttributeError):
             m.add_state('Fail', timeout=1)
+
+        async def run():
+            await m.to_B()
+            await asyncio.sleep(0.1)
+            self.assertTrue(m.is_B())  # timeout shouldn't be triggered
+            await m.to_A()  # cancel timeout
+            self.assertTrue(m.is_A())
+            await m.to_B()
+            await asyncio.sleep(0.3)
+            self.assertTrue(m.is_C())  # now timeout should have been processed
+            self.assertTrue(timeout_called.called)
+        asyncio.run(run())
 
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
@@ -289,6 +294,8 @@ class TestHierarchicalAsync(TestAsync):
         self.assertEqual(['P{0}1{0}a'.format(machine.state_cls.separator),
                           'P{0}2{0}b'.format(machine.state_cls.separator),
                           'P{0}3{0}y'.format(machine.state_cls.separator)], machine.state)
+        asyncio.run(machine.to_B())
+        self.assertTrue(machine.is_B())
 
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
