@@ -36,6 +36,11 @@ class TestAsync(TestTransitions):
     def synced_true():
         return True
 
+    @staticmethod
+    async def call_delayed(func, time):
+        await asyncio.sleep(time)
+        await func()
+
     def setUp(self):
         super(TestAsync, self).setUp()
         self.machine_cls = MachineFactory.get_predefined(asyncio=True)
@@ -92,21 +97,20 @@ class TestAsync(TestTransitions):
         self.assertTrue(mock.called)
 
     def test_multiple_models(self):
-        async def fix():
-            await m2.fix()
-
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         m1 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m1")
-        m2 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m2")
-        m2.add_transition(trigger='go', source='A', dest='B', before=self.cancel_soon)
-        m2.add_transition(trigger='fix', source='A', dest='C', conditions=self.await_true)
-        m1.add_transition(trigger='go', source='A', dest='B', conditions=self.await_true, after='go')
-        m1.add_transition(trigger='go', source='B', dest='C', after=fix)
-        loop.run_until_complete(asyncio.gather(m2.go(), m1.go()))
-        assert m1.is_C()
-        assert m2.is_C()
+        m2 = self.machine_cls(states=['A'], initial='A', name='m2')
+        m1.add_transition(trigger='go', source='A', dest='B', before=self.cancel_soon)
+        m1.add_transition(trigger='fix', source='A', dest='C', after=self.cancel_soon)
+        m1.add_transition(trigger='reset', source='C', dest='A')
+        m2.add_transition(trigger='go', source='A', dest=None, conditions=m1.is_C, after=m1.reset)
+
+        loop.run_until_complete(asyncio.gather(m1.go(),
+                                               self.call_delayed(m1.fix, 0.05),
+                                               self.call_delayed(m2.go, 0.1)))
+        assert m1.is_A()
         loop.close()
 
     def test_async_callback_arguments(self):

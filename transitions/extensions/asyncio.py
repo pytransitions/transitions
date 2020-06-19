@@ -359,7 +359,7 @@ class AsyncMachine(Machine):
         running_task = self.async_tasks.get(model, None)
         current_task = self.current_context.get()
         if  current_task != running_task:
-            if running_task is not None and running_task.done() is False:
+            if running_task is not None:
                 _LOGGER.debug("Cancel running tasks...")
                 self.async_tasks[model].cancel()
             self.async_tasks[model] = current_task
