@@ -10,3 +10,4 @@ include conftest.py
 recursive-include examples *.ipynb
 recursive-include tests *.py
 recursive-exclude examples/.ipynb_checkpoints *.ipynb
+recursive-include binder *.txt postBuild
