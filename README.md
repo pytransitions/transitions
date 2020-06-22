@@ -1633,7 +1633,9 @@ assert m.is_C()   # now timeout should have been processed
 
 #### <a name="django-support"></a> Using transitions together with Django
 
-Christian Ledermann developed `django-transitions`, a module dedicated to streamline the work with `transitions` and Django. The source code is also hosted on [Github](https://github.com/PrimarySite/django-transitions). Have a look at [the documentation](https://django-transitions.readthedocs.io/en/latest/) for usage examples.
+You can have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb) for some inspiration or checkout `django-transitions`.
+It has been developed by Christian Ledermann and is also hosted on [Github](https://github.com/PrimarySite/django-transitions).
+[The documentation](https://django-transitions.readthedocs.io/en/latest/) contains some usage examples.
 
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
