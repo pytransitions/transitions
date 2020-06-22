@@ -491,7 +491,7 @@ class AsyncTimeout(AsyncState):
             event_data (EventData): events representing the currently processed event.
         """
         if self.timeout > 0:
-            self.runner[id(event_data.model)] = asyncio.ensure_future(_timeout(self.timeout, self._process_timeout, event_data))
+            self.runner[id(event_data.model)] = self.create_timer(event_data)
         await super().enter(event_data)
 
     async def exit(self, event_data):
@@ -499,21 +499,39 @@ class AsyncTimeout(AsyncState):
         Cancels running timeout tasks stored in `self.runner` first (when not note) before calling further exit callbacks.
 
         Args:
-            event_data (EventData): events representing the currently processed event.
+            event_data (EventData): Data representing the currently processed event.
 
         Returns:
 
         """
         timer_task = self.runner.get(id(event_data.model), None)
-        if timer_task is not None and not timer_task.done():
+        if timer_task is not None:
             timer_task.cancel()
         await super().exit(event_data)
 
+    def create_timer(self, event_data):
+        """
+        Creates and returns a running timer. Shields self._process_timeout to prevent cancellation when
+        transitioning away from the current state (which cancels the timer) while processing timeout callbacks.
+        Args:
+            event_data (EventData): Data representing the currently processed event.
+
+        Returns (cancellable): A running timer with a cancel method
+        """
+        async def _timeout():
+            try:
+                await asyncio.sleep(self.timeout)
+                await asyncio.shield(self._process_timeout(event_data))
+            except asyncio.CancelledError:
+                pass
+
+        return asyncio.ensure_future(_timeout())
+
     async def _process_timeout(self, event_data):
         _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
-        self.runner[id(event_data.model)] = None  # make sure we are not cancelled when transitioning away from state
         await event_data.machine.callbacks(self.on_timeout, event_data)
         _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
+        self.runner[id(event_data.model)] = None
 
     @property
     def on_timeout(self):
@@ -526,12 +544,3 @@ class AsyncTimeout(AsyncState):
     def on_timeout(self, value):
         """ Listifies passed values and assigns them to on_timeout."""
         self._on_timeout = listify(value)
-
-
-# helper function to wrap timeout tasks into
-async def _timeout(timeout, func, event_data):
-    try:
-        await asyncio.sleep(timeout)
-        await func(event_data)
-    except asyncio.CancelledError:
-        pass
