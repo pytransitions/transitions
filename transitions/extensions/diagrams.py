@@ -291,7 +291,8 @@ class BaseGraph(object):
                     if prefix:
                         t = copy.copy(transition)
                         t['source'] = self.machine.state_cls.separator.join(prefix + [t['source']])
-                        t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
+                        if 'dest' in t:  # don't do this for internal transitions
+                            t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
                     else:
                         t = transition
                     transitions.append(t)
