@@ -25,7 +25,7 @@ class TestParallel(TestNested):
                                                {'name': '2', 'children': ['a', 'b'],
                                                 'initial': 'a',
                                                 'transitions': [['go', 'a', 'b']]}]}]
-        self.transitions = [['reset', '*', 'A']]
+        self.transitions = [['reset', 'C', 'A']]
 
     def test_init(self):
         m = self.stuff.machine_cls(states=self.states)
@@ -56,6 +56,7 @@ class TestParallel(TestNested):
 
         model1 = Model()
         m = self.stuff.machine_cls(model1, states=self.states, transitions=self.transitions, initial='A')
+        m.add_transition('reinit', 'C', 'C')
         model1.to_C()
         self.assertEqual(['C{0}1{0}a'.format(State.separator), 'C{0}2{0}a'.format(State.separator)], model1.state)
         model1.reset()
@@ -64,15 +65,18 @@ class TestParallel(TestNested):
 
         model2 = Model()
         m.add_model(model2, initial='C')
+        model2.reinit()
+        self.assertEqual(['C{0}1{0}a'.format(State.separator), 'C{0}2{0}a'.format(State.separator)], model2.state)
+        self.assertEqual(3, model2.mock.call_count)
         model2.reset()
         self.assertTrue(model2.is_A())
-        self.assertEqual(3, model2.mock.call_count)
+        self.assertEqual(6, model2.mock.call_count)
         for mod in m.models:
             mod.trigger('to_C')
         for mod in m.models:
             mod.trigger('reset')
         self.assertEqual(6, model1.mock.call_count)
-        self.assertEqual(6, model2.mock.call_count)
+        self.assertEqual(9, model2.mock.call_count)
 
     def test_parent_transition(self):
         m = self.stuff.machine_cls(states=self.states)

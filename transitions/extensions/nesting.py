@@ -238,13 +238,9 @@ class NestedTransition(Transition):
                 dst_name_path.pop(0)
 
         scoped_tree = reduce(dict.get, scope + root, state_tree)
-        exit_partials = []
-        if src_name_path:
-            for state_name in _resolve_order(scoped_tree):
-                cb = partial(machine.get_state(root + state_name).scoped_exit,
-                             event_data,
-                             scope + root + state_name[:-1])
-                exit_partials.append(cb)
+        exit_partials = [partial(machine.get_state(root + state_name).scoped_exit,
+                                 event_data, scope + root + state_name[:-1])
+                         for state_name in _resolve_order(scoped_tree)]
         if dst_name_path:
             new_states, enter_partials = self._enter_nested(root, dst_name_path, scope + root, event_data)
         else:

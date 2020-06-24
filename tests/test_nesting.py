@@ -230,16 +230,23 @@ class TestNestedTransitions(TestTransitions):
         def callback():
             mock()
         states = ['A', 'B', {'name': 'C', 'on_enter': callback, 'on_exit': callback,
-                             'children': [{'name': '1', 'on_exit': callback}, '2', '3']}, 'D']
+                             'children': [{'name': '1', 'on_enter': callback, 'on_exit': callback}, '2', '3']},
+                            {'name': 'D', 'on_enter': callback, 'on_exit': callback}]
         transitions = [['go', 'A', 'C{0}1'.format(State.separator)],
                        ['go', 'C', 'D']]
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.go()
         self.assertTrue(mock.called)
-        self.assertEqual(mock.call_count, 1)
+        self.assertEqual(2, mock.call_count)
         m.go()
         self.assertTrue(m.is_D())
-        self.assertEqual(mock.call_count, 3)
+        self.assertEqual(5, mock.call_count)
+        m.to_C()
+        self.assertEqual(7, mock.call_count)
+        m.to('C{0}1'.format(State.separator))
+        self.assertEqual(8, mock.call_count)
+        m.to('C{0}2'.format(State.separator))
+        self.assertEqual(9, mock.call_count)
 
     def test_ordered_transitions(self):
         State = self.state_cls
@@ -437,6 +444,33 @@ class TestNestedTransitions(TestTransitions):
         model2.to('B')
         self.assertTrue(mock.called)
         self.assertTrue(model2.is_B())
+
+    def test_trigger_parent(self):
+        parent_mock = MagicMock()
+        exit_mock = MagicMock()
+        enter_mock = MagicMock()
+
+        class Model():
+
+            def on_exit_A(self):
+                parent_mock()
+
+            def on_exit_A_1(self):
+                exit_mock()
+
+            def on_enter_A_2(self):
+                enter_mock()
+
+        model = Model()
+        machine = self.machine_cls(model, states=[{'name': 'A', 'children': ['1', '2']}],
+                                   transitions=[['go', 'A', 'A_2'], ['enter', 'A', 'A_1']], initial='A')
+
+        model.enter()
+        self.assertFalse(parent_mock.called)
+        model.go()
+        self.assertTrue(exit_mock.called)
+        self.assertTrue(enter_mock.called)
+        self.assertFalse(parent_mock.called)
 
 
 class TestSeparatorsBase(TestCase):
