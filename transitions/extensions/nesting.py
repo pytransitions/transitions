@@ -281,7 +281,8 @@ class NestedTransition(Transition):
             q = []
             prefix = prefix_path
             scoped_tree = new_states
-            initial_states = [event_data.machine.scoped.states[i] for i in listify(event_data.machine.scoped.initial)]
+            initial_names = [i.name if hasattr(i, 'name') else i for i in listify(event_data.machine.scoped.initial)]
+            initial_states = [event_data.machine.scoped.states[n] for n in initial_names]
             while True:
                 event_data.scope = prefix
                 for state in initial_states:
@@ -414,9 +415,11 @@ class HierarchicalMachine(Machine):
         ignore = self.ignore_invalid_triggers if ignore_invalid_triggers is None else ignore_invalid_triggers
 
         for state in listify(states):
-            if isinstance(state, Enum) and isinstance(state.value, EnumMeta):
-                state = {'name': state, 'children': state.value}
-
+            if isinstance(state, Enum):
+                if isinstance(state.value, EnumMeta):
+                    state = {'name': state, 'children': state.value}
+                elif isinstance(state.value, dict):
+                    state = dict(name=state, **state.value)
             if isinstance(state, string_types):
                 if remap is not None and state in remap:
                     return
