@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.3
+
+- Bugfix: `allow_substates` did not consider enum states
+
 ## 0.8.2 (June 2020)
 
 Release 0.8.2 is a minor release and contains several bugfixes and improvements:

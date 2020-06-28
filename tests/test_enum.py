@@ -234,7 +234,9 @@ class TestNestedStateEnums(TestEnumsAsStates):
 
         m.to_FOO_A()
         self.assertFalse(m.is_C())
+        self.assertTrue(m.is_FOO(allow_substates=True))
         self.assertTrue(m.is_FOO_A())
+        self.assertTrue(m.is_FOO_A(allow_substates=True))
         m.go()
         self.assertEqual(Bar.C, m.state)
         m.go()

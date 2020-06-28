@@ -626,7 +626,11 @@ class HierarchicalMachine(Machine):
     def is_state(self, state_name, model, allow_substates=False):
         current_name = getattr(model, self.model_attribute)
         if allow_substates:
-            return current_name.startswith(state_name.name if hasattr(state_name, 'name') else state_name)
+            if isinstance(current_name, Enum):
+                current_name = self.state_cls.separator.join(self._get_enum_path(current_name))
+            if isinstance(state_name, Enum):
+                state_name = self.state_cls.separator.join(self._get_enum_path(state_name))
+            return current_name.startswith(state_name)
         return current_name == state_name
 
     def on_enter(self, state_name, callback):
