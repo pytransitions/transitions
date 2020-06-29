@@ -184,9 +184,6 @@ class TestNestedStateEnums(TestEnumsAsStates):
             self.machine_cls(states=[Foo.A, Foo.A])
 
     def test_add_enum_transition(self):
-        from transitions.extensions.nesting_legacy import HierarchicalMachine
-        if self.machine_cls is HierarchicalMachine:
-            self.skipTest("Converting enums to nested states is not supported on the legacy HierarchicalMachine")
 
         class Foo(enum.Enum):
             A = 0
@@ -214,10 +211,6 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertEqual(m.state, Bar.C)
 
     def test_add_nested_enums_as_nested_state(self):
-        from transitions.extensions.nesting_legacy import HierarchicalMachine
-        if self.machine_cls is HierarchicalMachine:
-            self.skipTest("Converting enums to nested states is not supported on the legacy HierarchicalMachine")
-
         class Foo(enum.Enum):
             A = 0
             B = 1
@@ -247,7 +240,6 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertEqual(Bar.FOO, m.state)
 
     def test_enum_model_conversion(self):
-
         class Inner(enum.Enum):
             I1 = 1
             I2 = 2
