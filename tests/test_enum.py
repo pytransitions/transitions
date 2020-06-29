@@ -137,6 +137,21 @@ class TestEnumsAsStates(TestCase):
         m.bar()
         self.assertTrue(m.is_FOO())
 
+    def test_custom_enum_state(self):
+
+        class CustomState(self.machine_cls.state_cls, enum.Enum):
+            A = 'A'
+            B = 'B'
+
+        state_a = CustomState(CustomState.A)
+        state_b = CustomState(CustomState.B)
+        with self.assertRaises(ValueError):
+            state_c = CustomState('C')
+        m = self.machine_cls(states=[state_a, state_b], transitions=[['go', 'A', 'B']],
+                             initial=state_a)
+        m.go()
+        self.assertTrue(m.is_B())
+
 
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):
