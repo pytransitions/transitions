@@ -420,7 +420,16 @@ class HierarchicalMachine(Machine):
                     state = {'name': state, 'children': state.value}
                 elif isinstance(state.value, dict):
                     state = dict(name=state, **state.value)
-            if isinstance(state, string_types):
+
+            if isinstance(state, NestedState):
+                if state.name in self.states:
+                    raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
+                self.states[state.name] = state
+                self._init_state(state)
+            elif isinstance(state, State):
+                raise ValueError("A passed state object must derive from NestedState! "
+                                 "A default State object is not sufficient")
+            elif isinstance(state, string_types):
                 if remap is not None and state in remap:
                     return
                 domains = state.split(self.state_cls.separator, 1)
@@ -508,11 +517,6 @@ class HierarchicalMachine(Machine):
                     if transitions:
                         self.add_transitions(transitions)
                 self.add_transitions(remapped_transitions)
-            elif isinstance(state, NestedState):
-                if state.name in self.states:
-                    raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
-                self.states[state.name] = state
-                self._init_state(state)
             elif isinstance(state, Machine):
                 new_states = [s for s in state.states.values() if remap is None or s not in remap]
                 self.add_states(new_states)
@@ -520,9 +524,6 @@ class HierarchicalMachine(Machine):
                     self.events[ev.name] = ev
                 if self.scoped.initial is None:
                     self.scoped.initial = state.initial
-            elif isinstance(state, State) and not isinstance(state, NestedState):
-                raise ValueError("A passed state object must derive from NestedState! "
-                                 "A default State object is not sufficient")
             else:
                 raise ValueError("Cannot add state of type {0}. ".format(type(state).__name__))
 

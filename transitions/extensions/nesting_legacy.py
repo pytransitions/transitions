@@ -319,7 +319,13 @@ class HierarchicalMachine(Machine):
         for state in states:
             tmp_states = []
             # other state representations are handled almost like in the base class but a parent parameter is added
-            if isinstance(state, (string_types, Enum)):
+            if isinstance(state, NestedState):
+                tmp_states.append(state)
+                if state.children:
+                    tmp_states.extend(self._traverse(state.children, on_enter=on_enter, on_exit=on_exit,
+                                                     ignore_invalid_triggers=ignore_invalid_triggers,
+                                                     parent=state, remap=remap))
+            elif isinstance(state, (string_types, Enum)):
                 if state in remap:
                     continue
                 tmp_states.append(self._create_state(state, on_enter=on_enter, on_exit=on_exit, parent=parent,
@@ -389,13 +395,6 @@ class HierarchicalMachine(Machine):
                                                                'prepare': transition.prepare,
                                                                'before': transition.before,
                                                                'after': transition.after})
-
-            elif isinstance(state, NestedState):
-                tmp_states.append(state)
-                if state.children:
-                    tmp_states.extend(self._traverse(state.children, on_enter=on_enter, on_exit=on_exit,
-                                                     ignore_invalid_triggers=ignore_invalid_triggers,
-                                                     parent=state, remap=remap))
             else:
                 raise ValueError("%s is not an instance or subclass of NestedState "
                                  "required by HierarchicalMachine." % state)

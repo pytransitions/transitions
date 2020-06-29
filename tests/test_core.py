@@ -1102,6 +1102,18 @@ class TestTransitions(TestCase):
         with self.assertRaises(ValueError):
             m.add_transition(m.model_attribute, "A", "B")
 
+    def test_custom_state(self):
+
+        class CustomDictState(self.stuff.machine.state_cls, dict):
+            pass
+
+        state_a = CustomDictState('A')
+        state_a['data'] = 'hello'
+
+        m = self.stuff.machine_cls(states=[state_a], initial=state_a)
+        self.assertTrue(m.is_A())
+        self.assertIsInstance(m.states[state_a.name], CustomDictState)
+
 
 class TestWarnings(TestCase):
     def test_warning(self):

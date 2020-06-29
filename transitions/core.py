@@ -766,7 +766,9 @@ class Machine(object):
         states = listify(states)
 
         for state in states:
-            if isinstance(state, (string_types, Enum)):
+            if isinstance(state, State):  # need to check this first since states could inherit from Enum or dict
+                pass
+            elif isinstance(state, (string_types, Enum)):
                 state = self._create_state(
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore, **kwargs)

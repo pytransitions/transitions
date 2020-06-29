@@ -4,6 +4,7 @@
 
 - Bugfix: `allow_substates` did not consider enum states
 - Feature: Nested enums can now be passed in a dict as `children` with `initial` parameter
+- Feature #447: allow custom states to be derived from Enum, string or dict (thanks @chrko)
 - Bugfix #449: get_triggers did not return nested triggers correctly (thanks @alexandretanem)
 
 ## 0.8.2 (June 2020)
