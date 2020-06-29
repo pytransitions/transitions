@@ -268,6 +268,18 @@ class TestNestedStateEnums(TestEnumsAsStates):
 
         m = self.machine_cls(states=Outer, initial=Outer.O1)
 
+    def test_enum_initial(self):
+        class Foo(enum.Enum):
+            A = 0
+            B = 1
+
+        class Bar(enum.Enum):
+            FOO = dict(children=Foo, initial=Foo.A)
+            C = 2
+
+        m = self.machine_cls(states=Bar, initial=Bar.FOO)
+        self.assertTrue(m.is_FOO_A())
+
 
 @skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
 class TestEnumWithGraph(TestEnumsAsStates):
