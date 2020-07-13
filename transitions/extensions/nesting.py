@@ -565,14 +565,17 @@ class HierarchicalMachine(Machine):
                 ordered_states.extend(self.get_nested_state_names())
         return ordered_states
 
-    def get_nested_triggers(self, dest=None):
-        if dest:
-            triggers = _super(HierarchicalMachine, self).get_triggers(dest)
+    def get_nested_triggers(self, dest_path=None):
+        if dest_path:
+            triggers = _super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(dest_path))
+            if len(dest_path) > 1 and dest_path[0] in self.states:
+                with self(dest_path[0]):
+                    triggers.extend(self.get_nested_triggers(dest_path[1:]))
         else:
             triggers = list(self.events.keys())
-        for state in self.states.values():
-            with self(state.name):
-                triggers.extend(self.get_nested_triggers())
+            for state in self.states:
+                with self(state.name):
+                    triggers.extend(self.get_nested_triggers())
         return triggers
 
     def get_state(self, state, hint=None):
@@ -613,16 +616,15 @@ class HierarchicalMachine(Machine):
 
     def get_triggers(self, *args):
         """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """
-        # add parents to state set
         triggers = []
         with self():
             for state_name in args:
                 state_path = state_name.split(self.state_cls.separator)
-                root = state_path[0]
-                while state_path:
+                if len(state_path) > 1:  # we only need to check substates when 'state_name' referes to a substate
+                    with self(state_path[0]):
+                        triggers.extend(self.get_nested_triggers(state_path[1:]))
+                while state_path:  # check all valid transitions for parent states
                     triggers.extend(_super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(state_path)))
-                    with self(root):
-                        triggers.extend(self.get_nested_triggers(self.state_cls.separator.join(state_path)))
                     state_path.pop()
         return triggers
 
