@@ -415,21 +415,23 @@ class HierarchicalMachine(Machine):
         ignore = self.ignore_invalid_triggers if ignore_invalid_triggers is None else ignore_invalid_triggers
 
         for state in listify(states):
-            if isinstance(state, Enum):
-                if isinstance(state.value, EnumMeta):
-                    state = {'name': state, 'children': state.value}
-                elif isinstance(state.value, dict):
-                    state = dict(name=state, **state.value)
-
             if isinstance(state, NestedState):
                 if state.name in self.states:
                     raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
                 self.states[state.name] = state
                 self._init_state(state)
+                continue
             elif isinstance(state, State):
                 raise ValueError("A passed state object must derive from NestedState! "
                                  "A default State object is not sufficient")
-            elif isinstance(state, string_types):
+
+            if isinstance(state, Enum):  # convert enum into dict if its value is another set of enums or a dict
+                if isinstance(state.value, EnumMeta):
+                    state = dict(name=state, children=state.value)
+                elif isinstance(state.value, dict):
+                    state = dict(name=state, **state.value)
+
+            if isinstance(state, string_types):
                 if remap is not None and state in remap:
                     return
                 domains = state.split(self.state_cls.separator, 1)
