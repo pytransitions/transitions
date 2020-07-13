@@ -573,8 +573,8 @@ class HierarchicalMachine(Machine):
                     triggers.extend(self.get_nested_triggers(dest_path[1:]))
         else:
             triggers = list(self.events.keys())
-            for state in self.states:
-                with self(state.name):
+            for state_name in self.states:
+                with self(state_name):
                     triggers.extend(self.get_nested_triggers())
         return triggers
 
