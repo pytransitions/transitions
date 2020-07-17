@@ -565,12 +565,40 @@ class HierarchicalMachine(Machine):
                 ordered_states.extend(self.get_nested_state_names())
         return ordered_states
 
-    def get_nested_triggers(self, dest_path=None):
-        if dest_path:
-            triggers = _super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(dest_path))
-            if len(dest_path) > 1 and dest_path[0] in self.states:
-                with self(dest_path[0]):
-                    triggers.extend(self.get_nested_triggers(dest_path[1:]))
+    def get_nested_transitions(self, trigger="", src_path=None, dest_path=None):
+        if src_path and dest_path:
+            src = self.state_cls.separator.join(src_path)
+            dest = self.state_cls.separator.join(dest_path)
+            transitions = _super(HierarchicalMachine, self).get_transitions(trigger, src, dest)
+            if len(src_path) > 1 and len(dest_path) > 1:
+                with self(src_path[0]):
+                    transitions.extend(self.get_nested_transitions(trigger, src_path[1:], dest_path[1:]))
+        elif src_path:
+            src = self.state_cls.separator.join(src_path)
+            transitions = _super(HierarchicalMachine, self).get_transitions(trigger, src, "*")
+            if len(src_path) > 1:
+                with self(src_path[0]):
+                    transitions.extend(self.get_nested_transitions(trigger, src_path[1:], None))
+        elif dest_path:
+            dest = self.state_cls.separator.join(dest_path)
+            transitions = _super(HierarchicalMachine, self).get_transitions(trigger, "*", dest)
+            if len(dest_path) > 1:
+                for state_name in self.states:
+                    with self(state_name):
+                        transitions.extend(self.get_nested_transitions(trigger, None, dest_path[1:]))
+        else:
+            transitions = _super(HierarchicalMachine, self).get_transitions(trigger, "*", "*")
+            for state_name in self.states:
+                with self(state_name):
+                    transitions.extend(self.get_nested_transitions(trigger, None, None))
+        return transitions
+
+    def get_nested_triggers(self, src_path=None):
+        if src_path:
+            triggers = _super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(src_path))
+            if len(src_path) > 1 and src_path[0] in self.states:
+                with self(src_path[0]):
+                    triggers.extend(self.get_nested_triggers(src_path[1:]))
         else:
             triggers = list(self.events.keys())
             for state_name in self.states:
@@ -613,6 +641,19 @@ class HierarchicalMachine(Machine):
             else:
                 res.append(self.get_state(state))
         return res
+
+    def get_transitions(self, trigger="", source="*", dest="*"):
+        with self():
+            source_path = [] if source == "*" else source.split(self.state_cls.separator)
+            dest_path = [] if dest == "*" else dest.split(self.state_cls.separator)
+            if source_path:
+                transitions = []
+                while source_path:
+                    transitions.extend(self.get_nested_transitions(trigger, source_path, dest_path))
+                    source_path.pop()
+                    return transitions
+            else:
+                return self.get_nested_transitions(trigger, None, dest_path)
 
     def get_triggers(self, *args):
         """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """

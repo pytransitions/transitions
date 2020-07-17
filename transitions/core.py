@@ -988,11 +988,14 @@ class Machine(object):
         """ Return the transitions from the Machine.
         Args:
             trigger (str): Trigger name of the transition.
-            source (str): Limits removal to transitions from a certain state.
-            dest (str): Limits removal to transitions to a certain state.
+            source (str): Limits list to transitions from a certain state.
+            dest (str): Limits list to transitions to a certain state.
         """
         if trigger:
-            events = (self.events[trigger], )
+            try:
+                events = (self.events[trigger], )
+            except KeyError:
+                return []
         else:
             events = self.events.values()
         transitions = []
