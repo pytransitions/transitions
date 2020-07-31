@@ -5,6 +5,7 @@ build/
 dist
 dist/*
 *.egg-info
+.eggs/
 *.iml
 .idea
 .vscode
