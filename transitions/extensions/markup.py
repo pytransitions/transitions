@@ -10,8 +10,8 @@ import numbers
 class MarkupMachine(Machine):
 
     # Special attributes such as NestedState._name/_parent or Transition._condition are handled differently
-    state_attributes = ['on_exit', 'on_enter', 'ignore_invalid_triggers', 'timeout', 'on_timeout', 'tags']
-    transition_attributes = ['source', 'dest', 'prepare', 'before', 'after']
+    state_attributes = ['on_exit', 'on_enter', 'ignore_invalid_triggers', 'timeout', 'on_timeout', 'tags', 'label']
+    transition_attributes = ['source', 'dest', 'prepare', 'before', 'after', 'label']
 
     def __init__(self, *args, **kwargs):
         self._markup = kwargs.pop('markup', {})

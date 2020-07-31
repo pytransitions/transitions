@@ -24,6 +24,12 @@ class TransitionGraphSupport(Transition):
         conducted.
     """
 
+    def __init__(self, *args, **kwargs):
+        label = kwargs.pop('label', None)
+        _super(TransitionGraphSupport, self).__init__(*args, **kwargs)
+        if label:
+            self.label = label
+
     def _change_state(self, event_data):
         graph = event_data.machine.model_graphs[event_data.model]
         graph.reset_styling()

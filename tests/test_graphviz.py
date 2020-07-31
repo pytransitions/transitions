@@ -214,6 +214,27 @@ class TestDiagrams(TestTransitions):
                           use_pygraphviz=self.use_pygraphviz)
         g = m.get_graph(show_roi=True)
 
+    def test_label_attribute(self):
+
+        class LabelState(self.machine_cls.state_cls):
+            def __init__(self, *args, **kwargs):
+                self.label = kwargs.pop('label')
+                super(LabelState, self).__init__(*args, **kwargs)
+
+        class CustomMachine(self.machine_cls):
+            state_cls = LabelState
+
+        m = CustomMachine(states=[{'name': 'A', 'label': 'LabelA'},
+                                  {'name': 'B', 'label': 'NotLabelA'}],
+                          transitions=[{'trigger': 'event', 'source': 'A', 'dest': 'B', 'label': 'LabelEvent'}],
+                          initial='A', use_pygraphviz=self.use_pygraphviz)
+        dot, _, _ = self.parse_dot(m.get_graph())
+        self.assertIn("label=LabelA", dot)
+        self.assertIn("label=NotLabelA", dot)
+        self.assertIn("label=LabelEvent", dot)
+        self.assertNotIn("label=A", dot)
+        self.assertNotIn("label=event", dot)
+
 
 @skipIf(pgv is None, 'Graph diagram test requires graphviz')
 class TestDiagramsLocked(TestDiagrams):
