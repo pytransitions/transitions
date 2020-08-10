@@ -442,9 +442,13 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
         for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    res[key] = await self._trigger_event(_model, _trigger, value, *args, **kwargs)
+                    tmp = await self._trigger_event(_model, _trigger, value, *args, **kwargs)
+                    if tmp is not None:
+                        res[key] = tmp
             if not res.get(key, None) and _trigger in self.events:
-                res[key] = await self.events[_trigger].trigger(_model, self, *args, **kwargs)
+                tmp = await self.events[_trigger].trigger(_model, self, *args, **kwargs)
+                if tmp is not None:
+                    res[key] = tmp
         return None if not res or all([v is None for v in res.values()]) else any(res.values())
 
 

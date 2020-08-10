@@ -86,9 +86,12 @@ class TestNestedLegacy(TestNestedTransitions):
         self.assertEqual(s.state, 'C')
 
     def test_nested_definitions(self):
-        pass
+        pass  # not supported by legacy machine
 
     def test_add_nested_state(self):
+        pass  # not supported by legacy machine
+
+    def test_child_condition_persistence(self):
         pass  # not supported by legacy machine
 
 

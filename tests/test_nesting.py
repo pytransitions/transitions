@@ -472,6 +472,15 @@ class TestNestedTransitions(TestTransitions):
         self.assertTrue(enter_mock.called)
         self.assertFalse(parent_mock.called)
 
+    def test_child_condition_persistence(self):
+        # even though the transition is invalid for the parent it is valid for the nested child state
+        # no invalid transition exception should be thrown
+        machine = self.machine_cls(states=[{'name': 'A', 'children': ['1', '2'], 'initial': '1',
+                                            'transitions': [{'trigger': 'go', 'source': '1', 'dest': '2',
+                                                             'conditions': self.stuff.this_fails}]}, 'B'],
+                                   transitions=[['go', 'B', 'A']], initial='A')
+        self.assertFalse(False, machine.go())
+
 
 class TestSeparatorsBase(TestCase):
 

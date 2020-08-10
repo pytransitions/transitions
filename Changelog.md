@@ -6,6 +6,7 @@
 - Feature: Nested enums can now be passed in a dict as `children` with `initial` parameter
 - Bugfix #449: get_triggers/get_transitions did not return nested triggers correctly (thanks @alexandretanem)
 - Feature #452: Improve handling of label attributes in custom diagram states and `TransitionGraphSupport` (thanks @badiku)
+- Bugfix #456: Prevent parents from overriding (falsy) results of their children's events (thanks @alexandretanem)
 
 ## 0.8.2 (June 2020)
 
