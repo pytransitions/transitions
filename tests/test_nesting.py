@@ -340,6 +340,8 @@ class TestNestedTransitions(TestTransitions):
         states = ['standing', 'walking', {'name': 'caffeinated', 'children': ['dithering', 'running']}]
         transitions = [['walk', 'standing', 'walking'],
                        ['stop', 'walking', 'standing'],
+                       ['drink', 'caffeinated_dithering', '='],
+                       ['drink', 'caffeinated', 'caffeinated_dithering'],
                        ['drink', '*', 'caffeinated'],
                        ['walk', 'caffeinated', 'caffeinated_running'],
                        ['relax', 'caffeinated', 'standing']]
@@ -351,6 +353,10 @@ class TestNestedTransitions(TestTransitions):
         machine.drink()  # coffee time
         machine.state
         self.assertEqual(machine.state, 'caffeinated')
+        machine.drink()  # again!
+        self.assertEqual(machine.state, 'caffeinated_dithering')
+        machine.drink()  # and again!
+        self.assertEqual(machine.state, 'caffeinated_dithering')
         machine.walk()   # we have to go faster
         self.assertEqual(machine.state, 'caffeinated_running')
         machine.stop()   # can't stop moving!

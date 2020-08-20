@@ -231,6 +231,7 @@ class NestedTransition(Transition):
         src_name_path = event_data.source_path
         if src_name_path == dst_name_path:
             root = src_name_path[:-1]  # exit and enter the same state
+            dst_name_path = dst_name_path[-1:]
         else:
             root = []
             while dst_name_path and src_name_path and src_name_path[0] == dst_name_path[0]:
