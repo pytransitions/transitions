@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.8.3
+## 0.8.3 (August 2020)
+
+Release 0.8.3 is a minor release and contains several bugfixes mostly related to `HierarchicalStateMachine`:
 
 - Bugfix: `allow_substates` did not consider enum states
 - Feature: Nested enums can now be passed in a dict as `children` with `initial` parameter
@@ -8,6 +10,7 @@
 - Feature #452: Improve handling of label attributes in custom diagram states and `TransitionGraphSupport` (thanks @badiku)
 - Bugfix #456: Prevent parents from overriding (falsy) results of their children's events (thanks @alexandretanem)
 - Bugfix #458: Entering the same state caused key errors when transition was defined on a parent (thanks @matlom)
+- Bugfix #459: Do not remove current timeout runner in AsyncTimeout to prevent accidental overrides (@thanks @rgov)
 
 ## 0.8.2 (June 2020)
 

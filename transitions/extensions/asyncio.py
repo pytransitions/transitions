@@ -509,7 +509,7 @@ class AsyncTimeout(AsyncState):
 
         """
         timer_task = self.runner.get(id(event_data.model), None)
-        if timer_task is not None:
+        if timer_task is not None and not timer_task.done():
             timer_task.cancel()
         await super().exit(event_data)
 
@@ -535,7 +535,6 @@ class AsyncTimeout(AsyncState):
         _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
         await event_data.machine.callbacks(self.on_timeout, event_data)
         _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
-        self.runner[id(event_data.model)] = None
 
     @property
     def on_timeout(self):
