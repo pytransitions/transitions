@@ -30,13 +30,13 @@ class AsyncState(State):
         """ Triggered when a state is entered. """
         _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
         await event_data.machine.callbacks(self.on_enter, event_data)
-        _LOGGER.info("%sEntered state %s", event_data.machine.name, self.name)
+        _LOGGER.info("%sFinished processing state %s enter callbacks.", event_data.machine.name, self.name)
 
     async def exit(self, event_data):
         """ Triggered when a state is exited. """
         _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
         await event_data.machine.callbacks(self.on_exit, event_data)
-        _LOGGER.info("%sExited state %s", event_data.machine.name, self.name)
+        _LOGGER.info("%sFinished processing state %s exit callbacks.", event_data.machine.name, self.name)
 
 
 class NestedAsyncState(NestedState, AsyncState):

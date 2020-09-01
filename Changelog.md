@@ -10,7 +10,8 @@ Release 0.8.3 is a minor release and contains several bugfixes mostly related to
 - Feature #452: Improve handling of label attributes in custom diagram states and `TransitionGraphSupport` (thanks @badiku)
 - Bugfix #456: Prevent parents from overriding (falsy) results of their children's events (thanks @alexandretanem)
 - Bugfix #458: Entering the same state caused key errors when transition was defined on a parent (thanks @matlom)
-- Bugfix #459: Do not remove current timeout runner in AsyncTimeout to prevent accidental overrides (@thanks @rgov)
+- Bugfix #459: Do not remove current timeout runner in AsyncTimeout to prevent accidental overrides (thanks @rgov)
+- Rewording of `State.enter/exit` debug message emitted when callbacks have been processed. 
 
 ## 0.8.2 (June 2020)
 
