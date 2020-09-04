@@ -335,5 +335,3 @@ class AsyncHierarchicalGraphMachine(TestHierarchicalAsync):
         super(TestHierarchicalAsync, self).setUp()
         self.machine_cls = MachineFactory.get_predefined(graph=True, asyncio=True, nested=True)
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
-
-
