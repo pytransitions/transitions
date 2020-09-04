@@ -250,6 +250,36 @@ class TestAsync(TestTransitions):
             self.assertTrue(timeout_called.called)
         asyncio.run(run())
 
+    def test_callback_order(self):
+        finished = []
+
+        class Model:
+            async def before(self):
+                await asyncio.sleep(0.1)
+                finished.append(2)
+
+            async def after(self):
+                await asyncio.sleep(0.1)
+                finished.append(3)
+
+        async def after_state_change():
+            finished.append(4)
+
+        async def before_state_change():
+            finished.append(1)
+
+        model = Model()
+        m = self.machine_cls(
+            model=model,
+            states=['start', 'end'],
+            after_state_change=after_state_change,
+            before_state_change=before_state_change,
+            initial='start',
+        )
+        m.add_transition('transit', 'start', 'end', after='after', before='before')
+        asyncio.run(model.transit())
+        assert finished == [1, 2, 3, 4]
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class AsyncGraphMachine(TestAsync):
@@ -305,3 +335,5 @@ class AsyncHierarchicalGraphMachine(TestHierarchicalAsync):
         super(TestHierarchicalAsync, self).setUp()
         self.machine_cls = MachineFactory.get_predefined(graph=True, asyncio=True, nested=True)
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
+
+

@@ -15,4 +15,4 @@ class TestCodeFormat(unittest.TestCase):
             style.input_dir('.')
         result = style.check_files()
         self.assertEqual(result.total_errors, 0,
-                         "Found code style errors (and warnings).")
+                         "'Found code style errors (and warnings).")
