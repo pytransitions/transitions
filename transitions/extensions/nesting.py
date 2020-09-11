@@ -662,7 +662,7 @@ class HierarchicalMachine(Machine):
         with self():
             for state_name in args:
                 state_path = state_name.split(self.state_cls.separator)
-                if len(state_path) > 1:  # we only need to check substates when 'state_name' referes to a substate
+                if len(state_path) > 1:  # we only need to check substates when 'state_name' refers to a substate
                     with self(state_path[0]):
                         triggers.extend(self.get_nested_triggers(state_path[1:]))
                 while state_path:  # check all valid transitions for parent states
