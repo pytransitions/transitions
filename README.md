@@ -1059,9 +1059,9 @@ However, classes can also be directly imported from `transitions.extensions`. Th
 | LockedHierarchicalMachine      | ✘        | ✓      | ✓      | ✘ |
 | LockedHierarchicalGraphMachine | ✓        | ✓      | ✓      | ✘ |
 | AsyncMachine                   | ✘        | ✘      | ✘      | ✓ |
-| AsyncGraphMachine              | ✓        | ✘      | ✘      | ✓ |   
-| AsyncHierarchicalMachine       | ✘        | ✓      | ✘      | ✓ |   
-| AsyncHierarchicalGraphMachine  | ✓        | ✓      | ✘      | ✓ | 
+| AsyncGraphMachine              | ✓        | ✘      | ✘      | ✓ |
+| HierarchicalAsyncMachine       | ✘        | ✓      | ✘      | ✓ |
+| HierarchicalAsyncGraphMachine  | ✓        | ✓      | ✘      | ✓ |
 
 To use a feature-rich state machine, one could write:
 
