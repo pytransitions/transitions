@@ -280,6 +280,16 @@ class TestEnumWithGraph(TestEnumsAsStates):
         super(TestEnumWithGraph, self).setUp()
         self.machine_cls = MachineFactory.get_predefined(graph=True)
 
+    def test_get_graph(self):
+        m = self.machine_cls(states=self.States, initial=self.States.GREEN)
+        roi = m.get_graph(show_roi=False)
+        self.assertIsNotNone(roi)
+
+    def test_get_graph_show_roi(self):
+        m = self.machine_cls(states=self.States, initial=self.States.GREEN)
+        roi = m.get_graph(show_roi=True)
+        self.assertIsNotNone(roi)
+
 
 @skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
 class TestNestedStateGraphEnums(TestNestedStateEnums):
