@@ -74,7 +74,9 @@ class Graph(BaseGraph):
         if self.roi_state:
             filtered = self.fsm_graph.copy()
             kept_nodes = set()
-            active_state = self.roi_state if filtered.has_node(self.roi_state) else self.roi_state + '_anchor'
+            active_state = self.roi_state.name if hasattr(self.roi_state, 'name') else self.roi_state
+            if not filtered.has_node(self.roi_state):
+                active_state += '_anchor'
             kept_nodes.add(active_state)
 
             # remove all edges that have no connection to the currently active state
