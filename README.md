@@ -1256,7 +1256,7 @@ If you have a value more than once in a state tree those states cannot be distin
 
 ```python
 states = [States.RED, States.YELLOW, {'name': States.GREEN, 'children': ['tick', 'tock']}]
-states = ['A', {'name': 'B', 'children': States, 'initial': States.GREEN}, States.GREEN]
+states = ['A', {'name': 'B', 'children': states, 'initial': States.GREEN}, States.GREEN]
 machine = HierarchicalMachine(states=states)
 machine.to_B()
 machine.is_GREEN()  # returns True even though the actual state is B_GREEN
