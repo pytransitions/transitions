@@ -787,7 +787,11 @@ class Machine(object):
                         self.add_transition('to_%s' % a_state, state.name, a_state)
 
     def _add_model_to_state(self, state, model):
-        self._checked_assignment(model, 'is_%s' % state.name, partial(self.is_state, state.value, model))
+        if self.model_attribute != 'state':
+            meth_name = 'is_%s_%s' % (self.model_attribute, state.name)
+        else:
+            meth_name = 'is_%s' % state.name
+        self._checked_assignment(model, meth_name, partial(self.is_state, state.value, model))
 
         # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
         # except if they are already mentioned in 'on_enter/exit' of the defined state
