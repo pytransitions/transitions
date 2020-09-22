@@ -1071,25 +1071,31 @@ class TestTransitions(TestCase):
     def test_multiple_machines_per_model(self):
         class Model:
             def __init__(self):
-                self.state_a = None
-                self.state_b = None
+                self.car_state = None
+                self.driver_state = None
 
         instance = Model()
-        machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='state_a')
-        machine_a.add_transition('melt', 'A', 'B')
-        machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='state_b')
-        machine_b.add_transition('freeze', 'B', 'A')
+        machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='car_state')
+        machine_a.add_transition('accelerate_car', 'A', 'B')
+        machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='driver_state')
+        machine_b.add_transition('driving', 'B', 'A')
 
-        self.assertEqual(instance.state_a, 'A')
-        self.assertEqual(instance.state_b, 'B')
+        assert instance.car_state == 'A'
+        assert instance.driver_state == 'B'
+        assert instance.is_car_state_A()
+        assert instance.is_driver_state_B()
 
-        instance.melt()
-        self.assertEqual(instance.state_a, 'B')
-        self.assertEqual(instance.state_b, 'B')
+        instance.accelerate_car()
+        assert instance.car_state == 'B'
+        assert instance.driver_state == 'B'
+        assert not instance.is_car_state_A()
+        assert instance.is_car_state_B()
 
-        instance.freeze()
-        self.assertEqual(instance.state_b, 'A')
-        self.assertEqual(instance.state_a, 'B')
+        instance.driving()
+        assert instance.driver_state == 'A'
+        assert instance.car_state == 'B'
+        assert instance.is_driver_state_A()
+        assert not instance.is_driver_state_B()
 
     def test_initial_not_registered(self):
         m1 = self.machine_cls(states=['A', 'B'], initial=self.machine_cls.state_cls('C'))
