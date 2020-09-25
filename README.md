@@ -347,13 +347,16 @@ machine.get_state(lump.state).name
 >>> 'solid'
 ```
 
-If you'd like you track it using a different attribute, you could do that using the `model_attribute` argument while initializing the `Machine`.
+If you'd like you can choose your own state attribute name by passing the `model_attribute` argument while initializing the `Machine`. This will also change the name of `is_«state name»()` to `is_«model_attribute»_«state name»()` though. This is done to allow multiple machines to work on the same model with individual state attribute names.
 
 ```python
 lump = Matter()
 machine = Machine(lump, states=['solid', 'liquid', 'gas'],  model_attribute='matter_state', initial='solid')
 lump.matter_state
 >>> 'solid'
+# with a custom 'model_attribute', states can also be checked like this:
+lump.is_matter_state_solid()
+>>> True
 ```
 
 #### <a name="enum-state"></a>Enumerations
@@ -963,18 +966,23 @@ machine.add_model(Matter())
 machine.add_model(Matter(), initial='liquid')
 ```
 
-Models with multiple states could attach multiple machines using different `model_attribute` values:
+Models with multiple states could attach multiple machines using different `model_attribute` values. As mentioned in [Checking state](#checking-state), this will add custom `is_<model_attribute>_<state_name>` functions: 
 
 ```python
 lump = Matter()
 
+matter_machine = Machine(lump, states=['solid', 'liquid', 'gas'], initial='solid')
+# add a second machine to the same model but assign a different state attribute
+shipment_machine = Machine(lump, states=['delivered', 'shipping'], initial='delivered', model_attribute='shipping_state')
+
 lump.state
 >>> 'solid'
+lump.is_solid()  # check the default field
+>>> True
 lump.shipping_state
 >>> 'delivered'
-
-matter_machine = Machine(lump, model_attribute='state', **kwargs)
-shipment_machine = Machine(lump, model_attribute='shipping_state', **kwargs)
+lump.is_shipping_state_delivered()  # check the custom field.
+>>> True
 ```
 
 ### Logging

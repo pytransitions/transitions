@@ -14,6 +14,7 @@ Release 0.8.3 is a minor release and contains several bugfixes mostly related to
 - Bugfix #459: Do not remove current timeout runner in AsyncTimeout to prevent accidental overrides (thanks @rgov)
 - Rewording of `State.enter/exit` debug message emitted when callbacks have been processed.
 - Bugfix #370: Fix order of `before_state_change/before` and `after/after_state_change` in `AsyncMachine` (thanks @tzoiker and @vishes-shell)
+- Bugfix #470: `Graph.get_graph()` did not consider `enum` states when `show_roi=True` (thank @termim)
 
 ## 0.8.2 (June 2020)
 
