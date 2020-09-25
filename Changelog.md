@@ -1,9 +1,10 @@
 # Changelog
 
-## 0.8.3 (August 2020)
+## 0.8.3 (September 2020)
 
 Release 0.8.3 is a minor release and contains several bugfixes mostly related to `HierarchicalStateMachine`:
 
+- Feature #473: Assign `is_<model_attribute>_<state_name>` instead of `is_<state_name>` when `model_attribute != "state"` to enable multiple versions of such convenience functions. A warning will be raised when `is_<state_name>` is used. (thanks @artofhuman)
 - Bugfix: `allow_substates` did not consider enum states
 - Feature: Nested enums can now be passed in a dict as `children` with `initial` parameter
 - Bugfix #449: get_triggers/get_transitions did not return nested triggers correctly (thanks @alexandretanem)

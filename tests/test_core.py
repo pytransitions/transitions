@@ -12,6 +12,7 @@ from functools import partial
 from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, _prep_ordered_arg
 from unittest import TestCase, skipIf
+import warnings
 
 try:
     from unittest.mock import MagicMock
@@ -1110,15 +1111,21 @@ class TestTransitions(TestCase):
 
 
 class TestWarnings(TestCase):
-    def test_warning(self):
-        import sys
-        # does not work with python 3.3. However, the warning is shown when Machine is initialized manually.
-        if (3, 3) <= sys.version_info < (3, 4):
-            return
+    def test_multiple_machines_per_model(self):
+        class Model:
+            def __init__(self):
+                self.car_state = None
+                self.driver_state = None
 
-        # with warnings.catch_warnings(record=True) as w:
-        #     warnings.filterwarnings(action='default', message=r".*transitions version.*")
-        #     m = Machine(None)
-        #     self.assertEqual(len(w), 1)
-        #     for warn in w:
-        #         self.assertEqual(warn.category, DeprecationWarning)
+        instance = Model()
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.filterwarnings(action='default', message=r".*transitions version.*", category=DeprecationWarning)
+
+            machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='car_state')
+            machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='driver_state')
+            self.assertEqual(0, len(w))
+            self.assertEqual(True, instance.is_A())
+            self.assertEqual(True, instance.is_A())
+            self.assertEqual(1, len(w))
+            self.assertEqual(w[0].category, DeprecationWarning)

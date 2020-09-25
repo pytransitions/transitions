@@ -2,16 +2,12 @@ from transitions import Transition
 from transitions.extensions.markup import MarkupMachine
 from transitions.core import listify
 
-import warnings
 import logging
 from functools import partial
 import copy
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
-
-# make deprecation warnings of transition visible for module users
-warnings.filterwarnings(action='default', message=r".*transitions version.*")
 
 # this is a workaround for dill issues when partials and super is used in conjunction
 # without it, Python 3.0 - 3.3 will not support pickling

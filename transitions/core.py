@@ -31,9 +31,12 @@ import logging
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
 from six import string_types
+import warnings
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
+
+warnings.filterwarnings(action='default', message=r".*transitions version.*", category=DeprecationWarning)
 
 
 def listify(obj):
@@ -787,11 +790,26 @@ class Machine(object):
                         self.add_transition('to_%s' % a_state, state.name, a_state)
 
     def _add_model_to_state(self, state, model):
-        if self.model_attribute != 'state':
-            meth_name = 'is_%s_%s' % (self.model_attribute, state.name)
-        else:
+        # Add convenience function 'is_<state_name>' (e.g. 'is_A') to the model.
+        # When model_attribute has been customized, add 'is_<model_attribute>_<state_name>' instead
+        # to potentially support multiple states on one model (e.g. 'is_custom_state_A' and 'is_my_state_B').
+
+        func = partial(self.is_state, state.value, model)
+        if self.model_attribute == 'state':
             meth_name = 'is_%s' % state.name
-        self._checked_assignment(model, meth_name, partial(self.is_state, state.value, model))
+        else:
+            meth_name = 'is_%s_%s' % (self.model_attribute, state.name)
+
+            # TODO: Remove in 0.9.0
+            def _warning_wrapper(*args, **kwargs):
+                warnings.warn("Starting from transitions version 0.8.3, 'is_<state_name>' convenience functions will be"
+                              " assigned to 'is_<model_attribute>_<state_name>' when 'model_attribute "
+                              "!= \"state\"'. In 0.9.0, 'is_<state_name>' will NOT be assigned anymore when "
+                              "'model_attribute != \"state\"'! Please adjust your code and use "
+                              "'{0}' instead.".format(meth_name), DeprecationWarning)
+                return func(*args, **kwargs)
+            self._checked_assignment(model, 'is_%s' % state.name, _warning_wrapper)
+        self._checked_assignment(model, meth_name, func)
 
         # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
         # except if they are already mentioned in 'on_enter/exit' of the defined state
