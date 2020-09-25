@@ -1335,7 +1335,7 @@ assert m.is_B(allow_substates=True)
 
 Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
 Before *0.8.0*, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
-However, since *0.8.0* states are just **referenced** which means changes in one machine's states will influence the other instance.
+However, since *0.8.0* `(Nested)State` instances are just **referenced** which means changes in one machine's collection of states and events will influence the other machine instance. Models and their state will not be shared though.
 Note that events and transitions are also copied by reference and will be shared by both instances if you do not use the `remap` keyword.
 
 ```python
