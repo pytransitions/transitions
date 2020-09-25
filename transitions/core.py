@@ -784,10 +784,23 @@ class Machine(object):
                 for a_state in self.states.keys():
                     # add all states as sources to auto transitions 'to_<state>' with dest <state>
                     if a_state == state.name:
-                        self.add_transition('to_%s' % a_state, self.wildcard_all, a_state)
+                        if self.model_attribute == 'state':
+                            method_name = 'to_%s' % a_state
+                        else:
+                            method_name = 'to_%s_%s' % (self.model_attribute, a_state)
+                            self.add_transition('to_%s' % a_state, self.wildcard_all, a_state,
+                                                prepare=partial(_warning_wrapper_to, 'to_%s' % a_state))
+                        self.add_transition(method_name, self.wildcard_all, a_state)
+
                     # add auto transition with source <state> to <a_state>
                     else:
-                        self.add_transition('to_%s' % a_state, state.name, a_state)
+                        if self.model_attribute == 'state':
+                            method_name = 'to_%s' % a_state
+                        else:
+                            method_name = 'to_%s_%s' % (self.model_attribute, a_state)
+                            self.add_transition('to_%s' % a_state, state.name, a_state,
+                                                prepare=partial(_warning_wrapper_to, 'to_%s' % a_state))
+                        self.add_transition(method_name, state.name, a_state)
 
     def _add_model_to_state(self, state, model):
         # Add convenience function 'is_<state_name>' (e.g. 'is_A') to the model.
@@ -796,20 +809,11 @@ class Machine(object):
 
         func = partial(self.is_state, state.value, model)
         if self.model_attribute == 'state':
-            meth_name = 'is_%s' % state.name
+            method_name = 'is_%s' % state.name
         else:
-            meth_name = 'is_%s_%s' % (self.model_attribute, state.name)
-
-            # TODO: Remove in 0.9.0
-            def _warning_wrapper(*args, **kwargs):
-                warnings.warn("Starting from transitions version 0.8.3, 'is_<state_name>' convenience functions will be"
-                              " assigned to 'is_<model_attribute>_<state_name>' when 'model_attribute "
-                              "!= \"state\"'. In 0.9.0, 'is_<state_name>' will NOT be assigned anymore when "
-                              "'model_attribute != \"state\"'! Please adjust your code and use "
-                              "'{0}' instead.".format(meth_name), DeprecationWarning)
-                return func(*args, **kwargs)
-            self._checked_assignment(model, 'is_%s' % state.name, _warning_wrapper)
-        self._checked_assignment(model, meth_name, func)
+            method_name = 'is_%s_%s' % (self.model_attribute, state.name)
+            self._checked_assignment(model, 'is_%s' % state.name, partial(_warning_wrapper_is, method_name, func))
+        self._checked_assignment(model, method_name, func)
 
         # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
         # except if they are already mentioned in 'on_enter/exit' of the defined state
@@ -1215,3 +1219,21 @@ class MachineError(Exception):
 
     def __str__(self):
         return repr(self.value)
+
+
+# TODO: Remove in 0.9.0
+def _warning_wrapper_is(meth_name, func, *args, **kwargs):
+    warnings.warn("Starting from transitions version 0.8.3, 'is_<state_name>' convenience functions will be"
+                  " assigned to 'is_<model_attribute>_<state_name>' when 'model_attribute "
+                  "!= \"state\"'. In 0.9.0, 'is_<state_name>' will NOT be assigned anymore when "
+                  "'model_attribute != \"state\"'! Please adjust your code and use "
+                  "'{0}' instead.".format(meth_name), DeprecationWarning)
+    return func(*args, **kwargs)
+
+
+def _warning_wrapper_to(meth_name, *args, **kwargs):
+    warnings.warn("Starting from transitions version 0.8.3, 'to_<state_name>' convenience functions will be"
+                  " assigned to 'to_<model_attribute>_<state_name>' when 'model_attribute "
+                  "!= \"state\"'. In 0.9.0, 'to_<state_name>' will NOT be assigned anymore when "
+                  "'model_attribute != \"state\"'! Please adjust your code and use "
+                  "'{0}' instead.".format(meth_name), DeprecationWarning)

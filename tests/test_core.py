@@ -1097,6 +1097,8 @@ class TestTransitions(TestCase):
         assert instance.car_state == 'B'
         assert instance.is_driver_state_A()
         assert not instance.is_driver_state_B()
+        assert instance.to_driver_state_B()
+        assert instance.driver_state == 'B'
 
     def test_initial_not_registered(self):
         m1 = self.machine_cls(states=['A', 'B'], initial=self.machine_cls.state_cls('C'))
@@ -1125,7 +1127,12 @@ class TestWarnings(TestCase):
             machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='car_state')
             machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='driver_state')
             self.assertEqual(0, len(w))
-            self.assertEqual(True, instance.is_A())
-            self.assertEqual(True, instance.is_A())
+            self.assertTrue(instance.is_A())
+            self.assertTrue(instance.is_A())
             self.assertEqual(1, len(w))
             self.assertEqual(w[0].category, DeprecationWarning)
+            instance.to_B()
+            self.assertEqual('B', instance.car_state)
+            self.assertFalse(instance.is_A())
+            self.assertEqual(2, len(w))
+            self.assertEqual(w[1].category, DeprecationWarning)

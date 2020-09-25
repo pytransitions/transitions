@@ -347,7 +347,7 @@ machine.get_state(lump.state).name
 >>> 'solid'
 ```
 
-If you'd like you can choose your own state attribute name by passing the `model_attribute` argument while initializing the `Machine`. This will also change the name of `is_«state name»()` to `is_«model_attribute»_«state name»()` though. This is done to allow multiple machines to work on the same model with individual state attribute names.
+If you'd like you can choose your own state attribute name by passing the `model_attribute` argument while initializing the `Machine`. This will also change the name of `is_«state name»()` to `is_«model_attribute»_«state name»()` though. Similarly, auto transitions will be named `to_«model_attribute»_«state name»()` instead of `to_«state name»()`. This is done to allow multiple machines to work on the same model with individual state attribute names.
 
 ```python
 lump = Matter()
@@ -356,6 +356,8 @@ lump.matter_state
 >>> 'solid'
 # with a custom 'model_attribute', states can also be checked like this:
 lump.is_matter_state_solid()
+>>> True
+lump.to_matter_state_gas()
 >>> True
 ```
 
@@ -966,7 +968,7 @@ machine.add_model(Matter())
 machine.add_model(Matter(), initial='liquid')
 ```
 
-Models with multiple states could attach multiple machines using different `model_attribute` values. As mentioned in [Checking state](#checking-state), this will add custom `is_<model_attribute>_<state_name>` functions: 
+Models with multiple states could attach multiple machines using different `model_attribute` values. As mentioned in [Checking state](#checking-state), this will add custom `is/to_<model_attribute>_<state_name>` functions: 
 
 ```python
 lump = Matter()
@@ -983,6 +985,10 @@ lump.shipping_state
 >>> 'delivered'
 lump.is_shipping_state_delivered()  # check the custom field.
 >>> True
+lump.to_shipping_state_shipping()
+>>> True
+lump.is_shipping_state_delivered()
+>>> False
 ```
 
 ### Logging
