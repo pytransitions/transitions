@@ -303,6 +303,7 @@ class AsyncMachine(Machine):
     transition_cls = AsyncTransition
     event_cls = AsyncEvent
     async_tasks = {}
+    protected_tasks = []
     current_context = contextvars.ContextVar('current_context', default=None)
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
@@ -358,12 +359,16 @@ class AsyncMachine(Machine):
         Args:
             model (object): The currently processed model
         """
-        running_task = self.async_tasks.get(model, None)
-        if self.current_context.get() != running_task:
-            if running_task is not None and running_task.done() is False:
+        new_tasks = [self.current_context.get()]
+        for running_task in self.async_tasks.get(model, []):
+            if self.current_context.get() == running_task:
+                continue
+            elif running_task in self.protected_tasks:
+                new_tasks.append(running_task)
+            elif running_task.done() is False:
                 _LOGGER.debug("Cancel running tasks...")
                 running_task.cancel()
-            self.async_tasks[model] = self.current_context.get()
+        self.async_tasks[model] = new_tasks
 
     async def process_context(self, func, model):
         """
