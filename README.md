@@ -1638,12 +1638,14 @@ class TimeoutMachine(AsyncMachine):
     pass
 
 states = ['A', {'name': 'B', 'timeout': 0.2, 'on_timeout': 'to_C'}, 'C']
-m = TimeoutMachine(states=states, initial='A')
+m = TimeoutMachine(states=states, initial='A', queued=True)  # see remark below
 asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.1)]))
 assert m.is_B()  # timeout shouldn't be triggered
 asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.3)]))
 assert m.is_C()   # now timeout should have been processed
 ```
+
+You should consider passing `queued=True` to the `TimeoutMachine` constructor. This will make sure that events are processed sequentially and avoid asynchronous [racing conditions](https://github.com/pytransitions/transitions/issues/459) that may appear when timeout and event happen in close proximity.
 
 #### <a name="django-support"></a> Using transitions together with Django
 
