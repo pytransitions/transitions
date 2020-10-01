@@ -359,16 +359,12 @@ class AsyncMachine(Machine):
         Args:
             model (object): The currently processed model
         """
-        new_tasks = [self.current_context.get()]
         for running_task in self.async_tasks.get(model, []):
-            if self.current_context.get() == running_task:
+            if self.current_context.get() == running_task or running_task in self.protected_tasks:
                 continue
-            elif running_task in self.protected_tasks:
-                new_tasks.append(running_task)
             elif running_task.done() is False:
                 _LOGGER.debug("Cancel running tasks...")
                 running_task.cancel()
-        self.async_tasks[model] = new_tasks
 
     async def process_context(self, func, model):
         """
@@ -383,11 +379,21 @@ class AsyncMachine(Machine):
         """
         if self.current_context.get() is None:
             self.current_context.set(asyncio.current_task())
+            if model in self.async_tasks:
+                self.async_tasks[model].append(asyncio.current_task())
+            else:
+                self.async_tasks[model] = [asyncio.current_task()]
             try:
-                return await self._process(func)
+                res = await self._process(func)
             except asyncio.CancelledError:
-                return False
-        return await self._process(func)
+                res = False
+            finally:
+                self.async_tasks[model].remove(asyncio.current_task())
+                if len(self.async_tasks[model]) == 0:
+                    del self.async_tasks[model]
+        else:
+            res = await self._process(func)
+        return res
 
     async def _process(self, trigger):
         # default processing

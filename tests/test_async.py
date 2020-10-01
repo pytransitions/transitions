@@ -280,6 +280,19 @@ class TestAsync(TestTransitions):
         asyncio.run(model.transit())
         assert finished == [1, 2, 3, 4]
 
+    def test_task_cleanup(self):
+
+        models = [DummyModel() for i in range(100)]
+        m = self.machine_cls(model=models, states=['A', 'B'], initial='A')
+        self.assertEqual(0, len(m.async_tasks))  # check whether other tests were already leaking tasks
+
+        async def run():
+            for model in m.models:
+                await model.to_B()
+
+        asyncio.run(run())
+        self.assertEqual(0, len(m.async_tasks))
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class AsyncGraphMachine(TestAsync):
