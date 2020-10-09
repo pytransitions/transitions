@@ -121,8 +121,21 @@ class TestParallel(TestNested):
         self.assertEqual([['B{0}1{0}a{0}z'.format(State.separator),
                            'B{0}1{0}b{0}y'.format(State.separator)],
                           'B{0}2{0}a'.format(State.separator)], m.state)
+
+        # check whether we can initialize a new machine in a parallel state
+        m2 = self.machine_cls(states=states, initial=m.state)
+        self.assertEqual([['B{0}1{0}a{0}z'.format(State.separator),
+                           'B{0}1{0}b{0}y'.format(State.separator)],
+                          'B{0}2{0}a'.format(State.separator)], m2.state)
         m.to_A()
         self.assertEqual('A', m.state)
+        m2.to_A()
+        self.assertEqual(m.state, m2.state)
+
+    def test_deep_initial(self):
+        m = self.machine_cls(initial=['A', 'B{0}2{0}a'.format(State.separator)])
+        m.to_B()
+        self.assertEqual('B', m.state)
 
     def test_multiple_deeper(self):
         sep = self.state_cls.separator

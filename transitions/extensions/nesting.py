@@ -247,9 +247,7 @@ class NestedTransition(Transition):
         else:
             new_states, enter_partials = {}, []
 
-        for key in scoped_tree:
-            del scoped_tree[key]
-
+        scoped_tree.clear()
         for new_key, value in new_states.items():
             scoped_tree[new_key] = value
             break
@@ -370,7 +368,12 @@ class HierarchicalMachine(Machine):
         initial_name = getattr(models[0], self.model_attribute)
         if hasattr(initial_name, 'name'):
             initial_name = initial_name.name
-        initial_states = self._resolve_initial(models, initial_name.split(self.state_cls.separator))
+        # initial states set by add_model or machine might contain initial states themselves.
+        if isinstance(initial_name, string_types):
+            initial_states = self._resolve_initial(models, initial_name.split(self.state_cls.separator))
+        # when initial is set to a (parallel) state, we accept it as it is
+        else:
+            initial_states = initial_name
         for mod in models:
             self.set_state(initial_states, mod)
             if hasattr(mod, 'to'):
@@ -379,6 +382,15 @@ class HierarchicalMachine(Machine):
             else:
                 to_func = partial(self.to_state, mod)
                 setattr(mod, 'to', to_func)
+
+    @property
+    def initial(self):
+        """ Return the initial state. """
+        return self._initial
+
+    @initial.setter
+    def initial(self, value):
+        self._initial = self._recursive_initial(value)
 
     def add_ordered_transitions(self, states=None, trigger='next_state',
                                 loop=True, loop_includes_initial=True,
@@ -875,6 +887,24 @@ class HierarchicalMachine(Machine):
         with self(state.name):
             for substate in self.states.values():
                 self._init_state(substate)
+
+    def _recursive_initial(self, value):
+        if isinstance(value, string_types):
+            path = value.split(self.state_cls.separator, 1)
+            if len(path) > 1:
+                state_name, suffix = path
+                # make sure the passed state has been created already
+                _super(HierarchicalMachine, self.__class__).initial.fset(self, state_name)
+                with self(state_name):
+                    self.initial = suffix
+                    self._initial = state_name + self.state_cls.separator + self._initial
+            else:
+                _super(HierarchicalMachine, self.__class__).initial.fset(self, value)
+        elif isinstance(value, (list, tuple)):
+            return [self._recursive_initial(v) for v in value]
+        else:
+            _super(HierarchicalMachine, self.__class__).initial.fset(self, value)
+        return self._initial[0] if isinstance(self._initial, list) and len(self._initial) == 1 else self._initial
 
     def _resolve_initial(self, models, state_name_path, prefix=[]):
         if state_name_path:

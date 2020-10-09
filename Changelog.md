@@ -5,6 +5,7 @@
 - Bugfix #477: Model callbacks were not added to a LockedHierarchicalMachine when the machine itself served as a model (thanks @oliver-goetz)
 - Bugfix #475: Clear collection of tasks to prevent memory leak when initializing many models (thanks @h-nakai)
 - Feature #474: Added static `AsyncMachine.protected_tasks` list which can be used to prevent `transitions` to cancel certain tasks.
+- Feature: Constructor of `HierarchicalMachine` now accepts substates ('A_1_c') and parallel states (['A', 'B']) as `initial` parameter
 
 ## 0.8.3 (September 2020)
 

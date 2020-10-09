@@ -404,6 +404,8 @@ class TestNestedTransitions(TestTransitions):
         self.assertTrue(m.is_B(allow_substates=True))
         m.do()
         self.assertEqual(m.state, 'B{0}1'.format(separator))
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='B{0}2{0}b'.format(separator))
+        self.assertTrue('B{0}2{0}b'.format(separator), m.state)
 
     def test_get_triggers(self):
         seperator = self.state_cls.separator
