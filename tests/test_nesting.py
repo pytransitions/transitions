@@ -456,7 +456,7 @@ class TestNestedTransitions(TestTransitions):
         exit_mock = MagicMock()
         enter_mock = MagicMock()
 
-        class Model():
+        class Model:
 
             def on_exit_A(self):
                 parent_mock()
@@ -474,6 +474,31 @@ class TestNestedTransitions(TestTransitions):
         model.enter()
         self.assertFalse(parent_mock.called)
         model.go()
+        self.assertTrue(exit_mock.called)
+        self.assertTrue(enter_mock.called)
+        self.assertFalse(parent_mock.called)
+
+    def test_trigger_parent_model_self(self):
+        parent_mock = MagicMock()
+        exit_mock = MagicMock()
+        enter_mock = MagicMock()
+
+        class CustomMachine(self.machine_cls):
+
+            def on_exit_A(self):
+                parent_mock()
+
+            def on_exit_A_1(self):
+                exit_mock()
+
+            def on_enter_A_2(self):
+                enter_mock()
+
+        machine = CustomMachine(states=[{'name': 'A', 'children': ['1', '2']}],
+                                transitions=[['go', 'A', 'A_2'], ['enter', 'A', 'A_1']], initial='A')
+        machine.enter()
+        self.assertFalse(parent_mock.called)
+        machine.go()
         self.assertTrue(exit_mock.called)
         self.assertTrue(enter_mock.called)
         self.assertFalse(parent_mock.called)

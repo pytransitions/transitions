@@ -79,6 +79,9 @@ class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
 
     event_cls = NestedEvent
 
+    def _get_qualified_state_name(self, state):
+        return self.get_global_name(state.name)
+
 
 class LockedGraphMachine(GraphMachine, LockedMachine):
     """
@@ -87,7 +90,7 @@ class LockedGraphMachine(GraphMachine, LockedMachine):
     pass
 
 
-class LockedHierarchicalGraphMachine(GraphMachine, LockedMachine, HierarchicalMarkupMachine):
+class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):
     """
         A threadsafe hierarchical machine with graph support.
     """
