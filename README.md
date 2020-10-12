@@ -1190,6 +1190,7 @@ transitions = [
 ]
 # ...
 ```
+The `initial` keyword of the `HierarchicalMachine` constructor accepts nested states (e.g. `initial='caffeinated_running'`) and a list of states which is considered to be a parallel state (e.g. `initial=['A', 'B']`) or the current state of another model (`initial=model.state`) which should be effectively one of the previous mentioned options. Note that when passing a string, `transition` will check the targeted state for `initial` substates and use this as an entry state. This will be done recursively until a substate does not mention an initial state. Parallel states or a state passed as a list will be used 'as is' and no further initial evaluation will be conducted. 
 
 Note that your previously created state object *must be* a `NestedState` or a derived class of it.
 The standard `State` class used in simple `Machine` instances lacks features required for nesting.

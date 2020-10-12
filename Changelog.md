@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.8.4 ()
+## 0.8.4 (October 2020)
+
+Release 0.8.4 is a minor release and contains bugfixes as well as new features:
 
 - Bugfix #477: Model callbacks were not added to a LockedHierarchicalMachine when the machine itself served as a model (thanks @oliver-goetz)
 - Bugfix #475: Clear collection of tasks to prevent memory leak when initializing many models (thanks @h-nakai)
