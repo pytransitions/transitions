@@ -120,7 +120,7 @@ class AsyncTransition(Transition):
 
         machine = event_data.machine
         # cancel running tasks since the transition will happen
-        machine.switch_model_context(event_data.model)
+        await machine.switch_model_context(event_data.model)
 
         await event_data.machine.callbacks(event_data.machine.before_state_change, event_data)
         await event_data.machine.callbacks(self.before, event_data)
@@ -352,7 +352,7 @@ class AsyncMachine(Machine):
         """
         return await asyncio.gather(*[func() for func in callables])
 
-    def switch_model_context(self, model):
+    async def switch_model_context(self, model):
         """
         This method is called by an `AsyncTransition` when all conditional tests have passed and the transition will happen.
         This requires already running tasks to be cancelled.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.5 ()
+
+- `AsyncMachine.switch_model_context` is expected to be `async` now for easier integration of async code during model switch.
+
 ## 0.8.4 (October 2020)
 
 Release 0.8.4 is a minor release and contains bugfixes as well as new features:
