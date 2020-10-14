@@ -185,8 +185,8 @@ class GraphMachine(MarkupMachine):
             grph = self.graph_cls(self, title=title if title is not None else self.title)
             self.model_graphs[model] = grph
             try:
-                state = getattr(model, self.model_attribute)
-                self.model_graphs[model].set_node_style(state.name if hasattr(state, 'name') else state, 'active')
+                for state in _flatten(listify(getattr(model, self.model_attribute))):
+                    grph.set_node_style(self.dest if hasattr(state, 'name') else state, 'active')
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:

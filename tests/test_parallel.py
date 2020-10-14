@@ -6,6 +6,7 @@ except ImportError:
 from collections import OrderedDict
 
 from transitions.extensions.nesting import NestedState as State, _build_state_list
+from transitions.extensions import HierarchicalGraphMachine
 from .test_nesting import TestNestedTransitions as TestNested
 
 try:
@@ -137,6 +138,10 @@ class TestParallel(TestNested):
         m.to_B()
         self.assertEqual('B', m.state)
 
+    def test_parallel_initial(self):
+        m = self.machine_cls(states=['A', 'B', {'name': 'C', 'parallel': ['1', '2']}], initial='C')
+        m = self.machine_cls(states=['A', 'B', {'name': 'C', 'parallel': ['1', '2']}], initial=['C_1', 'C_2'])
+
     def test_multiple_deeper(self):
         sep = self.state_cls.separator
         states = ['A',
@@ -186,3 +191,29 @@ class TestParallel(TestNested):
         m = self.machine_cls()
         self.assertEqual(tree, m._build_state_tree(states, sep))
         self.assertEqual(states, _build_state_list(tree, sep))
+
+
+class TestParallelWithPyGraphviz(TestParallel):
+
+    def setUp(self):
+        class PGVMachine(HierarchicalGraphMachine):
+
+            def __init__(self, *args, **kwargs):
+                kwargs['use_pygraphviz'] = True
+                super(PGVMachine, self).__init__(*args, **kwargs)
+
+        super(TestParallelWithPyGraphviz, self).setUp()
+        self.machine_cls = PGVMachine
+
+
+class TestParallelWithGraphviz(TestParallel):
+
+    def setUp(self):
+        class GVMachine(HierarchicalGraphMachine):
+
+            def __init__(self, *args, **kwargs):
+                kwargs['use_pygraphviz'] = False
+                super(GVMachine, self).__init__(*args, **kwargs)
+
+        super(TestParallelWithGraphviz, self).setUp()
+        self.machine_cls = GVMachine
