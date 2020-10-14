@@ -8,6 +8,9 @@ from collections import OrderedDict
 from transitions.extensions.nesting import NestedState as State, _build_state_list
 from transitions.extensions import HierarchicalGraphMachine
 from .test_nesting import TestNestedTransitions as TestNested
+from .test_pygraphviz import pgv
+from .test_graphviz import pgv as gv
+from unittest import skipIf
 
 try:
     from unittest.mock import MagicMock
@@ -193,6 +196,7 @@ class TestParallel(TestNested):
         self.assertEqual(states, _build_state_list(tree, sep))
 
 
+@skipIf(pgv is None, "pygraphviz is not available")
 class TestParallelWithPyGraphviz(TestParallel):
 
     def setUp(self):
@@ -206,6 +210,7 @@ class TestParallelWithPyGraphviz(TestParallel):
         self.machine_cls = PGVMachine
 
 
+@skipIf(gv is None, "graphviz is not available")
 class TestParallelWithGraphviz(TestParallel):
 
     def setUp(self):
