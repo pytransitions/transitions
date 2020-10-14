@@ -63,16 +63,23 @@ class GraphMachine(MarkupMachine):
         'node': {
             '': {},
             'default': {
-                'shape': 'rectangle',
                 'style': 'rounded, filled',
+                'shape': 'rectangle',
+                'fillcolor': 'white',
+                'color': 'black',
+                'peripheries': '1'
+            },
+            'inactive': {
                 'fillcolor': 'white',
                 'color': 'black',
                 'peripheries': '1'
             },
             'parallel': {
+                'shape': 'rectangle',
                 'color': 'black',
                 'fillcolor': 'white',
-                'style': 'dashed, rounded, filled'
+                'style': 'dashed, rounded, filled',
+                'peripheries': '1'
             },
             'active': {
                 'color': 'red',

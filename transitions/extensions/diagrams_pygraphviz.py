@@ -125,7 +125,7 @@ class Graph(BaseGraph):
             edge.attr.update(style_attr)
         for node in self.fsm_graph.nodes_iter():
             if 'point' not in node.attr['shape']:
-                style_attr = self.fsm_graph.style_attributes.get('node', {}).get('default')
+                style_attr = self.fsm_graph.style_attributes.get('node', {}).get('inactive')
                 node.attr.update(style_attr)
         for sub_graph in self.fsm_graph.subgraphs_iter():
             style_attr = self.fsm_graph.style_attributes.get('graph', {}).get('default')
