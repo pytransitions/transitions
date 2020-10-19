@@ -664,7 +664,7 @@ class HierarchicalMachine(Machine):
                 while source_path:
                     transitions.extend(self.get_nested_transitions(trigger, source_path, dest_path))
                     source_path.pop()
-                    return transitions
+                return transitions
             else:
                 return self.get_nested_transitions(trigger, None, dest_path)
 
