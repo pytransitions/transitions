@@ -425,6 +425,29 @@ class TestNestedTransitions(TestTransitions):
         self.assertEqual(len(trans), 3)
         self.assertTrue('relax' in trans)
 
+    def test_get_nested_transitions(self):
+        seperator = self.state_cls.separator
+        states = ['A', {'name': 'B', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b'],
+                                                             'transitions': [['inner', 'a', 'b'],
+                                                                             ['inner', 'b', 'a']]}],
+                        'transitions': [['mid', '1', '1'],
+                                        ['mid', '2', '3'],
+                                        ['mid', '3', '1'],
+                                        ['mid2', '2', '3'],
+                                        ['mid_loop', '1', '1']]}]
+        transitions = [['outer', 'A', 'B'],
+                       ['outer', ['A', 'B'], 'C']]
+        machine = self.stuff.machine_cls(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        self.assertEqual(10, len(machine.get_transitions()))
+        self.assertEqual(2, len(machine.get_transitions(source='A')))
+        self.assertEqual(2, len(machine.get_transitions('inner')))
+        self.assertEqual(3, len(machine.get_transitions('mid')))
+        self.assertEqual(3, len(machine.get_transitions(dest='B{0}1'.format(seperator))))
+        self.assertEqual(2, len(machine.get_transitions(source='B{0}2'.format(seperator),
+                                                        dest='B{0}3'.format(seperator))))
+        self.assertEqual(1, len(machine.get_transitions(source='B{0}3{0}a'.format(seperator),
+                                                        dest='B{0}3{0}b'.format(seperator))))
+
     def test_internal_transitions(self):
         s = self.stuff
         s.machine.add_transition('internal', 'A', None, prepare='increase_level')

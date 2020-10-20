@@ -94,6 +94,9 @@ class TestNestedLegacy(TestNestedTransitions):
     def test_child_condition_persistence(self):
         pass  # not supported by legacy machine
 
+    def test_get_nested_transitions(self):
+        pass  # not supported by legacy machine
+
 
 class TestReuseLegacySeparatorDefault(TestReuseSeparatorBase):
 

@@ -659,14 +659,7 @@ class HierarchicalMachine(Machine):
         with self():
             source_path = [] if source == "*" else source.split(self.state_cls.separator)
             dest_path = [] if dest == "*" else dest.split(self.state_cls.separator)
-            if source_path:
-                transitions = []
-                while source_path:
-                    transitions.extend(self.get_nested_transitions(trigger, source_path, dest_path))
-                    source_path.pop()
-                    return transitions
-            else:
-                return self.get_nested_transitions(trigger, None, dest_path)
+            return self.get_nested_transitions(trigger, source_path, dest_path)
 
     def get_triggers(self, *args):
         """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """
