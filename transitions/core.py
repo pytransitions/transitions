@@ -836,7 +836,6 @@ class Machine(object):
         """Convenience function added to the model to trigger events by name.
         Args:
             model (object): Model with assigned event trigger.
-            machine (Machine): The machine containing the evaluated events.
             trigger_name (str): Name of the trigger to be called.
             *args: Variable length argument list which is passed to the triggered event.
             **kwargs: Arbitrary keyword arguments which is passed to the triggered event.
