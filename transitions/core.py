@@ -31,9 +31,12 @@ import logging
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
 from six import string_types
+import warnings
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
+
+warnings.filterwarnings(action='default', message=r".*transitions version.*", category=DeprecationWarning)
 
 
 def listify(obj):
@@ -134,13 +137,13 @@ class State(object):
         """ Triggered when a state is entered. """
         _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
         event_data.machine.callbacks(self.on_enter, event_data)
-        _LOGGER.info("%sEntered state %s", event_data.machine.name, self.name)
+        _LOGGER.info("%sFinished processing state %s enter callbacks.", event_data.machine.name, self.name)
 
     def exit(self, event_data):
         """ Triggered when a state is exited. """
         _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
         event_data.machine.callbacks(self.on_exit, event_data)
-        _LOGGER.info("%sExited state %s", event_data.machine.name, self.name)
+        _LOGGER.info("%sFinished processing state %s exit callbacks.", event_data.machine.name, self.name)
 
     def add_callback(self, trigger, func):
         """ Add a new enter or exit callback.
@@ -796,13 +799,36 @@ class Machine(object):
                 for a_state in self.states.keys():
                     # add all states as sources to auto transitions 'to_<state>' with dest <state>
                     if a_state == state.name:
-                        self.add_transition('to_%s' % a_state, self.wildcard_all, a_state)
+                        if self.model_attribute == 'state':
+                            method_name = 'to_%s' % a_state
+                        else:
+                            method_name = 'to_%s_%s' % (self.model_attribute, a_state)
+                            self.add_transition('to_%s' % a_state, self.wildcard_all, a_state,
+                                                prepare=partial(_warning_wrapper_to, 'to_%s' % a_state))
+                        self.add_transition(method_name, self.wildcard_all, a_state)
+
                     # add auto transition with source <state> to <a_state>
                     else:
-                        self.add_transition('to_%s' % a_state, state.name, a_state)
+                        if self.model_attribute == 'state':
+                            method_name = 'to_%s' % a_state
+                        else:
+                            method_name = 'to_%s_%s' % (self.model_attribute, a_state)
+                            self.add_transition('to_%s' % a_state, state.name, a_state,
+                                                prepare=partial(_warning_wrapper_to, 'to_%s' % a_state))
+                        self.add_transition(method_name, state.name, a_state)
 
     def _add_model_to_state(self, state, model):
-        self._checked_assignment(model, 'is_%s' % state.name, partial(self.is_state, state.value, model))
+        # Add convenience function 'is_<state_name>' (e.g. 'is_A') to the model.
+        # When model_attribute has been customized, add 'is_<model_attribute>_<state_name>' instead
+        # to potentially support multiple states on one model (e.g. 'is_custom_state_A' and 'is_my_state_B').
+
+        func = partial(self.is_state, state.value, model)
+        if self.model_attribute == 'state':
+            method_name = 'is_%s' % state.name
+        else:
+            method_name = 'is_%s_%s' % (self.model_attribute, state.name)
+            self._checked_assignment(model, 'is_%s' % state.name, partial(_warning_wrapper_is, method_name, func))
+        self._checked_assignment(model, method_name, func)
 
         # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
         # except if they are already mentioned in 'on_enter/exit' of the defined state
@@ -825,7 +851,6 @@ class Machine(object):
         """Convenience function added to the model to trigger events by name.
         Args:
             model (object): Model with assigned event trigger.
-            machine (Machine): The machine containing the evaluated events.
             trigger_name (str): Name of the trigger to be called.
             *args: Variable length argument list which is passed to the triggered event.
             **kwargs: Arbitrary keyword arguments which is passed to the triggered event.
@@ -835,7 +860,12 @@ class Machine(object):
         try:
             event = self.events[trigger_name]
         except KeyError:
-            raise AttributeError("Do not know event named '%s'." % trigger_name)
+            state = self.get_model_state(model)
+            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
+                else self.ignore_invalid_triggers
+            if not ignore:
+                raise AttributeError("Do not know event named '%s'." % trigger_name)
+            return False
         return event.trigger(model, *args, **kwargs)
 
     def get_triggers(self, *args):
@@ -897,7 +927,7 @@ class Machine(object):
         for state in source:
             if dest == self.wildcard_same:
                 _dest = state
-            elif dest:
+            elif dest is not None:
                 if isinstance(dest, State):
                     _ = self._has_state(dest, raise_error=True)
                 _dest = dest.name if hasattr(dest, 'name') else dest
@@ -998,11 +1028,14 @@ class Machine(object):
         """ Return the transitions from the Machine.
         Args:
             trigger (str): Trigger name of the transition.
-            source (str): Limits removal to transitions from a certain state.
-            dest (str): Limits removal to transitions to a certain state.
+            source (str): Limits list to transitions from a certain state.
+            dest (str): Limits list to transitions to a certain state.
         """
         if trigger:
-            events = (self.events[trigger], )
+            try:
+                events = (self.events[trigger], )
+            except KeyError:
+                return []
         else:
             events = self.events.values()
         transitions = []
@@ -1182,8 +1215,11 @@ class Machine(object):
                 state = self.get_state(target)
                 return partial(state.add_callback, callback_type[3:])
 
-        # Nothing matched
-        raise AttributeError("'{}' does not exist on <Machine@{}>".format(name, id(self)))
+        try:
+            return self.__getattribute__(name)
+        except AttributeError:
+            # Nothing matched
+            raise AttributeError("'{}' does not exist on <Machine@{}>".format(name, id(self)))
 
 
 class MachineError(Exception):
@@ -1197,3 +1233,21 @@ class MachineError(Exception):
 
     def __str__(self):
         return repr(self.value)
+
+
+# TODO: Remove in 0.9.0
+def _warning_wrapper_is(meth_name, func, *args, **kwargs):
+    warnings.warn("Starting from transitions version 0.8.3, 'is_<state_name>' convenience functions will be"
+                  " assigned to 'is_<model_attribute>_<state_name>' when 'model_attribute "
+                  "!= \"state\"'. In 0.9.0, 'is_<state_name>' will NOT be assigned anymore when "
+                  "'model_attribute != \"state\"'! Please adjust your code and use "
+                  "'{0}' instead.".format(meth_name), DeprecationWarning)
+    return func(*args, **kwargs)
+
+
+def _warning_wrapper_to(meth_name, *args, **kwargs):
+    warnings.warn("Starting from transitions version 0.8.3, 'to_<state_name>' convenience functions will be"
+                  " assigned to 'to_<model_attribute>_<state_name>' when 'model_attribute "
+                  "!= \"state\"'. In 0.9.0, 'to_<state_name>' will NOT be assigned anymore when "
+                  "'model_attribute != \"state\"'! Please adjust your code and use "
+                  "'{0}' instead.".format(meth_name), DeprecationWarning)

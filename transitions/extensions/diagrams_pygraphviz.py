@@ -74,7 +74,9 @@ class Graph(BaseGraph):
         if self.roi_state:
             filtered = self.fsm_graph.copy()
             kept_nodes = set()
-            active_state = self.roi_state if filtered.has_node(self.roi_state) else self.roi_state + '_anchor'
+            active_state = self.roi_state.name if hasattr(self.roi_state, 'name') else self.roi_state
+            if not filtered.has_node(self.roi_state):
+                active_state += '_anchor'
             kept_nodes.add(active_state)
 
             # remove all edges that have no connection to the currently active state
@@ -123,7 +125,7 @@ class Graph(BaseGraph):
             edge.attr.update(style_attr)
         for node in self.fsm_graph.nodes_iter():
             if 'point' not in node.attr['shape']:
-                style_attr = self.fsm_graph.style_attributes.get('node', {}).get('default')
+                style_attr = self.fsm_graph.style_attributes.get('node', {}).get('inactive')
                 node.attr.update(style_attr)
         for sub_graph in self.fsm_graph.subgraphs_iter():
             style_attr = self.fsm_graph.style_attributes.get('graph', {}).get('default')
@@ -154,7 +156,7 @@ class NestedGraph(Graph):
                 self._add_nodes(state['children'], sub, prefix=prefix + state['name'] + NestedState.separator,
                                 default_style='parallel' if is_parallel else 'default')
             else:
-                container.add_node(name, label=label, shape=self.machine.style_attributes['node']['default']['shape'])
+                container.add_node(name, label=label, **self.machine.style_attributes['node'][default_style])
 
     def _add_edges(self, transitions, container):
 

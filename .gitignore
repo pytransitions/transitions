@@ -5,6 +5,7 @@ build/
 dist
 dist/*
 *.egg-info
+.eggs/
 *.iml
 .idea
 .vscode
@@ -17,3 +18,4 @@ MANIFEST
 *.bak
 pylint.log
 sandbox*
+coverage.xml

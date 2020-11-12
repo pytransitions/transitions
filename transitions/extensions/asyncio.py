@@ -2,6 +2,7 @@ import itertools
 import logging
 import asyncio
 import contextvars
+import inspect
 
 from functools import partial, reduce
 import copy
@@ -13,8 +14,6 @@ from .nesting import HierarchicalMachine, NestedState, NestedEvent, NestedTransi
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
-
-is_subtask = contextvars.ContextVar('is_subtask', default=False)
 
 
 class AsyncState(State):
@@ -31,13 +30,13 @@ class AsyncState(State):
         """ Triggered when a state is entered. """
         _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
         await event_data.machine.callbacks(self.on_enter, event_data)
-        _LOGGER.info("%sEntered state %s", event_data.machine.name, self.name)
+        _LOGGER.info("%sFinished processing state %s enter callbacks.", event_data.machine.name, self.name)
 
     async def exit(self, event_data):
         """ Triggered when a state is exited. """
         _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
         await event_data.machine.callbacks(self.on_exit, event_data)
-        _LOGGER.info("%sExited state %s", event_data.machine.name, self.name)
+        _LOGGER.info("%sFinished processing state %s exit callbacks.", event_data.machine.name, self.name)
 
 
 class NestedAsyncState(NestedState, AsyncState):
@@ -72,14 +71,11 @@ class AsyncCondition(Condition):
                 model attached to the current machine which is used to invoke
                 the condition.
         """
-        predicate = event_data.machine.resolve_callable(self.func, event_data)
-        if asyncio.iscoroutinefunction(predicate):
-            if event_data.machine.send_event:
-                return await predicate(event_data) == self.target
-            else:
-                return await predicate(*event_data.args, **event_data.kwargs) == self.target
-        else:
-            return super(AsyncCondition, self).check(event_data)
+        func = event_data.machine.resolve_callable(self.func, event_data)
+        res = func(event_data) if event_data.machine.send_event else func(*event_data.args, **event_data.kwargs)
+        if inspect.isawaitable(res):
+            return await res == self.target
+        return res == self.target
 
 
 class AsyncTransition(Transition):
@@ -100,7 +96,7 @@ class AsyncTransition(Transition):
     condition_cls = AsyncCondition
 
     async def _eval_conditions(self, event_data):
-        res = await asyncio.gather(*[cond.check(event_data) for cond in self.conditions])
+        res = await event_data.machine.await_all([partial(cond.check, event_data) for cond in self.conditions])
         if not all(res):
             _LOGGER.debug("%sTransition condition failed: Transition halted.", event_data.machine.name)
             return False
@@ -122,26 +118,19 @@ class AsyncTransition(Transition):
         if not await self._eval_conditions(event_data):
             return False
 
-        # cancel running tasks since the transition will happen
         machine = event_data.machine
-        model = event_data.model
-        if model in machine.async_tasks and not machine.async_tasks[model].done():
-            parent = machine.async_tasks[model]
-            check = is_subtask.get()
-            if parent != check:
-                machine.async_tasks[model].cancel()
-        else:
-            current = asyncio.current_task()
-            is_subtask.set(current)
-            machine.async_tasks[model] = current
+        # cancel running tasks since the transition will happen
+        await machine.switch_model_context(event_data.model)
 
-        await event_data.machine.callbacks(itertools.chain(event_data.machine.before_state_change, self.before), event_data)
+        await event_data.machine.callbacks(event_data.machine.before_state_change, event_data)
+        await event_data.machine.callbacks(self.before, event_data)
         _LOGGER.debug("%sExecuted callback before transition.", event_data.machine.name)
 
         if self.dest:  # if self.dest is None this is an internal transition with no actual state change
             await self._change_state(event_data)
 
-        await event_data.machine.callbacks(itertools.chain(self.after, event_data.machine.after_state_change), event_data)
+        await event_data.machine.callbacks(self.after, event_data)
+        await event_data.machine.callbacks(event_data.machine.after_state_change, event_data)
         _LOGGER.debug("%sExecuted callback after transition.", event_data.machine.name)
         return True
 
@@ -174,7 +163,7 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
 class AsyncEvent(Event):
     """ A collection of transitions assigned to the same trigger """
 
-    async def trigger(self, model, *args, **kwargs):
+    async def trigger(self, _model, *args, **kwargs):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes. Note that `AsyncEvent` triggers must be awaited.
         Args:
@@ -184,12 +173,8 @@ class AsyncEvent(Event):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        func = partial(self._trigger, model, *args, **kwargs)
-        t = asyncio.create_task(self.machine._process(func))
-        try:
-            return await t
-        except asyncio.CancelledError:
-            return False
+        func = partial(self._trigger, _model, *args, **kwargs)
+        return await self.machine.process_context(func, _model)
 
     async def _trigger(self, model, *args, **kwargs):
         state = self.machine.get_state(model.state)
@@ -233,8 +218,8 @@ class NestedAsyncEvent(NestedEvent):
         be called by HierarchicalMachine instances.
         Args:
             _model (object): model object to
-            machine (HierarchicalMachine): Since NestedEvents can be used in multiple machine instances, this one
-                                           will be used to determine the current state separator.
+            _machine (HierarchicalMachine): Since NestedEvents can be used in multiple machine instances, this one
+                                            will be used to determine the current state separator.
             args and kwargs: Optional positional or named arguments that will
                 be passed onto the EventData object, enabling arbitrary state
                 information to be passed on to downstream triggered functions.
@@ -242,17 +227,13 @@ class NestedAsyncEvent(NestedEvent):
             successfully executed (True if successful, False if not).
         """
         func = partial(self._trigger, _model, _machine, *args, **kwargs)
-        t = asyncio.create_task(_machine._process(func))
-        try:
-            return await t
-        except asyncio.CancelledError:
-            return False
+        return await _machine.process_context(func, _model)
 
     async def _trigger(self, _model, _machine, *args, **kwargs):
         state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
         state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
         ordered_states = _resolve_order(state_tree)
-        done = []
+        done = set()
         res = None
         for state_path in ordered_states:
             state_name = _machine.state_cls.separator.join(state_path)
@@ -265,7 +246,7 @@ class NestedAsyncEvent(NestedEvent):
                 if res:
                     elems = state_path
                     while elems:
-                        done.append(_machine.state_cls.separator.join(elems))
+                        done.add(_machine.state_cls.separator.join(elems))
                         elems.pop()
         return res
 
@@ -322,6 +303,8 @@ class AsyncMachine(Machine):
     transition_cls = AsyncTransition
     event_cls = AsyncEvent
     async_tasks = {}
+    protected_tasks = []
+    current_context = contextvars.ContextVar('current_context', default=None)
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.
@@ -332,12 +315,12 @@ class AsyncMachine(Machine):
         Returns:
             bool The truth value of all triggers combined with AND
         """
-        results = await asyncio.gather(*[getattr(model, trigger)(*args, **kwargs) for model in self.models])
+        results = await self.await_all([partial(getattr(model, trigger), *args, **kwargs) for model in self.models])
         return all(results)
 
     async def callbacks(self, funcs, event_data):
         """ Triggers a list of callbacks """
-        await asyncio.gather(*[event_data.machine.callback(func, event_data) for func in funcs])
+        await self.await_all([partial(event_data.machine.callback, func, event_data) for func in funcs])
 
     async def callback(self, func, event_data):
         """ Trigger a callback function with passed event_data parameters. In case func is a string,
@@ -353,16 +336,64 @@ class AsyncMachine(Machine):
                 from (if event sending is disabled).
         """
         func = self.resolve_callable(func, event_data)
-        if self.send_event:
-            if asyncio.iscoroutinefunction(func) or asyncio.iscoroutinefunction(getattr(func, 'func', None)):
-                await func(event_data)
+        res = func(event_data) if self.send_event else func(*event_data.args, **event_data.kwargs)
+        if inspect.isawaitable(res):
+            await res
+
+    @staticmethod
+    async def await_all(callables):
+        """
+        Executes callables without parameters in parallel and collects their results.
+        Args:
+            partials (list): A list of callable functions
+
+        Returns:
+            list: A list of results. Using asyncio the list will be in the same order as the passed callables.
+        """
+        return await asyncio.gather(*[func() for func in callables])
+
+    async def switch_model_context(self, model):
+        """
+        This method is called by an `AsyncTransition` when all conditional tests have passed and the transition will happen.
+        This requires already running tasks to be cancelled.
+        Args:
+            model (object): The currently processed model
+        """
+        for running_task in self.async_tasks.get(model, []):
+            if self.current_context.get() == running_task or running_task in self.protected_tasks:
+                continue
+            elif running_task.done() is False:
+                _LOGGER.debug("Cancel running tasks...")
+                running_task.cancel()
+
+    async def process_context(self, func, model):
+        """
+        This function is called by an `AsyncEvent` to make callbacks processed in Event._trigger cancellable.
+        Using asyncio this will result in a try-catch block catching CancelledEvents.
+        Args:
+            func (callable): The partial of Event._trigger with all parameters already assigned
+            model (object): The currently processed model
+
+        Returns:
+            bool: returns the success state of the triggered event
+        """
+        if self.current_context.get() is None:
+            self.current_context.set(asyncio.current_task())
+            if model in self.async_tasks:
+                self.async_tasks[model].append(asyncio.current_task())
             else:
-                func(event_data)
+                self.async_tasks[model] = [asyncio.current_task()]
+            try:
+                res = await self._process(func)
+            except asyncio.CancelledError:
+                res = False
+            finally:
+                self.async_tasks[model].remove(asyncio.current_task())
+                if len(self.async_tasks[model]) == 0:
+                    del self.async_tasks[model]
         else:
-            if asyncio.iscoroutinefunction(func) or asyncio.iscoroutinefunction(getattr(func, 'func', None)):
-                await func(*event_data.args, **event_data.kwargs)
-            else:
-                func(*event_data.args, **event_data.kwargs)
+            res = await self._process(func)
+        return res
 
     async def _process(self, trigger):
         # default processing
@@ -424,7 +455,108 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
         for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    res[key] = await self._trigger_event(_model, _trigger, value, *args, **kwargs)
+                    tmp = await self._trigger_event(_model, _trigger, value, *args, **kwargs)
+                    if tmp is not None:
+                        res[key] = tmp
             if not res.get(key, None) and _trigger in self.events:
-                res[key] = await self.events[_trigger].trigger(_model, self, *args, **kwargs)
+                tmp = await self.events[_trigger].trigger(_model, self, *args, **kwargs)
+                if tmp is not None:
+                    res[key] = tmp
         return None if not res or all([v is None for v in res.values()]) else any(res.values())
+
+
+class AsyncTimeout(AsyncState):
+    """
+    Adds timeout functionality to an asynchronous state. Timeouts are handled model-specific.
+
+    Attributes:
+        timeout (float): Seconds after which a timeout function should be
+                         called.
+        on_timeout (list): Functions to call when a timeout is triggered.
+        runner (dict): Keeps track of running timeout tasks to cancel when a state is exited.
+    """
+
+    dynamic_methods = ["on_timeout"]
+
+    def __init__(self, *args, **kwargs):
+        """
+        Args:
+            **kwargs: If kwargs contain 'timeout', assign the float value to
+                self.timeout. If timeout is set, 'on_timeout' needs to be
+                passed with kwargs as well or an AttributeError will be thrown
+                if timeout is not passed or equal 0.
+        """
+        self.timeout = kwargs.pop("timeout", 0)
+        self._on_timeout = None
+        if self.timeout > 0:
+            try:
+                self.on_timeout = kwargs.pop("on_timeout")
+            except KeyError:
+                raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.")
+        else:
+            self._on_timeout = kwargs.pop("on_timeout", [])
+        self.runner = {}
+        super().__init__(*args, **kwargs)
+
+    async def enter(self, event_data):
+        """
+        Extends `transitions.core.State.enter` by starting a timeout timer for
+        the current model when the state is entered and self.timeout is larger
+        than 0.
+
+        Args:
+            event_data (EventData): events representing the currently processed event.
+        """
+        if self.timeout > 0:
+            self.runner[id(event_data.model)] = self.create_timer(event_data)
+        await super().enter(event_data)
+
+    async def exit(self, event_data):
+        """
+        Cancels running timeout tasks stored in `self.runner` first (when not note) before calling further exit callbacks.
+
+        Args:
+            event_data (EventData): Data representing the currently processed event.
+
+        Returns:
+
+        """
+        timer_task = self.runner.get(id(event_data.model), None)
+        if timer_task is not None and not timer_task.done():
+            timer_task.cancel()
+        await super().exit(event_data)
+
+    def create_timer(self, event_data):
+        """
+        Creates and returns a running timer. Shields self._process_timeout to prevent cancellation when
+        transitioning away from the current state (which cancels the timer) while processing timeout callbacks.
+        Args:
+            event_data (EventData): Data representing the currently processed event.
+
+        Returns (cancellable): A running timer with a cancel method
+        """
+        async def _timeout():
+            try:
+                await asyncio.sleep(self.timeout)
+                await asyncio.shield(self._process_timeout(event_data))
+            except asyncio.CancelledError:
+                pass
+
+        return asyncio.ensure_future(_timeout())
+
+    async def _process_timeout(self, event_data):
+        _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
+        await event_data.machine.callbacks(self.on_timeout, event_data)
+        _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
+
+    @property
+    def on_timeout(self):
+        """
+        List of strings and callables to be called when the state timeouts.
+        """
+        return self._on_timeout
+
+    @on_timeout.setter
+    def on_timeout(self, value):
+        """ Listifies passed values and assigns them to on_timeout."""
+        self._on_timeout = listify(value)

@@ -86,9 +86,15 @@ class TestNestedLegacy(TestNestedTransitions):
         self.assertEqual(s.state, 'C')
 
     def test_nested_definitions(self):
-        pass
+        pass  # not supported by legacy machine
 
     def test_add_nested_state(self):
+        pass  # not supported by legacy machine
+
+    def test_child_condition_persistence(self):
+        pass  # not supported by legacy machine
+
+    def test_get_nested_transitions(self):
         pass  # not supported by legacy machine
 
 
@@ -180,3 +186,12 @@ class TestLegacyNestedEnum(TestNestedStateEnums):
             # Initializing this would actually work but `m.to_A()` would raise an error in get_state(m.state)
             # as Machine is not aware of the location of States.GREEN
             m = self.machine_cls(states=states, initial='C')
+
+    def test_add_enum_transition(self):
+        pass  # not supported by legacy machine
+
+    def test_add_nested_enums_as_nested_state(self):
+        pass  # not supported by legacy machine
+
+    def test_enum_initial(self):
+        pass  # not supported by legacy machine

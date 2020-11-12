@@ -1,10 +1,11 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.8.1-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.8.5-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.0.svg)](https://github.com/pytransitions/transitions/compare/0.8.0...master)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.4.svg)](https://github.com/pytransitions/transitions/compare/0.8.4...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb)
 <!-- [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions) -->
 <!--[![Name](Image)](Link)-->
 
@@ -230,7 +231,9 @@ lump.state
 ```
 
 Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. You don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`).
-Additionally, there is a method called `trigger` now attached to your model.
+To be more precise, your model **should not** already contain methods with the same name as event triggers since `transitions` will only attach convenience methods to your model if the spot is not already taken.
+If you want to modify that behaviour, have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb).
+Furthermore, there is a method called `trigger` now attached to your model (if it hasn't been there before).
 This method lets you execute transitions by name in case dynamic triggering is required.
 
 ### <a name="states"></a>States
@@ -344,13 +347,18 @@ machine.get_state(lump.state).name
 >>> 'solid'
 ```
 
-If you'd like you track it using a different attribute, you could do that using the `model_attribute` argument while initializing the `Machine`.
+If you'd like you can choose your own state attribute name by passing the `model_attribute` argument while initializing the `Machine`. This will also change the name of `is_«state name»()` to `is_«model_attribute»_«state name»()` though. Similarly, auto transitions will be named `to_«model_attribute»_«state name»()` instead of `to_«state name»()`. This is done to allow multiple machines to work on the same model with individual state attribute names.
 
 ```python
 lump = Matter()
 machine = Machine(lump, states=['solid', 'liquid', 'gas'],  model_attribute='matter_state', initial='solid')
 lump.matter_state
 >>> 'solid'
+# with a custom 'model_attribute', states can also be checked like this:
+lump.is_matter_state_solid()
+>>> True
+lump.to_matter_state_gas()
+>>> True
 ```
 
 #### <a name="enum-state"></a>Enumerations
@@ -922,7 +930,7 @@ Here you get to consolidate all state machine functionality into your existing m
 
 A machine can handle multiple models which can be passed as a list like `Machine(model=[model1, model2, ...])`.
 In cases where you want to add models *as well as* the machine instance itself, you can pass the string placeholder `'self'` during initialization like `Machine(model=['self', model1, ...])`.
-You can also create a standalone machine, and register models dynamically via `machine.add_model`.
+You can also create a standalone machine, and register models dynamically via `machine.add_model` by passing `model=None` to the constructor.
 Remember to call `machine.remove_model` if machine is long-lasting and your models are temporary and should be garbage collected:
 
 ```python
@@ -932,7 +940,8 @@ class Matter():
 lump1 = Matter()
 lump2 = Matter()
 
-machine = Machine(states=states, transitions=transitions, initial='solid', add_self=False)
+# setting 'model' to None or passing an empty list will initialize the machine without a model
+machine = Machine(model=None, states=states, transitions=transitions, initial='solid')
 
 machine.add_model(lump1)
 machine.add_model(lump2, initial='liquid')
@@ -947,28 +956,39 @@ del lump1  # lump1 is garbage collected
 del lump2  # lump2 is garbage collected
 ```
 
-If you don't provide an initial state in the state machine constructor, you must provide one every time you add a model:
+If you don't provide an initial state in the state machine constructor, `transitions` will create and add a default state called `'initial'`.
+If you do not want a default initial state, you can pass `initial=None`.
+However, in this case you need to pass an initial state every time you add a model. 
 
 ```python
-machine = Machine(states=states, transitions=transitions, add_self=False)
+machine = Machine(model=None, states=states, transitions=transitions, initial=None)
 
 machine.add_model(Matter())
 >>> "MachineError: No initial state configured for machine, must specify when adding model."
 machine.add_model(Matter(), initial='liquid')
 ```
 
-Models with multiple states could attach multiple machines using different `model_attribute` values:
+Models with multiple states could attach multiple machines using different `model_attribute` values. As mentioned in [Checking state](#checking-state), this will add custom `is/to_<model_attribute>_<state_name>` functions: 
 
 ```python
 lump = Matter()
 
+matter_machine = Machine(lump, states=['solid', 'liquid', 'gas'], initial='solid')
+# add a second machine to the same model but assign a different state attribute
+shipment_machine = Machine(lump, states=['delivered', 'shipping'], initial='delivered', model_attribute='shipping_state')
+
 lump.state
 >>> 'solid'
+lump.is_solid()  # check the default field
+>>> True
 lump.shipping_state
 >>> 'delivered'
-
-matter_machine = Machine(lump, model_attribute='state', **kwargs)
-shipment_machine = Machine(lump, model_attribute='shipping_state', **kwargs)
+lump.is_shipping_state_delivered()  # check the custom field.
+>>> True
+lump.to_shipping_state_shipping()
+>>> True
+lump.is_shipping_state_delivered()
+>>> False
 ```
 
 ### Logging
@@ -1053,9 +1073,9 @@ However, classes can also be directly imported from `transitions.extensions`. Th
 | LockedHierarchicalMachine      | ✘        | ✓      | ✓      | ✘ |
 | LockedHierarchicalGraphMachine | ✓        | ✓      | ✓      | ✘ |
 | AsyncMachine                   | ✘        | ✘      | ✘      | ✓ |
-| AsyncGraphMachine              | ✓        | ✘      | ✘      | ✓ |   
-| AsyncHierarchicalMachine       | ✘        | ✓      | ✘      | ✓ |   
-| AsyncHierarchicalGraphMachine  | ✓        | ✓      | ✘      | ✓ | 
+| AsyncGraphMachine              | ✓        | ✘      | ✘      | ✓ |
+| HierarchicalAsyncMachine       | ✘        | ✓      | ✘      | ✓ |
+| HierarchicalAsyncGraphMachine  | ✓        | ✓      | ✘      | ✓ |
 
 To use a feature-rich state machine, one could write:
 
@@ -1113,7 +1133,8 @@ This produces something like this:
 
 ![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
 
-Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example.
+Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example about how to use and edit graphs.
+
 
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
@@ -1169,6 +1190,7 @@ transitions = [
 ]
 # ...
 ```
+The `initial` keyword of the `HierarchicalMachine` constructor accepts nested states (e.g. `initial='caffeinated_running'`) and a list of states which is considered to be a parallel state (e.g. `initial=['A', 'B']`) or the current state of another model (`initial=model.state`) which should be effectively one of the previous mentioned options. Note that when passing a string, `transition` will check the targeted state for `initial` substates and use this as an entry state. This will be done recursively until a substate does not mention an initial state. Parallel states or a state passed as a list will be used 'as is' and no further initial evaluation will be conducted. 
 
 Note that your previously created state object *must be* a `NestedState` or a derived class of it.
 The standard `State` class used in simple `Machine` instances lacks features required for nesting.
@@ -1181,7 +1203,7 @@ m.add_state('B')  # fine
 m.add_state({'name': 'C'})  # also fine
 m.add_state(NestedState('D'))  # fine as well
 m.add_state(State('E'))  # does not work!
-``` 
+```
 
 Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`.
 Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine.
@@ -1190,10 +1212,13 @@ When entering a substate, `enter` will be called for all parent states. The same
 Third, nested states can overwrite transition behaviour of their parents.
 If a transition is not known to the current state it will be delegated to its parent.
 
-In some cases underscore as a separator is not sufficient.
-For instance if state names consists of more than one word and a concatenated naming such as `state_A_name_state_C` would be confusing.
-Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks).
-You can even use unicode characters if you use python 3:
+**This means that in the standard configuration, state names in HSMs MUST NOT contain underscores.**
+For `transitions` it's impossible to tell whether `machine.add_state('state_name')` should add a state named `state_name` or add a substate `name` to the state `state`.
+In some cases this is not sufficient however.
+For instance if state names consists of more than one word and you want/need to use underscore to separate them instead of `CamelCase`.
+To deal with this, you can change the character used for separation quite easily.
+You can even use fancy unicode characters if you use Python 3.
+Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks) though:
 
 ```python
 from transitions.extensions.nesting import NestedState
@@ -1246,7 +1271,7 @@ If you have a value more than once in a state tree those states cannot be distin
 
 ```python
 states = [States.RED, States.YELLOW, {'name': States.GREEN, 'children': ['tick', 'tock']}]
-states = ['A', {'name': 'B', 'children': States, 'initial': States.GREEN}, States.GREEN]
+states = ['A', {'name': 'B', 'children': states, 'initial': States.GREEN}, States.GREEN]
 machine = HierarchicalMachine(states=states)
 machine.to_B()
 machine.is_GREEN()  # returns True even though the actual state is B_GREEN
@@ -1311,7 +1336,7 @@ assert m.is_B(allow_substates=True)
 
 Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
 Before *0.8.0*, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
-However, since *0.8.0* states are just **referenced** which means changes in one machine's states will influence the other instance.
+However, since *0.8.0* `(Nested)State` instances are just **referenced** which means changes in one machine's collection of states and events will influence the other machine instance. Models and their state will not be shared though.
 Note that events and transitions are also copied by reference and will be shared by both instances if you do not use the `remap` keyword.
 
 ```python
@@ -1600,18 +1625,44 @@ class VerboseMachine(Machine):
     def _create_state(self, *args, **kwargs):
         print("Creating a new state with machine '{0}'".format(self.name))
         return MyState(*args, **kwargs)
-
 ```
+
+If you want to avoid threads in your `AsyncMachine` entirely, you can replace the `Timeout` state feature with `AsyncTimeout` from the `asyncio` extension:
+
+```python
+import asyncio
+from transitions.extensions.states import add_state_features
+from transitions.extensions.asyncio import AsyncTimeout, AsyncMachine
+
+@add_state_features(AsyncTimeout)
+class TimeoutMachine(AsyncMachine):
+    pass
+
+states = ['A', {'name': 'B', 'timeout': 0.2, 'on_timeout': 'to_C'}, 'C']
+m = TimeoutMachine(states=states, initial='A', queued=True)  # see remark below
+asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.1)]))
+assert m.is_B()  # timeout shouldn't be triggered
+asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.3)]))
+assert m.is_C()   # now timeout should have been processed
+```
+
+You should consider passing `queued=True` to the `TimeoutMachine` constructor. This will make sure that events are processed sequentially and avoid asynchronous [racing conditions](https://github.com/pytransitions/transitions/issues/459) that may appear when timeout and event happen in close proximity.
 
 #### <a name="django-support"></a> Using transitions together with Django
 
-Christian Ledermann developed `django-transitions`, a module dedicated to streamline the work with `transitions` and Django. The source code is also hosted on [Github](https://github.com/PrimarySite/django-transitions). Have a look at [the documentation](https://django-transitions.readthedocs.io/en/latest/) for usage examples.
+You can have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb) for some inspiration or checkout `django-transitions`.
+It has been developed by Christian Ledermann and is also hosted on [Github](https://github.com/PrimarySite/django-transitions).
+[The documentation](https://django-transitions.readthedocs.io/en/latest/) contains some usage examples.
 
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
+
+First, congratulations! You reached the end of the documentation!
+If you want to try out `transitions` before you install it, you can do that in an interactive Jupyter notebook at mybinder.org.
+Just click this button 👉 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb).
+
 For bug reports and other issues, please open an issue on GitHub.
 
 For usage questions, post on Stack Overflow, making sure to tag your question with the `transitions` and `python` tags. Do not forget to have a look at the [extended examples](./examples)!
-
 
 For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).

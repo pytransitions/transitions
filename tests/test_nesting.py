@@ -230,16 +230,23 @@ class TestNestedTransitions(TestTransitions):
         def callback():
             mock()
         states = ['A', 'B', {'name': 'C', 'on_enter': callback, 'on_exit': callback,
-                             'children': [{'name': '1', 'on_exit': callback}, '2', '3']}, 'D']
+                             'children': [{'name': '1', 'on_enter': callback, 'on_exit': callback}, '2', '3']},
+                            {'name': 'D', 'on_enter': callback, 'on_exit': callback}]
         transitions = [['go', 'A', 'C{0}1'.format(State.separator)],
                        ['go', 'C', 'D']]
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.go()
         self.assertTrue(mock.called)
-        self.assertEqual(mock.call_count, 1)
+        self.assertEqual(2, mock.call_count)
         m.go()
         self.assertTrue(m.is_D())
-        self.assertEqual(mock.call_count, 3)
+        self.assertEqual(5, mock.call_count)
+        m.to_C()
+        self.assertEqual(7, mock.call_count)
+        m.to('C{0}1'.format(State.separator))
+        self.assertEqual(8, mock.call_count)
+        m.to('C{0}2'.format(State.separator))
+        self.assertEqual(9, mock.call_count)
 
     def test_ordered_transitions(self):
         State = self.state_cls
@@ -333,6 +340,8 @@ class TestNestedTransitions(TestTransitions):
         states = ['standing', 'walking', {'name': 'caffeinated', 'children': ['dithering', 'running']}]
         transitions = [['walk', 'standing', 'walking'],
                        ['stop', 'walking', 'standing'],
+                       ['drink', 'caffeinated_dithering', '='],
+                       ['drink', 'caffeinated', 'caffeinated_dithering'],
                        ['drink', '*', 'caffeinated'],
                        ['walk', 'caffeinated', 'caffeinated_running'],
                        ['relax', 'caffeinated', 'standing']]
@@ -344,6 +353,10 @@ class TestNestedTransitions(TestTransitions):
         machine.drink()  # coffee time
         machine.state
         self.assertEqual(machine.state, 'caffeinated')
+        machine.drink()  # again!
+        self.assertEqual(machine.state, 'caffeinated_dithering')
+        machine.drink()  # and again!
+        self.assertEqual(machine.state, 'caffeinated_dithering')
         machine.walk()   # we have to go faster
         self.assertEqual(machine.state, 'caffeinated_running')
         machine.stop()   # can't stop moving!
@@ -391,6 +404,8 @@ class TestNestedTransitions(TestTransitions):
         self.assertTrue(m.is_B(allow_substates=True))
         m.do()
         self.assertEqual(m.state, 'B{0}1'.format(separator))
+        m = self.stuff.machine_cls(states=states, transitions=transitions, initial='B{0}2{0}b'.format(separator))
+        self.assertTrue('B{0}2{0}b'.format(separator), m.state)
 
     def test_get_triggers(self):
         seperator = self.state_cls.separator
@@ -410,6 +425,29 @@ class TestNestedTransitions(TestTransitions):
         self.assertEqual(len(trans), 3)
         self.assertTrue('relax' in trans)
 
+    def test_get_nested_transitions(self):
+        seperator = self.state_cls.separator
+        states = ['A', {'name': 'B', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b'],
+                                                             'transitions': [['inner', 'a', 'b'],
+                                                                             ['inner', 'b', 'a']]}],
+                        'transitions': [['mid', '1', '1'],
+                                        ['mid', '2', '3'],
+                                        ['mid', '3', '1'],
+                                        ['mid2', '2', '3'],
+                                        ['mid_loop', '1', '1']]}]
+        transitions = [['outer', 'A', 'B'],
+                       ['outer', ['A', 'B'], 'C']]
+        machine = self.stuff.machine_cls(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        self.assertEqual(10, len(machine.get_transitions()))
+        self.assertEqual(2, len(machine.get_transitions(source='A')))
+        self.assertEqual(2, len(machine.get_transitions('inner')))
+        self.assertEqual(3, len(machine.get_transitions('mid')))
+        self.assertEqual(3, len(machine.get_transitions(dest='B{0}1'.format(seperator))))
+        self.assertEqual(2, len(machine.get_transitions(source='B{0}2'.format(seperator),
+                                                        dest='B{0}3'.format(seperator))))
+        self.assertEqual(1, len(machine.get_transitions(source='B{0}3{0}a'.format(seperator),
+                                                        dest='B{0}3{0}b'.format(seperator))))
+
     def test_internal_transitions(self):
         s = self.stuff
         s.machine.add_transition('internal', 'A', None, prepare='increase_level')
@@ -424,6 +462,7 @@ class TestNestedTransitions(TestTransitions):
 
     def test_skip_to_override(self):
         mock = MagicMock()
+
         class Model:
 
             def to(self):
@@ -436,6 +475,67 @@ class TestNestedTransitions(TestTransitions):
         model2.to('B')
         self.assertTrue(mock.called)
         self.assertTrue(model2.is_B())
+
+    def test_trigger_parent(self):
+        parent_mock = MagicMock()
+        exit_mock = MagicMock()
+        enter_mock = MagicMock()
+
+        class Model:
+
+            def on_exit_A(self):
+                parent_mock()
+
+            def on_exit_A_1(self):
+                exit_mock()
+
+            def on_enter_A_2(self):
+                enter_mock()
+
+        model = Model()
+        machine = self.machine_cls(model, states=[{'name': 'A', 'children': ['1', '2']}],
+                                   transitions=[['go', 'A', 'A_2'], ['enter', 'A', 'A_1']], initial='A')
+
+        model.enter()
+        self.assertFalse(parent_mock.called)
+        model.go()
+        self.assertTrue(exit_mock.called)
+        self.assertTrue(enter_mock.called)
+        self.assertFalse(parent_mock.called)
+
+    def test_trigger_parent_model_self(self):
+        parent_mock = MagicMock()
+        exit_mock = MagicMock()
+        enter_mock = MagicMock()
+
+        class CustomMachine(self.machine_cls):
+
+            def on_exit_A(self):
+                parent_mock()
+
+            def on_exit_A_1(self):
+                exit_mock()
+
+            def on_enter_A_2(self):
+                enter_mock()
+
+        machine = CustomMachine(states=[{'name': 'A', 'children': ['1', '2']}],
+                                transitions=[['go', 'A', 'A_2'], ['enter', 'A', 'A_1']], initial='A')
+        machine.enter()
+        self.assertFalse(parent_mock.called)
+        machine.go()
+        self.assertTrue(exit_mock.called)
+        self.assertTrue(enter_mock.called)
+        self.assertFalse(parent_mock.called)
+
+    def test_child_condition_persistence(self):
+        # even though the transition is invalid for the parent it is valid for the nested child state
+        # no invalid transition exception should be thrown
+        machine = self.machine_cls(states=[{'name': 'A', 'children': ['1', '2'], 'initial': '1',
+                                            'transitions': [{'trigger': 'go', 'source': '1', 'dest': '2',
+                                                             'conditions': self.stuff.this_fails}]}, 'B'],
+                                   transitions=[['go', 'B', 'A']], initial='A')
+        self.assertFalse(False, machine.go())
 
 
 class TestSeparatorsBase(TestCase):

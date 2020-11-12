@@ -2,16 +2,12 @@ from transitions import Transition
 from transitions.extensions.markup import MarkupMachine
 from transitions.core import listify
 
-import warnings
 import logging
 from functools import partial
 import copy
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
-
-# make deprecation warnings of transition visible for module users
-warnings.filterwarnings(action='default', message=r".*transitions version.*")
 
 # this is a workaround for dill issues when partials and super is used in conjunction
 # without it, Python 3.0 - 3.3 will not support pickling
@@ -23,6 +19,12 @@ class TransitionGraphSupport(Transition):
     """ Transition used in conjunction with (Nested)Graphs to update graphs whenever a transition is
         conducted.
     """
+
+    def __init__(self, *args, **kwargs):
+        label = kwargs.pop('label', None)
+        _super(TransitionGraphSupport, self).__init__(*args, **kwargs)
+        if label:
+            self.label = label
 
     def _change_state(self, event_data):
         graph = event_data.machine.model_graphs[event_data.model]
@@ -61,10 +63,22 @@ class GraphMachine(MarkupMachine):
         'node': {
             '': {},
             'default': {
-                'shape': 'rectangle',
                 'style': 'rounded, filled',
+                'shape': 'rectangle',
                 'fillcolor': 'white',
                 'color': 'black',
+                'peripheries': '1'
+            },
+            'inactive': {
+                'fillcolor': 'white',
+                'color': 'black',
+                'peripheries': '1'
+            },
+            'parallel': {
+                'shape': 'rectangle',
+                'color': 'black',
+                'fillcolor': 'white',
+                'style': 'dashed, rounded, filled',
                 'peripheries': '1'
             },
             'active': {
@@ -94,11 +108,6 @@ class GraphMachine(MarkupMachine):
                 'fillcolor': 'white',
                 'style': 'solid'
             },
-            'parallel': {
-                'color': 'black',
-                'fillcolor': 'white',
-                'style': 'dotted'
-            },
             'previous': {
                 'color': 'blue',
                 'fillcolor': 'azure2',
@@ -109,6 +118,11 @@ class GraphMachine(MarkupMachine):
                 'fillcolor': 'darksalmon',
                 'style': 'filled'
             },
+            'parallel': {
+                'color': 'black',
+                'fillcolor': 'white',
+                'style': 'dotted'
+            }
         }
     }
 
@@ -178,8 +192,8 @@ class GraphMachine(MarkupMachine):
             grph = self.graph_cls(self, title=title if title is not None else self.title)
             self.model_graphs[model] = grph
             try:
-                state = getattr(model, self.model_attribute)
-                self.model_graphs[model].set_node_style(state.name if hasattr(state, 'name') else state, 'active')
+                for state in _flatten(listify(getattr(model, self.model_attribute))):
+                    grph.set_node_style(self.dest if hasattr(state, 'name') else state, 'active')
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:
@@ -286,7 +300,8 @@ class BaseGraph(object):
                     if prefix:
                         t = copy.copy(transition)
                         t['source'] = self.machine.state_cls.separator.join(prefix + [t['source']])
-                        t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
+                        if 'dest' in t:  # don't do this for internal transitions
+                            t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
                     else:
                         t = transition
                     transitions.append(t)

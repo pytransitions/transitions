@@ -12,6 +12,7 @@ from functools import partial
 from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, _prep_ordered_arg
 from unittest import TestCase, skipIf
+import warnings
 
 try:
     from unittest.mock import MagicMock
@@ -810,6 +811,13 @@ class TestTransitions(TestCase):
         with self.assertRaises(KeyError):
             self.stuff.trigger('do_raises_keyerror')
 
+        self.stuff.machine.get_model_state(self.stuff).ignore_invalid_triggers = True
+        self.stuff.trigger('should_not_raise_anything')
+        self.stuff.trigger('to_A')
+        self.assertTrue(self.stuff.is_A())
+        self.stuff.machine.ignore_invalid_triggers = True
+        self.stuff.trigger('should_not_raise_anything')
+
     def test_get_triggers(self):
         states = ['A', 'B', 'C']
         transitions = [['a2b', 'A', 'B'],
@@ -1064,25 +1072,33 @@ class TestTransitions(TestCase):
     def test_multiple_machines_per_model(self):
         class Model:
             def __init__(self):
-                self.state_a = None
-                self.state_b = None
+                self.car_state = None
+                self.driver_state = None
 
         instance = Model()
-        machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='state_a')
-        machine_a.add_transition('melt', 'A', 'B')
-        machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='state_b')
-        machine_b.add_transition('freeze', 'B', 'A')
+        machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='car_state')
+        machine_a.add_transition('accelerate_car', 'A', 'B')
+        machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='driver_state')
+        machine_b.add_transition('driving', 'B', 'A')
 
-        self.assertEqual(instance.state_a, 'A')
-        self.assertEqual(instance.state_b, 'B')
+        assert instance.car_state == 'A'
+        assert instance.driver_state == 'B'
+        assert instance.is_car_state_A()
+        assert instance.is_driver_state_B()
 
-        instance.melt()
-        self.assertEqual(instance.state_a, 'B')
-        self.assertEqual(instance.state_b, 'B')
+        instance.accelerate_car()
+        assert instance.car_state == 'B'
+        assert instance.driver_state == 'B'
+        assert not instance.is_car_state_A()
+        assert instance.is_car_state_B()
 
-        instance.freeze()
-        self.assertEqual(instance.state_b, 'A')
-        self.assertEqual(instance.state_a, 'B')
+        instance.driving()
+        assert instance.driver_state == 'A'
+        assert instance.car_state == 'B'
+        assert instance.is_driver_state_A()
+        assert not instance.is_driver_state_B()
+        assert instance.to_driver_state_B()
+        assert instance.driver_state == 'B'
 
     def test_initial_not_registered(self):
         m1 = self.machine_cls(states=['A', 'B'], initial=self.machine_cls.state_cls('C'))
@@ -1097,15 +1113,26 @@ class TestTransitions(TestCase):
 
 
 class TestWarnings(TestCase):
-    def test_warning(self):
-        import sys
-        # does not work with python 3.3. However, the warning is shown when Machine is initialized manually.
-        if (3, 3) <= sys.version_info < (3, 4):
-            return
+    def test_multiple_machines_per_model(self):
+        class Model:
+            def __init__(self):
+                self.car_state = None
+                self.driver_state = None
 
-        # with warnings.catch_warnings(record=True) as w:
-        #     warnings.filterwarnings(action='default', message=r".*transitions version.*")
-        #     m = Machine(None)
-        #     self.assertEqual(len(w), 1)
-        #     for warn in w:
-        #         self.assertEqual(warn.category, DeprecationWarning)
+        instance = Model()
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.filterwarnings(action='default', message=r".*transitions version.*", category=DeprecationWarning)
+
+            machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='car_state')
+            machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='driver_state')
+            self.assertEqual(0, len(w))
+            self.assertTrue(instance.is_A())
+            self.assertTrue(instance.is_A())
+            self.assertEqual(1, len(w))
+            self.assertEqual(w[0].category, DeprecationWarning)
+            instance.to_B()
+            self.assertEqual('B', instance.car_state)
+            self.assertFalse(instance.is_A())
+            self.assertEqual(2, len(w))
+            self.assertEqual(w[1].category, DeprecationWarning)

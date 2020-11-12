@@ -1,8 +1,56 @@
 # Changelog
 
+## 0.8.5 ()
+
+- `AsyncMachine.switch_model_context` is expected to be `async` now for easier integration of async code during model switch.
+- Bugfix #478: Initializing a machine with `GraphSupport` threw an exception when initial was set to a nested or parallel state (thanks @nickvazztau)
+
+## 0.8.4 (October 2020)
+
+Release 0.8.4 is a minor release and contains bugfixes as well as new features:
+
+- Bugfix #477: Model callbacks were not added to a LockedHierarchicalMachine when the machine itself served as a model (thanks @oliver-goetz)
+- Bugfix #475: Clear collection of tasks to prevent memory leak when initializing many models (thanks @h-nakai)
+- Feature #474: Added static `AsyncMachine.protected_tasks` list which can be used to prevent `transitions` to cancel certain tasks.
+- Feature: Constructor of `HierarchicalMachine` now accepts substates ('A_1_c') and parallel states (['A', 'B']) as `initial` parameter
+
+## 0.8.3 (September 2020)
+
+Release 0.8.3 is a minor release and contains several bugfixes mostly related to `HierarchicalStateMachine`:
+
+- Feature #473: Assign `is_<model_attribute>_<state_name>` instead of `is_<state_name>` when `model_attribute != "state"` to enable multiple versions of such convenience functions. A warning will be raised when `is_<state_name>` is used. (thanks @artofhuman)
+- Similarly, auto transitions (`to_<state_name>`) will be assigned as `to_<model_attribute>_<state_name>`. `to_<state_name>` will work as before but raise a warning until version 0.9.0.
+- Bugfix: `allow_substates` did not consider enum states
+- Feature: Nested enums can now be passed in a dict as `children` with `initial` parameter
+- Bugfix #449: get_triggers/get_transitions did not return nested triggers correctly (thanks @alexandretanem)
+- Feature #452: Improve handling of label attributes in custom diagram states and `TransitionGraphSupport` (thanks @badiku)
+- Bugfix #456: Prevent parents from overriding (falsy) results of their children's events (thanks @alexandretanem)
+- Bugfix #458: Entering the same state caused key errors when transition was defined on a parent (thanks @matlom)
+- Bugfix #459: Do not remove current timeout runner in AsyncTimeout to prevent accidental overrides (thanks @rgov)
+- Rewording of `State.enter/exit` debug message emitted when callbacks have been processed.
+- Bugfix #370: Fix order of `before_state_change/before` and `after/after_state_change` in `AsyncMachine` (thanks @tzoiker and @vishes-shell)
+- Bugfix #470: `Graph.get_graph()` did not consider `enum` states when `show_roi=True` (thanks @termim)
+
+## 0.8.2 (June 2020)
+
+Release 0.8.2 is a minor release and contains several bugfixes and improvements:
+
+- Bugfix #438: Improved testing without any optional `graphviz` package
+- Bugfix: `_check_event_result` failed when model was in parallel state
+- Bugfix #440: Only allow explicit `dest=None` in `Machine.add_transition` (not just falsy) for internal transitions (thanks @Pathfinder216)
+- Bugfix #419: Fix state creation of nested enums (thanks @thedrow)
+- Bugfix #428: HierarchicalGraphMachine did not find/apply styling for parallel states (thanks @xiaohuihui1024)
+- Bugfix: `Model.trigger` now considers the machine's and current state's `ignore_invalid_triggers` attribute and can be called with non-existing events (thanks @potens1)
+- Bugfix: Child states may not have been exited when the executed transition had been defined on a parent (thanks @thedrow)
+- Feature #429: Introduced `transitions.extensions.asyncio.AsyncTimeout` as a state decorator to avoid threads used in `transitions.extensions.state.Timeout` (thanks @potens1)
+- Feature #444: `transitions` can now be tested online at mybinder.org
+- PR #418: Use sets instead of lists to cache already covered transitions in nested state machines (thanks @thedrow)
+- PR #422: Improve handling of unresolved attributes for easier inheritance (thanks @thedrow)
+- PR #445: Refactored AsyncMachine to enable trio/anyio override
+
 ## 0.8.1 (April 2020)
 
-Release 0.8.1 is a minor release of HSM improvements and bugfixes in the diagram and async extension
+Release 0.8.1 is a minor release of HSM improvements and bugfixes in the diagram and async extension:
 
 - Feature: Introduced experimental `HierarchicalAsync(Graph)Machine`
 - Feature #405: Support for nested Enums in `HierarchicalMachine` (thanks @thedrow)
@@ -14,7 +62,7 @@ Release 0.8.1 is a minor release of HSM improvements and bugfixes in the diagram
 
 ## 0.8.0 (March 2020)
 
-Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+, parallel state support and some bugfixes
+Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+, parallel state support and some bugfixes:
 
 - Feature: `HierarchicalMachine` has been rewritten to support parallel states. Please have a look at the ReadMe.md to check what has changed.
   + The previous version can be found in `transitions.extensions.nesting_legacy` for now

@@ -140,10 +140,10 @@ class NestedGraph(Graph):
 
             if state.get('children', []):
                 cluster_name = "cluster_" + name
-                with container.subgraph(name=cluster_name,
-                                        graph_attr=self.machine.style_attributes['graph']['default']) as sub:
-                    style = self.custom_styles['node'][name] or default_style
-                    sub.graph_attr.update(label=label, rank='source', **self.machine.style_attributes['graph'][style])
+                style_name = self.custom_styles['node'][name] or default_style
+                attr = {'label': label, 'rank': 'source'}
+                attr.update(**self.machine.style_attributes['graph'][style_name])
+                with container.subgraph(name=cluster_name, graph_attr=attr) as sub:
                     self._cluster_states.append(name)
                     is_parallel = isinstance(state.get('initial', ''), list)
                     width = '0.0' if is_parallel else '0.1'
@@ -153,15 +153,15 @@ class NestedGraph(Graph):
                     self._add_nodes(state['children'], sub, default_style='parallel' if is_parallel else 'default',
                                     prefix=prefix + state['name'] + self.machine.state_cls.separator)
             else:
-                style = self.custom_styles['node'][name] or default_style
-                container.node(name, label=label, **self.machine.style_attributes['node'][style])
+                style = self.machine.style_attributes['node'][default_style].copy()
+                style.update(self.machine.style_attributes['node'][self.custom_styles['node'][name] or default_style])
+                container.node(name, label=label, **style)
 
     def _add_edges(self, transitions, container, prefix=''):
         edges_attr = defaultdict(lambda: defaultdict(dict))
 
         for transition in transitions:
             # enable customizable labels
-            label_pos = 'label'
             src = prefix + transition['source']
             try:
                 dst = prefix + transition['dest']
@@ -171,38 +171,14 @@ class NestedGraph(Graph):
                 attr = edges_attr[src][dst]
                 attr[attr['label_pos']] = ' | '.join([edges_attr[src][dst][attr['label_pos']],
                                                       self._transition_label(transition)])
-                continue
             else:
-                attr = {}
-                if src in self._cluster_states:
-                    attr['ltail'] = 'cluster_' + src
-                    src_name = src + "_anchor"
-                    label_pos = 'headlabel'
-                else:
-                    src_name = src
+                edges_attr[src][dst] = self._create_edge_attr(src, dst, transition)
 
-                if dst in self._cluster_states:
-                    if not src.startswith(dst):
-                        attr['lhead'] = "cluster_" + dst
-                        label_pos = 'taillabel' if label_pos.startswith('l') else 'label'
-                    dst_name = dst + '_anchor'
-                else:
-                    dst_name = dst
-
-                # remove ltail when dst (ltail always starts with 'cluster_') is a child of src
-                if 'ltail' in attr and dst_name.startswith(attr['ltail'][8:]):
-                    del attr['ltail']
-
-                # # remove ltail when dst is a child of src
-                # if 'ltail' in edge_attr:
-                #     if _get_subgraph(container, edge_attr['ltail']).has_node(dst_name):
-                #         del edge_attr['ltail']
-
-                attr[label_pos] = self._transition_label(transition)
-                attr['label_pos'] = label_pos
-                attr['source'] = src_name
-                attr['dest'] = dst_name
-                edges_attr[src][dst] = attr
+        for custom_src, dests in self.custom_styles['edge'].items():
+            for custom_dst, style in dests.items():
+                if style and (custom_src not in edges_attr or custom_dst not in edges_attr[custom_src]):
+                    edges_attr[custom_src][custom_dst] = self._create_edge_attr(custom_src, custom_dst,
+                                                                                {'trigger': '', 'dest': ''})
 
         for src, dests in edges_attr.items():
             for dst, attr in dests.items():
@@ -210,6 +186,34 @@ class NestedGraph(Graph):
                 style = self.custom_styles['edge'][src][dst]
                 attr.update(**self.machine.style_attributes['edge'][style])
                 container.edge(attr.pop('source'), attr.pop('dest'), **attr)
+
+    def _create_edge_attr(self, src, dst, transition):
+        label_pos = 'label'
+        attr = {}
+        if src in self._cluster_states:
+            attr['ltail'] = 'cluster_' + src
+            src_name = src + "_anchor"
+            label_pos = 'headlabel'
+        else:
+            src_name = src
+
+        if dst in self._cluster_states:
+            if not src.startswith(dst):
+                attr['lhead'] = "cluster_" + dst
+                label_pos = 'taillabel' if label_pos.startswith('l') else 'label'
+            dst_name = dst + '_anchor'
+        else:
+            dst_name = dst
+
+        # remove ltail when dst (ltail always starts with 'cluster_') is a child of src
+        if 'ltail' in attr and dst_name.startswith(attr['ltail'][8:]):
+            del attr['ltail']
+
+        attr[label_pos] = self._transition_label(transition)
+        attr['label_pos'] = label_pos
+        attr['source'] = src_name
+        attr['dest'] = dst_name
+        return attr
 
 
 def _filter_states(states, state_names, state_cls, prefix=None):

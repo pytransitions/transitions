@@ -161,12 +161,17 @@ class LockedMachine(Machine):
     # not been created by Machine.__getattr__.
     # https://github.com/tyarkoni/transitions/issues/214
     def _add_model_to_state(self, state, model):
-        _super(LockedMachine, self)._add_model_to_state(state, model)  # pylint: disable=protected-access
-        for prefix in ['enter', 'exit']:
-            callback = "on_{0}_".format(prefix) + state.name
+        super(LockedMachine, self)._add_model_to_state(state, model)  # pylint: disable=protected-access
+        for prefix in self.state_cls.dynamic_methods:
+            callback = "{0}_{1}".format(prefix, self._get_qualified_state_name(state))
             func = getattr(model, callback, None)
             if isinstance(func, partial) and func.func != state.add_callback:
-                state.add_callback(prefix, callback)
+                state.add_callback(prefix[3:], callback)
+
+    # this needs to be overridden by the HSM variant to resolve names correctly
+    @staticmethod
+    def _get_qualified_state_name(state):
+        return state.name
 
     def _locked_method(self, func, *args, **kwargs):
         if self._ident.current != get_ident():

@@ -14,7 +14,8 @@ with codecs.open('README.md', 'r', 'utf-8') as f:
     long_description = re.sub(regex, "## Quickstart", readme, 1)
     assert long_description[:13] == '## Quickstart'  # Description should start with a headline (## Quickstart)
 
-tests_require = ['dill', 'graphviz', 'pygraphviz']
+tests_require = ['mock', 'tox', 'graphviz', 'pygraphviz']
+
 extras_require = {'diagrams': ['pygraphviz']}
 
 extra_setuptools_args = {}

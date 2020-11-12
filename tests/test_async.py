@@ -10,6 +10,8 @@ from unittest.mock import MagicMock
 from unittest import skipIf
 from .test_core import TestTransitions, MachineError
 from .utils import DummyModel
+from .test_graphviz import pgv as gv
+from .test_pygraphviz import pgv
 
 
 @skipIf(asyncio is None, "AsyncMachine requires asyncio and contextvars suppport")
@@ -26,13 +28,18 @@ class TestAsync(TestTransitions):
         return True
 
     @staticmethod
-    async def await_never_return():
-        await asyncio.sleep(100)
-        return None
+    async def cancel_soon():
+        await asyncio.sleep(1)
+        raise TimeoutError("Callback was not cancelled!")
 
     @staticmethod
     def synced_true():
         return True
+
+    @staticmethod
+    async def call_delayed(func, time):
+        await asyncio.sleep(time)
+        await func()
 
     def setUp(self):
         super(TestAsync, self).setUp()
@@ -90,21 +97,22 @@ class TestAsync(TestTransitions):
         self.assertTrue(mock.called)
 
     def test_multiple_models(self):
-        async def fix():
-            await m2.fix()
-
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         m1 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m1")
-        m2 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m2")
-        m2.add_transition(trigger='go', source='A', dest='B', before=self.await_never_return)
-        m2.add_transition(trigger='fix', source='A', dest='C', conditions=self.await_true)
-        m1.add_transition(trigger='go', source='A', dest='B', conditions=self.await_true, after='go')
-        m1.add_transition(trigger='go', source='B', dest='C', after=fix)
-        loop.run_until_complete(asyncio.gather(m2.go(), m1.go()))
-        assert m1.is_C()
-        assert m2.is_C()
+        m2 = self.machine_cls(states=['A'], initial='A', name='m2')
+        m1.add_transition(trigger='go', source='A', dest='B', before=self.cancel_soon)
+        m1.add_transition(trigger='fix', source='A', dest='C', after=self.cancel_soon)
+        m1.add_transition(trigger='check', source='C', dest='B', conditions=self.await_false)
+        m1.add_transition(trigger='reset', source='C', dest='A')
+        m2.add_transition(trigger='go', source='A', dest=None, conditions=m1.is_C, after=m1.reset)
+
+        loop.run_until_complete(asyncio.gather(m1.go(),  # should block before B
+                                               self.call_delayed(m1.fix, 0.05),  # should cancel task and go to C
+                                               self.call_delayed(m1.check, 0.07),  # should exit before m1.fix
+                                               self.call_delayed(m2.go, 0.1)))  # should cancel m1.fix
+        assert m1.is_A()
         loop.close()
 
     def test_async_callback_arguments(self):
@@ -215,7 +223,78 @@ class TestAsync(TestTransitions):
             asyncio.run(m.go())
         self.assertEqual('B', m.state)
 
+    def test_async_timeout(self):
+        from transitions.extensions.states import add_state_features
+        from transitions.extensions.asyncio import AsyncTimeout
 
+        timeout_called = MagicMock()
+
+        @add_state_features(AsyncTimeout)
+        class TimeoutMachine(self.machine_cls):
+            pass
+
+        states = ['A', {'name': 'B', 'timeout': 0.2, 'on_timeout': ['to_C', timeout_called]}, 'C']
+        m = TimeoutMachine(states=states, initial='A')
+        with self.assertRaises(AttributeError):
+            m.add_state('Fail', timeout=1)
+
+        async def run():
+            await m.to_B()
+            await asyncio.sleep(0.1)
+            self.assertTrue(m.is_B())  # timeout shouldn't be triggered
+            await m.to_A()  # cancel timeout
+            self.assertTrue(m.is_A())
+            await m.to_B()
+            await asyncio.sleep(0.3)
+            self.assertTrue(m.is_C())  # now timeout should have been processed
+            self.assertTrue(timeout_called.called)
+        asyncio.run(run())
+
+    def test_callback_order(self):
+        finished = []
+
+        class Model:
+            async def before(self):
+                await asyncio.sleep(0.1)
+                finished.append(2)
+
+            async def after(self):
+                await asyncio.sleep(0.1)
+                finished.append(3)
+
+        async def after_state_change():
+            finished.append(4)
+
+        async def before_state_change():
+            finished.append(1)
+
+        model = Model()
+        m = self.machine_cls(
+            model=model,
+            states=['start', 'end'],
+            after_state_change=after_state_change,
+            before_state_change=before_state_change,
+            initial='start',
+        )
+        m.add_transition('transit', 'start', 'end', after='after', before='before')
+        asyncio.run(model.transit())
+        assert finished == [1, 2, 3, 4]
+
+    def test_task_cleanup(self):
+
+        models = [DummyModel() for i in range(100)]
+        m = self.machine_cls(model=models, states=['A', 'B'], initial='A')
+        self.assertEqual(0, len(m.async_tasks))  # check whether other tests were already leaking tasks
+
+        async def run():
+            for model in m.models:
+                await model.to_B()
+
+        asyncio.run(run())
+        self.assertEqual(0, len(m.async_tasks))
+
+
+@skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class AsyncGraphMachine(TestAsync):
 
     def setUp(self):
@@ -258,3 +337,14 @@ class TestHierarchicalAsync(TestAsync):
         self.assertEqual(['P{0}1{0}a'.format(machine.state_cls.separator),
                           'P{0}2{0}b'.format(machine.state_cls.separator),
                           'P{0}3{0}y'.format(machine.state_cls.separator)], machine.state)
+        asyncio.run(machine.to_B())
+        self.assertTrue(machine.is_B())
+
+
+@skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
+class AsyncHierarchicalGraphMachine(TestHierarchicalAsync):
+
+    def setUp(self):
+        super(TestHierarchicalAsync, self).setUp()
+        self.machine_cls = MachineFactory.get_predefined(graph=True, asyncio=True, nested=True)
+        self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')

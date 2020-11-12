@@ -6,6 +6,8 @@ except ImportError:
     enum = None
 
 from transitions.extensions import MachineFactory
+from .test_pygraphviz import pgv
+from .test_graphviz import pgv as gv
 
 
 @skipIf(enum is None, "enum is not available")
@@ -117,6 +119,24 @@ class TestEnumsAsStates(TestCase):
         assert s.is_ONE()
         assert s.message == 'Goodbye'
 
+    def test_enum_zero(self):
+        from enum import IntEnum
+
+        class State(IntEnum):
+            FOO = 0
+            BAR = 1
+
+        transitions = [
+            ['foo', State.FOO, State.BAR],
+            ['bar', State.BAR, State.FOO]
+        ]
+
+        m = self.machine_cls(states=State, initial=State.FOO, transitions=transitions)
+        m.foo()
+        self.assertTrue(m.is_BAR())
+        m.bar()
+        self.assertTrue(m.is_FOO())
+
 
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):
@@ -164,9 +184,6 @@ class TestNestedStateEnums(TestEnumsAsStates):
             self.machine_cls(states=[Foo.A, Foo.A])
 
     def test_add_enum_transition(self):
-        from transitions.extensions.nesting_legacy import HierarchicalMachine
-        if self.machine_cls is HierarchicalMachine:
-            self.skipTest("Converting enums to nested states is not supported on the legacy HierarchicalMachine")
 
         class Foo(enum.Enum):
             A = 0
@@ -194,10 +211,6 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertEqual(m.state, Bar.C)
 
     def test_add_nested_enums_as_nested_state(self):
-        from transitions.extensions.nesting_legacy import HierarchicalMachine
-        if self.machine_cls is HierarchicalMachine:
-            self.skipTest("Converting enums to nested states is not supported on the legacy HierarchicalMachine")
-
         class Foo(enum.Enum):
             A = 0
             B = 1
@@ -210,17 +223,23 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertEqual(sorted(m.states['FOO'].states.keys()), ['A', 'B'])
         m.add_transition('go', 'FOO_A', 'C')
         m.add_transition('go', 'C', 'FOO_B')
+        m.add_transition('foo', Bar.C, Bar.FOO)
 
         m.to_FOO_A()
         self.assertFalse(m.is_C())
+        self.assertTrue(m.is_FOO(allow_substates=True))
         self.assertTrue(m.is_FOO_A())
+        self.assertTrue(m.is_FOO_A(allow_substates=True))
         m.go()
         self.assertEqual(Bar.C, m.state)
         m.go()
         self.assertEqual(Foo.B, m.state)
+        m.to_state(m, Bar.C.name)
+        self.assertEqual(Bar.C, m.state)
+        m.foo()
+        self.assertEqual(Bar.FOO, m.state)
 
     def test_enum_model_conversion(self):
-
         class Inner(enum.Enum):
             I1 = 1
             I2 = 2
@@ -241,16 +260,38 @@ class TestNestedStateEnums(TestEnumsAsStates):
 
         m = self.machine_cls(states=Outer, initial=Outer.O1)
 
+    def test_enum_initial(self):
+        class Foo(enum.Enum):
+            A = 0
+            B = 1
 
-@skipIf(enum is None, "enum is not available")
+        class Bar(enum.Enum):
+            FOO = dict(children=Foo, initial=Foo.A)
+            C = 2
+
+        m = self.machine_cls(states=Bar, initial=Bar.FOO)
+        self.assertTrue(m.is_FOO_A())
+
+
+@skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
 class TestEnumWithGraph(TestEnumsAsStates):
 
     def setUp(self):
         super(TestEnumWithGraph, self).setUp()
         self.machine_cls = MachineFactory.get_predefined(graph=True)
 
+    def test_get_graph(self):
+        m = self.machine_cls(states=self.States, initial=self.States.GREEN)
+        roi = m.get_graph(show_roi=False)
+        self.assertIsNotNone(roi)
 
-@skipIf(enum is None, "enum is not available")
+    def test_get_graph_show_roi(self):
+        m = self.machine_cls(states=self.States, initial=self.States.GREEN)
+        roi = m.get_graph(show_roi=True)
+        self.assertIsNotNone(roi)
+
+
+@skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
 class TestNestedStateGraphEnums(TestNestedStateEnums):
 
     def setUp(self):

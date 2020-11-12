@@ -13,3 +13,4 @@ from .locking import LockedMachine
 
 from .factory import MachineFactory, HierarchicalGraphMachine, LockedHierarchicalGraphMachine
 from .factory import LockedHierarchicalMachine, LockedGraphMachine
+from .factory import AsyncMachine, AsyncGraphMachine, HierarchicalAsyncMachine, HierarchicalAsyncGraphMachine
