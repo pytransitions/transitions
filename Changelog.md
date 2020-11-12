@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.8.5 ()
+## 0.8.5 (November 2020)
+
+Release 0.8.5 is a minor release and contains bugfixes:
 
 - `AsyncMachine.switch_model_context` is expected to be `async` now for easier integration of async code during model switch.
 - Bugfix #478: Initializing a machine with `GraphSupport` threw an exception when initial was set to a nested or parallel state (thanks @nickvazztau)
