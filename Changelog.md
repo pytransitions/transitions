@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.6 ()
+
+- `HierarchicalMachine.add_states` will return a `MachineError` when an `Enum` name contains the currently used `NestedState.separator`.
+
 ## 0.8.5 (November 2020)
 
 Release 0.8.5 is a minor release and contains bugfixes:

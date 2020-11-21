@@ -6,6 +6,7 @@ except ImportError:
     enum = None
 
 from transitions.extensions import MachineFactory
+from transitions import MachineError
 from .test_pygraphviz import pgv
 from .test_graphviz import pgv as gv
 
@@ -271,6 +272,24 @@ class TestNestedStateEnums(TestEnumsAsStates):
 
         m = self.machine_cls(states=Bar, initial=Bar.FOO)
         self.assertTrue(m.is_FOO_A())
+
+    def test_separator_naming_error(self):
+        class UnderscoreEnum(enum.Enum):
+            STATE_NAME = 0
+
+        # using _ in enum names in the default config should raise an error
+        with self.assertRaises(MachineError):
+            self.machine_cls(states=UnderscoreEnum)
+
+        # changing the separator should make it work
+        class DotNestedState(self.machine_cls.state_cls):
+            separator = '.'
+
+        # make custom machine use custom state with dot separator
+        class DotMachine(self.machine_cls):
+            state_cls = DotNestedState
+
+        m = DotMachine(states=UnderscoreEnum)
 
 
 @skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
