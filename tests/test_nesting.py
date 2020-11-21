@@ -537,6 +537,35 @@ class TestNestedTransitions(TestTransitions):
                                    transitions=[['go', 'B', 'A']], initial='A')
         self.assertFalse(False, machine.go())
 
+    def test_exception_in_state_enter_exit(self):
+        # https://github.com/pytransitions/transitions/issues/486
+        # NestedState._scope needs to be reset when an error is raised in a state callback
+        class Model:
+            def on_enter_B_1(self):
+                raise RuntimeError("Oh no!")
+
+            def on_exit_C_1(self):
+                raise RuntimeError("Oh no!")
+
+        states = ['A',
+                  {'name': 'B', 'initial': '1', 'children': ['1', '2']},
+                  {'name': 'C', 'initial': '1', 'children': ['1', '2']}]
+        model = Model()
+        machine = self.machine_cls(model, states=states, initial='A')
+        with self.assertRaises(RuntimeError):
+            model.to_B()
+        self.assertTrue(model.is_B_1())
+        machine.set_state('A', model)
+        with self.assertRaises(RuntimeError):
+            model.to_B()
+        with self.assertRaises(RuntimeError):
+            model.to_C()
+            model.to_A()
+        self.assertTrue(model.is_C_1())
+        machine.set_state('A', model)
+        model.to_C()
+        self.assertTrue(model.is_C_1())
+
 
 class TestSeparatorsBase(TestCase):
 

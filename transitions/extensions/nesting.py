@@ -192,13 +192,17 @@ class NestedState(State):
 
     def scoped_enter(self, event_data, scope=[]):
         self._scope = scope
-        self.enter(event_data)
-        self._scope = []
+        try:
+            self.enter(event_data)
+        finally:
+            self._scope = []
 
     def scoped_exit(self, event_data, scope=[]):
         self._scope = scope
-        self.exit(event_data)
-        self._scope = []
+        try:
+            self.exit(event_data)
+        finally:
+            self._scope = []
 
     @property
     def name(self):

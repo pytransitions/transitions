@@ -3,6 +3,7 @@
 ## 0.8.6 ()
 
 - `HierarchicalMachine.add_states` will return a `MachineError` when an `Enum` name contains the currently used `NestedState.separator`.
+- Bugfix #486: Reset `NestedState._scope` when enter/exit callbacks raise an exception (thanks @m986883511)
 
 ## 0.8.5 (November 2020)
 
