@@ -457,9 +457,9 @@ class HierarchicalMachine(Machine):
                     self._init_state(new_state)
             elif isinstance(state, Enum):
                 if self.state_cls.separator in state.name:
-                    raise MachineError("State '{0}' contains '{1}' which is used as state name separator. "
-                                       "Consider changing the NestedState.separator to avoid this issue."
-                                       "".format(state.name, self.state_cls.separator))
+                    raise ValueError("State '{0}' contains '{1}' which is used as state name separator. "
+                                     "Consider changing the NestedState.separator to avoid this issue."
+                                     "".format(state.name, self.state_cls.separator))
                 if remap is not None and state.name in remap:
                     return
                 new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,

@@ -6,7 +6,6 @@ except ImportError:
     enum = None
 
 from transitions.extensions import MachineFactory
-from transitions import MachineError
 from .test_pygraphviz import pgv
 from .test_graphviz import pgv as gv
 
@@ -278,7 +277,7 @@ class TestNestedStateEnums(TestEnumsAsStates):
             STATE_NAME = 0
 
         # using _ in enum names in the default config should raise an error
-        with self.assertRaises(MachineError):
+        with self.assertRaises(ValueError):
             self.machine_cls(states=UnderscoreEnum)
 
         # changing the separator should make it work

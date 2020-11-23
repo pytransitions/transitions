@@ -807,9 +807,9 @@ class TestTransitions(TestCase):
         def raise_key_error():
             raise KeyError
 
-        self.stuff.machine.add_transition('do_raises_keyerror', '*', 'C', before=raise_key_error)
+        self.stuff.machine.add_transition('do_raise_keyerror', '*', 'C', before=raise_key_error)
         with self.assertRaises(KeyError):
-            self.stuff.trigger('do_raises_keyerror')
+            self.stuff.trigger('do_raise_keyerror')
 
         self.stuff.machine.get_model_state(self.stuff).ignore_invalid_triggers = True
         self.stuff.trigger('should_not_raise_anything')
