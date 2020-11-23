@@ -799,6 +799,8 @@ class TestTransitions(TestCase):
         self.assertTrue(self.stuff.is_A())
         with self.assertRaises(AttributeError):
             self.stuff.trigger('not_available')
+        with self.assertRaises(MachineError):
+            self.stuff.trigger('maybe')
 
         model = Model()
         m = Machine(model=model)

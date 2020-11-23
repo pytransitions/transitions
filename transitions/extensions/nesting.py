@@ -683,6 +683,18 @@ class HierarchicalMachine(Machine):
                     state_path.pop()
         return triggers
 
+    def has_trigger(self, trigger, state=None):
+        """ Check whether an event/trigger is known to the machine
+        Args:
+            trigger (str): Event/trigger name
+            state (optional[NestedState]): Limits the recursive search to this state and its children
+        Returns:
+            bool: True if event is known and False otherwise
+        """
+
+        state = state or self
+        return trigger in state.events or any([self.has_trigger(trigger, sta) for sta in state.states.values()])
+
     def is_state(self, state_name, model, allow_substates=False):
         current_name = getattr(model, self.model_attribute)
         if allow_substates:
@@ -831,7 +843,12 @@ class HierarchicalMachine(Machine):
                 ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
                     else self.ignore_invalid_triggers
                 if not ignore:
-                    raise MachineError(msg)
+                    # determine whether a MachineError (valid event but invalid state) ...
+                    if self.has_trigger(trigger):
+                        raise MachineError(msg)
+                    # or AttributeError (invalid event) is appropriate
+                    else:
+                        raise AttributeError("Do not know event named '%s'." % trigger)
             _LOGGER.warning(msg)
             res = False
         return res
@@ -846,10 +863,7 @@ class HierarchicalMachine(Machine):
         Returns:
             bool: True if a transitions has been conducted or the trigger event has been queued.
         """
-        try:
-            return self.trigger_event(model, trigger_name, *args, **kwargs)
-        except MachineError:
-            raise AttributeError("Do not know event named '%s'." % trigger_name)
+        return self.trigger_event(model, trigger_name, *args, **kwargs)
 
     def _has_state(self, state, raise_error=False):
         """ This function
@@ -938,7 +952,7 @@ class HierarchicalMachine(Machine):
                     tmp = self._trigger_event(_model, _trigger, value, *args, **kwargs)
                     if tmp is not None:
                         res[key] = tmp
-            if not res.get(key, None) and _trigger in self.events:
+            if res.get(key, False) is False and _trigger in self.events:
                 tmp = self.events[_trigger].trigger(_model, self, *args, **kwargs)
                 if tmp is not None:
                     res[key] = tmp
