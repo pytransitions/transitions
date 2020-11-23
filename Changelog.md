@@ -2,9 +2,9 @@
 
 ## 0.8.6 ()
 
-- `HierarchicalMachine.add_states` will return a `MachineError` when an `Enum` name contains the currently used `NestedState.separator`.
+- `HierarchicalMachine.add_states` will raise a `ValueError` when an `Enum` name contains the currently used `NestedState.separator`.
 - Bugfix #486: Reset `NestedState._scope` when enter/exit callbacks raise an exception (thanks @m986883511)
-- Bugfix #488: Let `HierarchicalMachine.__get_trigger` which is bound to `model.trigger` raise a `MachineError` for invalid events and `AttributeError` for unknown events (thanks @hsharrison)
+- Bugfix #488: Let `HierarchicalMachine._get_trigger` which is bound to `model.trigger` raise a `MachineError` for invalid events and `AttributeError` for unknown events (thanks @hsharrison)
 - Introduced `HierarchicalMachine.has_trigger` to determine whether an event is valid for an HSM
 
 ## 0.8.5 (November 2020)
