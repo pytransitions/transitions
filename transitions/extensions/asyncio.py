@@ -3,7 +3,7 @@ import logging
 import asyncio
 import contextvars
 import inspect
-
+from collections import defaultdict, deque
 from functools import partial, reduce
 import copy
 
@@ -306,6 +306,10 @@ class AsyncMachine(Machine):
     protected_tasks = []
     current_context = contextvars.ContextVar('current_context', default=None)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._transition_queue = defaultdict(deque)
+
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.
         Args:
@@ -384,7 +388,7 @@ class AsyncMachine(Machine):
             else:
                 self.async_tasks[model] = [asyncio.current_task()]
             try:
-                res = await self._process(func)
+                res = await self._process(func, model)
             except asyncio.CancelledError:
                 res = False
             finally:
@@ -392,10 +396,10 @@ class AsyncMachine(Machine):
                 if len(self.async_tasks[model]) == 0:
                     del self.async_tasks[model]
         else:
-            res = await self._process(func)
+            res = await self._process(func, model)
         return res
 
-    async def _process(self, trigger):
+    async def _process(self, trigger, model):
         # default processing
         if not self.has_queue:
             if not self._transition_queue:
@@ -404,19 +408,19 @@ class AsyncMachine(Machine):
             else:
                 raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
 
-        self._transition_queue.append(trigger)
+        self._transition_queue[model].append(trigger)
         # another entry in the queue implies a running transition; skip immediate execution
-        if len(self._transition_queue) > 1:
+        if len(self._transition_queue[model]) > 1:
             return True
 
         # execute as long as transition queue is not empty ToDo: not tested!
-        while self._transition_queue:
+        while self._transition_queue[model]:
             try:
-                await self._transition_queue[0]()
-                self._transition_queue.popleft()
+                await self._transition_queue[model][0]()
+                self._transition_queue[model].popleft()
             except Exception:
                 # if a transition raises an exception, clear queue and delegate exception handling
-                self._transition_queue.clear()
+                self._transition_queue[model].clear()
                 raise
         return True
 
