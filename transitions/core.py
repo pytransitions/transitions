@@ -602,11 +602,14 @@ class Machine(object):
 
     def remove_model(self, model):
         """ Remove a model from the state machine. The model will still contain all previously added triggers
-        and callbacks, but will not receive updates when states or transitions are added to the Machine. """
+        and callbacks, but will not receive updates when states or transitions are added to the Machine.
+        If an event queue is used, all queued events of that model will be removed."""
         models = listify(model)
 
         for mod in models:
             self.models.remove(mod)
+            if self.has_queue:
+                self._transition_queue = deque([e for e in self._transition_queue if e.args[0] != mod])
 
     @classmethod
     def _create_transition(cls, *args, **kwargs):
@@ -1153,11 +1156,14 @@ class Machine(object):
         while self._transition_queue:
             try:
                 self._transition_queue[0]()
-                self._transition_queue.popleft()
             except Exception:
                 # if a transition raises an exception, clear queue and delegate exception handling
                 self._transition_queue.clear()
                 raise
+            try:
+                self._transition_queue.popleft()
+            except IndexError:  # list had been cleared during event
+                pass
         return True
 
     @classmethod

@@ -6,7 +6,7 @@ except ImportError:
 import sys
 
 from .utils import InheritedStuff
-from .utils import Stuff
+from .utils import Stuff, DummyModel
 
 from functools import partial
 from transitions import Machine, MachineError, State, EventData
@@ -619,6 +619,23 @@ class TestTransitions(TestCase):
 
         with self.assertRaises(ValueError):
             m.do(machine=m)
+
+    def test_queued_model_remove(self):
+        m = self.machine_cls(model=None, states=['A', 'B', 'C'], initial='A', queued=True)
+
+        class Model:
+            def on_enter_A(self):
+                self.to_B()
+
+            def on_enter_B(self):
+                self.to_C()
+                m.remove_model(self)
+
+            def on_enter_C(self):
+                raise RuntimeError("Event was not cancelled")
+
+        m.add_model(Model())
+        m.dispatch('to_A')
 
     def test___getattr___and_identify_callback(self):
         m = self.machine_cls(Stuff(), states=['A', 'B', 'C'], initial='A')
