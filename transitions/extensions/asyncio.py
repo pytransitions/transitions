@@ -308,7 +308,11 @@ class AsyncMachine(Machine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._transition_queue = defaultdict(deque)
+        if self.has_queue == 'model':  # each model gets its own queue
+            self._transition_queue = defaultdict(deque)
+        elif self.has_queue:  # one queue for all models
+            d = deque()
+            self._transition_queue = defaultdict(lambda: d)
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.
@@ -430,11 +434,14 @@ class AsyncMachine(Machine):
         while self._transition_queue[model]:
             try:
                 await self._transition_queue[model][0]()
-                self._transition_queue[model].popleft()
             except Exception:
                 # if a transition raises an exception, clear queue and delegate exception handling
                 self._transition_queue[model].clear()
                 raise
+            try:
+                self._transition_queue[model].popleft()
+            except (IndexError, KeyError):  # list had been cleared during event
+                return True
         return True
 
 
