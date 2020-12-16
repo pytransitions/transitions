@@ -399,6 +399,19 @@ class AsyncMachine(Machine):
             res = await self._process(func, model)
         return res
 
+    def remove_model(self, model):
+        """ Remove a model from the state machine. The model will still contain all previously added triggers
+        and callbacks, but will not receive updates when states or transitions are added to the Machine.
+        If an event queue is used, all queued events of that model will be removed."""
+        models = listify(model)
+
+        for mod in models:
+            self.models.remove(mod)
+            if self.has_queue == 'model':
+                del self._transition_queue[mod]
+            elif self.has_queue:
+                self._transition_queue[mod] = deque([e for e in self._transition_queue if e.args[0] != mod])
+
     async def _process(self, trigger, model):
         # default processing
         if not self.has_queue:

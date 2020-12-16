@@ -8,6 +8,7 @@ except (ImportError, SyntaxError):
 
 from unittest.mock import MagicMock
 from unittest import skipIf
+from functools import partial
 from .test_core import TestTransitions, MachineError
 from .utils import DummyModel
 from .test_graphviz import pgv as gv
@@ -31,6 +32,10 @@ class TestAsync(TestTransitions):
     async def cancel_soon():
         await asyncio.sleep(1)
         raise TimeoutError("Callback was not cancelled!")
+
+    @staticmethod
+    def raise_value_error():
+        raise ValueError("ValueError raised.")
 
     @staticmethod
     def synced_true():
@@ -222,6 +227,39 @@ class TestAsync(TestTransitions):
         with self.assertRaises(ValueError):
             asyncio.run(m.go())
         self.assertEqual('B', m.state)
+
+    def test_model_queue(self):
+        mock = MagicMock()
+
+        def check_mock():
+            self.assertTrue(mock.called)
+
+        m1 = DummyModel()
+        m2 = DummyModel()
+
+        async def run():
+            transitions = [{'trigger': 'mock', 'source': ['A', 'B'], 'dest': 'B', 'after': mock},
+                           {'trigger': 'delayed', 'source': 'A', 'dest': 'B', 'before': partial(asyncio.sleep, 0.1)},
+                           {'trigger': 'check', 'source': 'B', 'dest': 'A', 'after': check_mock},
+                           {'trigger': 'error', 'source': 'B', 'dest': 'C', 'before': self.raise_value_error}]
+            m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions, initial='A',
+                                 queued='model')
+            # call m1.delayed and m2.mock should be called immediately
+            # m1.check should be delayed until after m1.delayed
+            await asyncio.gather(m1.delayed(), self.call_delayed(m1.check, 0.02), self.call_delayed(m2.mock, 0.04))
+            self.assertTrue(m1.is_A())
+            self.assertTrue(m2.is_B())
+            mock.reset_mock()
+            with self.assertRaises(ValueError):
+                # m1.error raises an error which should cancel m1.to_A but not m2.mock and m2.check
+                await asyncio.gather(m1.to_A(), m2.to_A(),
+                                     self.call_delayed(m1.delayed, 0.01), self.call_delayed(m2.delayed, 0.01),
+                                     self.call_delayed(m1.error, 0.02), self.call_delayed(m1.to_A, 0.03),
+                                     self.call_delayed(m2.mock, 0.03), self.call_delayed(m2.check, 0.04))
+            await asyncio.sleep(0.05)  # give m2 events time to finish
+            self.assertTrue(m1.is_B())
+            self.assertTrue(m2.is_A())
+        asyncio.run(run())
 
     def test_async_timeout(self):
         from transitions.extensions.states import add_state_features
