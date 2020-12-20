@@ -620,7 +620,7 @@ class TestTransitions(TestCase):
         with self.assertRaises(ValueError):
             m.do(machine=m)
 
-    def test_queued_model_remove(self):
+    def test_queued_remove(self):
         m = self.machine_cls(model=None, states=['A', 'B', 'C'], initial='A', queued=True)
         assert_equal = self.assertEqual
 
