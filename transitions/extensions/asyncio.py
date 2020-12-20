@@ -307,12 +307,17 @@ class AsyncMachine(Machine):
     current_context = contextvars.ContextVar('current_context', default=None)
 
     def __init__(self, *args, **kwargs):
+        self._transition_queue_dict = {}
         super().__init__(*args, **kwargs)
-        if self.has_queue == 'model':  # each model gets its own queue
-            self._transition_queue = defaultdict(deque)
-        elif self.has_queue:  # one queue for all models
-            d = deque()
-            self._transition_queue = defaultdict(lambda: d)
+
+    def add_model(self, model, initial=None):
+        super().add_model(model, initial)
+        if self.has_queue == 'model':
+            for mod in listify(model):
+                self._transition_queue_dict[mod if mod != 'self' else self] = deque()
+        elif self.has_queue:
+            for mod in listify(model):
+                self._transition_queue_dict[mod if mod != 'self' else self] = self._transition_queue
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.
@@ -408,13 +413,14 @@ class AsyncMachine(Machine):
         and callbacks, but will not receive updates when states or transitions are added to the Machine.
         If an event queue is used, all queued events of that model will be removed."""
         models = listify(model)
-
-        for mod in models:
-            self.models.remove(mod)
-            if self.has_queue == 'model':
-                del self._transition_queue[mod]
-            elif self.has_queue:
-                self._transition_queue[mod] = deque([e for e in self._transition_queue if e.args[0] != mod])
+        if self.has_queue == 'model':
+            for mod in models:
+                del self._transition_queue_dict[mod]
+        elif self.has_queue:
+            for mod in models:
+                del self._transition_queue_dict[mod]
+            d = self._transition_queue
+            self._transition_queue_dict[models[0]] = deque([d.popleft()] + [e for e in d if e.args[0] not in models])
 
     async def _process(self, trigger, model):
         # default processing
@@ -425,22 +431,21 @@ class AsyncMachine(Machine):
             else:
                 raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
 
-        self._transition_queue[model].append(trigger)
+        self._transition_queue_dict[model].append(trigger)
         # another entry in the queue implies a running transition; skip immediate execution
-        if len(self._transition_queue[model]) > 1:
+        if len(self._transition_queue_dict[model]) > 1:
             return True
 
-        # execute as long as transition queue is not empty ToDo: not tested!
-        while self._transition_queue[model]:
+        while self._transition_queue_dict[model]:
             try:
-                await self._transition_queue[model][0]()
+                await self._transition_queue_dict[model][0]()
             except Exception:
                 # if a transition raises an exception, clear queue and delegate exception handling
-                self._transition_queue[model].clear()
+                self._transition_queue_dict[model].clear()
                 raise
             try:
-                self._transition_queue[model].popleft()
-            except (IndexError, KeyError):  # list had been cleared during event
+                self._transition_queue_dict[model].popleft()
+            except KeyError:
                 return True
         return True
 
