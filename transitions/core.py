@@ -608,8 +608,10 @@ class Machine(object):
 
         for mod in models:
             self.models.remove(mod)
-            if self.has_queue:
-                self._transition_queue = deque([e for e in self._transition_queue if e.args[0] != mod])
+        if self.has_queue:
+            # the first element of the list is currently executed. Keeping it for further Machine._process(ing)
+            self._transition_queue = deque(
+                [self._transition_queue[0]] + [e for e in self._transition_queue if e.args[0] not in models])
 
     @classmethod
     def _create_transition(cls, *args, **kwargs):
@@ -1156,14 +1158,11 @@ class Machine(object):
         while self._transition_queue:
             try:
                 self._transition_queue[0]()
+                self._transition_queue.popleft()
             except Exception:
                 # if a transition raises an exception, clear queue and delegate exception handling
                 self._transition_queue.clear()
                 raise
-            try:
-                self._transition_queue.popleft()
-            except IndexError:  # list had been cleared during event
-                pass
         return True
 
     @classmethod
