@@ -623,6 +623,16 @@ machine.jump()
 >>> True
 ```
 
+When a model is removed from the machine, `transitions` will also remove all related events from the queue.
+
+```python
+class Model:
+    def on_enter_B(self):
+        self.to_C()  # add event to queue ...
+        self.machine.remove_model(self)  # aaaand it's gone
+```
+
+
 #### <a name="conditional-transitions"></a>Conditional transitions
 Sometimes you only want a particular transition to execute if a specific condition occurs. You can do this by passing a method, or list of methods, in the `conditions` argument:
 
@@ -1533,6 +1543,27 @@ This separation would not be possible without `contextvars`.
 Note that `prepare` and `conditions` are NOT treated as ongoing transitions.
 This means that after `conditions` have been evaluated, a transition is executed even though another event already happened.
 Tasks will only be cancelled when run as a `before` callback or later.
+
+`AsyncMachine` features a model-special queue mode which can be used when `queued='model'` is passed to the constructor.
+With model-specific queue, events will only be queued when they belong to the same model.
+Furthermore, a raised exception will only clear the event queue of the model that raised that exception.
+For the sake of simplicity, let's assume that every event in `asyncion.gather` below is not triggered at the same time but slightly delayed:
+
+```python
+asyncio.gather(model1.event1(), model1.event2(), model2.event1())
+# execution order with AsyncMachine(queued=True)
+# model1.event1 -> model1.event2 -> model2.event1
+# execution order with AsyncMachine(queued='model')
+# (model1.event1, model2.event1) -> model1.event2
+
+asyncio.gather(model1.event1(), model1.error(), model1.event3(), model2.event1(), model2.event2(), model2.event3())
+# execution order with AsyncMachine(queued=True)
+# model1.event1 -> model1.error
+# execution order with AsyncMachine(queued='model')
+# (model1.event1, model2.event1) -> (model1.error, model2.event2) -> model2.event3
+```
+
+Note that queue modes must not be changed after machine construction. 
 
 #### <a name="state-features"></a>Adding features to states
 
