@@ -261,7 +261,7 @@ class TestAsync(TestTransitions):
             self.assertTrue(m2.is_A())
         asyncio.run(run())
 
-    def test_queued_model_remove(self):
+    def test_queued_remove(self):
 
         def remove_model(event_data):
             event_data.machine.remove_model(event_data.model)
