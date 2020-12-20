@@ -1,11 +1,13 @@
 # Changelog
 
-## 0.8.6 ()
+## 0.8.6 (December 2020)
 
 - `HierarchicalMachine.add_states` will raise a `ValueError` when an `Enum` name contains the currently used `NestedState.separator`.
 - Bugfix #486: Reset `NestedState._scope` when enter/exit callbacks raise an exception (thanks @m986883511)
 - Bugfix #488: Let `HierarchicalMachine._get_trigger` which is bound to `model.trigger` raise a `MachineError` for invalid events and `AttributeError` for unknown events (thanks @hsharrison)
 - Introduced `HierarchicalMachine.has_trigger` to determine whether an event is valid for an HSM
+- Feature #490: `AsyncMachine` features an event queue dictionary for individual models when `queued='model'` (thanks @jekel)
+- Feature #490: `Machine.remove_model` will now also remove model events from the event queue when `queued=True` 
 
 ## 0.8.5 (November 2020)
 

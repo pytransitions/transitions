@@ -261,6 +261,43 @@ class TestAsync(TestTransitions):
             self.assertTrue(m2.is_A())
         asyncio.run(run())
 
+    def test_queued_model_remove(self):
+
+        def remove_model(event_data):
+            event_data.machine.remove_model(event_data.model)
+
+        def check_queue(expect, event_data):
+            self.assertEqual(expect, len(event_data.machine._transition_queue_dict[event_data.model]))
+
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'B', 'after': partial(asyncio.sleep, 0.1)},
+            {'trigger': 'go', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'remove', 'source': 'B', 'dest': None, 'prepare': ['to_A', 'to_C'],
+             'before': partial(check_queue, 4), 'after': remove_model},
+            {'trigger': 'remove_queue', 'source': 'B', 'dest': None, 'prepare': ['to_A', 'to_C'],
+             'before': partial(check_queue, 3), 'after': remove_model}
+        ]
+
+        async def run():
+            m1 = DummyModel()
+            m2 = DummyModel()
+            m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions,
+                                 initial='A', queued=True, send_event=True)
+            await asyncio.gather(m1.go(), m2.go(),
+                                 self.call_delayed(m1.remove, 0.02), self.call_delayed(m2.go, 0.04))
+            self.assertTrue(m1.is_B())
+            self.assertTrue(m2.is_C())
+            m1 = DummyModel()
+            m2 = DummyModel()
+            m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions,
+                                 initial='A', queued='model', send_event=True)
+            await asyncio.gather(m1.go(), m2.go(),
+                                 self.call_delayed(m1.remove_queue, 0.02), self.call_delayed(m2.go, 0.04))
+            self.assertNotIn(m1, m._transition_queue_dict)
+            self.assertTrue(m1.is_B())
+            self.assertTrue(m2.is_C())
+        asyncio.run(run())
+
     def test_async_timeout(self):
         from transitions.extensions.states import add_state_features
         from transitions.extensions.asyncio import AsyncTimeout

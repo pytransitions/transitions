@@ -622,20 +622,41 @@ class TestTransitions(TestCase):
 
     def test_queued_model_remove(self):
         m = self.machine_cls(model=None, states=['A', 'B', 'C'], initial='A', queued=True)
+        assert_equal = self.assertEqual
 
-        class Model:
+        class BaseModel:
+            def on_enter_A(self):
+                pass
+
+            def on_enter_B(self):
+                pass
+
+            def on_enter_C(self):
+                pass
+
+        class SubModel(BaseModel):
+            def __init__(self):
+                self.inner = BaseModel()
+
             def on_enter_A(self):
                 self.to_B()
+                self.inner.to_B()
 
             def on_enter_B(self):
                 self.to_C()
+                self.inner.to_C()
+                # queue should contain to_B(), inner.to_B(), to_C(), inner.to_C()
+                assert_equal(4, len(m._transition_queue))
                 m.remove_model(self)
+                # since to_B() is currently executed it should still be in the list, to_C should be gone
+                assert_equal(3, len(m._transition_queue))
 
             def on_enter_C(self):
                 raise RuntimeError("Event was not cancelled")
-
-        m.add_model(Model())
-        m.dispatch('to_A')
+        model = SubModel()
+        m.add_model([model, model.inner])
+        model.to_A()
+        self.assertTrue(model.inner.is_C())
 
     def test___getattr___and_identify_callback(self):
         m = self.machine_cls(Stuff(), states=['A', 'B', 'C'], initial='A')
