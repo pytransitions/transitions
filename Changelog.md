@@ -7,7 +7,8 @@
 - Bugfix #488: Let `HierarchicalMachine._get_trigger` which is bound to `model.trigger` raise a `MachineError` for invalid events and `AttributeError` for unknown events (thanks @hsharrison)
 - Introduced `HierarchicalMachine.has_trigger` to determine whether an event is valid for an HSM
 - Feature #490: `AsyncMachine` features an event queue dictionary for individual models when `queued='model'` (thanks @jekel)
-- Feature #490: `Machine.remove_model` will now also remove model events from the event queue when `queued=True` 
+- Feature #490: `Machine.remove_model` will now also remove model events from the event queue when `queued=True`
+- Feature #491: `Machine.get_transitions` and its HSM counterpart now accept `Enum` and `State` for `source` and `dest` (thanks @thedrow)
 
 ## 0.8.5 (November 2020)
 

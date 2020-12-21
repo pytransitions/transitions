@@ -198,3 +198,6 @@ class TestLegacyNestedEnum(TestNestedStateEnums):
 
     def test_separator_naming_error(self):
         pass  # not supported by legacy machine
+
+    def test_get_nested_transitions(self):
+        pass  # not supported by legacy machine

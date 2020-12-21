@@ -137,6 +137,17 @@ class TestEnumsAsStates(TestCase):
         m.bar()
         self.assertTrue(m.is_FOO())
 
+    def test_get_transitions(self):
+        m = self.machine_cls(states=self.States, initial=self.States.RED)
+        self.assertEqual(3, len(m.get_transitions(source=self.States.RED)))
+        self.assertEqual(3, len(m.get_transitions(dest=self.States.RED)))
+        self.assertEqual(1, len(m.get_transitions(source=self.States.RED, dest=self.States.YELLOW)))
+        self.assertEqual(9, len(m.get_transitions()))
+        m.add_transition('switch_to_yellow', self.States.RED, self.States.YELLOW)
+        self.assertEqual(4, len(m.get_transitions(source=self.States.RED)))
+        # we expect two return values. 'switch_to_yellow' and 'to_YELLOW'
+        self.assertEqual(2, len(m.get_transitions(source=self.States.RED, dest=self.States.YELLOW)))
+
 
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):
@@ -289,6 +300,25 @@ class TestNestedStateEnums(TestEnumsAsStates):
             state_cls = DotNestedState
 
         m = DotMachine(states=UnderscoreEnum)
+
+    def test_get_nested_transitions(self):
+
+        class Errors(enum.Enum):
+            NONE = self.States
+            UNKNOWN = 2
+            POWER = 3
+        m = self.machine_cls(states=Errors, initial=Errors.NONE.value.RED, auto_transitions=False)
+        m.add_transition('error', Errors.NONE, Errors.UNKNOWN)
+        m.add_transition('outage', [Errors.NONE, Errors.UNKNOWN], Errors.POWER)
+        m.add_transition('reset', '*', self.States.RED)
+        m.add_transition('toggle', self.States.RED, self.States.GREEN)
+        m.add_transition('toggle', self.States.GREEN, self.States.YELLOW)
+        m.add_transition('toggle', self.States.YELLOW, self.States.RED)
+        self.assertEqual(5, len(m.get_transitions(dest=self.States.RED)))
+        self.assertEqual(1, len(m.get_transitions(source=self.States.RED, dest=self.States.RED, delegate=True)))
+        self.assertEqual(1, len(m.get_transitions(source=self.States.RED, dest=self.States.GREEN)))
+        self.assertEqual(1, len(m.get_transitions(dest=self.States.GREEN)))
+        self.assertEqual(3, len(m.get_transitions(trigger='toggle')))
 
 
 @skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
