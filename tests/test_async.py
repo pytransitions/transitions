@@ -285,6 +285,7 @@ class TestAsync(TestTransitions):
                                  initial='A', queued=True, send_event=True)
             await asyncio.gather(m1.go(), m2.go(),
                                  self.call_delayed(m1.remove, 0.02), self.call_delayed(m2.go, 0.04))
+            _ = repr(m._transition_queue_dict)  # check whether _DictionaryMock returns a valid representation
             self.assertTrue(m1.is_B())
             self.assertTrue(m2.is_C())
             m.remove_model(m2)
