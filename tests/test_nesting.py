@@ -452,7 +452,6 @@ class TestNestedTransitions(TestTransitions):
         self.assertEqual(3, len(machine.get_transitions(source=machine.states['B'].states['3'].states['b'],
                                                         delegate=True)))
 
-
     def test_internal_transitions(self):
         s = self.stuff
         s.machine.add_transition('internal', 'A', None, prepare='increase_level')
