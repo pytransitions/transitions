@@ -309,15 +309,16 @@ class AsyncMachine(Machine):
     def __init__(self, *args, **kwargs):
         self._transition_queue_dict = {}
         super().__init__(*args, **kwargs)
+        if self.has_queue is True:
+            self._transition_queue_dict = _DictionaryMock()
+            # _DictionaryMock sets and returns ONE internal value and ignores the passed key
+            self._transition_queue_dict[0] = self._transition_queue
 
     def add_model(self, model, initial=None):
         super().add_model(model, initial)
         if self.has_queue == 'model':
             for mod in listify(model):
                 self._transition_queue_dict[mod if mod != 'self' else self] = deque()
-        elif self.has_queue:
-            for mod in listify(model):
-                self._transition_queue_dict[mod if mod != 'self' else self] = self._transition_queue
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.
@@ -416,11 +417,11 @@ class AsyncMachine(Machine):
         if self.has_queue == 'model':
             for mod in models:
                 del self._transition_queue_dict[mod]
-        elif self.has_queue:
-            for mod in models:
-                del self._transition_queue_dict[mod]
-            d = self._transition_queue
-            self._transition_queue_dict[models[0]] = deque([d.popleft()] + [e for e in d if e.args[0] not in models])
+        if len(self._transition_queue) > 0:
+            queue = self._transition_queue
+            new_queue = [queue.popleft()] + [e for e in queue if e.args[0] not in models]
+            self._transition_queue.clear()
+            self._transition_queue.extend(new_queue)
 
     async def _process(self, trigger, model):
         # default processing
@@ -589,3 +590,15 @@ class AsyncTimeout(AsyncState):
     def on_timeout(self, value):
         """ Listifies passed values and assigns them to on_timeout."""
         self._on_timeout = listify(value)
+
+
+class _DictionaryMock(dict):
+
+    def __setitem__(self, key, item):
+        self._value = item
+
+    def __getitem__(self, key):
+        return self._value
+
+    def __repr__(self):
+        return repr("{{'*': {0}}}".format(self._value))

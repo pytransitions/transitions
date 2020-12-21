@@ -656,6 +656,8 @@ class TestTransitions(TestCase):
         model = SubModel()
         m.add_model([model, model.inner])
         model.to_A()
+        # test whether models can be removed outside event queue
+        m.remove_model(model.inner)
         self.assertTrue(model.inner.is_C())
 
     def test___getattr___and_identify_callback(self):
