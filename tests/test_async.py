@@ -287,15 +287,18 @@ class TestAsync(TestTransitions):
                                  self.call_delayed(m1.remove, 0.02), self.call_delayed(m2.go, 0.04))
             self.assertTrue(m1.is_B())
             self.assertTrue(m2.is_C())
+            m.remove_model(m2)
+            self.assertNotIn(m1, m._transition_queue_dict)
+            self.assertNotIn(m2, m._transition_queue_dict)
             m1 = DummyModel()
             m2 = DummyModel()
             m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions,
                                  initial='A', queued='model', send_event=True)
             await asyncio.gather(m1.go(), m2.go(),
                                  self.call_delayed(m1.remove_queue, 0.02), self.call_delayed(m2.go, 0.04))
-            self.assertNotIn(m1, m._transition_queue_dict)
             self.assertTrue(m1.is_B())
             self.assertTrue(m2.is_C())
+            m.remove_model(m2)
         asyncio.run(run())
 
     def test_async_timeout(self):
