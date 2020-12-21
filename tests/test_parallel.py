@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 from transitions.extensions.nesting import NestedState as State, _build_state_list
 from transitions.extensions import HierarchicalGraphMachine
+from transitions import MachineError
 from .test_nesting import TestNestedTransitions as TestNested
 from .test_pygraphviz import pgv
 from .test_graphviz import pgv as gv
@@ -107,6 +108,8 @@ class TestParallel(TestNested):
         self.assertEqual('X', m.state)
         m.to_P()
         self.assertEqual(['P{0}1'.format(sep), 'P{0}2{0}b'.format(sep)], m.state)
+        with self.assertRaises(MachineError):
+            m.to('X')
 
     def test_multiple(self):
         states = ['A',

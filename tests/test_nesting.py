@@ -447,6 +447,11 @@ class TestNestedTransitions(TestTransitions):
                                                         dest='B{0}3'.format(seperator))))
         self.assertEqual(1, len(machine.get_transitions(source='B{0}3{0}a'.format(seperator),
                                                         dest='B{0}3{0}b'.format(seperator))))
+        self.assertEqual(1, len(machine.get_transitions(source=machine.states['B'].states['3'].states['b'])))
+        # should be B_3_b -> B_3_a, B_3 -> B_1 and B -> C
+        self.assertEqual(3, len(machine.get_transitions(source=machine.states['B'].states['3'].states['b'],
+                                                        delegate=True)))
+
 
     def test_internal_transitions(self):
         s = self.stuff
