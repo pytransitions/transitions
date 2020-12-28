@@ -2,6 +2,8 @@
 
 ## 0.8.6 (December 2020)
 
+Release 0.8.6 is a minor release and contains bugfixes and new features:
+
 - `HierarchicalMachine.add_states` will raise a `ValueError` when an `Enum` name contains the currently used `NestedState.separator`.
 - Bugfix #486: Reset `NestedState._scope` when enter/exit callbacks raise an exception (thanks @m986883511)
 - Bugfix #488: Let `HierarchicalMachine._get_trigger` which is bound to `model.trigger` raise a `MachineError` for invalid events and `AttributeError` for unknown events (thanks @hsharrison)
