@@ -173,6 +173,12 @@ MachineError: "Can't trigger event clean_up from state asleep!"
 1
 ```
 
+While we cannot read the mind of the actual batman, we surely can visualize the current state of our `NarcolepticSuperhero`.
+
+![batman diagram](https://user-images.githubusercontent.com/205986/104932302-c2f24580-59a7-11eb-8963-5dce738b9305.png)
+
+Have a look at the [Diagrams](#diagrams) extentions if you want to know how.
+
 ## The non-quickstart
 
 ### Basic initialization
