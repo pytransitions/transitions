@@ -2,7 +2,7 @@
 
 ## 0.8.7 ()
 
-- State configuration dictionaries passed to `HierarchicalStateMachine` can also use `states` as a keyword to define substates. If `children` and `states` are present, only `children` will be considered.
+- State configuration dictionaries passed to `HierarchicalMachine` can also use `states` as a keyword to define substates. If `children` and `states` are present, only `children` will be considered.
 
 ## 0.8.6 (December 2020)
 

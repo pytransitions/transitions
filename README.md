@@ -1411,9 +1411,9 @@ If a reused state machine does not have a final state, you can of course add the
 If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'waiting']` to achieve the same behaviour.
 
 For complex state machines, sharing configurations rather than instantiated machines might be more feasible.
-Especially since instantiated machines must be derived from `HierarchicalStateMachine`.
+Especially since instantiated machines must be derived from `HierarchicalMachine`.
 Such configurations can be stored and loaded easily via JSON or YAML (see the [FAQ](examples/Frequently%20asked%20questions.ipynb)).
-`HierarchicalStateMachine` allows defining substates either with the keyword `children` or `states`.
+`HierarchicalMachine` allows defining substates either with the keyword `children` or `states`.
 If both are present, only `children` will be considered.
 
 ```python
