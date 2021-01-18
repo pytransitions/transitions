@@ -168,6 +168,9 @@ class TestReuseLegacy(TestReuse):
         self.assertIsNot(top_machine.nested.get_state('2').on_enter,
                          top_machine.get_state('B{0}2'.format(separator)).on_enter)
 
+    def test_reuse_machine_config(self):
+        pass  # not supported
+
 
 class TestLegacyNestedEnum(TestNestedStateEnums):
 

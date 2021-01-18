@@ -475,7 +475,7 @@ class HierarchicalMachine(Machine):
                 remap = state.pop('remap', None)
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
-                state_children = state.pop('children', [])
+                state_children = state.pop('children', state.pop('states', []))
                 state_parallel = state.pop('parallel', [])
                 transitions = state.pop('transitions', [])
                 new_state = self._create_state(**state)

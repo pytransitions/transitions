@@ -9,7 +9,7 @@ from __future__ import absolute_import
 from .version import __version__
 from .core import (State, Transition, Event, EventData, Machine, MachineError)
 
-__copyright__ = "Copyright (c) 2017 Tal Yarkoni"
+__copyright__ = "Copyright (c) 2021 Tal Yarkoni, Alexander Neumann"
 __license__ = "MIT"
 __summary__ = "A lightweight, object-oriented finite state machine in Python"
 __uri__ = "https://github.com/tyarkoni/transitions"

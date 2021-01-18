@@ -1,9 +1,9 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.8.6-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.8.7-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.5.svg)](https://github.com/pytransitions/transitions/compare/0.8.5...master)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.6.svg)](https://github.com/pytransitions/transitions/compare/0.8.6...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb)
 <!-- [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions) -->
@@ -1404,6 +1404,44 @@ As mentioned above, using `remap` will **copy** events and transitions since the
 If a reused state machine does not have a final state, you can of course add the transitions manually.
 If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'waiting']` to achieve the same behaviour.
 
+For complex state machines, sharing configurations rather than instantiated machines might be more feasible.
+Especially since instantiated machines must be derived from `HierarchicalStateMachine`.
+Such configurations can be stored and loaded easily via JSON or YAML (see the [FAQ](examples/Frequently%20asked%20questions.ipynb)).
+`HierarchicalStateMachine` allows defining substates either with the keyword `children` or `states`.
+If both are present, only `children` will be considered.
+
+```python
+counter_conf = {
+    'name': 'counting',
+    'states': ['1', '2', '3', 'done'],
+    'transitions': [
+        ['increase', '1', '2'],
+        ['increase', '2', '3'],
+        ['decrease', '3', '2'],
+        ['decrease', '2', '1'],
+        ['done', '3', 'done'],
+        ['reset', '*', '1']
+    ],
+    'initial': '1'
+}
+
+collector_conf = {
+    'name': 'collector',
+    'states': ['waiting', 'collecting', counter_conf],
+    'transitions': [
+        ['collect', '*', 'collecting'],
+        ['wait', '*', 'waiting'],
+        ['count', 'collecting', 'counting']
+    ],
+    'initial': 'waiting'
+}
+
+collector = Machine(**collector_conf)
+collector.collect()
+collector.count()
+collector.increase()
+assert collector.is_counting_2()
+```
 
 #### <a name="threading"></a> Threadsafe(-ish) State Machine
 

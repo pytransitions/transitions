@@ -308,3 +308,20 @@ class TestReuse(TestCase):
         self.assertTrue(top_machine.nested.mock.called)
         self.assertIs(top_machine.nested.get_state('2').on_enter,
                       top_machine.get_state('B{0}2'.format(separator)).on_enter)
+
+    def test_reuse_machine_config(self):
+        simple_config = {
+            "name": "Child",
+            "states": ["1", "2"],
+            "transitions": [['go', '1', '2']],
+            "initial": "1"
+        }
+        simple_cls = MachineFactory.get_predefined()
+        simple = simple_cls(**simple_config)
+        self.assertTrue(simple.is_1())
+        self.assertTrue(simple.go())
+        self.assertTrue(simple.is_2())
+        machine = self.machine_cls(states=['A', simple_config], initial='A')
+        machine.to_Child()
+        machine.go()
+        self.assertTrue(machine.is_Child_2())
