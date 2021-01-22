@@ -29,6 +29,9 @@ class TestNestedLegacySeparatorDefault(TestSeparatorsBase):
     def test_ordered_with_graph(self):
         pass
 
+    def test_example_two(self):
+        pass  # not supported by legacy machine
+
 
 class TestNestedLegacySeparatorDot(TestNestedLegacySeparatorDefault):
     separator = '.'

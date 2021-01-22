@@ -1237,6 +1237,7 @@ You can even use fancy unicode characters if you use Python 3.
 Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks) though:
 
 ```python
+from transitions.extensions import HierarchicalMachine
 from transitions.extensions.nesting import NestedState
 NestedState.separator = '↦'
 states = ['A', 'B',
@@ -1251,12 +1252,13 @@ transitions = [
 ]
 
 # we rely on auto transitions
-machine = Machine(states=states, transitions=transitions, initial='A')
+machine = HierarchicalMachine(states=states, transitions=transitions, initial='A')
 machine.to_B()  # exit state A, enter state B
 machine.to_C()  # exit B, enter C
 machine.to_C.s3.a()  # enter C↦a; enter C↦3↦a;
-machine.state,
+machine.state
 >>> 'C↦3↦a'
+assert machine.is_C.s3.a()
 machine.to('C↦2')  # not interactive; exit C↦3↦a, exit C↦3, enter C↦2
 machine.reset()  # exit C↦2; reset C has been overwritten by C↦3
 machine.state
@@ -1268,9 +1270,9 @@ machine.state
 ```
 
 Instead of `to_C_3_a()` auto transition is called as `to_C.s3.a()`. If your substate starts with a digit, transitions adds a prefix 's' ('3' becomes 's3') to the auto transition `FunctionWrapper` to comply with the attribute naming scheme of Python.
-If interactive completion is not required, `to('C↦3↦a')` can be called directly. Additionally, `on_enter/exit_<<state name>>` is replaced with `on_enter/exit(state_name, callback)`.
+If interactive completion is not required, `to('C↦3↦a')` can be called directly. Additionally, `on_enter/exit_<<state name>>` is replaced with `on_enter/exit(state_name, callback)`. State checks can be conducted in a similar fashion. Instead of `is_C_3_a()`, the `FunctionWrapper` variant `is_C.s3.a()` can be used.
 
-To check whether the current state is a substate of a specific state `is_state` supports the keyword `allow_substates`:
+To check whether the current state is a substate of a specific state, `is_state` supports the keyword `allow_substates`:
 
 ```python
 machine.state
@@ -1279,6 +1281,8 @@ machine.is_C() # checks for specific states
 >>> False
 machine.is_C(allow_substates=True)
 >>> True
+assert machine.is_C.s2() is False
+assert machine.is_C.s2(allow_substates=True)  # FunctionWrapper support allow_substate as well
 ```
 
 *new in 0.8.0*  

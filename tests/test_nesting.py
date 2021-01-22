@@ -727,8 +727,18 @@ class TestSeparatorsBase(TestCase):
         machine.to_C()  # exit B, enter C
         if separator == '_':
             machine.to_C_3_a()
+            self.assertTrue(machine.is_C(allow_substates=True))
+            self.assertFalse(machine.is_C())
+            self.assertTrue(machine.is_C_3(allow_substates=True))
+            self.assertFalse(machine.is_C_3())
+            self.assertTrue(machine.is_C_3_a())
         else:
             machine.to_C.s3.a()  # enter C↦a; enter C↦3↦a;
+            self.assertTrue(machine.is_C(allow_substates=True))
+            self.assertFalse(machine.is_C())
+            self.assertTrue(machine.is_C.s3(allow_substates=True))
+            self.assertFalse(machine.is_C.s3())
+            self.assertTrue(machine.is_C.s3.a())
         self.assertEqual(machine.state, 'C{0}3{0}a'.format(separator))
         machine.to('C{0}2'.format(separator))  # exit C↦3↦a, exit C↦3, enter C↦2
         self.assertEqual(machine.state, 'C{0}2'.format(separator))

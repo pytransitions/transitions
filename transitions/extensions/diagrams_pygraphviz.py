@@ -138,7 +138,6 @@ class NestedGraph(Graph):
     def __init__(self, *args, **kwargs):
         self.seen_transitions = []
         _super(NestedGraph, self).__init__(*args, **kwargs)
-        # self.style_attributes['edge']['default']['minlen'] = 2
 
     def _add_nodes(self, states, container, prefix='', default_style='default'):
         for state in states:
@@ -171,6 +170,7 @@ class NestedGraph(Graph):
             edge_attr = {}
             if _get_subgraph(container, 'cluster_' + src) is not None:
                 edge_attr['ltail'] = 'cluster_' + src
+                # edge_attr['minlen'] = "3"
                 src_name = src + "_anchor"
                 label_pos = 'headlabel'
             else:

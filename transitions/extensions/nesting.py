@@ -799,7 +799,7 @@ class HierarchicalMachine(Machine):
 
     def _add_model_to_state(self, state, model):
         name = self.get_global_name(state)
-        if self.state_cls.separator == '_' or self.state_cls.separator not in name:
+        if self.state_cls.separator == '_':
             value = state.value if isinstance(state.value, Enum) else name
             self._checked_assignment(model, 'is_%s' % name, partial(self.is_state, value, model))
             # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
@@ -809,6 +809,14 @@ class HierarchicalMachine(Machine):
                 if hasattr(model, method) and inspect.ismethod(getattr(model, method)) and \
                         method not in getattr(state, callback):
                     state.add_callback(callback[3:], method)
+        else:
+            path = name.split(self.state_cls.separator)
+            value = state.value if isinstance(state.value, Enum) else name
+            trig_func = partial(self.is_state, value, model)
+            if hasattr(model, 'is_' + path[0]):
+                getattr(model, 'is_' + path[0]).add(trig_func, path[1:])
+            else:
+                self._checked_assignment(model, 'is_' + path[0], FunctionWrapper(trig_func, path[1:]))
         with self(state.name):
             for event in self.events.values():
                 if not hasattr(model, event.name):
