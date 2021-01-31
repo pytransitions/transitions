@@ -31,6 +31,7 @@ class TransitionGraphSupport(Transition):
         graph.reset_styling()
         graph.set_previous_transition(self.source, self.dest, event_data.event.name)
         _super(TransitionGraphSupport, self)._change_state(event_data)  # pylint: disable=protected-access
+        graph = event_data.machine.model_graphs[event_data.model]  # graph might have changed during change_event
         for state in _flatten(listify(getattr(event_data.model, event_data.machine.model_attribute))):
             graph.set_node_style(self.dest if hasattr(state, 'name') else state, 'active')
 
