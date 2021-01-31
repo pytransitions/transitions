@@ -281,7 +281,7 @@ machine.add_states([solid, liquid, gas])
 States are initialized *once* when added to the machine and will persist until they are removed from it. In other words: if you alter the attributes of a state object, this change will NOT be reset the next time you enter that state. Have a look at how to [extend state features](#state-features) in case you require some other behaviour.
 
 #### <a name="state-callbacks"></a>Callbacks
-A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization, or add them later.
+A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization by passing them to a `State` object constructor, in a state property dictionary, or add them later. 
 
 For convenience, whenever a new `State` is added to a `Machine`, the methods `on_enter_«state name»` and `on_exit_«state name»` are dynamically created on the Machine (not on the model!), which allow you to dynamically add new enter and exit callbacks later if you need them.
 
@@ -298,7 +298,7 @@ lump = Matter()
 states = [
     State(name='solid', on_exit=['say_goodbye']),
     'liquid',
-    { 'name': 'gas' }
+    { 'name': 'gas', 'on_exit': ['say_goodbye']}
     ]
 
 machine = Machine(lump, states=states)
