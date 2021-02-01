@@ -293,7 +293,7 @@ class NestedTransition(Transition):
                     scoped_tree[state.name] = OrderedDict()
                     if state.initial:
                         q.append((scoped_tree[state.name], prefix + [state.name],
-                                  [state.states[i] for i in listify(state.initial)]))
+                                  [state.states[i.name] if hasattr(i, 'name') else state.states[i] for i in listify(state.initial)]))
                 if not q:
                     break
                 scoped_tree, prefix, initial_states = q.pop(0)
