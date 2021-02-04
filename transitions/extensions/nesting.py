@@ -535,12 +535,13 @@ class HierarchicalMachine(Machine):
                 self.states[state.name] = state
                 self._init_state(state)
             elif isinstance(state, Machine):
-                new_states = [s for s in state.states.values() if remap is None or s not in remap]
+                machine = copy.deepcopy(state)
+                new_states = [s for s in machine.states.values() if remap is None or s not in remap]
                 self.add_states(new_states)
-                for ev in state.events.values():
+                for ev in machine.events.values():
                     self.events[ev.name] = ev
                 if self.scoped.initial is None:
-                    self.scoped.initial = state.initial
+                    self.scoped.initial = machine.initial
             elif isinstance(state, State) and not isinstance(state, NestedState):
                 raise ValueError("A passed state object must derive from NestedState! "
                                  "A default State object is not sufficient")
