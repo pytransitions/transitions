@@ -141,7 +141,7 @@ class AsyncTransition(Transition):
             graph.set_previous_transition(self.source, self.dest)
         await event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
-        event_data.update(getattr(event_data.model, event_data.model.model_attribute))
+        event_data.update(getattr(event_data.model, event_data.machine.model_attribute))
         await event_data.machine.get_state(self.dest).enter(event_data)
 
 
@@ -177,7 +177,7 @@ class AsyncEvent(Event):
         return await self.machine.process_context(func, _model)
 
     async def _trigger(self, model, *args, **kwargs):
-        state = self.machine.get_state(getattr(model, model.model_attribute))
+        state = self.machine.get_state(getattr(model, self.machine.model_attribute))
         if state.name not in self.transitions:
             msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
                                                                state.name)
