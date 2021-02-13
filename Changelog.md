@@ -7,6 +7,7 @@
 - Bugfix  #512: Use `model_attribute` consistently in `AsyncMachine` (thanks @thedrow)
 - Testing now treats most warnings as errors (thanks @thedrow)
 - As a consequence, `pygraphviz.Agraph` in `diagrams_pygraphviz` are now copied by `transitions` since `AGraph.copy` as of version `1.6` does not close temporary files appropriately
+- `HierarchicalMachine` now checks whether `state_cls`, `event_cls` and `transition_cls` have been subclassed from nested base classes (e.g. `NestedState`) to prevent hard to debug inheritance errors
 
 ## 0.8.6 (December 2020)
 

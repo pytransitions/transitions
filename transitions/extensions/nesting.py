@@ -334,6 +334,9 @@ class HierarchicalMachine(Machine):
     event_cls = NestedEvent
 
     def __init__(self, *args, **kwargs):
+        assert issubclass(self.state_cls, NestedState)
+        assert issubclass(self.event_cls, NestedEvent)
+        assert issubclass(self.transition_cls, NestedTransition)
         self._stack = []
         self.scoped = self
         _super(HierarchicalMachine, self).__init__(*args, **kwargs)

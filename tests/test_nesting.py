@@ -570,6 +570,22 @@ class TestNestedTransitions(TestTransitions):
         model.to_C()
         self.assertTrue(model.is_C_1())
 
+    def test_correct_subclassing(self):
+        from transitions.core import State
+
+        class WrongStateClass(self.machine_cls):
+            state_cls = State
+
+        class MyNestedState(NestedState):
+            pass
+
+        class CorrectStateClass(self.machine_cls):
+            state_cls = MyNestedState
+
+        with self.assertRaises(AssertionError):
+            m = WrongStateClass()
+        m = CorrectStateClass()
+
 
 class TestSeparatorsBase(TestCase):
 
