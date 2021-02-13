@@ -72,7 +72,7 @@ class Graph(BaseGraph):
         if title:
             self.fsm_graph.graph_attr['label'] = title
         if self.roi_state:
-            filtered = self.fsm_graph.copy()
+            filtered = _copy_agraph(self.fsm_graph)
             kept_nodes = set()
             active_state = self.roi_state.name if hasattr(self.roi_state, 'name') else self.roi_state
             if not filtered.has_node(self.roi_state):
@@ -247,3 +247,21 @@ def _get_subgraph(graph, name):
         if sub_graph:
             return sub_graph
     return None
+
+
+# the official copy method does not close the file handle
+# which causes ResourceWarnings
+def _copy_agraph(graph):
+    from tempfile import TemporaryFile
+
+    fh = TemporaryFile()
+    if hasattr(fh, "file"):
+        fhandle = fh.file
+    else:
+        fhandle = fh
+
+    graph.write(fhandle)
+    fh.seek(0)
+    res = graph.__class__(filename=fhandle)
+    fhandle.close()
+    return res

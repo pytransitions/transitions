@@ -51,6 +51,17 @@ class TestAsync(TestTransitions):
         self.machine_cls = MachineFactory.get_predefined(asyncio=True)
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
+    def test_new_state_in_enter_callback(self):
+        machine = self.machine_cls(states=['A', 'B'], initial='A')
+
+        async def on_enter_B():
+            state = self.machine_cls.state_cls(name='C')
+            machine.add_state(state)
+            await machine.to_C()
+
+        machine.on_enter_B(on_enter_B)
+        asyncio.run(machine.to_B())
+
     def test_async_machine_cb(self):
         mock = MagicMock()
 
