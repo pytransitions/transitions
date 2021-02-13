@@ -1113,7 +1113,7 @@ class TestTransitions(TestCase):
                 self.status = None
                 self.state = 'some_value'
 
-        m = Machine(Model(), states=['A', 'B'], initial='A', model_attribute='status')
+        m = self.machine_cls(Model(), states=['A', 'B'], initial='A', model_attribute='status')
         self.assertEqual(m.model.status, 'A')
         self.assertEqual(m.model.state, 'some_value')
 

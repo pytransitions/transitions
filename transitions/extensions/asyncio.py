@@ -480,7 +480,8 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
 
     async def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
         if _state_tree is None:
-            _state_tree = self._build_state_tree(listify(getattr(_model, self.model_attribute)), self.state_cls.separator)
+            _state_tree = self._build_state_tree(listify(getattr(_model, self.model_attribute)),
+                                                 self.state_cls.separator)
         res = {}
         for key, value in _state_tree.items():
             if value:

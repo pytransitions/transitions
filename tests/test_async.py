@@ -62,6 +62,22 @@ class TestAsync(TestTransitions):
         machine.on_enter_B(on_enter_B)
         asyncio.run(machine.to_B())
 
+    def test_dynamic_model_state_attribute(self):
+        class Model:
+            def __init__(self):
+                self.status = None
+                self.state = 'some_value'
+
+        m = self.machine_cls(Model(), states=['A', 'B'], initial='A', model_attribute='status')
+        self.assertEqual(m.model.status, 'A')
+        self.assertEqual(m.model.state, 'some_value')
+
+        m.add_transition('move', 'A', 'B')
+        asyncio.run(m.model.move())
+
+        self.assertEqual(m.model.status, 'B')
+        self.assertEqual(m.model.state, 'some_value')
+
     def test_async_machine_cb(self):
         mock = MagicMock()
 
