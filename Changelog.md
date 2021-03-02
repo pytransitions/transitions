@@ -97,11 +97,11 @@ Release 0.8.0 is a major release and introduces asyncio support for Python 3.7+,
 - `GraphMachine` now attempts to fall back to `graphviz` when importing `pygraphviz` fails
 - Not implemented/tested so far (contributions are welcome!):
   + Proper Graphviz support of parallel states
-  + AsyncHierachicalMachine 
+  + AsyncHierachicalMachine
 
 ## 0.7.2 (January 2020)
 
-Release 0.7.2 is a minor release and contains bugfixes and and a new feature:
+Release 0.7.2 is a minor release and contains bugfixes and a new feature:
 
 - Bugfix #386: Fix transitions for enums with str behavior (thanks @artofhuman)
 - Bugfix #378: Don't mask away KeyError when executing a transition (thanks @facundofc)
