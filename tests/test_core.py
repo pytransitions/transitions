@@ -961,7 +961,10 @@ class TestTransitions(TestCase):
             return False
 
         def always_raises(event_data):
-            raise Exception()
+            raise RuntimeError()
+
+        def raises_value_error(event_data):
+            raise ValueError()
 
         transitions = [
             {'trigger': 'go', 'source': 'A', 'dest': 'B'},
@@ -979,9 +982,15 @@ class TestTransitions(TestCase):
         self.assertIsInstance(event_data, EventData)
         self.assertEqual(finalize_mock.call_count, 2)
         self.assertFalse(event_data.result)
-        with self.assertRaises(Exception):
+        with self.assertRaises(RuntimeError):
             m.planB()
-        self.assertEqual(finalize_mock.call_count, 3)
+
+        m.finalize_event.append(raises_value_error)
+        # ValueError in finalize should be suppressed
+        # but mock should have been called anyway
+        with self.assertRaises(RuntimeError):
+            m.planB()
+        self.assertEqual(finalize_mock.call_count, 4)
 
     def test_machine_finalize_exception(self):
 

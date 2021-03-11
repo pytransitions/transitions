@@ -424,8 +424,14 @@ class Event(object):
             event_data.error = err
             raise
         finally:
-            self.machine.callbacks(self.machine.finalize_event, event_data)
-            _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
+            try:
+                self.machine.callbacks(self.machine.finalize_event, event_data)
+                _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
+            except Exception as err:
+                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
+                              self.machine.name,
+                              type(err).__name__,
+                              str(err))
 
         return event_data.result
 
