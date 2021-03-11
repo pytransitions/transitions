@@ -7,6 +7,8 @@
     factory object.
 """
 
+from functools import partial
+
 from ..core import Machine
 
 from .nesting import HierarchicalMachine, NestedTransition, NestedEvent
@@ -87,7 +89,12 @@ class LockedGraphMachine(GraphMachine, LockedMachine):
     """
         A threadsafe machine with graph support.
     """
-    pass
+
+    @staticmethod
+    def format_references(func):
+        if isinstance(func, partial) and func.func.__name__.startswith('_locked_method'):
+            func = func.args[0]
+        return GraphMachine.format_references(func)
 
 
 class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):
@@ -97,6 +104,12 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):
 
     transition_cls = NestedGraphTransition
     event_cls = NestedEvent
+
+    @staticmethod
+    def format_references(func):
+        if isinstance(func, partial) and func.func.__name__.startswith('_locked_method'):
+            func = func.args[0]
+        return GraphMachine.format_references(func)
 
 
 class AsyncGraphMachine(GraphMachine, AsyncMachine):

@@ -177,7 +177,7 @@ While we cannot read the mind of the actual batman, we surely can visualize the 
 
 ![batman diagram](https://user-images.githubusercontent.com/205986/104932302-c2f24580-59a7-11eb-8963-5dce738b9305.png)
 
-Have a look at the [Diagrams](#diagrams) extentions if you want to know how.
+Have a look at the [Diagrams](#diagrams) extensions if you want to know how.
 
 ## The non-quickstart
 
@@ -1133,7 +1133,7 @@ from transitions.extensions import GraphMachine as Machine
 m = Model()
 # without further arguments pygraphviz will be used
 machine = Machine(model=m, ...)
-# when you want to use graphviz explicitely
+# when you want to use graphviz explicitly
 machine = Machine(model=m, use_pygraphviz=False, ...)
 # in cases where auto transitions should be visible
 machine = Machine(model=m, show_auto_transitions=True, ...)
@@ -1149,6 +1149,37 @@ This produces something like this:
 
 ![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
 
+References and partials passed as callbacks will be resolved as good as possible:
+
+```python
+from transitions.extensions import GraphMachine as Machine
+from functools import partial
+
+
+class Model:
+
+    def clear_state(self, deep=False, force=False):
+        print("Clearing state ...")
+        return True
+
+
+model = Model()
+machine = Machine(model=model, states=['A', 'B', 'C'],
+                  transitions=[
+                      {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
+                      {'trigger': 'clear', 'source': 'C', 'dest': 'A',
+                       'conditions': partial(model.clear_state, False, force=True)},
+                  ],
+                  initial='A', show_conditions=True)
+
+model.get_graph().draw('my_state_diagram.png', prog='dot')
+```
+
+This should produce something similar to this:
+
+![state diagram references_example](https://user-images.githubusercontent.com/205986/110783076-39087f80-8268-11eb-8fa1-fc7bac97f4cf.png)
+
+If the format of references does not suit your needs, you can override the static method `GraphMachine.format_references`. If you want to skip reference entirely, just let `GraphMachine.format_references` return `None`.
 Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example about how to use and edit graphs.
 
 

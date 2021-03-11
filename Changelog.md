@@ -2,7 +2,8 @@
 
 ## 0.8.8
 
-- Introduce `try/except` for finalize callbacks in `Machine` and `HierachicalMachine`. Thus, errors occurring in finalize callbacks will be suppressed and only the original error will be raised.
+- Feature #517: Introduce `try/except` for finalize callbacks in `Machine` and `HierachicalMachine`. Thus, errors occurring in finalize callbacks will be suppressed and only the original error will be raised.
+- Feature #520: Show references in graphs and markup. Introduce `MarkupMachine.format_references` to tweak reference formatting (thanks @StephenCarboni)
 
 ## 0.8.7 (February 2020)
 

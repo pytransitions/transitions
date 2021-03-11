@@ -16,7 +16,6 @@ class MarkupMachine(Machine):
     def __init__(self, *args, **kwargs):
         self._markup = kwargs.pop('markup', {})
         self._auto_transitions_markup = kwargs.pop('auto_transitions_markup', False)
-        self.skip_references = True
         self._needs_update = True
 
         if self._markup:
@@ -68,6 +67,21 @@ class MarkupMachine(Machine):
                                               ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
         self._needs_update = True
 
+    @staticmethod
+    def format_references(func):
+        try:
+            return func.__name__
+        except AttributeError:
+            pass
+        if isinstance(func, partial):
+            return "%s(%s)" % (
+                func.func.__name__,
+                ", ".join(itertools.chain(
+                    (str(_) for _ in func.args),
+                    ("%s=%s" % (key, value)
+                     for key, value in iteritems(func.keywords if func.keywords else {})))))
+        return str(func)
+
     def _convert_states_and_transitions(self, root):
         state = getattr(self, 'scoped', self)
         if state.initial:
@@ -81,7 +95,7 @@ class MarkupMachine(Machine):
         key = 'states' if getattr(self, 'scoped', self) == self else 'children'
         root[key] = []
         for state_name, state in self.states.items():
-            s_def = _convert(state, self.state_attributes, self.skip_references)
+            s_def = _convert(state, self.state_attributes, self.format_references)
             if isinstance(state_name, Enum):
                 s_def['name'] = state_name.name
             else:
@@ -99,11 +113,11 @@ class MarkupMachine(Machine):
 
             for transitions in event.transitions.items():
                 for trans in transitions[1]:
-                    t_def = _convert(trans, self.transition_attributes, self.skip_references)
+                    t_def = _convert(trans, self.transition_attributes, self.format_references)
                     t_def['trigger'] = event.name
-                    con = [x for x in (rep(f.func, self.skip_references) for f in trans.conditions
+                    con = [x for x in (rep(f.func, self.format_references) for f in trans.conditions
                                        if f.target) if x]
-                    unl = [x for x in (rep(f.func, self.skip_references) for f in trans.conditions
+                    unl = [x for x in (rep(f.func, self.format_references) for f in trans.conditions
                                        if not f.target) if x]
                     if con:
                         t_def['conditions'] = con
@@ -153,29 +167,16 @@ class MarkupMachine(Machine):
         return callback_type, target
 
 
-def rep(func, skip_references=False):
+def rep(func, format_references=None):
     """ Return a string representation for `func`. """
     if isinstance(func, string_types):
         return func
     if isinstance(func, numbers.Number):
         return str(func)
-    if skip_references:
-        return None
-    try:
-        return func.__name__
-    except AttributeError:
-        pass
-    if isinstance(func, partial):
-        return "%s(%s)" % (
-            func.func.__name__,
-            ", ".join(itertools.chain(
-                (str(_) for _ in func.args),
-                ("%s=%s" % (key, value)
-                 for key, value in iteritems(func.keywords if func.keywords else {})))))
-    return str(func)
+    return format_references(func) if format_references is not None else None
 
 
-def _convert(obj, attributes, skip):
+def _convert(obj, attributes, format_references):
     s = {}
     for key in attributes:
         val = getattr(obj, key, False)
@@ -185,7 +186,7 @@ def _convert(obj, attributes, skip):
             s[key] = val
         else:
             try:
-                s[key] = [rep(v, skip) for v in iter(val)]
+                s[key] = [rep(v, format_references) for v in iter(val)]
             except TypeError:
-                s[key] = rep(val, skip)
+                s[key] = rep(val, format_references)
     return s

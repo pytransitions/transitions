@@ -39,35 +39,35 @@ class TestRep(TestCase):
         def check():
             return True
         self.assertTrue(check())
-        self.assertEqual(rep(check), "check")
+        self.assertEqual(rep(check, MarkupMachine.format_references), "check")
 
     def test_rep_partial_no_args_no_kwargs(self):
         def check():
             return True
         pcheck = partial(check)
         self.assertTrue(pcheck())
-        self.assertEqual(rep(pcheck), "check()")
+        self.assertEqual(rep(pcheck, MarkupMachine.format_references), "check()")
 
     def test_rep_partial_with_args(self):
         def check(result):
             return result
         pcheck = partial(check, True)
         self.assertTrue(pcheck())
-        self.assertEqual(rep(pcheck), "check(True)")
+        self.assertEqual(rep(pcheck, MarkupMachine.format_references), "check(True)")
 
     def test_rep_partial_with_kwargs(self):
         def check(result=True):
             return result
         pcheck = partial(check, result=True)
         self.assertTrue(pcheck())
-        self.assertEqual(rep(pcheck), "check(result=True)")
+        self.assertEqual(rep(pcheck, MarkupMachine.format_references), "check(result=True)")
 
     def test_rep_partial_with_args_and_kwargs(self):
         def check(result, doublecheck=True):
             return result == doublecheck
         pcheck = partial(check, True, doublecheck=True)
         self.assertTrue(pcheck())
-        self.assertEqual(rep(pcheck), "check(True, doublecheck=True)")
+        self.assertEqual(rep(pcheck, MarkupMachine.format_references), "check(True, doublecheck=True)")
 
     def test_rep_callable_class(self):
         class Check(object):
@@ -82,7 +82,7 @@ class TestRep(TestCase):
 
         ccheck = Check(True)
         self.assertTrue(ccheck())
-        self.assertEqual(rep(ccheck), "Check(True)")
+        self.assertEqual(rep(ccheck, MarkupMachine.format_references), "Check(True)")
 
 
 class TestMarkupMachine(TestCase):
