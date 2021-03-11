@@ -34,6 +34,10 @@ class Stuff(object):
         return False
 
     @staticmethod
+    def this_raises(exception, *args, **kwargs):
+        raise exception
+
+    @staticmethod
     def this_fails_by_default(boolean=False):
         return boolean
 

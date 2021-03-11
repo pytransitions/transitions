@@ -767,10 +767,37 @@ except ValueError:
     pass
 print(lump.state)
 
->>> I am ready!
->>> Result:  <class 'ValueError'> Oh no
->>> initial
+# >>> I am ready!
+# >>> Result:  <class 'ValueError'> Oh no
+# >>> initial
 ```
+
+Sometimes things just don't work out as intended and we need to handle exceptions and clean up the mess to keep things going.
+We can pass callbacks to `on_exception` to do this:
+
+```python
+from transitions import Machine
+
+class Matter(object):
+    def raise_error(self, event): raise ValueError("Oh no")
+    def handle_error(self, event):
+        print("Fixing things ...")
+        del event.error  # it did not happen if we cannot see it ...
+
+states=['solid', 'liquid', 'gas', 'plasma']
+
+lump = Matter()
+m = Machine(lump, states, before_state_change='raise_error', on_exception='handle_error', send_event=True)
+try:
+    lump.to_gas()
+except ValueError:
+    pass
+print(lump.state)
+
+# >>> Fixing things ...
+# >>> initial
+```
+
 
 ### <a name="resolution"></a>Callable resolution
 

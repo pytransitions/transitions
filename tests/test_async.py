@@ -399,6 +399,26 @@ class TestAsync(TestTransitions):
         asyncio.run(run())
         self.assertEqual(0, len(m.async_tasks))
 
+    def test_on_exception_callback(self):
+        mock = MagicMock()
+
+        def on_exception(event_data):
+            self.assertIsInstance(event_data.error, ValueError)
+            mock()
+
+        m = self.machine_cls(states=['A', 'B'], initial='A', send_event=True,
+                             after_state_change=partial(self.stuff.this_raises, ValueError))
+
+        async def run():
+            with self.assertRaises(ValueError):
+                await m.to_B()
+
+            m.on_exception.append(on_exception)
+            await m.to_B()
+            self.assertTrue(mock.called)
+
+        asyncio.run(run())
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class AsyncGraphMachine(TestAsync):

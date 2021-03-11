@@ -607,11 +607,9 @@ class TestTransitions(TestCase):
         def after_change(machine):
             machine.to_C(machine)
 
-        def failed_transition(machine):
-            raise ValueError('Something was wrong')
-
         states = ['A', 'B', 'C']
-        transitions = [{'trigger': 'do', 'source': '*', 'dest': 'C', 'before': failed_transition}]
+        transitions = [{'trigger': 'do', 'source': '*', 'dest': 'C',
+                        'before': partial(self.stuff.this_raises, ValueError)}]
         m = Machine(states=states, transitions=transitions, queued=True,
                     before_state_change=before_change, after_state_change=after_change)
         with self.assertRaises(MachineError):
@@ -845,11 +843,8 @@ class TestTransitions(TestCase):
         model = Model()
         m = Machine(model=model)
         self.assertEqual(model.trigger(5), 5)
-
-        def raise_key_error():
-            raise KeyError
-
-        self.stuff.machine.add_transition('do_raise_keyerror', '*', 'C', before=raise_key_error)
+        self.stuff.machine.add_transition('do_raise_keyerror', '*', 'C',
+                                          before=partial(self.stuff.this_raises, KeyError))
         with self.assertRaises(KeyError):
             self.stuff.trigger('do_raise_keyerror')
 
@@ -960,16 +955,11 @@ class TestTransitions(TestCase):
         def always_fails(event_data):
             return False
 
-        def always_raises(event_data):
-            raise RuntimeError()
-
-        def raises_value_error(event_data):
-            raise ValueError()
-
         transitions = [
             {'trigger': 'go', 'source': 'A', 'dest': 'B'},
             {'trigger': 'planA', 'source': 'B', 'dest': 'A', 'conditions': always_fails},
-            {'trigger': 'planB', 'source': 'B', 'dest': 'A', 'conditions': always_raises}
+            {'trigger': 'planB', 'source': 'B', 'dest': 'A',
+             'conditions': partial(self.stuff.this_raises, RuntimeError)}
         ]
         m = self.stuff.machine_cls(states=['A', 'B'], transitions=transitions,
                                    finalize_event=finalize_mock, initial='A', send_event=True)
@@ -985,7 +975,7 @@ class TestTransitions(TestCase):
         with self.assertRaises(RuntimeError):
             m.planB()
 
-        m.finalize_event.append(raises_value_error)
+        m.finalize_event.append(partial(self.stuff.this_raises, ValueError))
         # ValueError in finalize should be suppressed
         # but mock should have been called anyway
         with self.assertRaises(RuntimeError):
@@ -994,16 +984,11 @@ class TestTransitions(TestCase):
 
     def test_machine_finalize_exception(self):
 
-        exception = ZeroDivisionError()
-
-        def always_raises(event):
-            raise exception
-
         def finalize_callback(event):
-            self.assertEqual(event.error, exception)
+            self.assertIsInstance(event.error, ZeroDivisionError)
 
         m = self.stuff.machine_cls(states=['A', 'B'], send_event=True, initial='A',
-                                   before_state_change=always_raises,
+                                   before_state_change=partial(self.stuff.this_raises, ZeroDivisionError),
                                    finalize_event=finalize_callback)
 
         with self.assertRaises(ZeroDivisionError):
@@ -1185,6 +1170,22 @@ class TestTransitions(TestCase):
 
         machine.on_enter_B(on_enter_B)
         machine.to_B()
+
+    def test_on_exception_callback(self):
+        mock = MagicMock()
+
+        def on_exception(event_data):
+            self.assertIsInstance(event_data.error, ValueError)
+            mock()
+
+        m = self.machine_cls(states=['A', 'B'], initial='A', send_event=True,
+                             after_state_change=partial(self.stuff.this_raises, ValueError))
+        with self.assertRaises(ValueError):
+            m.to_B()
+
+        m.on_exception.append(on_exception)
+        m.to_B()
+        self.assertTrue(mock.called)
 
 
 class TestWarnings(TestCase):

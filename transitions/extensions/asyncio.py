@@ -203,7 +203,10 @@ class AsyncEvent(Event):
                     break
         except Exception as err:
             event_data.error = err
-            raise
+            if self.machine.on_exception:
+                await self.machine.callbacks(self.machine.on_exception, event_data)
+            else:
+                raise
         finally:
             await self.machine.callbacks(self.machine.finalize_event, event_data)
             _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
@@ -263,7 +266,10 @@ class NestedAsyncEvent(NestedEvent):
                     break
         except Exception as err:
             event_data.error = err
-            raise
+            if self.machine.on_exception:
+                await self.machine.callbacks(self.machine.on_exception, event_data)
+            else:
+                raise
         finally:
             await machine.callbacks(machine.finalize_event, event_data)
             _LOGGER.debug("%sExecuted machine finalize callbacks", machine.name)
@@ -287,6 +293,8 @@ class AsyncMachine(Machine):
             Callbacks will be executed AFTER the custom callbacks assigned to the transition.
         finalize_event (list): Callbacks will be executed after all transitions callbacks have been executed.
             Callbacks mentioned here will also be called if a transition or condition check raised an error.
+        on_exception: A callable called when an event raises an exception. If not set,
+            the Exception will be raised instead.
         queued (bool): Whether transitions in callbacks should be executed immediately (False) or sequentially.
         send_event (bool): When True, any arguments passed to trigger methods will be wrapped in an EventData
             object, allowing indirect and encapsulated access to data. When False, all positional and keyword

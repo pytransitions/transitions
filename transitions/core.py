@@ -422,7 +422,10 @@ class Event(object):
                     break
         except Exception as err:
             event_data.error = err
-            raise
+            if self.machine.on_exception:
+                self.machine.callbacks(self.machine.on_exception, event_data)
+            else:
+                raise
         finally:
             try:
                 self.machine.callbacks(self.machine.finalize_event, event_data)
@@ -489,7 +492,8 @@ class Machine(object):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
+                 **kwargs):
         """
         Args:
             model (object or list): The object(s) whose states we want to manage. If 'self',
@@ -533,6 +537,8 @@ class Machine(object):
                 It receives the very same args as normal callbacks.
             finalize_event: A callable called on for each triggered event after transitions have been processed.
                 This is also called when a transition raises an exception.
+            on_exception: A callable called when an event raises an exception. If not set,
+                the exception will be raised instead.
 
             **kwargs additional arguments passed to next class in MRO. This can be ignored in most cases.
         """
@@ -551,6 +557,7 @@ class Machine(object):
         self._after_state_change = []
         self._prepare_event = []
         self._finalize_event = []
+        self._on_exception = []
         self._initial = None
 
         self.states = OrderedDict()
@@ -562,6 +569,7 @@ class Machine(object):
         self.before_state_change = before_state_change
         self.after_state_change = after_state_change
         self.finalize_event = finalize_event
+        self.on_exception = on_exception
         self.name = name + ": " if name is not None else ""
         self.model_attribute = model_attribute
 
@@ -707,6 +715,16 @@ class Machine(object):
     @finalize_event.setter
     def finalize_event(self, value):
         self._finalize_event = listify(value)
+
+    @property
+    def on_exception(self):
+        """Callbacks will be executed when an Event raises an Exception."""
+        return self._on_exception
+
+    # this should make sure that finalize_event is always a list
+    @on_exception.setter
+    def on_exception(self, value):
+        self._on_exception = listify(value)
 
     def get_state(self, state):
         """ Return the State instance with the passed name. """

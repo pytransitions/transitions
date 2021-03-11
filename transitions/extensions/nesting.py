@@ -145,7 +145,10 @@ class NestedEvent(Event):
                     break
         except Exception as err:
             event_data.error = err
-            raise
+            if self.machine.on_exception:
+                self.machine.callbacks(self.machine.on_exception, event_data)
+            else:
+                raise
         finally:
             try:
                 machine.callbacks(machine.finalize_event, event_data)
@@ -332,7 +335,8 @@ class NestedTransition(Transition):
 
 class HierarchicalMachine(Machine):
     """ Extends transitions.core.Machine by capabilities to handle nested states.
-        A hierarchical machine REQUIRES NestedStates (or any subclass of it) to operate.
+        A hierarchical machine REQUIRES NestedStates, NestedEvent and NestedTransitions
+        (or any subclass of it) to operate.
     """
 
     state_cls = NestedState
@@ -420,9 +424,10 @@ class HierarchicalMachine(Machine):
     def add_states(self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs):
         """ Add new nested state(s).
         Args:
-            states (list, str, dict, Enum or NestedState): a list, a NestedState instance, the
+            states (list, str, dict, Enum, NestedState or Machine): a list, a NestedState instance, the
                 name of a new state, an enumeration (member) or a dict with keywords to pass on to the
-                NestedState initializer. If a list, each element can be a string, NestedState or enumeration member.
+                NestedState initializer. If a list, each element can be a string, dict, NestedState or
+                enumeration member.
             on_enter (str or list): callbacks to trigger when the state is
                 entered. Only valid if first argument is string.
             on_exit (str or list): callbacks to trigger when the state is
