@@ -1,6 +1,6 @@
 # <a name="transitions-module"></a> transitions
 [![Version](https://img.shields.io/badge/version-v0.8.8-orange.svg)](https://github.com/pytransitions/transitions)
-[![Build Status](https://travis-ci.org/pytransitions/transitions.svg?branch=master)](https://travis-ci.org/pytransitions/transitions)
+[![Build Status](https://github.com/pytransitions/transitions/actions/workflows/pytest.yml/badge.svg)](https://github.com/pytransitions/transitions/actions?query=workflow%3Apytest)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
 [![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.7.svg)](https://github.com/pytransitions/transitions/compare/0.8.7...master)
