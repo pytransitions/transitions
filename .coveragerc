@@ -1,3 +1,4 @@
 [run]
 source = transitions
 include = */transitions/*
+relative_files = True
