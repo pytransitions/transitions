@@ -1743,7 +1743,9 @@ Currently, transitions comes equipped with the following state features:
     - keyword: `hook` (string, default='scope') -- The model's attribute name fore the temporal object.
 
 You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit`. Your extension may inherit from *State* but will also work without it.
-In case you prefer to write your own custom states from scratch be aware that some state extensions *require* certain state features. `HierarchicalMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:
+Using `@add_state_features` has a drawback which is that decorated machines cannot be pickled (more precisely, the dynamically generated `CustomState` cannot be pickled).
+This might be a reason to write a dedicated custom state class instead.
+Depending on the chosen state machine, your custom state class may need to provide certain state features. For instance, `HierarchicalMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:
 
 ```python
 from transitions import Machine, State
