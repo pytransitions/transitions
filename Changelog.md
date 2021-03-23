@@ -6,7 +6,7 @@
 - Feature #520: Show references in graphs and markup. Introduce `MarkupMachine.format_references` to tweak reference formatting (thanks @StephenCarboni)
 - Feature #485: Introduce `Machine.on_exception` to handle raised exceptions in callbacks (thanks @thedrow)
 
-## 0.8.7 (February 2020)
+## 0.8.7 (February 2021)
 
 - State configuration dictionaries passed to `HierarchicalMachine` can also use `states` as a keyword to define substates. If `children` and `states` are present, only `children` will be considered.
 - Feature #500: `HierarchicalMachine` with custom separator now adds `is_state` partials for nested states (e.g. `is_C.s3.a()`) to models (thanks @alterscape)
