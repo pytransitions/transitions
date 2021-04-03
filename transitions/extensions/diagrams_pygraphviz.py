@@ -7,15 +7,10 @@
 """
 
 import logging
-import copy
 
 from .nesting import NestedState
 from .diagrams import BaseGraph
-
-try:
-    import pygraphviz as pgv
-except ImportError:  # pragma: no cover
-    pgv = None
+import pygraphviz as pgv
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -51,14 +46,9 @@ class Graph(BaseGraph):
             else:
                 container.add_edge(src, dst, **edge_attr)
 
-    def generate(self, title=None):
-        """ Generate a DOT graph with pygraphviz, returns an AGraph object """
-        if not pgv:  # pragma: no cover
-            raise Exception('AGraph diagram requires pygraphviz')
+    def generate(self):
 
-        title = '' if not title else title
-
-        self.fsm_graph = pgv.AGraph(label=title, **self.machine.machine_attributes)
+        self.fsm_graph = pgv.AGraph(**self.machine.machine_attributes)
         self.fsm_graph.node_attr.update(self.machine.style_attributes['node']['default'])
         self.fsm_graph.edge_attr.update(self.machine.style_attributes['edge']['default'])
         states, transitions = self._get_elements()
@@ -66,16 +56,14 @@ class Graph(BaseGraph):
         self._add_edges(transitions, self.fsm_graph)
         setattr(self.fsm_graph, 'style_attributes', self.machine.style_attributes)
 
-        return self.fsm_graph
-
-    def get_graph(self, title=None):
+    def get_graph(self, title=None, roi_state=None):
         if title:
             self.fsm_graph.graph_attr['label'] = title
-        if self.roi_state:
+        if roi_state:
             filtered = _copy_agraph(self.fsm_graph)
             kept_nodes = set()
-            active_state = self.roi_state.name if hasattr(self.roi_state, 'name') else self.roi_state
-            if not filtered.has_node(self.roi_state):
+            active_state = roi_state.name if hasattr(roi_state, 'name') else roi_state
+            if not filtered.has_node(roi_state):
                 active_state += '_anchor'
             kept_nodes.add(active_state)
 
@@ -100,8 +88,7 @@ class Graph(BaseGraph):
                     filtered.delete_node(node)
 
             return filtered
-        else:
-            return self.fsm_graph
+        return self.fsm_graph
 
     def set_node_style(self, state, style):
         node = self.fsm_graph.get_node(state)

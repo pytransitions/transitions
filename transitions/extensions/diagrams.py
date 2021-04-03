@@ -1,10 +1,28 @@
-from transitions import Transition
-from transitions.extensions.markup import MarkupMachine
-from transitions.core import listify
+"""
+    transitions.extensions.diagrams
+    -------------------------------
+
+    This module contains machine and transition definitions for generating diagrams from machine instances.
+    It uses Graphviz either directly with the help of pygraphviz (https://pygraphviz.github.io/) or loosely
+    coupled via dot graphs with the graphviz module (https://github.com/xflr6/graphviz).
+    Pygraphviz accesses libgraphviz directly and also features more functionality considering graph manipulation.
+    However, especially on Windows, compiling the required extension modules can be tricky.
+    Furthermore, some pygraphviz issues are platform-dependent as well.
+    Graphviz generates a dot graph and calls the `dot` executable to generate diagrams and thus is commonly easier to
+    set up. Make sure that the `dot` executable is in your PATH.
+"""
 
 import logging
 from functools import partial
 import copy
+import abc
+
+import six
+
+from transitions import Transition
+from transitions.extensions.markup import MarkupMachine
+from transitions.core import listify
+
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -21,7 +39,7 @@ class TransitionGraphSupport(Transition):
     """
 
     def __init__(self, *args, **kwargs):
-        label = kwargs.pop('label', None)
+        label = kwargs.pop("label", None)
         _super(TransitionGraphSupport, self).__init__(*args, **kwargs)
         if label:
             self.label = label
@@ -29,11 +47,17 @@ class TransitionGraphSupport(Transition):
     def _change_state(self, event_data):
         graph = event_data.machine.model_graphs[id(event_data.model)]
         graph.reset_styling()
-        graph.set_previous_transition(self.source, self.dest, event_data.event.name)
-        _super(TransitionGraphSupport, self)._change_state(event_data)  # pylint: disable=protected-access
-        graph = event_data.machine.model_graphs[id(event_data.model)]  # graph might have changed during change_event
-        for state in _flatten(listify(getattr(event_data.model, event_data.machine.model_attribute))):
-            graph.set_node_style(self.dest if hasattr(state, 'name') else state, 'active')
+        graph.set_previous_transition(self.source, self.dest)
+        _super(TransitionGraphSupport, self)._change_state(
+            event_data
+        )  # pylint: disable=protected-access
+        graph = event_data.machine.model_graphs[
+            id(event_data.model)
+        ]  # graph might have changed during change_event
+        for state in _flatten(
+            listify(getattr(event_data.model, event_data.machine.model_attribute))
+        ):
+            graph.set_node_style(self.dest if hasattr(state, "name") else state, "active")
 
 
 class GraphMachine(MarkupMachine):
@@ -44,87 +68,51 @@ class GraphMachine(MarkupMachine):
             transition_cls (cls): TransitionGraphSupport
     """
 
-    _pickle_blacklist = ['model_graphs']
+    _pickle_blacklist = ["model_graphs"]
     transition_cls = TransitionGraphSupport
 
     machine_attributes = {
-        'directed': 'true',
-        'strict': 'false',
-        'rankdir': 'LR',
+        "directed": "true",
+        "strict": "false",
+        "rankdir": "LR",
     }
 
     hierarchical_machine_attributes = {
-        'rankdir': 'TB',
-        'rank': 'source',
-        'nodesep': '1.5',
-        'compound': 'true'
+        "rankdir": "TB",
+        "rank": "source",
+        "nodesep": "1.5",
+        "compound": "true",
     }
 
     style_attributes = {
-        'node': {
-            '': {},
-            'default': {
-                'style': 'rounded, filled',
-                'shape': 'rectangle',
-                'fillcolor': 'white',
-                'color': 'black',
-                'peripheries': '1'
+        "node": {
+            "": {},
+            "default": {
+                "style": "rounded, filled",
+                "shape": "rectangle",
+                "fillcolor": "white",
+                "color": "black",
+                "peripheries": "1",
             },
-            'inactive': {
-                'fillcolor': 'white',
-                'color': 'black',
-                'peripheries': '1'
+            "inactive": {"fillcolor": "white", "color": "black", "peripheries": "1"},
+            "parallel": {
+                "shape": "rectangle",
+                "color": "black",
+                "fillcolor": "white",
+                "style": "dashed, rounded, filled",
+                "peripheries": "1",
             },
-            'parallel': {
-                'shape': 'rectangle',
-                'color': 'black',
-                'fillcolor': 'white',
-                'style': 'dashed, rounded, filled',
-                'peripheries': '1'
-            },
-            'active': {
-                'color': 'red',
-                'fillcolor': 'darksalmon',
-                'peripheries': '2'
-            },
-            'previous': {
-                'color': 'blue',
-                'fillcolor': 'azure2',
-                'peripheries': '1'
-            }
+            "active": {"color": "red", "fillcolor": "darksalmon", "peripheries": "2"},
+            "previous": {"color": "blue", "fillcolor": "azure2", "peripheries": "1"},
         },
-        'edge': {
-            '': {},
-            'default': {
-                'color': 'black'
-            },
-            'previous': {
-                'color': 'blue'
-            }
+        "edge": {"": {}, "default": {"color": "black"}, "previous": {"color": "blue"}},
+        "graph": {
+            "": {},
+            "default": {"color": "black", "fillcolor": "white", "style": "solid"},
+            "previous": {"color": "blue", "fillcolor": "azure2", "style": "filled"},
+            "active": {"color": "red", "fillcolor": "darksalmon", "style": "filled"},
+            "parallel": {"color": "black", "fillcolor": "white", "style": "dotted"},
         },
-        'graph': {
-            '': {},
-            'default': {
-                'color': 'black',
-                'fillcolor': 'white',
-                'style': 'solid'
-            },
-            'previous': {
-                'color': 'blue',
-                'fillcolor': 'azure2',
-                'style': 'filled'
-            },
-            'active': {
-                'color': 'red',
-                'fillcolor': 'darksalmon',
-                'style': 'filled'
-            },
-            'parallel': {
-                'color': 'black',
-                'fillcolor': 'white',
-                'style': 'dotted'
-            }
-        }
     }
 
     # model_graphs cannot be pickled. Omit them.
@@ -137,55 +125,56 @@ class GraphMachine(MarkupMachine):
         self.model_graphs = {}  # reinitialize new model_graphs
         for model in self.models:
             try:
-                _ = self._get_graph(model, title=self.title)
-            except AttributeError as e:
-                _LOGGER.warning("Graph for model could not be initialized after pickling: %s", e)
+                _ = self._get_graph(model)
+            except AttributeError as err:
+                _LOGGER.warning("Graph for model could not be initialized after pickling: %s", err)
 
     def __init__(self, *args, **kwargs):
         # remove graph config from keywords
-        self.title = kwargs.pop('title', 'State Machine')
-        self.show_conditions = kwargs.pop('show_conditions', False)
-        self.show_state_attributes = kwargs.pop('show_state_attributes', False)
+        self.title = kwargs.pop("title", "State Machine")
+        self.show_conditions = kwargs.pop("show_conditions", False)
+        self.show_state_attributes = kwargs.pop("show_state_attributes", False)
         # in MarkupMachine this switch is called 'with_auto_transitions'
         # keep 'auto_transitions_markup' for backwards compatibility
-        kwargs['auto_transitions_markup'] = kwargs.get('auto_transitions_markup', False) or \
-            kwargs.pop('show_auto_transitions', False)
+        kwargs["auto_transitions_markup"] = kwargs.get(
+            "auto_transitions_markup", False
+        ) or kwargs.pop("show_auto_transitions", False)
         self.model_graphs = {}
-
-        # determine graph engine; if pygraphviz cannot be imported, fall back to graphviz
-        use_pygraphviz = kwargs.pop('use_pygraphviz', True)
-        if use_pygraphviz:
-            try:
-                import pygraphviz
-            except ImportError:
-                use_pygraphviz = False
-        self.graph_cls = self._init_graphviz_engine(use_pygraphviz)
+        self.graph_cls = self._init_graphviz_engine(kwargs.pop("use_pygraphviz", True))
 
         _LOGGER.debug("Using graph engine %s", self.graph_cls)
         _super(GraphMachine, self).__init__(*args, **kwargs)
 
         # for backwards compatibility assign get_combined_graph to get_graph
         # if model is not the machine
-        if not hasattr(self, 'get_graph'):
-            setattr(self, 'get_graph', self.get_combined_graph)
+        if not hasattr(self, "get_graph"):
+            setattr(self, "get_graph", self.get_combined_graph)
 
     def _init_graphviz_engine(self, use_pygraphviz):
         if use_pygraphviz:
             try:
                 # state class needs to have a separator and machine needs to be a context manager
-                if hasattr(self.state_cls, 'separator') and hasattr(self, '__enter__'):
-                    from .diagrams_pygraphviz import NestedGraph as Graph
+                if hasattr(self.state_cls, "separator") and hasattr(self, "__enter__"):
+                    from .diagrams_pygraphviz import (
+                        NestedGraph as Graph,
+                    )  # pylint: disable=import-outside-toplevel
+
                     self.machine_attributes.update(self.hierarchical_machine_attributes)
                 else:
-                    from .diagrams_pygraphviz import Graph
+                    from .diagrams_pygraphviz import (
+                        Graph,
+                    )  # pylint: disable=import-outside-toplevel
                 return Graph
             except ImportError:
                 pass
-        if hasattr(self.state_cls, 'separator') and hasattr(self, '__enter__'):
-            from .diagrams_graphviz import NestedGraph as Graph
+        if hasattr(self.state_cls, "separator") and hasattr(self, "__enter__"):
+            from .diagrams_graphviz import (
+                NestedGraph as Graph,
+            )  # pylint: disable=import-outside-toplevel
+
             self.machine_attributes.update(self.hierarchical_machine_attributes)
         else:
-            from .diagrams_graphviz import Graph
+            from .diagrams_graphviz import Graph  # pylint: disable=import-outside-toplevel
         return Graph
 
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
@@ -194,7 +183,7 @@ class GraphMachine(MarkupMachine):
             self.model_graphs[id(model)] = grph
             try:
                 for state in _flatten(listify(getattr(model, self.model_attribute))):
-                    grph.set_node_style(self.dest if hasattr(state, 'name') else state, 'active')
+                    grph.set_node_style(self.dest if hasattr(state, "name") else state, "active")
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:
@@ -216,8 +205,10 @@ class GraphMachine(MarkupMachine):
                 the current state.
         Returns: AGraph of the first machine's model.
         """
-        _LOGGER.info('Returning graph of the first model. In future releases, this '
-                     'method will return a combined graph of all models.')
+        _LOGGER.info(
+            "Returning graph of the first model. In future releases, this "
+            "method will return a combined graph of all models."
+        )
         return self._get_graph(self.models[0], title, force_new, show_roi)
 
     def add_model(self, model, initial=None):
@@ -225,59 +216,136 @@ class GraphMachine(MarkupMachine):
         super(GraphMachine, self).add_model(models, initial)
         for mod in models:
             mod = self if mod is self.self_literal else mod
-            if hasattr(mod, 'get_graph'):
-                raise AttributeError('Model already has a get_graph attribute. Graph retrieval cannot be bound.')
-            setattr(mod, 'get_graph', partial(self._get_graph, mod))
+            if hasattr(mod, "get_graph"):
+                raise AttributeError(
+                    "Model already has a get_graph attribute. Graph retrieval cannot be bound."
+                )
+            setattr(mod, "get_graph", partial(self._get_graph, mod))
             _ = mod.get_graph(title=self.title, force_new=True)  # initialises graph
 
-    def add_states(self, states, on_enter=None, on_exit=None,
-                   ignore_invalid_triggers=None, **kwargs):
+    def add_states(
+        self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs
+    ):
         """ Calls the base method and regenerates all models's graphs. """
-        _super(GraphMachine, self).add_states(states, on_enter=on_enter, on_exit=on_exit,
-                                              ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+        _super(GraphMachine, self).add_states(
+            states,
+            on_enter=on_enter,
+            on_exit=on_exit,
+            ignore_invalid_triggers=ignore_invalid_triggers,
+            **kwargs
+        )
         for model in self.models:
             model.get_graph(force_new=True)
 
-    def add_transition(self, trigger, source, dest, conditions=None,
-                       unless=None, before=None, after=None, prepare=None, **kwargs):
+    def add_transition(
+        self,
+        trigger,
+        source,
+        dest,
+        conditions=None,
+        unless=None,
+        before=None,
+        after=None,
+        prepare=None,
+        **kwargs
+    ):
         """ Calls the base method and regenerates all models's graphs. """
-        _super(GraphMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
-                                                  before=before, after=after, prepare=prepare, **kwargs)
+        _super(GraphMachine, self).add_transition(
+            trigger,
+            source,
+            dest,
+            conditions=conditions,
+            unless=unless,
+            before=before,
+            after=after,
+            prepare=prepare,
+            **kwargs
+        )
         for model in self.models:
             model.get_graph(force_new=True)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class BaseGraph(object):
+    """ Provides the common foundation for graphs generated either with pygraphviz or graphviz. This abstract class
+    should not be instantiated directly. Use .(py)graphviz.(Nested)Graph instead.
+    Attributes:
+        machine (GraphMachine): The associated GraphMachine
+        fsm_graph (object): The AGraph-like object that holds the graphviz information
+    """
 
-    def __init__(self, machine, title=None):
+    def __init__(self, machine):
         self.machine = machine
         self.fsm_graph = None
-        self.roi_state = None
-        self.generate(title)
+        self.generate()
+
+    @abc.abstractmethod
+    def generate(self):
+        """ Triggers the generation of a graph.
+        Args:
+            title (str): The title of the graph
+        """
+
+    @abc.abstractmethod
+    def set_previous_transition(self, src, dst):
+        """ Sets the styling of an edge to 'previous'
+        Args:
+            src (str): Name of the source state
+            dst (str): Name of the destination
+        """
+
+    @abc.abstractmethod
+    def reset_styling(self):
+        """ Resets the styling of the currently generated graph. """
+
+    @abc.abstractmethod
+    def set_node_style(self, state, style):
+        """ Sets the style of a node state
+        Args:
+            state (str): Name of the state
+            style (str): Name of the style
+        """
+
+    @abc.abstractmethod
+    def get_graph(self, title=None, roi_state=None):
+        """ Returns a graph object.
+        Args:
+            title (str): Title of the generated graph
+            roi_state (State): If not None, the returned graph will only contain edges and states connected to it.
+        Returns:
+             A graph instance with a `draw` that allows to render the graph.
+        """
 
     def _convert_state_attributes(self, state):
-        label = state.get('label', state['name'])
+        label = state.get("label", state["name"])
         if self.machine.show_state_attributes:
-            if 'tags' in state:
-                label += ' [' + ', '.join(state['tags']) + ']'
-            if 'on_enter' in state:
-                label += r'\l- enter:\l  + ' + r'\l  + '.join(state['on_enter'])
-            if 'on_exit' in state:
-                label += r'\l- exit:\l  + ' + r'\l  + '.join(state['on_exit'])
-            if 'timeout' in state:
-                label += r'\l- timeout(' + state['timeout'] + 's)  -> (' + ', '.join(state['on_timeout']) + ')'
+            if "tags" in state:
+                label += " [" + ", ".join(state["tags"]) + "]"
+            if "on_enter" in state:
+                label += r"\l- enter:\l  + " + r"\l  + ".join(state["on_enter"])
+            if "on_exit" in state:
+                label += r"\l- exit:\l  + " + r"\l  + ".join(state["on_exit"])
+            if "timeout" in state:
+                label += (
+                    r"\l- timeout("
+                    + state["timeout"]
+                    + "s)  -> ("
+                    + ", ".join(state["on_timeout"])
+                    + ")"
+                )
         return label
 
     def _transition_label(self, tran):
-        edge_label = tran.get('label', tran['trigger'])
-        if 'dest' not in tran:
+        edge_label = tran.get("label", tran["trigger"])
+        if "dest" not in tran:
             edge_label += " [internal]"
-        if self.machine.show_conditions and any(prop in tran for prop in ['conditions', 'unless']):
-            x = '{edge_label} [{conditions}]'.format(
+        if self.machine.show_conditions and any(prop in tran for prop in ["conditions", "unless"]):
+            edge_label = "{edge_label} [{conditions}]".format(
                 edge_label=edge_label,
-                conditions=' & '.join(tran.get('conditions', []) + ['!' + u for u in tran.get('unless', [])]),
+                conditions=" & ".join(
+                    tran.get("conditions", []) + ["!" + u for u in tran.get("unless", [])]
+                ),
             )
-            return x
         return edge_label
 
     def _get_global_name(self, path):
@@ -293,34 +361,43 @@ class BaseGraph(object):
         transitions = []
         try:
             markup = self.machine.get_markup_config()
-            q = [([], markup)]
+            queue = [([], markup)]
 
-            while q:
-                prefix, scope = q.pop(0)
-                for transition in scope.get('transitions', []):
+            while queue:
+                prefix, scope = queue.pop(0)
+                for transition in scope.get("transitions", []):
                     if prefix:
-                        t = copy.copy(transition)
-                        t['source'] = self.machine.state_cls.separator.join(prefix + [t['source']])
-                        if 'dest' in t:  # don't do this for internal transitions
-                            t['dest'] = self.machine.state_cls.separator.join(prefix + [t['dest']])
+                        tran = copy.copy(transition)
+                        tran["source"] = self.machine.state_cls.separator.join(
+                            prefix + [tran["source"]]
+                        )
+                        if "dest" in tran:  # don't do this for internal transitions
+                            tran["dest"] = self.machine.state_cls.separator.join(
+                                prefix + [tran["dest"]]
+                            )
                     else:
-                        t = transition
-                    transitions.append(t)
-                for state in scope.get('children', []) + scope.get('states', []):
+                        tran = transition
+                    transitions.append(tran)
+                for state in scope.get("children", []) + scope.get("states", []):
                     if not prefix:
-                        s = state
-                        states.append(s)
+                        sta = state
+                        states.append(sta)
 
-                    ini = state.get('initial', [])
+                    ini = state.get("initial", [])
                     if not isinstance(ini, list):
-                        ini = ini.name if hasattr(ini, 'name') else ini
-                        t = dict(trigger='',
-                                 source=self.machine.state_cls.separator.join(prefix + [state['name']]) + '_anchor',
-                                 dest=self.machine.state_cls.separator.join(prefix + [state['name'], ini]))
-                        transitions.append(t)
-                    if state.get('children', []):
-                        q.append((prefix + [state['name']], state))
-        except KeyError as e:
+                        ini = ini.name if hasattr(ini, "name") else ini
+                        tran = dict(
+                            trigger="",
+                            source=self.machine.state_cls.separator.join(prefix + [state["name"]])
+                            + "_anchor",
+                            dest=self.machine.state_cls.separator.join(
+                                prefix + [state["name"], ini]
+                            ),
+                        )
+                        transitions.append(tran)
+                    if state.get("children", []):
+                        queue.append((prefix + [state["name"]], state))
+        except KeyError:
             _LOGGER.error("Graph creation incomplete!")
         return states, transitions
 
