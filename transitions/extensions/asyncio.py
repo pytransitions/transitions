@@ -425,6 +425,10 @@ class AsyncMachine(Machine):
         if self.has_queue == 'model':
             for mod in models:
                 del self._transition_queue_dict[mod]
+                self.models.remove(mod)
+        else:
+            for mod in models:
+                self.models.remove(mod)
         if len(self._transition_queue) > 0:
             queue = self._transition_queue
             new_queue = [queue.popleft()] + [e for e in queue if e.args[0] not in models]

@@ -820,6 +820,12 @@ class TestTransitions(TestCase):
         self.assertEqual(s1.state, 'B')
         self.assertEqual(s2.state, 'C')
 
+    def test_remove_model(self):
+        m = self.machine_cls()
+        self.assertIn(m, m.models)
+        m.remove_model(m)
+        self.assertNotIn(m, m.models)
+
     def test_string_trigger(self):
         def return_value(value):
             return value

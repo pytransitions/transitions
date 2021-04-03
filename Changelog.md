@@ -2,6 +2,7 @@
 
 ## 0.8.8
 
+- Bugfix #526: `AsyncMachine` does not remove models when `remove_models` is called (thanks @Plazas87)
 - Feature #517: Introduce `try/except` for finalize callbacks in `Machine` and `HierachicalMachine`. Thus, errors occurring in finalize callbacks will be suppressed and only the original error will be raised.
 - Feature #520: Show references in graphs and markup. Introduce `MarkupMachine.format_references` to tweak reference formatting (thanks @StephenCarboni)
 - Feature #485: Introduce `Machine.on_exception` to handle raised exceptions in callbacks (thanks @thedrow)
