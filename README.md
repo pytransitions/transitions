@@ -849,7 +849,10 @@ class CustomMachine(Machine):
 
 ### <a name="execution-order"></a>Callback execution order
 
-In summary, callbacks on transitions are executed in the following order:
+In summary, there are currently three ways to trigger events. You can call a model's convenience functions like `lump.melt()`,
+execute triggers by name such as `lump.trigger("melt")` or dispatch events on multiple models with `machine.dispatch("melt")`
+(see section about multiple models in [alternative initialization patterns](#alternative-initialization-patterns)).
+Callbacks on transitions are then executed in the following order:
 
 |      Callback                  | Current State |               Comments                                      |
 |--------------------------------|:-------------:|-------------------------------------------------------------|
@@ -867,10 +870,11 @@ In summary, callbacks on transitions are executed in the following order:
 | `'machine.on_exception'`       | `source/destination` | callbacks will be executed when an exception has been raised |
 | `'machine.finalize_event'`     | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
-If any callback raises an exception, the processing of callbacks is not continued. This means that when an error occurs before the transition (in `state.on_exit` or earlier), it is halted. In case there is a raise after the transition has been conducted (in `state.on_enter` or later), the state change persists and no rollback is happening. Callbacks specified in `machine.finalize_event` will always be executed unless the exception is raised by a finalizing callback itself.
+If any callback raises an exception, the processing of callbacks is not continued. This means that when an error occurs before the transition (in `state.on_exit` or earlier), it is halted. In case there is a raise after the transition has been conducted (in `state.on_enter` or later), the state change persists and no rollback is happening. Callbacks specified in `machine.finalize_event` will always be executed unless the exception is raised by a finalizing callback itself. Note that each callback sequence has to be finished before the next stage is executed. Blocking callbacks will halt the execution order and therefore block the `trigger` or `dispatch` call itself. If you want callbacks to be executed in parallel, you could have a look at the [extensions](#extensions) `AsyncMachine` for asynchronous processing or `LockedMachine` for threading.
 
 ### <a name="passing-data"></a>Passing data
-Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state. Transitions allows you to do this in two different ways.
+Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state.
+Transitions allows you to do this in two different ways.
 
 First (the default), you can pass any positional or keyword arguments directly to the trigger methods (created when you call `add_transition()`):
 
@@ -975,6 +979,7 @@ Here you get to consolidate all state machine functionality into your existing m
 A machine can handle multiple models which can be passed as a list like `Machine(model=[model1, model2, ...])`.
 In cases where you want to add models *as well as* the machine instance itself, you can pass the string placeholder `'self'` during initialization like `Machine(model=['self', model1, ...])`.
 You can also create a standalone machine, and register models dynamically via `machine.add_model` by passing `model=None` to the constructor.
+Furthermore, you can use `machine.dispatch` to trigger events on all currently added models.
 Remember to call `machine.remove_model` if machine is long-lasting and your models are temporary and should be garbage collected:
 
 ```python
@@ -994,6 +999,13 @@ lump1.state
 >>> 'solid'
 lump2.state
 >>> 'liquid'
+
+# custom events as well as auto transitions can be dispatched to all models
+machine.dispatch("to_plasma")
+
+lump1.state
+>>> 'plasma'
+assert lump1.state == lump2.state
 
 machine.remove_model([lump1, lump2])
 del lump1  # lump1 is garbage collected
