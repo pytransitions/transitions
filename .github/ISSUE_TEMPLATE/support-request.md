@@ -11,7 +11,7 @@ assignees: ''
 
 Your question gains higher visibility since most developers look for help there.
 The targeted community is larger; Some people will even help you to formulate a good question.
-People get 'rewarded' with 'reputation' to help you. You also gain reputation in case this questions pops up more frequently. It's a win-win situation. Tag your question with `[pytransitions]` to make sure, that users of transitions will receive a notification. If the SO community cannot answer you question in a week, you can notify us by opening a new issue. Make sure to link your Stack Overflow post.  We'd rather answer questions there.
+People get 'rewarded' with 'reputation' to help you. You also gain reputation in case this questions pops up more frequently. It's a win-win situation. Tag your question with `[pytransitions]` to make sure, that users of transitions will receive a notification. If the SO community cannot answer you question within a week, you can notify us by opening an issue here. Make sure to link your Stack Overflow post.  We'd rather answer questions there.
 
 **Checklist** 
 
