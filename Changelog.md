@@ -6,6 +6,7 @@
 - Feature #517: Introduce `try/except` for finalize callbacks in `Machine` and `HierachicalMachine`. Thus, errors occurring in finalize callbacks will be suppressed and only the original error will be raised.
 - Feature #520: Show references in graphs and markup. Introduce `MarkupMachine.format_references` to tweak reference formatting (thanks @StephenCarboni)
 - Feature #485: Introduce `Machine.on_exception` to handle raised exceptions in callbacks (thanks @thedrow)
+- Feature #527: `Machine.get_triggers` now supports `State` and `Enum` as arguments (thanks @luup2k)
 
 ## 0.8.7 (February 2021)
 

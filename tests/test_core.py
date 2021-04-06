@@ -871,7 +871,11 @@ class TestTransitions(TestCase):
         self.assertEqual(len(machine.get_triggers('B')), 0)
         self.assertEqual(len(machine.get_triggers('C')), 1)
         # self stuff machine should have to-transitions to every state
-        self.assertEqual(len(self.stuff.machine.get_triggers('B')), len(self.stuff.machine.states))
+        m = self.stuff.machine
+        self.assertEqual(len(m.get_triggers('B')), len(m.states))
+        trigger_name = m.get_triggers('B')
+        trigger_state = m.get_triggers(m.states['B'])
+        self.assertEqual(trigger_name, trigger_state)
 
     def test_skip_override(self):
         local_mock = MagicMock()

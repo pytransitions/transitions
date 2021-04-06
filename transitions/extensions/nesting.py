@@ -710,7 +710,8 @@ class HierarchicalMachine(Machine):
         """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """
         triggers = []
         with self():
-            for state_name in args:
+            for state in args:
+                state_name = state.name if hasattr(state, 'name') else state
                 state_path = state_name.split(self.state_cls.separator)
                 if len(state_path) > 1:  # we only need to check substates when 'state_name' refers to a substate
                     with self(state_path[0]):

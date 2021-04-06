@@ -890,8 +890,8 @@ class Machine(object):
         Returns:
             list of transition/trigger names.
         """
-        states = set(args)
-        return [t for (t, ev) in self.events.items() if any(state in ev.transitions for state in states)]
+        names = set([state.name if hasattr(state, 'name') else state for state in args])
+        return [t for (t, ev) in self.events.items() if any(name in ev.transitions for name in names)]
 
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None, **kwargs):

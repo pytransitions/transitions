@@ -148,6 +148,12 @@ class TestEnumsAsStates(TestCase):
         # we expect two return values. 'switch_to_yellow' and 'to_YELLOW'
         self.assertEqual(2, len(m.get_transitions(source=self.States.RED, dest=self.States.YELLOW)))
 
+    def test_get_triggers(self):
+        m = self.machine_cls(states=self.States, initial=self.States.RED)
+        trigger_name = m.get_triggers(m.state.name)
+        trigger_enum = m.get_triggers(m.state)
+        self.assertEqual(trigger_enum, trigger_name)
+
 
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):
