@@ -166,7 +166,7 @@ class NestedState(State):
     Attributes:
         states (OrderedDict): A list of substates of the current state.
         events (dict): A list of events defined for the nested state.
-        initial (str): Name of a child which should be entered when the state is entered.
+        initial (list, str, NestedState or Enum): (Name of a) child or list of children that should be entered when the state is entered.
         exit_stack (defaultdict): A list of currently active substates
     """
 
@@ -302,7 +302,8 @@ class NestedTransition(Transition):
                     scoped_tree[state.name] = OrderedDict()
                     if state.initial:
                         q.append((scoped_tree[state.name], prefix + [state.name],
-                                  [state.states[i.name] if hasattr(i, 'name') else state.states[i] for i in listify(state.initial)]))
+                                  [state.states[i.name] if hasattr(i, 'name') else state.states[i]
+                                   for i in listify(state.initial)]))
                 if not q:
                     break
                 scoped_tree, prefix, initial_states = q.pop(0)
@@ -489,19 +490,22 @@ class HierarchicalMachine(Machine):
                 remap = state.pop('remap', None)
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
-                state_children = state.pop('children', state.pop('states', []))
+
+                # parallel: [states] is just a short handle for {children: [states], initial: [state_names]}
                 state_parallel = state.pop('parallel', [])
+                if state_parallel:
+                    state_children = state_parallel
+                    state['initial'] = [s['name'] if isinstance(s, dict)
+                                        else s for s in state_children]
+                else:
+                    state_children = state.pop('children', state.pop('states', []))
                 transitions = state.pop('transitions', [])
                 new_state = self._create_state(**state)
                 self.states[new_state.name] = new_state
                 self._init_state(new_state)
                 remapped_transitions = []
                 with self(new_state.name):
-                    if state_parallel:
-                        self.add_states(state_parallel, remap=remap, **kwargs)
-                        new_state.initial = [s if isinstance(s, string_types) else s['name'] for s in state_parallel]
-                    else:
-                        self.add_states(state_children, remap=remap, **kwargs)
+                    self.add_states(state_children, remap=remap, **kwargs)
                     if remap is not None:
                         drop_event = []
                         for evt in self.events.values():

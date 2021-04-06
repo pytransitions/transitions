@@ -7,6 +7,7 @@
 - Feature #520: Show references in graphs and markup. Introduce `MarkupMachine.format_references` to tweak reference formatting (thanks @StephenCarboni)
 - Feature #485: Introduce `Machine.on_exception` to handle raised exceptions in callbacks (thanks @thedrow)
 - Feature #527: `Machine.get_triggers` now supports `State` and `Enum` as arguments (thanks @luup2k)
+- Feature #506: `NestedState` and `HierachicalMachine.add_states` now accept (lists of) states and enums as `initial` parameter
 
 ## 0.8.7 (February 2021)
 

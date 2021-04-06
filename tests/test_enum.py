@@ -326,6 +326,39 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertEqual(1, len(m.get_transitions(dest=self.States.GREEN)))
         self.assertEqual(3, len(m.get_transitions(trigger='toggle')))
 
+    def test_multiple_deeper(self):
+
+        class X(enum.Enum):
+            X1 = 1
+            X2 = 2
+
+        class B(enum.Enum):
+            B1 = dict(parallel=X)
+            B2 = 2
+
+        class A(enum.Enum):
+            A1 = dict(parallel=B)
+            A2 = 2
+
+        class Q(enum.Enum):
+            Q1 = 1
+            Q2 = dict(parallel=A)
+
+        class P(enum.Enum):
+            P1 = 1
+            P2 = dict(parallel=Q)
+
+        class States(enum.Enum):
+            S1 = 1
+            S2 = dict(parallel=P)
+
+        m = self.machine_cls(states=States, initial=States.S1)
+        self.assertEqual(m.state, States.S1)
+        m.to_S2()
+
+        ref_state = [P.P1, [Q.Q1, [[[X.X1, X.X2], B.B2], A.A2]]]
+        self.assertEqual(ref_state, m.state)
+
 
 @skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
 class TestEnumWithGraph(TestEnumsAsStates):

@@ -210,3 +210,6 @@ class TestLegacyNestedEnum(TestNestedStateEnums):
 
     def test_get_nested_transitions(self):
         pass  # not supported by legacy machine
+
+    def test_multiple_deeper(self):
+        pass  # not supported by legacy machine
