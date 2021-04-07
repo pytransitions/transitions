@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.8 (April 2022)
+## 0.8.8 (April 2021)
 
 Release 0.8.8 is a minor release and contains a bugfix and several new or improved features:
 
