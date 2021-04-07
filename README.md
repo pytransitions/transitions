@@ -1429,6 +1429,7 @@ Besides semantic order, nested states are very handy if you want to specify stat
 Before *0.8.0*, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
 However, since *0.8.0* `(Nested)State` instances are just **referenced** which means changes in one machine's collection of states and events will influence the other machine instance. Models and their state will not be shared though.
 Note that events and transitions are also copied by reference and will be shared by both instances if you do not use the `remap` keyword.
+This change was done to be more in line with `Machine` which also uses passed `State` instances by reference.
 
 ```python
 count_states = ['1', '2', '3', 'done']
@@ -1484,6 +1485,21 @@ collector.state
 As mentioned above, using `remap` will **copy** events and transitions since they could not be valid in the original state machine.
 If a reused state machine does not have a final state, you can of course add the transitions manually.
 If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'waiting']` to achieve the same behaviour.
+
+In cases where you want states and transitions to be copied by value rather than reference (for instance, if you want to keep the pre-0.8 behaviour) you can do so by creating a `NestedState` and assign deep copies of the machine's events and states to it.
+
+```python
+from transitions.extensions.nesting import NestedState
+from copy import deepcopy
+
+# ... configuring and creating counter 
+
+counting_state = NestedState(name="counting", initial='1')
+counting_state.states = deepcopy(counter.states)
+counting_state.events = deepcopy(counter.events)
+
+states = ['waiting', 'collecting', counting_state]
+```
 
 For complex state machines, sharing configurations rather than instantiated machines might be more feasible.
 Especially since instantiated machines must be derived from `HierarchicalMachine`.
