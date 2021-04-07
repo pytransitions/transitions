@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.8.8
+## 0.8.8 (April 2022)
+
+Release 0.8.8 is a minor release and contains a bugfix and several new or improved features:
 
 - Bugfix #526: `AsyncMachine` does not remove models when `remove_models` is called (thanks @Plazas87)
 - Feature #517: Introduce `try/except` for finalize callbacks in `Machine` and `HierachicalMachine`. Thus, errors occurring in finalize callbacks will be suppressed and only the original error will be raised.
@@ -10,6 +12,8 @@
 - Feature #506: `NestedState` and `HierachicalMachine.add_states` now accept (lists of) states and enums as `initial` parameter
 
 ## 0.8.7 (February 2021)
+
+Release 0.8.7 is a minor release and contains a bugfix, a feature and adjustments to internal processes:
 
 - State configuration dictionaries passed to `HierarchicalMachine` can also use `states` as a keyword to define substates. If `children` and `states` are present, only `children` will be considered.
 - Feature #500: `HierarchicalMachine` with custom separator now adds `is_state` partials for nested states (e.g. `is_C.s3.a()`) to models (thanks @alterscape)
