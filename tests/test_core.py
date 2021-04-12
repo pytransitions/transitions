@@ -63,7 +63,7 @@ class TestTransitions(TestCase):
         self.assertEqual(listify(None), [])
         self.assertEqual(listify((4, 5)), (4, 5))
         self.assertEqual(listify([1, 3]), [1, 3])
-        
+
         class Foo:
             pass
         obj = Foo()
