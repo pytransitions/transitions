@@ -13,6 +13,7 @@ from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, _prep_ordered_arg
 from unittest import TestCase, skipIf
 import warnings
+import weakref
 
 try:
     from unittest.mock import MagicMock
@@ -62,6 +63,13 @@ class TestTransitions(TestCase):
         self.assertEqual(listify(None), [])
         self.assertEqual(listify((4, 5)), (4, 5))
         self.assertEqual(listify([1, 3]), [1, 3])
+        
+        class Foo:
+            pass
+        obj = Foo()
+        proxy = weakref.proxy(obj)
+        del obj
+        self.assertEqual(listify(proxy), [proxy])
 
     def test_property_initial(self):
         states = ['A', 'B', 'C', 'D']
