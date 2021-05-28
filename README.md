@@ -1152,7 +1152,7 @@ Additional Keywords:
 Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed:   
 To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
 
-    sudo apt-get install graphviz  # Ubuntu and Debian
+    sudo apt-get install graphviz graphviz-dev  # Ubuntu and Debian
     brew install graphviz  # MacOS
     conda install graphviz python-graphviz  # (Ana)conda
 
