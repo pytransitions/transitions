@@ -1453,7 +1453,7 @@ transitions = [
     ['count', 'collecting', 'counting']
 ]
 
-collector = Machine(states=states, transitions=transitions, initial='waiting')
+collector = HierarchicalMachine(states=states, transitions=transitions, initial='waiting')
 collector.collect()  # collecting
 collector.count()  # let's see what we got; counting_1
 collector.increase()  # counting_2
