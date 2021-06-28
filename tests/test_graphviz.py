@@ -235,6 +235,17 @@ class TestDiagrams(TestTransitions):
         self.assertNotIn("label=A", dot)
         self.assertNotIn("label=event", dot)
 
+    def test_binary_stream(self):
+        from io import BytesIO
+        m = self.machine_cls(states=['A', 'B', 'C'], initial='A', auto_transitions=True,
+                             title='A test', show_conditions=True, use_pygraphviz=self.use_pygraphviz)
+        b1 = BytesIO()
+        g = m.get_graph()
+        g.draw(b1, format='png', prog='dot')
+        b2 = g.draw(None, format='png', prog='dot')
+        self.assertEqual(b2, b1.getvalue())
+        b1.close()
+
 
 @skipIf(pgv is None, 'Graph diagram test requires graphviz')
 class TestDiagramsLocked(TestDiagrams):
@@ -390,16 +401,6 @@ class TestDiagramsNested(TestDiagrams):
         machine.drink()
         g1 = machine.get_graph()
         self.assertIsNotNone(g1)
-
-    def test_binary_stream(self):
-        from io import BytesIO
-        m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
-                             title='A test', show_conditions=True, use_pygraphviz=self.use_pygraphviz)
-        b1 = BytesIO()
-        g = m.get_graph()
-        g.draw(b1, format='png', prog='dot')
-        b2 = g.draw(None, format='png', prog='dot')
-        self.assertEqual(b2, b1.getvalue())
 
 
 @skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
