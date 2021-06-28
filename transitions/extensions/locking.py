@@ -86,7 +86,7 @@ class LockedEvent(Event):
         # LockedMachine._locked should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
         if self.machine._ident.current != get_ident():
-            with nested(*self.machine.model_context_map[model]):
+            with nested(*self.machine.model_context_map[id(model)]):
                 return _super(LockedEvent, self).trigger(model, *args, **kwargs)
         else:
             return _super(LockedEvent, self).trigger(model, *args, **kwargs)
@@ -115,6 +115,23 @@ class LockedMachine(Machine):
 
         _super(LockedMachine, self).__init__(*args, **kwargs)
 
+    # When we attempt to pickle a locked machine, using IDs wont suffice to unpickle the contexts since
+    # IDs have changed. We use a 'reference' store with objects as dictionary keys to resolve the newly created
+    # references. This should induce no restrictions compared to transitions 0.8.8 but enable the usage of unhashable
+    # objects in locked machine.
+    def __getstate__(self):
+        state = {k: v for k, v in self.__dict__.items()}
+        del state['model_context_map']
+        state['_model_context_map_store'] = {mod: self.model_context_map[id(mod)] for mod in self.models}
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.model_context_map = defaultdict(list)
+        for model in self.models:
+            self.model_context_map[id(model)] = self._model_context_map_store[model]
+        del self._model_context_map_store
+
     def add_model(self, model, initial=None, model_context=None):
         """ Extends `transitions.core.Machine.add_model` by `model_context` keyword.
         Args:
@@ -129,8 +146,8 @@ class LockedMachine(Machine):
 
         for mod in models:
             mod = self if mod == 'self' else mod
-            self.model_context_map[mod].extend(self.machine_context)
-            self.model_context_map[mod].extend(model_context)
+            self.model_context_map[id(mod)].extend(self.machine_context)
+            self.model_context_map[id(mod)].extend(model_context)
 
         return output
 
@@ -140,7 +157,7 @@ class LockedMachine(Machine):
         models = listify(model)
 
         for mod in models:
-            del self.model_context_map[mod]
+            del self.model_context_map[id(mod)]
 
         return _super(LockedMachine, self).remove_model(models)
 

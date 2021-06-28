@@ -294,7 +294,7 @@ class TestAsync(TestTransitions):
             event_data.machine.remove_model(event_data.model)
 
         def check_queue(expect, event_data):
-            self.assertEqual(expect, len(event_data.machine._transition_queue_dict[event_data.model]))
+            self.assertEqual(expect, len(event_data.machine._transition_queue_dict[id(event_data.model)]))
 
         transitions = [
             {'trigger': 'go', 'source': 'A', 'dest': 'B', 'after': partial(asyncio.sleep, 0.1)},
@@ -316,8 +316,8 @@ class TestAsync(TestTransitions):
             self.assertTrue(m1.is_B())
             self.assertTrue(m2.is_C())
             m.remove_model(m2)
-            self.assertNotIn(m1, m._transition_queue_dict)
-            self.assertNotIn(m2, m._transition_queue_dict)
+            self.assertNotIn(id(m1), m._transition_queue_dict)
+            self.assertNotIn(id(m2), m._transition_queue_dict)
             m1 = DummyModel()
             m2 = DummyModel()
             m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions,

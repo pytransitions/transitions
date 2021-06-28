@@ -27,11 +27,11 @@ class TransitionGraphSupport(Transition):
             self.label = label
 
     def _change_state(self, event_data):
-        graph = event_data.machine.model_graphs[event_data.model]
+        graph = event_data.machine.model_graphs[id(event_data.model)]
         graph.reset_styling()
         graph.set_previous_transition(self.source, self.dest, event_data.event.name)
         _super(TransitionGraphSupport, self)._change_state(event_data)  # pylint: disable=protected-access
-        graph = event_data.machine.model_graphs[event_data.model]  # graph might have changed during change_event
+        graph = event_data.machine.model_graphs[id(event_data.model)]  # graph might have changed during change_event
         for state in _flatten(listify(getattr(event_data.model, event_data.machine.model_attribute))):
             graph.set_node_style(self.dest if hasattr(state, 'name') else state, 'active')
 
@@ -191,17 +191,17 @@ class GraphMachine(MarkupMachine):
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
         if force_new:
             grph = self.graph_cls(self, title=title if title is not None else self.title)
-            self.model_graphs[model] = grph
+            self.model_graphs[id(model)] = grph
             try:
                 for state in _flatten(listify(getattr(model, self.model_attribute))):
                     grph.set_node_style(self.dest if hasattr(state, 'name') else state, 'active')
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:
-            m = self.model_graphs[model]
+            m = self.model_graphs[id(model)]
         except KeyError:
             _ = self._get_graph(model, title, force_new=True)
-            m = self.model_graphs[model]
+            m = self.model_graphs[id(model)]
         m.roi_state = getattr(model, self.model_attribute) if show_roi else None
         return m.get_graph(title=title)
 

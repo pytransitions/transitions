@@ -132,8 +132,8 @@ class TestDiagrams(TestTransitions):
         m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A',
                              use_pygraphviz=self.use_pygraphviz)
         m1.walk()
-        self.assertEqual(m.model_graphs[m1].custom_styles['node'][m1.state], 'active')
-        self.assertEqual(m.model_graphs[m2].custom_styles['node'][m1.state], '')
+        self.assertEqual(m.model_graphs[id(m1)].custom_styles['node'][m1.state], 'active')
+        self.assertEqual(m.model_graphs[id(m2)].custom_styles['node'][m1.state], '')
         # backwards compatibility test
         dot1, _, _ = self.parse_dot(m1.get_graph())
         dot, _, _ = self.parse_dot(m.get_graph())

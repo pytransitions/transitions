@@ -111,6 +111,8 @@ class TestLockedTransitions(TestCore):
         fast = time.time()
         # stuff2 should be locked and take about 1 second
         # to be executed
+        print(id(self.stuff), self.stuff.machine.model_context_map)
+        print(id(stuff2), stuff2.machine.model_context_map)
         self.assertTrue(stuff2.is_B())
         blocked = time.time()
         self.assertAlmostEqual(fast - begin, 0, delta=0.1)

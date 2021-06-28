@@ -136,7 +136,7 @@ class AsyncTransition(Transition):
 
     async def _change_state(self, event_data):
         if hasattr(event_data.machine, "model_graphs"):
-            graph = event_data.machine.model_graphs[event_data.model]
+            graph = event_data.machine.model_graphs[id(event_data.model)]
             graph.reset_styling()
             graph.set_previous_transition(self.source, self.dest)
         await event_data.machine.get_state(self.source).exit(event_data)
@@ -149,7 +149,7 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
 
     async def _change_state(self, event_data):
         if hasattr(event_data.machine, "model_graphs"):
-            graph = event_data.machine.model_graphs[event_data.model]
+            graph = event_data.machine.model_graphs[id(event_data.model)]
             graph.reset_styling()
             graph.set_previous_transition(self.source, self.dest)
         state_tree, exit_partials, enter_partials = self._resolve_transition(event_data)
@@ -326,7 +326,7 @@ class AsyncMachine(Machine):
         super().add_model(model, initial)
         if self.has_queue == 'model':
             for mod in listify(model):
-                self._transition_queue_dict[mod if mod != 'self' else self] = deque()
+                self._transition_queue_dict[id(mod) if mod != 'self' else id(self)] = deque()
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.
@@ -381,7 +381,7 @@ class AsyncMachine(Machine):
         Args:
             model (object): The currently processed model
         """
-        for running_task in self.async_tasks.get(model, []):
+        for running_task in self.async_tasks.get(id(model), []):
             if self.current_context.get() == running_task or running_task in self.protected_tasks:
                 continue
             elif running_task.done() is False:
@@ -401,18 +401,18 @@ class AsyncMachine(Machine):
         """
         if self.current_context.get() is None:
             self.current_context.set(asyncio.current_task())
-            if model in self.async_tasks:
-                self.async_tasks[model].append(asyncio.current_task())
+            if id(model) in self.async_tasks:
+                self.async_tasks[id(model)].append(asyncio.current_task())
             else:
-                self.async_tasks[model] = [asyncio.current_task()]
+                self.async_tasks[id(model)] = [asyncio.current_task()]
             try:
                 res = await self._process(func, model)
             except asyncio.CancelledError:
                 res = False
             finally:
-                self.async_tasks[model].remove(asyncio.current_task())
-                if len(self.async_tasks[model]) == 0:
-                    del self.async_tasks[model]
+                self.async_tasks[id(model)].remove(asyncio.current_task())
+                if len(self.async_tasks[id(model)]) == 0:
+                    del self.async_tasks[id(model)]
         else:
             res = await self._process(func, model)
         return res
@@ -424,7 +424,7 @@ class AsyncMachine(Machine):
         models = listify(model)
         if self.has_queue == 'model':
             for mod in models:
-                del self._transition_queue_dict[mod]
+                del self._transition_queue_dict[id(mod)]
                 self.models.remove(mod)
         else:
             for mod in models:
@@ -444,20 +444,20 @@ class AsyncMachine(Machine):
             else:
                 raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
 
-        self._transition_queue_dict[model].append(trigger)
+        self._transition_queue_dict[id(model)].append(trigger)
         # another entry in the queue implies a running transition; skip immediate execution
-        if len(self._transition_queue_dict[model]) > 1:
+        if len(self._transition_queue_dict[id(model)]) > 1:
             return True
 
-        while self._transition_queue_dict[model]:
+        while self._transition_queue_dict[id(model)]:
             try:
-                await self._transition_queue_dict[model][0]()
+                await self._transition_queue_dict[id(model)][0]()
             except Exception:
                 # if a transition raises an exception, clear queue and delegate exception handling
-                self._transition_queue_dict[model].clear()
+                self._transition_queue_dict[id(model)].clear()
                 raise
             try:
-                self._transition_queue_dict[model].popleft()
+                self._transition_queue_dict[id(model)].popleft()
             except KeyError:
                 return True
         return True
