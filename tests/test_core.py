@@ -71,6 +71,13 @@ class TestTransitions(TestCase):
         del obj
         self.assertEqual(listify(proxy), [proxy])
 
+    def test_weakproxy_model(self):
+        d = DummyModel()
+        pr = weakref.proxy(d)
+        self.machine_cls(pr, states=['A', 'B'], transitions=[['go', 'A', 'B']], initial='A')
+        pr.go()
+        self.assertTrue(pr.is_B())
+
     def test_property_initial(self):
         states = ['A', 'B', 'C', 'D']
         # Define with list of dictionaries

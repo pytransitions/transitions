@@ -3,6 +3,7 @@
 ## 0.8.9 
 
 - Feature #533: `(A)Graph.draw` function (object returned by `GraphMachine.get_graph()`) can be passed a file/stream object as first parameter or `None`. The later will result in `draw` returning a binary string. (thanks @Blindfreddy).
+- Feature #532: Use id(model) instead of model for machine-bound caches in `LockedMachine`, `AsyncMachine` and `GraphMachine`. This might influence pickling (thanks @thedrow).
 
 ## 0.8.8 (April 2021)
 

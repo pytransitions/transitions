@@ -1847,8 +1847,8 @@ First, congratulations! You reached the end of the documentation!
 If you want to try out `transitions` before you install it, you can do that in an interactive Jupyter notebook at mybinder.org.
 Just click this button 👉 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb).
 
-For bug reports and other issues, please open an issue on GitHub.
+For bug reports and other issues, please [open an issue](https://github.com/pytransitions/transitions) on GitHub.
 
 For usage questions, post on Stack Overflow, making sure to tag your question with the [`pytransitions` tag](https://stackoverflow.com/questions/tagged/pytransitions). Do not forget to have a look at the [extended examples](./examples)!
 
-For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
+For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com) (initial author) and/or [Alexander Neumann](mailto:aleneum@gmail.com) (current maintainer).

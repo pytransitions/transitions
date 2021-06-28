@@ -9,6 +9,7 @@ except (ImportError, SyntaxError):
 from unittest.mock import MagicMock
 from unittest import skipIf
 from functools import partial
+import weakref
 from .test_core import TestTransitions, MachineError
 from .utils import DummyModel
 from .test_graphviz import pgv as gv
@@ -418,6 +419,13 @@ class TestAsync(TestTransitions):
             self.assertTrue(mock.called)
 
         asyncio.run(run())
+
+    def test_weakproxy_model(self):
+        d = DummyModel()
+        pr = weakref.proxy(d)
+        self.machine_cls(pr, states=['A', 'B'], transitions=[['go', 'A', 'B']], initial='A')
+        asyncio.run(pr.go())
+        self.assertTrue(pr.is_B())
 
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
