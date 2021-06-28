@@ -1136,9 +1136,9 @@ However, classes can also be directly imported from `transitions.extensions`. Th
 To use a feature-rich state machine, one could write:
 
 ```python
-from transitions.extensions import LockedHierarchicalGraphMachine as Machine
+from transitions.extensions import LockedHierarchicalGraphMachine as LHGMachine
 
-machine = Machine(model, states, transitions)
+machine = LHGMachine(model, states, transitions)
 ```
 
 #### <a name="diagrams"></a> Diagrams
@@ -1152,7 +1152,7 @@ Additional Keywords:
 Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed:   
 To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
 
-    sudo apt-get install graphviz  # Ubuntu and Debian
+    sudo apt-get install graphviz graphviz-dev  # Ubuntu and Debian
     brew install graphviz  # MacOS
     conda install graphviz python-graphviz  # (Ana)conda
 
@@ -1169,14 +1169,14 @@ With `Model.get_graph()` you can get the current graph or the region of interest
 ```python
 # import transitions
 
-from transitions.extensions import GraphMachine as Machine
+from transitions.extensions import GraphMachine
 m = Model()
 # without further arguments pygraphviz will be used
-machine = Machine(model=m, ...)
+machine = GraphMachine(model=m, ...)
 # when you want to use graphviz explicitly
-machine = Machine(model=m, use_pygraphviz=False, ...)
+machine = GraphMachine(model=m, use_pygraphviz=False, ...)
 # in cases where auto transitions should be visible
-machine = Machine(model=m, show_auto_transitions=True, ...)
+machine = GraphMachine(model=m, show_auto_transitions=True, ...)
 
 # draw the whole graph ...
 m.get_graph().draw('my_state_diagram.png', prog='dot')
@@ -1210,7 +1210,7 @@ assert result == b.getvalue()
 References and partials passed as callbacks will be resolved as good as possible:
 
 ```python
-from transitions.extensions import GraphMachine as Machine
+from transitions.extensions import GraphMachine
 from functools import partial
 
 
@@ -1222,13 +1222,13 @@ class Model:
 
 
 model = Model()
-machine = Machine(model=model, states=['A', 'B', 'C'],
-                  transitions=[
-                      {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
-                      {'trigger': 'clear', 'source': 'C', 'dest': 'A',
-                       'conditions': partial(model.clear_state, False, force=True)},
-                  ],
-                  initial='A', show_conditions=True)
+machine = GraphMachine(model=model, states=['A', 'B', 'C'],
+                       transitions=[
+                           {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
+                           {'trigger': 'clear', 'source': 'C', 'dest': 'A',
+                            'conditions': partial(model.clear_state, False, force=True)},
+                       ],
+                       initial='A', show_conditions=True)
 
 model.get_graph().draw('my_state_diagram.png', prog='dot')
 ```
@@ -1249,7 +1249,7 @@ To create a nested state, either import `NestedState` from transitions or use a 
 Optionally, `initial` can be used to define a sub state to transit to, when the nested state is entered.
 
 ```python
-from transitions.extensions import HierarchicalMachine as Machine
+from transitions.extensions import HierarchicalMachine
 
 states = ['standing', 'walking', {'name': 'caffeinated', 'children':['dithering', 'running']}]
 transitions = [
@@ -1260,7 +1260,7 @@ transitions = [
   ['relax', 'caffeinated', 'standing']
 ]
 
-machine = Machine(states=states, transitions=transitions, initial='standing', ignore_invalid_triggers=True)
+machine = HierarchicalMachine(states=states, transitions=transitions, initial='standing', ignore_invalid_triggers=True)
 
 machine.walk() # Walking now
 machine.stop() # let's stop for a moment
@@ -1460,7 +1460,7 @@ count_trans = [
     ['reset', '*', '1']
 ]
 
-counter = Machine(states=count_states, transitions=count_trans, initial='1')
+counter = HierarchicalMachine(states=count_states, transitions=count_trans, initial='1')
 
 counter.increase() # love my counter
 states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
@@ -1471,7 +1471,7 @@ transitions = [
     ['count', 'collecting', 'counting']
 ]
 
-collector = Machine(states=states, transitions=transitions, initial='waiting')
+collector = HierarchicalMachine(states=states, transitions=transitions, initial='waiting')
 collector.collect()  # collecting
 collector.count()  # let's see what we got; counting_1
 collector.increase()  # counting_2
@@ -1551,7 +1551,7 @@ collector_conf = {
     'initial': 'waiting'
 }
 
-collector = Machine(**collector_conf)
+collector = HierarchicalMachine(**collector_conf)
 collector.collect()
 collector.count()
 collector.increase()
@@ -1564,12 +1564,12 @@ In cases where event dispatching is done in threads, one can use either `LockedM
 This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
 
 ```python
-from transitions.extensions import LockedMachine as Machine
+from transitions.extensions import LockedMachine
 from threading import Thread
 import time
 
 states = ['A', 'B', 'C']
-machine = Machine(states=states, initial='A')
+machine = LockedMachine(states=states, initial='A')
 
 # let us assume that entering B will take some time
 thread = Thread(target=machine.to_B)
@@ -1585,7 +1585,7 @@ machine.new_attrib = 42 # not synchronized! will mess with execution order
 Any python context manager can be passed in via the `machine_context` keyword argument:
 
 ```python
-from transitions.extensions import LockedMachine as Machine
+from transitions.extensions import LockedMachine
 from threading import RLock
 
 states = ['A', 'B', 'C']
@@ -1593,7 +1593,7 @@ states = ['A', 'B', 'C']
 lock1 = RLock()
 lock2 = RLock()
 
-machine = Machine(states=states, initial='A', machine_context=[lock1, lock2])
+machine = LockedMachine(states=states, initial='A', machine_context=[lock1, lock2])
 ```
 
 Any contexts via `machine_model` will be shared between all models registered with the `Machine`.

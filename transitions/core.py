@@ -50,7 +50,11 @@ def listify(obj):
     if obj is None:
         return []
 
-    return obj if isinstance(obj, (list, tuple, EnumMeta)) else [obj]
+    try:
+        return obj if isinstance(obj, (list, tuple, EnumMeta)) else [obj]
+    except ReferenceError:
+        # obj is an empty weakref
+        return [obj]
 
 
 def _prep_ordered_arg(desired_length, arguments=None):
