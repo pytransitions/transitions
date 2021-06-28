@@ -102,19 +102,27 @@ class Graph(BaseGraph):
 
     @staticmethod
     def draw(graph, filename, format=None, prog='dot', args=''):
-        """ Generates and saves an image of the state machine using graphviz.
+        """
+        Generates and saves an image of the state machine using graphviz. Note that `prog` and `args` are only part
+        of the signature to mimic `Agraph.draw` and thus allow to easily switch between graph backends.
         Args:
-            filename (str): path and name of image output
+            filename (str or file descriptor or stream or None): path and name of image output, file descriptor, stream object or None
             format (str): Optional format of the output file
+            prog (str): ignored
+            args (list): ignored
         Returns:
-
+            None or str: Returns a binary string of the graph when the first parameter (`filename`) is set to None.
         """
         graph.engine = prog
+        if filename is None:
+            if format is None:
+                raise ValueError("Parameter 'format' must not be None when filename is no valid file path.")
+            return graph.pipe(format)
         try:
             filename, ext = splitext(filename)
             format = format if format is not None else ext[1:]
             graph.render(filename, format=format if format else 'png', cleanup=True)
-        except TypeError:
+        except (TypeError, AttributeError):
             if format is None:
                 raise ValueError("Parameter 'format' must not be None when filename is no valid file path.")
             filename.write(graph.pipe(format))

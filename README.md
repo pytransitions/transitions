@@ -1189,6 +1189,24 @@ This produces something like this:
 
 ![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
 
+Independent of the backend you use, the draw function also accepts a file descriptor or a binary stream as the first argument. If you set this parameter to `None`, the byte stream will be returned:
+
+```python
+import io
+
+with open('a_graph.png', 'bw') as f:
+    # you need to pass the format when you pass objects instead of filenames.
+    m.get_graph().draw(f, format="png", prog='dot')
+
+# you can pass a (binary) stream too
+b = io.BytesIO()
+m.get_graph().draw(b, format="png", prog='dot')
+
+# or just handle the binary string yourself
+result = m.get_graph().draw(None, format="png", prog='dot')
+assert result == b.getvalue()
+```
+
 References and partials passed as callbacks will be resolved as good as possible:
 
 ```python

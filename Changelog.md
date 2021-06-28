@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.9 
+
+- Feature #533: `(A)Graph.draw` function (object returned by `GraphMachine.get_graph()`) can be passed a file/stream object as first parameter or `None`. The later will result in `draw` returning a binary string. (thanks @Blindfreddy).
+
 ## 0.8.8 (April 2022)
 
 Release 0.8.8 is a minor release and contains a bugfix and several new or improved features:
