@@ -565,6 +565,16 @@ machine.add_ordered_transitions(conditions='check')
 # machine contains states (A->B, ..., X->A)
 machine = Machine(states=states, initial='A')
 machine.add_ordered_transitions(conditions=['check_A2B', ..., 'check_X2A'])
+# Conditions are always applied starting from the initial state
+machine = Machine(states=states, initial='B')
+machine.add_ordered_transitions(conditions=['check_B2C', ..., 'check_A2B'])
+# With `loop=False`, the transition from the last state to the first state will be omitted (e.g. C->A)
+# When you also pass conditions, you need to pass one condition less (len(states)-1)
+machine = Machine(states=states, initial='A')
+machine.add_ordered_transitions(loop=False)
+machine.next_state()
+machine.next_state()
+machine.next_state() # transitions.core.MachineError: "Can't trigger event next_state from state C!"
 ```
 
 #### <a name="queued-transitions"></a>Queued transitions
