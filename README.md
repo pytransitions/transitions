@@ -256,7 +256,7 @@ The following snippets illustrate several ways to achieve the same goal:
 
 ```python
 # import Machine and State class
-from transitions import State
+from transitions import Machine, State
 
 # Create a list of 3 states to pass to the Machine
 # initializer. We can mix types; in this case, we
