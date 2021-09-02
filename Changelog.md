@@ -2,7 +2,7 @@
 
 ## 0.8.9 (September 2021)
 
-Release 0.8.8 is a minor release and contains a bugfix for HSM, a feature for `GraphSupport` and changes internal cache handling:
+Release 0.8.9 is a minor release and contains a bugfix for HSM, a feature for `GraphSupport` and changes internal cache handling:
 
 - Bugfix #544: `NestedEvent` now wraps the machine's scope into partials passed to `HierarchicalMachine._process`. This prevents queued transitions from losing their scope.
 - Feature #533: `(A)Graph.draw` function (object returned by `GraphMachine.get_graph()`) can be passed a file/stream object as first parameter or `None`. The later will result in `draw` returning a binary string. (thanks @Blindfreddy).
