@@ -380,9 +380,13 @@ class Event(object):
         self.transitions[transition.source].append(transition)
 
     def trigger(self, model, *args, **kwargs):
-        """ Serially execute all transitions that match the current state,
-        halting as soon as one successfully completes.
+        """ Executes all transitions that match the current state,
+        halting as soon as one successfully completes. More precisely, it prepares a partial
+        of the internal ``_trigger`` function, passes this to ``Machine._process``.
+        It is up to the machine's configuration of the Event whether processing happens queued (sequentially) or
+        whether further Events are processed as they occur.
         Args:
+            model (object): The currently processed model
             args and kwargs: Optional positional or named arguments that will
                 be passed onto the EventData object, enabling arbitrary state
                 information to be passed on to downstream triggered functions.
@@ -398,7 +402,14 @@ class Event(object):
 
     def _trigger(self, model, *args, **kwargs):
         """ Internal trigger function called by the ``Machine`` instance. This should not
-        be called directly but via the public method ``Machine.trigger``.
+        be called directly but via the public method ``Machine.process``.
+        Args:
+            model (object): The currently processed model
+            args and kwargs: Optional positional or named arguments that will
+                be passed onto the EventData object, enabling arbitrary state
+                information to be passed on to downstream triggered functions.
+        Returns: boolean indicating whether or not a transition was
+            successfully executed (True if successful, False if not).
         """
         state = self.machine.get_model_state(model)
         if state.name not in self.transitions:

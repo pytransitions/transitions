@@ -586,6 +586,16 @@ class TestNestedTransitions(TestTransitions):
             m = WrongStateClass()
         m = CorrectStateClass()
 
+    def test_queued_callbacks(self):
+        states = [
+            "initial",
+            {'name': 'A', 'children': [{'name': '1', 'on_enter': 'go'}, '2'],
+             'transitions': [['go', '1', '2']], 'initial': '1'}
+        ]
+        machine = self.machine_cls(states=states, initial='initial', queued=True)
+        machine.to_A()
+        self.assertEqual("A{0}2".format(self.state_cls.separator), machine.state)
+
 
 class TestSeparatorsBase(TestCase):
 

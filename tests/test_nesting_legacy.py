@@ -103,6 +103,9 @@ class TestNestedLegacy(TestNestedTransitions):
     def test_correct_subclassing(self):
         pass  # not supported by legacy machine
 
+    def test_queued_callbacks(self):
+        pass  # not supported by legacy machine
+
 
 class TestReuseLegacySeparatorDefault(TestReuseSeparatorBase):
 

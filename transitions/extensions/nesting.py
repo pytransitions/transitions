@@ -91,27 +91,64 @@ class NestedEvent(Event):
     """
 
     def trigger(self, _model, _machine, *args, **kwargs):
-        """ Serially execute all transitions that match the current state,
-        halting as soon as one successfully completes. NOTE: This should only
+        """ Executes all transitions that match the current state,
+        halting as soon as one successfully completes. More precisely, it prepares a partial
+        of the internal ``_trigger`` function, passes this to ``machine._process``.
+        It is up to the machine's configuration of the Event whether processing happens queued (sequentially) or
+        whether further Events are processed as they occur. NOTE: This should only
         be called by HierarchicalMachine instances.
         Args:
-            _model (object): model object to
+            _model (object): The currently processed model
             _machine (HierarchicalMachine): Since NestedEvents can be used in multiple machine instances, this one
-                                            will be used to determine the current state separator.
+                                            will be used to determine the current state separator and the current scope.
             args and kwargs: Optional positional or named arguments that will
                 be passed onto the EventData object, enabling arbitrary state
                 information to be passed on to downstream triggered functions.
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        func = partial(self._trigger, _model, _machine, *args, **kwargs)
+        # Save the current scope (_machine.scoped, _machine.states, _machine.events) in partial
+        # since queued transitions could otherwise loose their scope.
+        func = partial(self._trigger, _model, _machine, (_machine.scoped, _machine.states, _machine.events),
+                       *args, **kwargs)
         # pylint: disable=protected-access
         # noinspection PyProtectedMember
         # Machine._process should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
         return _machine._process(func)
 
-    def _trigger(self, _model, _machine, *args, **kwargs):
+    def _trigger(self, _model, _machine, _scope, *args, **kwargs):
+        """ Internal trigger function called by the ``HierarchicalMachine`` instance. This should not
+        be called directly but via the public method ``HierarchicalMachine.process``. In contrast to
+        the inherited ``Event._trigger``, this requires a scope tuple to process triggers in the right context.
+        Args:
+            _model (object): The currently processed model
+            _machine (HierarchicalMachine): The machine that should be used to process the event
+            _scope (Tuple): A tuple containing information about the currently scoped object, states an transitions.
+            args and kwargs: Optional positional or named arguments that will
+                be passed onto the EventData object, enabling arbitrary state
+                information to be passed on to downstream triggered functions.
+        Returns: boolean indicating whether or not a transition was
+            successfully executed (True if successful, False if not).
+        """
+        if _scope[0] != _machine.scoped:
+            with _machine(_scope):
+                return self._trigger_scoped(_model, _machine, *args, **kwargs)
+        else:
+            return self._trigger_scoped(_model, _machine, *args, **kwargs)
+
+    def _trigger_scoped(self, _model, _machine, *args, **kwargs):
+        """ Internal scope-adjusted trigger function called by the ``NestedEvent._trigger`` instance. This should not
+        be called directly.
+        Args:
+            _model (object): The currently processed model
+            _machine (HierarchicalMachine): The machine that should be used to process the event
+            args and kwargs: Optional positional or named arguments that will
+                be passed onto the EventData object, enabling arbitrary state
+                information to be passed on to downstream triggered functions.
+        Returns: boolean indicating whether or not a transition was
+            successfully executed (True if successful, False if not).
+        """
         state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
         state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
         ordered_states = _resolve_order(state_tree)
@@ -575,7 +612,8 @@ class HierarchicalMachine(Machine):
         _super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions,
                                                          unless, before, after, prepare, **kwargs)
 
-    def get_global_name(self, state=None, join=True):
+    def get_global_name(self, state=None, join=True, scope=None):
+        scope = scope or self
         local_stack = [s[0] for s in self._stack] + [self.scoped]
         local_stack_start = len(local_stack) - local_stack[::-1].index(self)
         domains = [s.name for s in local_stack[local_stack_start:]]
