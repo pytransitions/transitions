@@ -627,6 +627,22 @@ class TestNestedTransitions(TestTransitions):
         machine = self.machine_cls(states=states, queued=True, initial='b')
         machine.to_b_c()
 
+    def test_get_nested_triggers(self):
+        transitions = [
+            ['goB', 'A', 'B'],
+            ['goC', 'B', 'C'],
+            ['goA', '*', 'A'],
+            ['goF1', ['C{0}1'.format(self.machine_cls.separator), 'C{0}2'.format(self.machine_cls.separator)], 'F'],
+            ['goF2', 'C', 'F']
+        ]
+        m = self.machine_cls(states=test_states, transitions=transitions, auto_transitions=False, initial='A')
+        self.assertEqual(1, len(m.get_nested_triggers(['C', '1'])))
+        with m('C'):
+            m.add_transition('goC1', '1', '2')
+        self.assertEqual(len(transitions) + 1, len(m.get_nested_triggers()))
+        self.assertEqual(2, len(m.get_nested_triggers(['C', '1'])))
+        self.assertEqual(2, len(m.get_nested_triggers(['C'])))
+
 
 class TestSeparatorsBase(TestCase):
 
