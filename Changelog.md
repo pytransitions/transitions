@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.10 
+
+- Feature #545: The literal 'self' (default model parameter of `Machine`) has been replaced by the class variable `Machine.self_literal = 'self'`. `Machine` now performs an identity check (instead of a value check) with `mod is self.self_literal` to determine whether it should act as a model. While 'self' should still work when passed to the `model` parameter, we encourage using `Machine.self_literal` from now on. This was done to enable easier override of `Machine.__eq__` in subclasses (thanks @VKSolovev).
+
 ## 0.8.9 (September 2021)
 
 Release 0.8.9 is a minor release and contains a bugfix for HSM, a feature for `GraphSupport` and changes internal cache handling:

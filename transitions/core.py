@@ -502,8 +502,9 @@ class Machine(object):
     state_cls = State
     transition_cls = Transition
     event_cls = Event
+    self_literal = 'self'
 
-    def __init__(self, model='self', states=None, initial='initial', transitions=None,
+    def __init__(self, model=self_literal, states=None, initial='initial', transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
@@ -511,8 +512,8 @@ class Machine(object):
                  **kwargs):
         """
         Args:
-            model (object or list): The object(s) whose states we want to manage. If 'self',
-                the current Machine instance will be used the model (i.e., all
+            model (object or list): The object(s) whose states we want to manage. If set to `Machine.self_literal`
+                (default value), the current Machine instance will be used as the model (i.e., all
                 triggering events will be attached to the Machine itself). Note that an empty list
                 is treated like no model.
             states (list or Enum): A list or enumeration of valid states. Each list element can be either a
@@ -616,7 +617,7 @@ class Machine(object):
                 initial = self.initial
 
         for mod in models:
-            mod = self if mod == 'self' else mod
+            mod = self if mod is self.self_literal else mod
             if mod not in self.models:
                 self._checked_assignment(mod, 'trigger', partial(self._get_trigger, mod))
 

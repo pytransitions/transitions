@@ -145,7 +145,7 @@ class LockedMachine(Machine):
         output = _super(LockedMachine, self).add_model(models, initial)
 
         for mod in models:
-            mod = self if mod == 'self' else mod
+            mod = self if mod is self.self_literal else mod
             self.model_context_map[id(mod)].extend(self.machine_context)
             self.model_context_map[id(mod)].extend(model_context)
 

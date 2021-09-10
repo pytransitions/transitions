@@ -987,7 +987,7 @@ lump.state
 Here you get to consolidate all state machine functionality into your existing model, which often feels more natural way than sticking all of the functionality we want in a separate standalone `Machine` instance.
 
 A machine can handle multiple models which can be passed as a list like `Machine(model=[model1, model2, ...])`.
-In cases where you want to add models *as well as* the machine instance itself, you can pass the string placeholder `'self'` during initialization like `Machine(model=['self', model1, ...])`.
+In cases where you want to add models *as well as* the machine instance itself, you can pass the class variable placeholder (string) `Machine.self_literal` during initialization like `Machine(model=[Machine.self_literal, model1, ...])`.
 You can also create a standalone machine, and register models dynamically via `machine.add_model` by passing `model=None` to the constructor.
 Furthermore, you can use `machine.dispatch` to trigger events on all currently added models.
 Remember to call `machine.remove_model` if machine is long-lasting and your models are temporary and should be garbage collected:

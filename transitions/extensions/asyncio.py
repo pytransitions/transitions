@@ -326,7 +326,7 @@ class AsyncMachine(Machine):
         super().add_model(model, initial)
         if self.has_queue == 'model':
             for mod in listify(model):
-                self._transition_queue_dict[id(mod) if mod != 'self' else id(self)] = deque()
+                self._transition_queue_dict[id(self) if mod is self.self_literal else id(mod)] = deque()
 
     async def dispatch(self, trigger, *args, **kwargs):  # ToDo: not tested
         """ Trigger an event on all models assigned to the machine.

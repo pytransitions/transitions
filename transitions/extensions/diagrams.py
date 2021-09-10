@@ -224,7 +224,7 @@ class GraphMachine(MarkupMachine):
         models = listify(model)
         super(GraphMachine, self).add_model(models, initial)
         for mod in models:
-            mod = self if mod == 'self' else mod
+            mod = self if mod is self.self_literal else mod
             if hasattr(mod, 'get_graph'):
                 raise AttributeError('Model already has a get_graph attribute. Graph retrieval cannot be bound.')
             setattr(mod, 'get_graph', partial(self._get_graph, mod))

@@ -259,7 +259,7 @@ class HierarchicalMachine(Machine):
         _super(HierarchicalMachine, self).add_model(model, initial=initial)
         models = listify(model)
         for mod in models:
-            mod = self if mod == 'self' else mod
+            mod = self if mod is self.self_literal else mod
             # TODO: Remove 'mod != self' in 0.7.0
             if hasattr(mod, 'to') and mod != self:
                 _LOGGER.warning("%sModel already has a 'to'-method. It will NOT "
