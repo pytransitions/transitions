@@ -109,7 +109,8 @@ class NestedEvent(Event):
         """
         # Save the current scope (_machine.scoped, _machine.states, _machine.events) in partial
         # since queued transitions could otherwise loose their scope.
-        func = partial(self._trigger, _model, _machine, (_machine.scoped, _machine.states, _machine.events),
+        func = partial(self._trigger, _model, _machine,
+                       (_machine.scoped, _machine.states, _machine.events, _machine.prefix_path),
                        *args, **kwargs)
         # pylint: disable=protected-access
         # noinspection PyProtectedMember
@@ -272,7 +273,7 @@ class NestedTransition(Transition):
 
     def _resolve_transition(self, event_data):
         machine = event_data.machine
-        dst_name_path = machine.get_local_name(self.dest, join=False)
+        dst_name_path = self.dest.split(event_data.machine.state_cls.separator)
         _ = machine.get_state(dst_name_path)
         model_states = listify(getattr(event_data.model, machine.model_attribute))
         state_tree = machine._build_state_tree(model_states, machine.state_cls.separator)
@@ -386,6 +387,7 @@ class HierarchicalMachine(Machine):
         assert issubclass(self.event_cls, NestedEvent)
         assert issubclass(self.transition_cls, NestedTransition)
         self._stack = []
+        self.prefix_path = []
         self.scoped = self
         _super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
@@ -393,26 +395,26 @@ class HierarchicalMachine(Machine):
         if isinstance(to_scope, string_types):
             state_name = to_scope.split(self.state_cls.separator)[0]
             state = self.states[state_name]
-            to_scope = (state, state.states, state.events)
+            to_scope = (state, state.states, state.events, self.prefix_path + [state_name])
         elif isinstance(to_scope, Enum):
             state = self.states[to_scope.name]
-            to_scope = (state, state.states, state.events)
+            to_scope = (state, state.states, state.events, self.prefix_path + [to_scope.name])
         elif to_scope is None:
             if self._stack:
                 to_scope = self._stack[0]
             else:
-                to_scope = (self, self.states, self.events)
+                to_scope = (self, self.states, self.events, [])
         self._next_scope = to_scope
 
         return self
 
     def __enter__(self):
-        self._stack.append((self.scoped, self.states, self.events))
-        self.scoped, self.states, self.events = self._next_scope
+        self._stack.append((self.scoped, self.states, self.events, self.prefix_path))
+        self.scoped, self.states, self.events, self.prefix_path = self._next_scope
         self._next_scope = None
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.scoped, self.states, self.events = self._stack.pop()
+        self.scoped, self.states, self.events, self.prefix_path = self._stack.pop()
 
     def add_model(self, model, initial=None):
         """ Extends transitions.core.Machine.add_model by applying a custom 'to' function to
@@ -612,11 +614,8 @@ class HierarchicalMachine(Machine):
         _super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions,
                                                          unless, before, after, prepare, **kwargs)
 
-    def get_global_name(self, state=None, join=True, scope=None):
-        scope = scope or self
-        local_stack = [s[0] for s in self._stack] + [self.scoped]
-        local_stack_start = len(local_stack) - local_stack[::-1].index(self)
-        domains = [s.name for s in local_stack[local_stack_start:]]
+    def get_global_name(self, state=None, join=True):
+        domains = copy.copy(self.prefix_path)
         if state:
             state_name = state.name if hasattr(state, 'name') else state
             if state_name in self.states:
@@ -624,15 +623,6 @@ class HierarchicalMachine(Machine):
             else:
                 raise ValueError("State '{0}' not found in local states.".format(state))
         return self.state_cls.separator.join(domains) if join else domains
-
-    def get_local_name(self, state_name, join=True):
-        state_name = state_name.split(self.state_cls.separator)
-        local_stack = [s[0] for s in self._stack] + [self.scoped]
-        local_stack_start = len(local_stack) - local_stack[::-1].index(self)
-        domains = [s.name for s in local_stack[local_stack_start:]]
-        if domains and state_name and state_name[0] != domains[0]:
-            return self.state_cls.separator.join(state_name) if join else state_name
-        return self.state_cls.separator.join(state_name) if join else state_name
 
     def get_nested_state_names(self):
         ordered_states = []

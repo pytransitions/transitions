@@ -596,6 +596,23 @@ class TestNestedTransitions(TestTransitions):
         machine.to_A()
         self.assertEqual("A{0}2".format(self.state_cls.separator), machine.state)
 
+    def test_nested_transitions(self):
+        states = [{
+            'name': 'A',
+            'states': [
+                {'name': 'B',
+                 'states': [
+                     {'name': 'C',
+                      'states': ['1', '2'],
+                      'initial': '1'}],
+                 'transitions': [['go', 'C_1', 'C_2']],
+                 'initial': 'C',
+                 }],
+            'initial': 'B'
+        }]
+        machine = self.machine_cls(states=states, initial='A')
+        machine.go()
+
 
 class TestSeparatorsBase(TestCase):
 
