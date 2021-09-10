@@ -348,7 +348,7 @@ class TestTransitions(TestCase):
 
     def test_auto_transitions(self):
         states = ['A', {'name': 'B'}, State(name='C')]
-        m = Machine('self', states, initial='A', auto_transitions=True)
+        m = Machine(states=states, initial='A', auto_transitions=True)
         m.to_B()
         self.assertEqual(m.state, 'B')
         m.to_C()
@@ -356,13 +356,13 @@ class TestTransitions(TestCase):
         m.to_A()
         self.assertEqual(m.state, 'A')
         # Should fail if auto transitions is off...
-        m = Machine('self', states, initial='A', auto_transitions=False)
+        m = Machine(states=states, initial='A', auto_transitions=False)
         with self.assertRaises(AttributeError):
             m.to_C()
 
     def test_ordered_transitions(self):
         states = ['beginning', 'middle', 'end']
-        m = Machine('self', states)
+        m = Machine(states=states)
         m.add_ordered_transitions()
         self.assertEqual(m.state, 'initial')
         m.next_state()
@@ -374,21 +374,21 @@ class TestTransitions(TestCase):
         self.assertEqual(m.state, 'initial')
 
         # Include initial state in loop
-        m = Machine('self', states)
+        m = Machine(states=states)
         m.add_ordered_transitions(loop_includes_initial=False)
         m.to_end()
         m.next_state()
         self.assertEqual(m.state, 'beginning')
 
         # Do not loop transitions
-        m = Machine('self', states)
+        m = Machine(states=states)
         m.add_ordered_transitions(loop=False)
         m.to_end()
         with self.assertRaises(MachineError):
             m.next_state()
 
         # Test user-determined sequence and trigger name
-        m = Machine('self', states, initial='beginning')
+        m = Machine(states=states, initial='beginning')
         m.add_ordered_transitions(['end', 'beginning'], trigger='advance')
         m.advance()
         self.assertEqual(m.state, 'end')
@@ -396,19 +396,19 @@ class TestTransitions(TestCase):
         self.assertEqual(m.state, 'beginning')
 
         # Via init argument
-        m = Machine('self', states, initial='beginning', ordered_transitions=True)
+        m = Machine(states=states, initial='beginning', ordered_transitions=True)
         m.next_state()
         self.assertEqual(m.state, 'middle')
 
         # Alter initial state
-        m = Machine('self', states, initial='middle', ordered_transitions=True)
+        m = Machine(states=states, initial='middle', ordered_transitions=True)
         m.next_state()
         self.assertEqual(m.state, 'end')
         m.next_state()
         self.assertEqual(m.state, 'beginning')
 
         # Partial state machine without the initial state
-        m = Machine('self', states, initial='beginning')
+        m = Machine(states=states, initial='beginning')
         m.add_ordered_transitions(['middle', 'end'])
         self.assertEqual(m.state, 'beginning')
         with self.assertRaises(MachineError):
@@ -433,17 +433,17 @@ class TestTransitions(TestCase):
         transitions = [['a_to_b', 'A', 'B']]
         # Exception is triggered by default
         b_state = State('B')
-        m1 = Machine('self', states=[a_state, b_state], transitions=transitions,
+        m1 = Machine(states=[a_state, b_state], transitions=transitions,
                      initial='B')
         with self.assertRaises(MachineError):
             m1.a_to_b()
         # Set default value on machine level
-        m2 = Machine('self', states=[a_state, b_state], transitions=transitions,
+        m2 = Machine(states=[a_state, b_state], transitions=transitions,
                      initial='B', ignore_invalid_triggers=True)
         m2.a_to_b()
         # Exception is suppressed, so this passes
         b_state = State('B', ignore_invalid_triggers=True)
-        m3 = Machine('self', states=[a_state, b_state], transitions=transitions,
+        m3 = Machine(states=[a_state, b_state], transitions=transitions,
                      initial='B')
         m3.a_to_b()
         # Set for some states but not others
@@ -455,7 +455,7 @@ class TestTransitions(TestCase):
         with self.assertRaises(MachineError):
             m1.a_to_b()
         # State value overrides machine behaviour
-        m3 = Machine('self', states=[a_state, b_state], transitions=transitions,
+        m3 = Machine(states=[a_state, b_state], transitions=transitions,
                      initial='B', ignore_invalid_triggers=False)
         m3.a_to_b()
 
@@ -483,7 +483,7 @@ class TestTransitions(TestCase):
         before_state_change = MagicMock()
         after_state_change = MagicMock()
 
-        m = Machine('self', states=['A', 'B'],
+        m = Machine(states=['A', 'B'],
                     before_state_change=before_state_change,
                     after_state_change=after_state_change, send_event=True,
                     initial='A', auto_transitions=True)
@@ -1063,7 +1063,7 @@ class TestTransitions(TestCase):
 
     def test_get_transitions(self):
         states = ['A', 'B', 'C', 'D']
-        m = self.machine_cls('self', states, initial='A', auto_transitions=False)
+        m = self.machine_cls(states=states, initial='A', auto_transitions=False)
         m.add_transition('go', ['A', 'B', 'C'], 'D')
         m.add_transition('run', 'A', 'D')
         self.assertEqual(

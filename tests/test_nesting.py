@@ -271,14 +271,14 @@ class TestNestedTransitions(TestTransitions):
         self.assertEqual('ninth', m.state)
 
         # Include initial state in loop
-        m = self.stuff.machine_cls('self', states)
+        m = self.stuff.machine_cls(states=states)
         m.add_ordered_transitions(loop_includes_initial=False)
         m.to_ninth()
         m.next_state()
         self.assertEqual(m.state, 'first')
 
         # Test user-determined sequence and trigger name
-        m = self.stuff.machine_cls('self', states, initial='first')
+        m = self.stuff.machine_cls(states=states, initial='first')
         m.add_ordered_transitions(['first', 'ninth'], trigger='advance')
         m.advance()
         self.assertEqual(m.state, 'ninth')
@@ -286,7 +286,7 @@ class TestNestedTransitions(TestTransitions):
         self.assertEqual(m.state, 'first')
 
         # Via init argument
-        m = self.stuff.machine_cls('self', states, initial='first', ordered_transitions=True)
+        m = self.stuff.machine_cls(states=states, initial='first', ordered_transitions=True)
         m.next_state()
         self.assertEqual(m.state, 'first{0}second'.format(State.separator))
 
@@ -723,7 +723,7 @@ class TestSeparatorsBase(TestCase):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2',
                                                        {'name': '3', 'children': ['a', 'b', 'c']}]}, 'D', 'E', 'F']
 
-        machine = CustomHierarchicalGraphMachine('self', states, initial='A', auto_transitions=False,
+        machine = CustomHierarchicalGraphMachine(states=states, initial='A', auto_transitions=False,
                                                  ignore_invalid_triggers=True, use_pygraphviz=False)
         machine.add_ordered_transitions(trigger='next_state')
         machine.next_state()
