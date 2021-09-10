@@ -179,7 +179,7 @@ class GraphMachine(MarkupMachine):
 
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
         if force_new:
-            grph = self.graph_cls(self, title=title if title is not None else self.title)
+            grph = self.graph_cls(self)
             self.model_graphs[id(model)] = grph
             try:
                 for state in _flatten(listify(getattr(model, self.model_attribute))):
@@ -191,8 +191,7 @@ class GraphMachine(MarkupMachine):
         except KeyError:
             _ = self._get_graph(model, title, force_new=True)
             m = self.model_graphs[id(model)]
-        m.roi_state = getattr(model, self.model_attribute) if show_roi else None
-        return m.get_graph(title=title)
+        return m.get_graph(title=title, roi_state=getattr(model, self.model_attribute) if show_roi else None)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
         """ This method is currently equivalent to 'get_graph' of the first machine's model.
@@ -326,13 +325,7 @@ class BaseGraph(object):
             if "on_exit" in state:
                 label += r"\l- exit:\l  + " + r"\l  + ".join(state["on_exit"])
             if "timeout" in state:
-                label += (
-                    r"\l- timeout("
-                    + state["timeout"]
-                    + "s)  -> ("
-                    + ", ".join(state["on_timeout"])
-                    + ")"
-                )
+                label += r'\l- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
         return label
 
     def _transition_label(self, tran):
@@ -388,8 +381,7 @@ class BaseGraph(object):
                         ini = ini.name if hasattr(ini, "name") else ini
                         tran = dict(
                             trigger="",
-                            source=self.machine.state_cls.separator.join(prefix + [state["name"]])
-                            + "_anchor",
+                            source=self.machine.state_cls.separator.join(prefix + [state["name"]]) + "_anchor",
                             dest=self.machine.state_cls.separator.join(
                                 prefix + [state["name"], ini]
                             ),
