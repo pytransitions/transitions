@@ -613,6 +613,20 @@ class TestNestedTransitions(TestTransitions):
         machine = self.machine_cls(states=states, initial='A')
         machine.go()
 
+    def test_auto_transitions_from_nested_callback(self):
+
+        def fail():
+            self.fail("C should not be exited!")
+
+        states = [
+            {'name': 'b', 'children': [
+                {'name': 'c', 'on_exit': fail, 'on_enter': 'to_b_c_ca', 'children': ['ca', 'cb']},
+                'd'
+            ]},
+        ]
+        machine = self.machine_cls(states=states, queued=True, initial='b')
+        machine.to_b_c()
+
 
 class TestSeparatorsBase(TestCase):
 

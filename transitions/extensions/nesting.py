@@ -284,10 +284,11 @@ class NestedTransition(Transition):
             root = src_name_path[:-1]  # exit and enter the same state
             dst_name_path = dst_name_path[-1:]
         else:
+            tmp_tree = state_tree.get(dst_name_path[0], None)
             root = []
-            while dst_name_path and src_name_path and src_name_path[0] == dst_name_path[0]:
-                root.append(src_name_path.pop(0))
-                dst_name_path.pop(0)
+            while tmp_tree is not None:
+                root.append(dst_name_path.pop(0))
+                tmp_tree = tmp_tree.get(dst_name_path[0], None) if len(dst_name_path) > 0 else None
 
         scoped_tree = reduce(dict.get, scope + root, state_tree)
         exit_partials = [partial(machine.get_state(root + state_name).scoped_exit,
