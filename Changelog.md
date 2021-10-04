@@ -1,9 +1,11 @@
 # Changelog
 
-## 0.8.10 
+## 0.8.10 (October 2021)
+
+Release 0.8.10 is a minor release and contains two bug fixes for the HSM extension and changes how the 'self' literal string is handled.
 
 - Feature #545: The literal 'self' (default model parameter of `Machine`) has been replaced by the class variable `Machine.self_literal = 'self'`. `Machine` now performs an identity check (instead of a value check) with `mod is self.self_literal` to determine whether it should act as a model. While 'self' should still work when passed to the `model` parameter, we encourage using `Machine.self_literal` from now on. This was done to enable easier override of `Machine.__eq__` in subclasses (thanks @VKSolovev).
-- Bug #547: Introduce `HierarchicalMachine.prefix_path` to resolve global state names since the HSM stack is not reliable when `queued=True` (thanks @jankrejci)
+- Bug #547: Introduce `HierarchicalMachine.prefix_path` to resolve global state names since the HSM stack is not reliable when `queued=True` (thanks @jankrejci).
 - Bug #548: `HSM` source states were exited even though they are parents of the destination state (thanks @wes-public-apps).
 
 ## 0.8.9 (September 2021)
