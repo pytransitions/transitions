@@ -1,7 +1,16 @@
 from logging import Logger
 from typing import Any, Optional, Callable, Union, Iterable, List, Dict, DefaultDict, Type, Deque, OrderedDict, Tuple
-from enum import EnumMeta, Enum
-from .core import EventData
+
+try:
+    # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
+    from enum import Enum, EnumMeta
+except ImportError:
+    # If enum is not available, create dummy classes for type checks
+    class Enum:
+        pass
+
+    class EnumMeta:
+        pass
 
 _LOGGER: Logger
 
