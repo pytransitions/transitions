@@ -4,7 +4,7 @@ from .locking import LockedMachine
 from .markup import MarkupMachine
 from .nesting import HierarchicalMachine, NestedEvent, NestedTransition
 from transitions.extensions.asyncio import AsyncMachine, AsyncTransition,HierarchicalAsyncMachine ,NestedAsyncTransition
-from typing import Any, Type, Dict, Tuple, Callable
+from typing import Type, Dict, Tuple, Callable
 
 class MachineFactory:
     @staticmethod
@@ -37,4 +37,4 @@ class AsyncGraphMachine(GraphMachine, AsyncMachine):
 class HierarchicalAsyncGraphMachine(GraphMachine, HierarchicalAsyncMachine):
     transition_cls: NestedAsyncTransition
 
-_CLASS_MAP: Dict[Tuple[bool, bool, bool, bool], Machine]
+_CLASS_MAP: Dict[Tuple[bool, bool, bool, bool], Type[Machine]]
