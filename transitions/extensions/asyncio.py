@@ -404,7 +404,7 @@ class AsyncMachine(Machine):
         """
         Executes callables without parameters in parallel and collects their results.
         Args:
-            partials (list): A list of callable functions
+            callables (list): A list of callable functions
 
         Returns:
             list: A list of results. Using asyncio the list will be in the same order as the passed callables.

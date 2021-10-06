@@ -1,6 +1,6 @@
-from ..core import Enum as Enum, EnumMeta as EnumMeta, Event as Event, EventData as EventData, Machine as Machine, MachineError as MachineError, State as State, Transition as Transition, listify as listify
+from ..core import Enum, EnumMeta as EnumMeta, Event as Event, EventData as EventData, Machine as Machine, MachineError as MachineError, State as State, Transition as Transition, listify as listify
 from collections import defaultdict as defaultdict
-from typing import Any
+from typing import Any, OrderedDict, Union
 
 _LOGGER: Any
 _super = super
@@ -33,6 +33,8 @@ class NestedState(State):
     def scoped_exit(self, event_data, scope=...) -> None: ...
     @property
     def name(self): ...
+
+StateTree = OrderedDict[str, Union['StateTree', NestedState]]
 
 class NestedTransition(Transition):
     def _resolve_transition(self, event_data): ...
