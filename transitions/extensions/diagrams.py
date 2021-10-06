@@ -280,10 +280,7 @@ class BaseGraph(object):
 
     @abc.abstractmethod
     def generate(self):
-        """ Triggers the generation of a graph.
-        Args:
-            title (str): The title of the graph
-        """
+        """ Triggers the generation of a graph. """
 
     @abc.abstractmethod
     def set_previous_transition(self, src, dst):

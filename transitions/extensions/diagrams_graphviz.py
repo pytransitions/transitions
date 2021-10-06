@@ -124,7 +124,7 @@ class Graph(BaseGraph):
             filename (str or file descriptor or stream or None): path and name of image output, file descriptor, stream object or None
             format (str): Optional format of the output file
             prog (str): ignored
-            args (list): ignored
+            args (str): ignored
         Returns:
             None or str: Returns a binary string of the graph when the first parameter (`filename`) is set to None.
         """

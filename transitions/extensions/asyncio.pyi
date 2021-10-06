@@ -2,12 +2,13 @@ from ..core import Condition as Condition, Event as Event, EventData as EventDat
 from .nesting import HierarchicalMachine as HierarchicalMachine, NestedEvent as NestedEvent, NestedState as NestedState, NestedTransition as NestedTransition, _resolve_order as _resolve_order
 from typing import Any, Optional, List, Type, Dict, Deque, Callable, Union
 from asyncio import Task
+from logging import Logger
 from contextvars import ContextVar
 
 from ..core import StateIdentifier, CallbacksArg, CallbackList
 from .nesting import StateTree
 
-_LOGGER: Any
+_LOGGER: Logger
 
 class AsyncState(State):
     async def enter(self, event_data: EventData) -> None: ...

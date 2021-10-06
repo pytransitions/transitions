@@ -95,7 +95,7 @@ class Graph(BaseGraph):
         style_attr = self.fsm_graph.style_attributes.get('node', {}).get(style)
         node.attr.update(style_attr)
 
-    def set_previous_transition(self, src, dst, key=None):
+    def set_previous_transition(self, src, dst):
         try:
             edge = self.fsm_graph.get_edge(src, dst)
         except KeyError:
@@ -194,7 +194,7 @@ class NestedGraph(Graph):
             style_attr = self.fsm_graph.style_attributes.get('graph', {}).get(style)
             subgraph.graph_attr.update(style_attr)
 
-    def set_previous_transition(self, src, dst, key=None):
+    def set_previous_transition(self, src, dst):
         src = self._get_global_name(src.split(self.machine.state_cls.separator))
         dst = self._get_global_name(dst.split(self.machine.state_cls.separator))
         edge_attr = self.fsm_graph.style_attributes.get('edge', {}).get('previous').copy()
