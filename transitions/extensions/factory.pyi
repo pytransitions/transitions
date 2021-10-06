@@ -1,44 +1,40 @@
-from ..core import Machine as Machine
-from .diagrams import GraphMachine as GraphMachine, TransitionGraphSupport as TransitionGraphSupport
-from .locking import LockedMachine as LockedMachine
-from .markup import MarkupMachine as MarkupMachine
-from .nesting import HierarchicalMachine as HierarchicalMachine, NestedEvent as NestedEvent, NestedTransition as NestedTransition
-from transitions.extensions.asyncio import AsyncMachine as AsyncMachine, AsyncTransition as AsyncTransition, HierarchicalAsyncMachine as HierarchicalAsyncMachine, NestedAsyncTransition as NestedAsyncTransition
-from typing import Any
-
-class AsyncMachine: ...
-class AsyncTransition: ...
-class HierarchicalAsyncMachine: ...
-class NestedAsyncTransition: ...
+from ..core import Machine, State
+from .diagrams import GraphMachine, TransitionGraphSupport
+from .locking import LockedMachine
+from .markup import MarkupMachine
+from .nesting import HierarchicalMachine, NestedEvent, NestedTransition
+from transitions.extensions.asyncio import AsyncMachine, AsyncTransition,HierarchicalAsyncMachine ,NestedAsyncTransition
+from typing import Any, Type, Dict, Tuple, Callable
 
 class MachineFactory:
     @staticmethod
-    def get_predefined(graph: bool = ..., nested: bool = ..., locked: bool = ..., asyncio: bool = ...): ...
+    def get_predefined(graph: bool = ..., nested: bool = ...,
+                       locked: bool = ..., asyncio: bool = ...) -> Type[Machine]: ...
 
 class NestedGraphTransition(TransitionGraphSupport, NestedTransition): ...
 class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine): ...
 
 class HierarchicalGraphMachine(GraphMachine, HierarchicalMarkupMachine):
-    transition_cls: Any
+    transition_cls: NestedGraphTransition
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
-    event_cls: Any
-    def _get_qualified_state_name(self, state): ...
+    event_cls: NestedEvent
+    def _get_qualified_state_name(self, state: State) -> str: ...
 
 class LockedGraphMachine(GraphMachine, LockedMachine):
     @staticmethod
     def format_references(func): ...
 
 class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):
-    transition_cls: Any
-    event_cls: Any
+    transition_cls: NestedGraphTransition
+    event_cls: NestedEvent
     @staticmethod
-    def format_references(func): ...
+    def format_references(func: Callable) -> str: ...
 
 class AsyncGraphMachine(GraphMachine, AsyncMachine):
-    transition_cls: Any
+    transition_cls: AsyncTransition
 
 class HierarchicalAsyncGraphMachine(GraphMachine, HierarchicalAsyncMachine):
-    transition_cls: Any
+    transition_cls: NestedAsyncTransition
 
-_CLASS_MAP: Any
+_CLASS_MAP: Dict[Tuple[bool, bool, bool, bool], Machine]
