@@ -1212,6 +1212,55 @@ class TestTransitions(TestCase):
         m.to_B()
         self.assertTrue(mock.called)
 
+    def test_may_transition(self):
+        states = ['A', 'B', 'C']
+        d = DummyModel()
+        m = Machine(model=d, states=states, initial='A', auto_transitions=False)
+        m.add_transition('walk', 'A', 'B')
+        m.add_transition('stop', 'B', 'C')
+        assert d.may_walk()
+        assert not d.may_stop()
+
+        d.walk()
+        assert not d.may_walk()
+        assert d.may_stop()
+
+    def test_may_transition_with_conditions(self):
+        states = ['A', 'B', 'C']
+        d = DummyModel()
+        m = Machine(model=d, states=states, initial='A', auto_transitions=False)
+        m.add_transition('walk', 'A', 'B', conditions=[lambda: False])
+        m.add_transition('stop', 'B', 'C')
+        m.add_transition('run', 'A', 'C')
+        assert not d.may_walk()
+        assert not d.may_stop()
+        assert d.may_run()
+        d.run()
+        assert not d.may_run()
+
+    def test_may_transition_with_auto_transitions(self):
+        states = ['A', 'B', 'C']
+        d = DummyModel()
+        Machine(model=d, states=states, initial='A')
+        assert d.may_to_A()
+        assert d.may_to_B()
+        assert d.may_to_C()
+
+    def test_machine_may_transitions(self):
+        states = ['A', 'B', 'C']
+        m = Machine(states=states, initial='A', auto_transitions=False)
+        m.add_transition('walk', 'A', 'B', conditions=[lambda: False])
+        m.add_transition('stop', 'B', 'C')
+        m.add_transition('run', 'A', 'C')
+
+        assert not m.may_walk()
+        assert not m.may_stop()
+        assert m.may_run()
+        m.run()
+        assert not m.may_run()
+        assert not m.may_stop()
+        assert not m.may_walk()
+
 
 class TestWarnings(TestCase):
     def test_multiple_machines_per_model(self):

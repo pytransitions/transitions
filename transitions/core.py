@@ -874,8 +874,22 @@ class Machine(object):
         else:
             setattr(model, name, func)
 
+    def _can_trigger(self, model, trigger, *args, **kwargs):
+        e = EventData(None, None, self, model, args, kwargs)
+        state = self.get_model_state(model).name
+
+        return trigger in {
+            trigger_name
+            for trigger_name in self.get_triggers(state)
+            if any(
+                all(c.check(e) for c in t.conditions)
+                for t in self.events[trigger_name].transitions[state]
+            )
+        }
+
     def _add_trigger_to_model(self, trigger, model):
         self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
+        self._checked_assignment(model, "may_%s" % trigger, partial(self._can_trigger, model, trigger))
 
     def _get_trigger(self, model, trigger_name, *args, **kwargs):
         """Convenience function added to the model to trigger events by name.

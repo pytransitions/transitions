@@ -154,6 +154,17 @@ class TestEnumsAsStates(TestCase):
         trigger_enum = m.get_triggers(m.state)
         self.assertEqual(trigger_enum, trigger_name)
 
+    def test_may_transition(self):
+        class TrafficLight(object):
+            pass
+
+        t = TrafficLight()
+        m = MachineFactory.get_predefined()(states=self.States, model=t, initial=self.States.RED, auto_transitions=False)
+        m.add_transition('go', self.States.RED, self.States.GREEN)
+        m.add_transition('stop', self.States.YELLOW, self.States.RED)
+        assert t.may_go()
+        assert not t.may_stop()
+
 
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):
