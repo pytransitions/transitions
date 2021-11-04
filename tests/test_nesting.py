@@ -627,6 +627,21 @@ class TestNestedTransitions(TestTransitions):
         machine = self.machine_cls(states=states, queued=True, initial='b')
         machine.to_b_c()
 
+    def test_machine_may_transitions_for_generated_triggers(self):
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
+        m = self.stuff.machine_cls(states=states, initial='A')
+        assert m.may_to_A()
+        m.to_A()
+        assert m.may_to_B()
+        m.to_B()
+        assert m.may_to_C()
+        m.to_C()
+        assert m.may_to_C_1()
+        m.to_C_1()
+        # TODO: no transitions for to_D from C_1 -> D but m.to_D() works
+        assert m.may_to_D()
+        m.to_D()
+
 
 class TestSeparatorsBase(TestCase):
 

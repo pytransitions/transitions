@@ -882,6 +882,7 @@ class Machine(object):
             if trigger_name != trigger:
                 continue
             for transition in self.events[trigger_name].transitions[state]:
+                # TODO: better way to check dest is valid state
                 try:
                     self.get_state(transition.dest)
                 except ValueError:
@@ -891,9 +892,12 @@ class Machine(object):
                     return True
         return False
 
+    def _add_may_transition_func_for_trigger(self, trigger, model):
+        self._checked_assignment(model, "may_%s" % trigger, partial(self._can_trigger, model, trigger))
+
     def _add_trigger_to_model(self, trigger, model):
         self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
-        self._checked_assignment(model, "may_%s" % trigger, partial(self._can_trigger, model, trigger))
+        self._add_may_transition_func_for_trigger(trigger, model)
 
     def _get_trigger(self, model, trigger_name, *args, **kwargs):
         """Convenience function added to the model to trigger events by name.
