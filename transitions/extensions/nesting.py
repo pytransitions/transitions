@@ -885,6 +885,7 @@ class HierarchicalMachine(Machine):
                 self._checked_assignment(model, 'to_' + path[0], FunctionWrapper(trig_func, path[1:]))
         else:
             self._checked_assignment(model, trigger, trig_func)
+            self._checked_assignment(model, "may_%s" % trigger, partial(self._can_trigger, model, trigger))
 
     # converts a list of current states into a hierarchical state tree
     def _build_state_tree(self, model_states, separator, tree=None):

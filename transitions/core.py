@@ -878,14 +878,18 @@ class Machine(object):
         e = EventData(None, None, self, model, args, kwargs)
         state = self.get_model_state(model).name
 
-        return trigger in {
-            trigger_name
-            for trigger_name in self.get_triggers(state)
-            if any(
-                t.dest in self.states and all(c.check(e) for c in t.conditions)
-                for t in self.events[trigger_name].transitions[state]
-            )
-        }
+        for trigger_name in self.get_triggers(state):
+            if trigger_name != trigger:
+                continue
+            for transition in self.events[trigger_name].transitions[state]:
+                try:
+                    self.get_state(transition.dest)
+                except ValueError:
+                    continue
+
+                if all(c.check(e) for c in transition.conditions):
+                    return True
+        return False
 
     def _add_trigger_to_model(self, trigger, model):
         self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))

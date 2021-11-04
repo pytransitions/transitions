@@ -804,6 +804,32 @@ class TestSeparatorsBase(TestCase):
         machine.reset()  # exit C, enter A
         self.assertEqual('A', machine.state)
 
+    def test_machine_may_transitions(self):
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'run_fast', 'source': 'C', 'dest': 'C{0}1'.format(self.separator)},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+        m = self.stuff.machine_cls(
+            states=states, transitions=transitions, initial='A', auto_transitions=False
+        )
+        assert m.may_walk()
+        assert not m.may_run()
+        assert not m.may_run_fast()
+        assert not m.may_sprint()
+
+        m.walk()
+        assert not m.may_walk()
+        assert m.may_run()
+        assert not m.may_run_fast()
+
+        m.run()
+        assert m.may_run_fast()
+        assert m.may_sprint()
+        m.run_fast()
+
 
 class TestSeparatorsSlash(TestSeparatorsBase):
     separator = '/'
