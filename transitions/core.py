@@ -882,7 +882,7 @@ class Machine(object):
             trigger_name
             for trigger_name in self.get_triggers(state)
             if any(
-                all(c.check(e) for c in t.conditions)
+                t.dest in self.states and all(c.check(e) for c in t.conditions)
                 for t in self.events[trigger_name].transitions[state]
             )
         }

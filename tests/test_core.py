@@ -1261,6 +1261,13 @@ class TestTransitions(TestCase):
         assert not m.may_stop()
         assert not m.may_walk()
 
+    def test_may_transition_with_invalid_state(self):
+        states = ['A', 'B', 'C']
+        d = DummyModel()
+        m = Machine(model=d, states=states, initial='A', auto_transitions=False)
+        m.add_transition('walk', 'A', 'UNKNOWN')
+        assert not d.may_walk()
+
 
 class TestWarnings(TestCase):
     def test_multiple_machines_per_model(self):
