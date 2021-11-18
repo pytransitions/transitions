@@ -393,14 +393,14 @@ class Event(object):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        func = partial(self._trigger, model, *args, **kwargs)
+        func = partial(self._trigger, EventData(None, self, self.machine, model, args=args, kwargs=kwargs))
         # pylint: disable=protected-access
         # noinspection PyProtectedMember
         # Machine._process should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
         return self.machine._process(func)
 
-    def _trigger(self, model, *args, **kwargs):
+    def _trigger(self, event_data):
         """ Internal trigger function called by the ``Machine`` instance. This should not
         be called directly but via the public method ``Machine.process``.
         Args:
@@ -411,30 +411,10 @@ class Event(object):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        state = self.machine.get_model_state(model)
-        if state.name not in self.transitions:
-            msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
-                                                               state.name)
-            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
-                else self.machine.ignore_invalid_triggers
-            if ignore:
-                _LOGGER.warning(msg)
-                return False
-            else:
-                raise MachineError(msg)
-        event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
-        return self._process(event_data)
-
-    def _process(self, event_data):
-        self.machine.callbacks(self.machine.prepare_event, event_data)
-        _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
-
+        event_data.state = self.machine.get_model_state(event_data.model)
         try:
-            for trans in self.transitions[event_data.state.name]:
-                event_data.transition = trans
-                if trans.execute(event_data):
-                    event_data.result = True
-                    break
+            if self._is_valid_trigger(event_data.state):
+                self._process(event_data)
         except Exception as err:
             event_data.error = err
             if self.machine.on_exception:
@@ -450,8 +430,29 @@ class Event(object):
                               self.machine.name,
                               type(err).__name__,
                               str(err))
-
         return event_data.result
+
+    def _process(self, event_data):
+        self.machine.callbacks(self.machine.prepare_event, event_data)
+        _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
+        for trans in self.transitions[event_data.state.name]:
+            event_data.transition = trans
+            if trans.execute(event_data):
+                event_data.result = True
+                break
+
+    def _is_valid_trigger(self, state):
+        if state.name not in self.transitions:
+            msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
+                                                               state.name)
+            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
+                else self.machine.ignore_invalid_triggers
+            if ignore:
+                _LOGGER.warning(msg)
+                return False
+            else:
+                raise MachineError(msg)
+        return True
 
     def __repr__(self):
         return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
@@ -641,7 +642,7 @@ class Machine(object):
         if len(self._transition_queue) > 0:
             # the first element of the list is currently executed. Keeping it for further Machine._process(ing)
             self._transition_queue = deque(
-                [self._transition_queue[0]] + [e for e in self._transition_queue if e.args[0] not in models])
+                [self._transition_queue[0]] + [e for e in self._transition_queue if e.args[0].model not in models])
 
     @classmethod
     def _create_transition(cls, *args, **kwargs):

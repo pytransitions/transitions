@@ -1005,7 +1005,7 @@ class TestTransitions(TestCase):
         # but mock should have been called anyway
         with self.assertRaises(RuntimeError):
             m.planB()
-        self.assertEqual(finalize_mock.call_count, 4)
+        self.assertEqual(4, finalize_mock.call_count)
 
     def test_machine_finalize_exception(self):
 
@@ -1200,17 +1200,22 @@ class TestTransitions(TestCase):
         mock = MagicMock()
 
         def on_exception(event_data):
-            self.assertIsInstance(event_data.error, ValueError)
+            self.assertIsInstance(event_data.error, (ValueError, MachineError))
             mock()
 
-        m = self.machine_cls(states=['A', 'B'], initial='A', send_event=True,
+        m = self.machine_cls(states=['A', 'B'], initial='A', transitions=[['go', 'A', 'B']], send_event=True,
                              after_state_change=partial(self.stuff.this_raises, ValueError))
         with self.assertRaises(ValueError):
             m.to_B()
+        self.assertTrue(m.is_B())
+        with self.assertRaises(MachineError):
+            m.go()
 
         m.on_exception.append(on_exception)
         m.to_B()
+        m.go()
         self.assertTrue(mock.called)
+        self.assertEqual(2, mock.call_count)
 
 
 class TestWarnings(TestCase):

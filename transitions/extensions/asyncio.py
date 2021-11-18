@@ -178,29 +178,10 @@ class AsyncEvent(Event):
 
     async def _trigger(self, model, *args, **kwargs):
         state = self.machine.get_state(getattr(model, self.machine.model_attribute))
-        if state.name not in self.transitions:
-            msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
-                                                               state.name)
-            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
-                else self.machine.ignore_invalid_triggers
-            if ignore:
-                _LOGGER.warning(msg)
-                return False
-            else:
-                raise MachineError(msg)
         event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
-        return await self._process(event_data)
-
-    async def _process(self, event_data):
-        await self.machine.callbacks(self.machine.prepare_event, event_data)
-        _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
-
         try:
-            for trans in self.transitions[event_data.state.name]:
-                event_data.transition = trans
-                if await trans.execute(event_data):
-                    event_data.result = True
-                    break
+            if self._is_valid_trigger(state):
+                await self._process(event_data)
         except Exception as err:
             event_data.error = err
             if self.machine.on_exception:
@@ -211,6 +192,15 @@ class AsyncEvent(Event):
             await self.machine.callbacks(self.machine.finalize_event, event_data)
             _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
         return event_data.result
+
+    async def _process(self, event_data):
+        await self.machine.callbacks(self.machine.prepare_event, event_data)
+        _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
+        for trans in self.transitions[event_data.state.name]:
+            event_data.transition = trans
+            if await trans.execute(event_data):
+                event_data.result = True
+                break
 
 
 class NestedAsyncEvent(NestedEvent):
