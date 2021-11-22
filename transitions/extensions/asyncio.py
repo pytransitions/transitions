@@ -465,6 +465,24 @@ class AsyncMachine(Machine):
             self._transition_queue.clear()
             self._transition_queue.extend(new_queue)
 
+    async def _can_trigger(self, model, trigger, *args, **kwargs):
+        e = EventData(None, None, self, model, args, kwargs)
+        state = self.get_model_state(model).name
+
+        for trigger_name in self.get_triggers(state):
+            if trigger_name != trigger:
+                continue
+            for transition in self.events[trigger_name].transitions[state]:
+                try:
+                    _ = self.get_state(transition.dest)
+                except ValueError:
+                    continue
+                await self.callbacks(self.prepare_event, e)
+                await self.callbacks(transition.prepare, e)
+                if all(await self.await_all([partial(c.check, e) for c in transition.conditions])):
+                    return True
+        return False
+
     async def _process(self, trigger, model):
         # default processing
         if not self.has_queue:
@@ -559,6 +577,34 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                 if tmp is not None:
                     res[key] = tmp
         return None if not res or all(v is None for v in res.values()) else any(res.values())
+
+    async def _can_trigger(self, model, trigger, *args, **kwargs):
+        state_tree = self.build_state_tree(getattr(model, self.model_attribute), self.state_cls.separator)
+        ordered_states = _resolve_order(state_tree)
+        for state_path in ordered_states:
+            with self():
+                return await self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
+
+    async def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
+        e = EventData(None, None, self, model, args, kwargs)
+        if trigger in self.events:
+            source_path = copy.copy(path)
+            while source_path:
+                state_name = self.state_cls.separator.join(source_path)
+                for transition in self.events[trigger].transitions.get(state_name, []):
+                    try:
+                        _ = self.get_state(transition.dest)
+                    except ValueError:
+                        continue
+                    await self.callbacks(self.prepare_event, e)
+                    await self.callbacks(transition.prepare, e)
+                    if all(await self.await_all([partial(c.check, e) for c in transition.conditions])):
+                        return True
+                source_path.pop(-1)
+        if path:
+            with self(path.pop(0)):
+                return await self._can_trigger_nested(model, trigger, path, *args, **kwargs)
+        return False
 
 
 class AsyncTimeout(AsyncState):

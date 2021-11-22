@@ -1256,17 +1256,18 @@ class TestTransitions(TestCase):
     def test_may_transition_with_auto_transitions(self):
         states = ['A', 'B', 'C']
         d = DummyModel()
-        Machine(model=d, states=states, initial='A')
+        self.machine_cls(model=d, states=states, initial='A')
         assert d.may_to_A()
         assert d.may_to_B()
         assert d.may_to_C()
 
     def test_machine_may_transitions(self):
         states = ['A', 'B', 'C']
-        m = Machine(states=states, initial='A', auto_transitions=False)
+        m = self.machine_cls(states=states, initial='A', auto_transitions=False)
         m.add_transition('walk', 'A', 'B', conditions=[lambda: False])
         m.add_transition('stop', 'B', 'C')
         m.add_transition('run', 'A', 'C')
+        m.add_transition('reset', 'C', 'A')
 
         assert not m.may_walk()
         assert not m.may_stop()
@@ -1279,6 +1280,6 @@ class TestTransitions(TestCase):
     def test_may_transition_with_invalid_state(self):
         states = ['A', 'B', 'C']
         d = DummyModel()
-        m = Machine(model=d, states=states, initial='A', auto_transitions=False)
+        m = self.machine_cls(model=d, states=states, initial='A', auto_transitions=False)
         m.add_transition('walk', 'A', 'UNKNOWN')
         assert not d.may_walk()

@@ -431,6 +431,47 @@ class TestAsync(TestTransitions):
         asyncio.run(pr.go())
         self.assertTrue(pr.is_B())
 
+    def test_may_transition_with_auto_transitions(self):
+        states = ['A', 'B', 'C']
+        d = DummyModel()
+        self.machine_cls(model=d, states=states, initial='A')
+
+        async def run():
+            assert await d.may_to_A()
+            assert await d.may_to_B()
+            assert await d.may_to_C()
+
+        asyncio.run(run())
+
+    def test_machine_may_transitions(self):
+        states = ['A', 'B', 'C']
+        m = self.machine_cls(states=states, initial='A', auto_transitions=False)
+        m.add_transition('walk', 'A', 'B', conditions=[lambda: False])
+        m.add_transition('stop', 'B', 'C')
+        m.add_transition('run', 'A', 'C')
+
+        async def run():
+            assert not await m.may_walk()
+            assert not await m.may_stop()
+            assert await m.may_run()
+            await m.run()
+            assert not await m.may_run()
+            assert not await m.may_stop()
+            assert not await m.may_walk()
+
+        asyncio.run(run())
+
+    def test_may_transition_with_invalid_state(self):
+        states = ['A', 'B', 'C']
+        d = DummyModel()
+        m = self.machine_cls(model=d, states=states, initial='A', auto_transitions=False)
+        m.add_transition('walk', 'A', 'UNKNOWN')
+
+        async def run():
+            assert not await d.may_walk()
+
+        asyncio.run(run())
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class AsyncGraphMachine(TestAsync):

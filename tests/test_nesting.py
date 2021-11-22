@@ -638,7 +638,6 @@ class TestNestedTransitions(TestTransitions):
         m.to_C()
         assert m.may_to_C_1()
         m.to_C_1()
-        # TODO: no transitions for to_D from C_1 -> D but m.to_D() works
         assert m.may_to_D()
         m.to_D()
 
