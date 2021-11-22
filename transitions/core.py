@@ -152,7 +152,7 @@ class Condition(object):
     """ A helper class to call condition checks in the intended way.
 
     Attributes:
-        func (callable): The function to call for the condition check
+        func (str or callable): The function to call for the condition check
         target (bool): Indicates the target state--i.e., when True,
                 the condition-checking callback should return True to pass,
                 and when False, the callback should return False to pass.
@@ -161,7 +161,7 @@ class Condition(object):
     def __init__(self, func, target=True):
         """
         Args:
-            func (str): Name of the condition-checking callable
+            func (str or callable): Name of the condition-checking callable
             target (bool): Indicates the target state--i.e., when True,
                 the condition-checking callback should return True to pass,
                 and when False, the callback should return False to pass.
@@ -290,7 +290,7 @@ class Transition(object):
         Args:
             trigger (str): The type of triggering event. Must be one of
                 'before', 'after' or 'prepare'.
-            func (str): The name of the callback function.
+            func (str or callable): The name of the callback function or a callable.
         """
         callback_list = getattr(self, trigger)
         callback_list.append(func)
@@ -313,7 +313,7 @@ class EventData(object):
         kwargs (dict): Optional keyword arguments from trigger method
             to store internally for possible later use.
         transition (Transition): Currently active transition. Will be assigned during triggering.
-        error (Error): In case a triggered event causes an Error, it is assigned here and passed on.
+        error (Exception): In case a triggered event causes an Error, it is assigned here and passed on.
         result (bool): True in case a transition has been successful, False otherwise.
     """
 
@@ -757,7 +757,7 @@ class Machine(object):
         """ Check whether the current state matches the named state. This function is not called directly
             but assigned as partials to model instances (e.g. is_A -> partial(_is_state, 'A', model)).
         Args:
-            state (str): name of the checked state
+            state (str or Enum): name of the checked state or Enum
             model: model to be checked
         Returns:
             bool: Whether the model's current state is state.
@@ -765,6 +765,13 @@ class Machine(object):
         return getattr(model, self.model_attribute) == state
 
     def get_model_state(self, model):
+        """
+            Get the state of a model
+        Args:
+            model (object): the stateful model
+        Returns:
+            State: The State object related to the model's state
+        """
         return self.get_state(getattr(model, self.model_attribute))
 
     def set_state(self, state, model=None):
@@ -834,8 +841,6 @@ class Machine(object):
                             method_name = 'to_%s' % a_state
                         else:
                             method_name = 'to_%s_%s' % (self.model_attribute, a_state)
-                            self.add_transition('to_%s' % a_state, self.wildcard_all, a_state,
-                                                prepare=partial(_warning_wrapper_to, 'to_%s' % a_state))
                         self.add_transition(method_name, self.wildcard_all, a_state)
 
                     # add auto transition with source <state> to <a_state>
@@ -844,8 +849,6 @@ class Machine(object):
                             method_name = 'to_%s' % a_state
                         else:
                             method_name = 'to_%s_%s' % (self.model_attribute, a_state)
-                            self.add_transition('to_%s' % a_state, state.name, a_state,
-                                                prepare=partial(_warning_wrapper_to, 'to_%s' % a_state))
                         self.add_transition(method_name, state.name, a_state)
 
     def _add_model_to_state(self, state, model):
@@ -858,7 +861,6 @@ class Machine(object):
             method_name = 'is_%s' % state.name
         else:
             method_name = 'is_%s_%s' % (self.model_attribute, state.name)
-            self._checked_assignment(model, 'is_%s' % state.name, partial(_warning_wrapper_is, method_name, func))
         self._checked_assignment(model, method_name, func)
 
         # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
@@ -918,10 +920,10 @@ class Machine(object):
                 transition. This will be attached to the currently specified
                 model (e.g., passing trigger='advance' will create a new
                 advance() method in the model that triggers the transition.)
-            source(str or list): The name of the source state--i.e., the state we
+            source(str, Enum or list): The name of the source state--i.e., the state we
                 are transitioning away from. This can be a single state, a
                 list of states or an asterisk for all states.
-            dest (str): The name of the destination State--i.e., the state
+            dest (str or Enum): The name of the destination State--i.e., the state
                 we are transitioning into. This can be a single state or an
                 equal sign to specify that the transition should be reflexive
                 so that the destination will be the same as the source for
@@ -1084,8 +1086,8 @@ class Machine(object):
         """ Removes a transition from the Machine and all models.
         Args:
             trigger (str): Trigger name of the transition.
-            source (str): Limits removal to transitions from a certain state.
-            dest (str): Limits removal to transitions to a certain state.
+            source (str, Enum or State): Limits removal to transitions from a certain state.
+            dest (str, Enum or State): Limits removal to transitions to a certain state.
         """
         source = listify(source) if source != "*" else source
         dest = listify(dest) if dest != "*" else dest
@@ -1265,21 +1267,3 @@ class MachineError(Exception):
 
     def __str__(self):
         return repr(self.value)
-
-
-# TODO: Remove in 0.9.0
-def _warning_wrapper_is(meth_name, func, *args, **kwargs):
-    warnings.warn("Starting from transitions version 0.8.3, 'is_<state_name>' convenience functions will be"
-                  " assigned to 'is_<model_attribute>_<state_name>' when 'model_attribute "
-                  "!= \"state\"'. In 0.9.0, 'is_<state_name>' will NOT be assigned anymore when "
-                  "'model_attribute != \"state\"'! Please adjust your code and use "
-                  "'{0}' instead.".format(meth_name), DeprecationWarning)
-    return func(*args, **kwargs)
-
-
-def _warning_wrapper_to(meth_name, *args, **kwargs):
-    warnings.warn("Starting from transitions version 0.8.3, 'to_<state_name>' convenience functions will be"
-                  " assigned to 'to_<model_attribute>_<state_name>' when 'model_attribute "
-                  "!= \"state\"'. In 0.9.0, 'to_<state_name>' will NOT be assigned anymore when "
-                  "'model_attribute != \"state\"'! Please adjust your code and use "
-                  "'{0}' instead.".format(meth_name), DeprecationWarning)
