@@ -185,7 +185,7 @@ class TestDiagrams(TestTransitions):
         m.add_transition('to_state_F', 'B', 'F')
         g1 = m.get_graph(show_roi=True)
         dot, nodes, edges = self.parse_dot(g1)
-        self.assertEqual(len(edges), 0)
+        self.assertEqual(0, len(edges))
         self.assertIn("label=A", dot)
         # make sure that generating a graph without ROI has not influence on the later generated graph
         # this has to be checked since graph.custom_style is a class property and is persistent for multiple

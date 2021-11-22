@@ -90,7 +90,7 @@ class NestedEvent(Event):
         This subclass is NOT compatible with simple Machine instances.
     """
 
-    def trigger(self, _model, _machine, *args, **kwargs):
+    def trigger(self, event_data):
         """ Executes all transitions that match the current state,
         halting as soon as one successfully completes. More precisely, it prepares a partial
         of the internal ``_trigger`` function, passes this to ``machine._process``.
@@ -107,18 +107,18 @@ class NestedEvent(Event):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
+        machine = event_data.machine
         # Save the current scope (_machine.scoped, _machine.states, _machine.events) in partial
         # since queued transitions could otherwise loose their scope.
-        func = partial(self._trigger, _model, _machine,
-                       (_machine.scoped, _machine.states, _machine.events, _machine.prefix_path),
-                       *args, **kwargs)
+        func = partial(self._trigger, event_data,
+                       (machine.scoped, machine.states, machine.events, machine.prefix_path))
         # pylint: disable=protected-access
         # noinspection PyProtectedMember
         # Machine._process should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
-        return _machine._process(func)
+        return machine._process(func)
 
-    def _trigger(self, _model, _machine, _scope, *args, **kwargs):
+    def _trigger(self, event_data, _scope):
         """ Internal trigger function called by the ``HierarchicalMachine`` instance. This should not
         be called directly but via the public method ``HierarchicalMachine.process``. In contrast to
         the inherited ``Event._trigger``, this requires a scope tuple to process triggers in the right context.
@@ -132,13 +132,13 @@ class NestedEvent(Event):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        if _scope[0] != _machine.scoped:
-            with _machine(_scope):
-                return self._trigger_scoped(_model, _machine, *args, **kwargs)
+        if _scope[0] != event_data.machine.scoped:
+            with event_data.machine(_scope):
+                return self._trigger_scoped(event_data)
         else:
-            return self._trigger_scoped(_model, _machine, *args, **kwargs)
+            return self._trigger_scoped(event_data)
 
-    def _trigger_scoped(self, _model, _machine, *args, **kwargs):
+    def _trigger_scoped(self, event_data):
         """ Internal scope-adjusted trigger function called by the ``NestedEvent._trigger`` instance. This should not
         be called directly.
         Args:
@@ -150,53 +150,36 @@ class NestedEvent(Event):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
-        state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
+        machine = event_data.machine
+        model = event_data.model
+        state_tree = machine.build_state_tree(getattr(model, machine.model_attribute), machine.state_cls.separator)
+        state_tree = reduce(dict.get, machine.get_global_name(join=False), state_tree)
         ordered_states = _resolve_order(state_tree)
         done = set()
-        res = None
+        event_data.event = self
         for state_path in ordered_states:
-            state_name = _machine.state_cls.separator.join(state_path)
+            state_name = machine.state_cls.separator.join(state_path)
             if state_name not in done and state_name in self.transitions:
-                state = _machine.get_state(state_name)
-                event_data = EventData(state, self, _machine, _model, args=args, kwargs=kwargs)
+                event_data.state = machine.get_state(state_name)
                 event_data.source_name = state_name
                 event_data.source_path = copy.copy(state_path)
-                res = self._process(event_data)
-                if res:
+                self._process(event_data)
+                if event_data.result:
                     elems = state_path
                     while elems:
-                        done.add(_machine.state_cls.separator.join(elems))
+                        done.add(machine.state_cls.separator.join(elems))
                         elems.pop()
-        return res
+        return event_data.result
 
     def _process(self, event_data):
         machine = event_data.machine
         machine.callbacks(event_data.machine.prepare_event, event_data)
         _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", machine.name)
-
-        try:
-            for trans in self.transitions[event_data.source_name]:
-                event_data.transition = trans
-                if trans.execute(event_data):
-                    event_data.result = True
-                    break
-        except Exception as err:
-            event_data.error = err
-            if self.machine.on_exception:
-                self.machine.callbacks(self.machine.on_exception, event_data)
-            else:
-                raise
-        finally:
-            try:
-                machine.callbacks(machine.finalize_event, event_data)
-                _LOGGER.debug("%sExecuted machine finalize callbacks", machine.name)
-            except Exception as err:
-                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
-                              self.machine.name,
-                              type(err).__name__,
-                              str(err))
-        return event_data.result
+        for trans in self.transitions[event_data.source_name]:
+            event_data.transition = trans
+            event_data.result = trans.execute(event_data)
+            if event_data.result:
+                break
 
 
 class NestedState(State):
@@ -276,7 +259,7 @@ class NestedTransition(Transition):
         dst_name_path = self.dest.split(event_data.machine.state_cls.separator)
         _ = machine.get_state(dst_name_path)
         model_states = listify(getattr(event_data.model, machine.model_attribute))
-        state_tree = machine._build_state_tree(model_states, machine.state_cls.separator)
+        state_tree = machine.build_state_tree(model_states, machine.state_cls.separator)
 
         scope = machine.get_global_name(join=False)
         src_name_path = event_data.source_path
@@ -841,9 +824,28 @@ class HierarchicalMachine(Machine):
                           is not True. Note that a transition which is not executed due to conditions
                           is still considered valid.
         """
-        with self():
-            res = self._trigger_event(_model, _trigger, None, *args, **kwargs)
-        return self._check_event_result(res, _model, _trigger)
+        event_data = EventData(state=None, event=None, machine=self, model=_model, args=args, kwargs=kwargs)
+        event_data.result = None
+        try:
+            with self():
+                res = self._trigger_event(event_data, _trigger, None)
+            event_data.result = self._check_event_result(res, _model, _trigger)
+        except Exception as err:
+            event_data.error = err
+            if self.on_exception:
+                self.callbacks(self.on_exception, event_data)
+            else:
+                raise
+        finally:
+            try:
+                self.callbacks(self.finalize_event, event_data)
+                _LOGGER.debug("%sExecuted machine finalize callbacks", self.name)
+            except Exception as err:
+                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
+                              self.name,
+                              type(err).__name__,
+                              str(err))
+        return event_data.result
 
     def _add_model_to_state(self, state, model):
         name = self.get_global_name(state)
@@ -888,11 +890,11 @@ class HierarchicalMachine(Machine):
             self._checked_assignment(model, trigger, trig_func)
 
     # converts a list of current states into a hierarchical state tree
-    def _build_state_tree(self, model_states, separator, tree=None):
+    def build_state_tree(self, model_states, separator, tree=None):
         tree = tree if tree is not None else OrderedDict()
         if isinstance(model_states, list):
             for state in model_states:
-                _ = self._build_state_tree(state, separator, tree)
+                _ = self.build_state_tree(state, separator, tree)
         else:
             tmp = tree
             if isinstance(model_states, (Enum, EnumMeta)):
@@ -912,7 +914,7 @@ class HierarchicalMachine(Machine):
                 res = self._get_enum_path(enum_state, prefix=prefix + [name])
                 if res:
                     return res
-        return []
+        raise ValueError("Could not find path of {0}.".format(enum_state))
 
     def _get_state_path(self, state, prefix=[]):
         if state in self.states.values():
@@ -1031,19 +1033,21 @@ class HierarchicalMachine(Machine):
             a_state = self.get_state(state_name)
             return a_state.value if isinstance(a_state.value, Enum) else state_name
 
-    def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
+    def _trigger_event(self, event_data, trigger, _state_tree):
+        model = event_data.model
         if _state_tree is None:
-            _state_tree = self._build_state_tree(listify(getattr(_model, self.model_attribute)),
-                                                 self.state_cls.separator)
+            _state_tree = self.build_state_tree(listify(getattr(_model, self.model_attribute)),
+                                                self.state_cls.separator)
         res = {}
         for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    tmp = self._trigger_event(_model, _trigger, value, *args, **kwargs)
+                    tmp = self._trigger_event(event_data, trigger, value)
                     if tmp is not None:
                         res[key] = tmp
-            if res.get(key, False) is False and _trigger in self.events:
-                tmp = self.events[_trigger].trigger(_model, self, *args, **kwargs)
+            if res.get(key, False) is False and trigger in self.events:
+                event_data.event = self.events[trigger]
+                tmp = event_data.event.trigger(event_data)
                 if tmp is not None:
                     res[key] = tmp
         return None if not res or all(v is None for v in res.values()) else any(res.values())

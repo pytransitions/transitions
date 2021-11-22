@@ -325,3 +325,8 @@ class TestReuse(TestCase):
         machine.to_Child()
         machine.go()
         self.assertTrue(machine.is_Child_2())
+
+    def test_reuse_wrong_class(self):
+        m1 = MachineFactory.get_predefined()(states=['A', 'B'], initial='A')
+        with self.assertRaises(ValueError):
+            m2 = MachineFactory.get_predefined(nested=True)(states=['X', {'name': 'Y', 'states': m1}], initial='Y')

@@ -42,7 +42,7 @@ except ImportError:
             yield contexts
 
 
-class PicklableLock(object):
+class PicklableLock:
     """ A wrapper for threading.Lock which discards its state during pickling and
         is reinitialized unlocked when unpickled.
     """

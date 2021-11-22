@@ -395,3 +395,15 @@ class TestNestedStateGraphEnums(TestNestedStateEnums):
     def setUp(self):
         super(TestNestedStateGraphEnums, self).setUp()
         self.machine_cls = MachineFactory.get_predefined(nested=True, graph=True)
+
+    def test_invalid_enum_path(self):
+        class States(enum.Enum):
+            ONE = 1
+            TWO = 2
+            THREE = 3
+
+        class Invalid(enum.Enum):
+            INVALID = 1
+
+        with self.assertRaises(ValueError):
+            self.machine_cls(states=States, transitions=[['go', '*', Invalid.INVALID]], initial=States.ONE)
