@@ -162,7 +162,6 @@ class Volatile(State):
             pass
 
 
-
 class Retry(State):
     """ The Retry mix-in sets a limit on the number of times a state may be
         re-entered from itself.
@@ -177,7 +176,7 @@ class Retry(State):
 
         transitions the model directly to the 'failed' state, if the machine has
         automatic transitions enabled (the default).
-        
+
         Attributes:
             retries (int): Number of retries to allow before failing.
             on_failure (str): Function to invoke on the model when the retry limit
@@ -213,7 +212,7 @@ class Retry(State):
         # If we have tried too many times, invoke our failure callback instead
         if self.retry_counts[k] > self.retries > 0:
             _LOGGER.info('%sRetry count for state %s exceeded limit (%i)',
-                          event_data.machine.name, self.name, self.retries)
+                         event_data.machine.name, self.name, self.retries)
             event_data.machine.callback(self.on_failure, event_data)
             return
 
