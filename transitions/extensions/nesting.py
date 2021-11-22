@@ -876,6 +876,7 @@ class HierarchicalMachine(Machine):
 
     def _add_trigger_to_model(self, trigger, model):
         trig_func = partial(self.trigger_event, model, trigger)
+        self._add_may_transition_func_for_trigger(trigger, model)
         # FunctionWrappers are only necessary if a custom separator is used
         if trigger.startswith('to_') and self.state_cls.separator != '_':
             path = trigger[3:].split(self.state_cls.separator)

@@ -627,6 +627,21 @@ class TestNestedTransitions(TestTransitions):
         machine = self.machine_cls(states=states, queued=True, initial='b')
         machine.to_b_c()
 
+    def test_machine_may_transitions_for_generated_triggers(self):
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
+        m = self.stuff.machine_cls(states=states, initial='A')
+        assert m.may_to_A()
+        m.to_A()
+        assert m.may_to_B()
+        m.to_B()
+        assert m.may_to_C()
+        m.to_C()
+        assert m.may_to_C_1()
+        m.to_C_1()
+        # TODO: no transitions for to_D from C_1 -> D but m.to_D() works
+        assert m.may_to_D()
+        m.to_D()
+
     def test_get_nested_triggers(self):
         transitions = [
             ['goB', 'A', 'B'],
@@ -819,6 +834,32 @@ class TestSeparatorsBase(TestCase):
         self.assertEqual('C', machine.state)
         machine.reset()  # exit C, enter A
         self.assertEqual('A', machine.state)
+
+    def test_machine_may_transitions(self):
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'run_fast', 'source': 'C', 'dest': 'C{0}1'.format(self.separator)},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+        m = self.stuff.machine_cls(
+            states=states, transitions=transitions, initial='A', auto_transitions=False
+        )
+        assert m.may_walk()
+        assert not m.may_run()
+        assert not m.may_run_fast()
+        assert not m.may_sprint()
+
+        m.walk()
+        assert not m.may_walk()
+        assert m.may_run()
+        assert not m.may_run_fast()
+
+        m.run()
+        assert m.may_run_fast()
+        assert m.may_sprint()
+        m.run_fast()
 
 
 class TestSeparatorsSlash(TestSeparatorsBase):
