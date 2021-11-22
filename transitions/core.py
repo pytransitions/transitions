@@ -885,12 +885,12 @@ class Machine(object):
             if trigger_name != trigger:
                 continue
             for transition in self.events[trigger_name].transitions[state]:
-                # TODO: better way to check dest is valid state
                 try:
-                    self.get_state(transition.dest)
+                    _ = self.get_state(transition.dest)
                 except ValueError:
                     continue
-
+                self.callbacks(self.prepare_event, e)
+                self.callbacks(transition.prepare, e)
                 if all(c.check(e) for c in transition.conditions):
                     return True
         return False

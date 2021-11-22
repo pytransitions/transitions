@@ -722,6 +722,34 @@ class HierarchicalMachine(Machine):
                 source_path.pop()
             return matches
 
+    def _can_trigger(self, model, trigger, *args, **kwargs):
+        state_tree = self.build_state_tree(getattr(model, self.model_attribute), self.state_cls.separator)
+        ordered_states = _resolve_order(state_tree)
+        for state_path in ordered_states:
+            with self():
+                return self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
+
+    def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
+        e = EventData(None, None, self, model, args, kwargs)
+        if trigger in self.events:
+            source_path = copy.copy(path)
+            while source_path:
+                state_name = self.state_cls.separator.join(source_path)
+                for transition in self.events[trigger].transitions.get(state_name, []):
+                    try:
+                        _ = self.get_state(state_name)
+                    except ValueError:
+                        continue
+                    self.callbacks(self.prepare_event, e)
+                    self.callbacks(transition.prepare, e)
+                    if all(c.check(e) for c in transition.conditions):
+                        return True
+                source_path.pop(-1)
+        if path:
+            with self(path.pop(0)):
+                return self._can_trigger_nested(model, trigger, path, *args, **kwargs)
+        return False
+
     def get_triggers(self, *args):
         """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """
         triggers = []
@@ -1036,7 +1064,7 @@ class HierarchicalMachine(Machine):
     def _trigger_event(self, event_data, trigger, _state_tree):
         model = event_data.model
         if _state_tree is None:
-            _state_tree = self.build_state_tree(listify(getattr(_model, self.model_attribute)),
+            _state_tree = self.build_state_tree(listify(getattr(model, self.model_attribute)),
                                                 self.state_cls.separator)
         res = {}
         for key, value in _state_tree.items():
