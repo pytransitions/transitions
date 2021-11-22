@@ -1282,29 +1282,3 @@ class TestTransitions(TestCase):
         m = Machine(model=d, states=states, initial='A', auto_transitions=False)
         m.add_transition('walk', 'A', 'UNKNOWN')
         assert not d.may_walk()
-
-
-class TestWarnings(TestCase):
-    def test_multiple_machines_per_model(self):
-        class Model:
-            def __init__(self):
-                self.car_state = None
-                self.driver_state = None
-
-        instance = Model()
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.filterwarnings(action='default', message=r".*transitions version.*", category=DeprecationWarning)
-
-            machine_a = Machine(instance, states=['A', 'B'], initial='A', model_attribute='car_state')
-            machine_b = Machine(instance, states=['A', 'B'], initial='B', model_attribute='driver_state')
-            self.assertEqual(0, len(w))
-            self.assertTrue(instance.is_A())
-            self.assertTrue(instance.is_A())
-            self.assertEqual(1, len(w))
-            self.assertEqual(w[0].category, DeprecationWarning)
-            instance.to_B()
-            self.assertEqual('B', instance.car_state)
-            self.assertFalse(instance.is_A())
-            self.assertEqual(2, len(w))
-            self.assertEqual(w[1].category, DeprecationWarning)
