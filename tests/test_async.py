@@ -309,6 +309,7 @@ class TestAsync(TestTransitions):
         async def run():
             m1 = DummyModel()
             m2 = DummyModel()
+            self.machine_cls = MachineFactory.get_predefined(asyncio=True, nested=True)
             m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions,
                                  initial='A', queued=True, send_event=True)
             await asyncio.gather(m1.go(), m2.go(),
@@ -404,10 +405,10 @@ class TestAsync(TestTransitions):
         mock = MagicMock()
 
         def on_exception(event_data):
-            self.assertIsInstance(event_data.error, ValueError)
+            self.assertIsInstance(event_data.error, (ValueError, MachineError))
             mock()
 
-        m = self.machine_cls(states=['A', 'B'], initial='A', send_event=True,
+        m = self.machine_cls(states=['A', 'B'], initial='A', transitions=[['go', 'A', 'B']], send_event=True,
                              after_state_change=partial(self.stuff.this_raises, ValueError))
 
         async def run():
@@ -416,6 +417,9 @@ class TestAsync(TestTransitions):
 
             m.on_exception.append(on_exception)
             await m.to_B()
+            await m.go()
+            self.assertTrue(mock.called)
+            self.assertEqual(2, mock.call_count)
             self.assertTrue(mock.called)
 
         asyncio.run(run())

@@ -198,72 +198,76 @@ class AsyncEvent(Event):
         _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
         for trans in self.transitions[event_data.state.name]:
             event_data.transition = trans
-            if await trans.execute(event_data):
-                event_data.result = True
+            event_data.result = await trans.execute(event_data)
+            if event_data.result:
                 break
 
 
 class NestedAsyncEvent(NestedEvent):
 
-    async def trigger(self, _model, _machine, *args, **kwargs):
+    async def trigger(self, event_data):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes. NOTE: This should only
         be called by HierarchicalMachine instances.
         Args:
-            _model (object): model object to
-            _machine (HierarchicalMachine): Since NestedEvents can be used in multiple machine instances, this one
-                                            will be used to determine the current state separator.
-            args and kwargs: Optional positional or named arguments that will
-                be passed onto the EventData object, enabling arbitrary state
-                information to be passed on to downstream triggered functions.
+            event_data (EventData): The currently processed event.
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        func = partial(self._trigger, _model, _machine, *args, **kwargs)
-        return await _machine.process_context(func, _model)
+        machine = event_data.machine
+        func = partial(self._trigger, event_data,
+                       (machine.scoped, machine.states, machine.events, machine.prefix_path))
 
-    async def _trigger(self, _model, _machine, *args, **kwargs):
-        state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
-        state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
+        return await machine.process_context(func, event_data.model)
+
+    async def _trigger(self, _event_data, _scope):
+        """ Internal trigger function called by the ``HierarchicalMachine`` instance. This should not
+        be called directly but via the public method ``HierarchicalMachine.process``. In contrast to
+        the inherited ``Event._trigger``, this requires a scope tuple to process triggers in the right context.
+        Args:
+            _event_data (EventData): The currently processed event
+            _scope (Tuple): A tuple containing information about the currently scoped object, states an transitions.
+        Returns: boolean indicating whether or not a transition was
+            successfully executed (True if successful, False if not).
+        """
+        if _scope[0] != _event_data.machine.scoped:
+            with _event_data.machine(_scope):
+                return await self._trigger_scoped(_event_data)
+        else:
+            return await self._trigger_scoped(_event_data)
+
+    async def _trigger_scoped(self, event_data):
+        machine = event_data.machine
+        model = event_data.model
+        state_tree = machine._build_state_tree(getattr(model, machine.model_attribute), machine.state_cls.separator)
+        state_tree = reduce(dict.get, machine.get_global_name(join=False), state_tree)
         ordered_states = _resolve_order(state_tree)
         done = set()
-        res = None
+        event_data.event = self
         for state_path in ordered_states:
-            state_name = _machine.state_cls.separator.join(state_path)
+            state_name = machine.state_cls.separator.join(state_path)
             if state_name not in done and state_name in self.transitions:
-                state = _machine.get_state(state_name)
-                event_data = EventData(state, self, _machine, _model, args=args, kwargs=kwargs)
+                event_data.state = machine.get_state(state_name)
                 event_data.source_name = state_name
                 event_data.source_path = copy.copy(state_path)
-                res = await self._process(event_data)
-                if res:
+                await self._process(event_data)
+                if event_data.result:
                     elems = state_path
                     while elems:
-                        done.add(_machine.state_cls.separator.join(elems))
+                        done.add(machine.state_cls.separator.join(elems))
                         elems.pop()
-        return res
+        return event_data.result
 
     async def _process(self, event_data):
         machine = event_data.machine
         await machine.callbacks(event_data.machine.prepare_event, event_data)
         _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", machine.name)
 
-        try:
-            for trans in self.transitions[event_data.source_name]:
-                event_data.transition = trans
-                if await trans.execute(event_data):
-                    event_data.result = True
-                    break
-        except Exception as err:
-            event_data.error = err
-            if self.machine.on_exception:
-                await self.machine.callbacks(self.machine.on_exception, event_data)
-            else:
-                raise
-        finally:
-            await machine.callbacks(machine.finalize_event, event_data)
-            _LOGGER.debug("%sExecuted machine finalize callbacks", machine.name)
-        return event_data.result
+        for trans in self.transitions[event_data.source_name]:
+            event_data.transition = trans
+            event_data.result = await trans.execute(event_data)
+            if event_data.result:
+                break
 
 
 class AsyncMachine(Machine):
@@ -421,7 +425,7 @@ class AsyncMachine(Machine):
                 self.models.remove(mod)
         if len(self._transition_queue) > 0:
             queue = self._transition_queue
-            new_queue = [queue.popleft()] + [e for e in queue if e.args[0] not in models]
+            new_queue = [queue.popleft()] + [e for e in queue if e.args[0].model not in models]
             self._transition_queue.clear()
             self._transition_queue.extend(new_queue)
 
@@ -476,23 +480,43 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                           is not True. Note that a transition which is not executed due to conditions
                           is still considered valid.
         """
-        with self():
-            res = await self._trigger_event(_model, _trigger, None, *args, **kwargs)
-        return self._check_event_result(res, _model, _trigger)
+        event_data = EventData(state=None, event=None, machine=self, model=_model, args=args, kwargs=kwargs)
+        event_data.result = None
+        try:
+            with self():
+                res = await self._trigger_event(event_data, _trigger, None)
+            event_data.result = self._check_event_result(res, _model, _trigger)
+        except Exception as err:
+            event_data.error = err
+            if self.on_exception:
+                await self.callbacks(self.on_exception, event_data)
+            else:
+                raise
+        finally:
+            try:
+                await self.callbacks(self.finalize_event, event_data)
+                _LOGGER.debug("%sExecuted machine finalize callbacks", self.name)
+            except Exception as err:
+                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
+                              self.name,
+                              type(err).__name__,
+                              str(err))
+        return event_data.result
 
-    async def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
+    async def _trigger_event(self, event_data, _trigger, _state_tree):
+        model = event_data.model
         if _state_tree is None:
-            _state_tree = self._build_state_tree(listify(getattr(_model, self.model_attribute)),
+            _state_tree = self._build_state_tree(listify(getattr(model, self.model_attribute)),
                                                  self.state_cls.separator)
         res = {}
         for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    tmp = await self._trigger_event(_model, _trigger, value, *args, **kwargs)
+                    tmp = await self._trigger_event(event_data, _trigger, value)
                     if tmp is not None:
                         res[key] = tmp
             if not res.get(key, None) and _trigger in self.events:
-                tmp = await self.events[_trigger].trigger(_model, self, *args, **kwargs)
+                tmp = await self.events[_trigger].trigger(event_data)
                 if tmp is not None:
                     res[key] = tmp
         return None if not res or all([v is None for v in res.values()]) else any(res.values())
