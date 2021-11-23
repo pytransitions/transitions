@@ -679,6 +679,27 @@ class TestNestedTransitions(TestTransitions):
         assert mock.called
         assert m.is_B_D()
 
+    def test_nested_queued_remap(self):
+        states = ['A', 'done',
+                  {'name': 'B', 'remap': {'done': 'done'},
+                   'initial': 'initial',
+                   'transitions': [['go', 'initial', 'a']],
+                   'states': ['done', 'initial', {'name': 'a', 'remap': {'done': 'done'},
+                                                  'initial': 'initial',
+                                                  'transitions': [['go', 'initial', 'x']],
+                                                  'states': ['done', 'initial',
+                                                             {'name': 'x',
+                                                              'remap': {'done': 'done'},
+                                                              'initial': 'initial',
+                                                              'states': ['initial', 'done'],
+                                                              'transitions': [['done', 'initial', 'done']]}]}]}]
+        m = self.machine_cls(states=states, initial='A', queued=True)
+        m.on_enter_B('go')
+        m.on_enter_B_a('go')
+        m.on_enter_B_a_x_initial('done')
+        m.to_B()
+        assert m.is_done()
+
 
 class TestSeparatorsBase(TestCase):
 

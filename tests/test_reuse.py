@@ -330,3 +330,76 @@ class TestReuse(TestCase):
         m1 = MachineFactory.get_predefined()(states=['A', 'B'], initial='A')
         with self.assertRaises(ValueError):
             m2 = MachineFactory.get_predefined(nested=True)(states=['X', {'name': 'Y', 'states': m1}], initial='Y')
+
+    def test_reuse_remap(self):
+
+        class GenericMachine(self.machine_cls):
+
+            def __init__(self, states, transitions, model=None):
+                generic_states = [
+                    {"name": "initial", "on_enter": self.entry_initial},
+                    {"name": "done", "on_enter": self.entry_done},
+                ]
+                states += generic_states
+
+                super().__init__(
+                    states=states,
+                    transitions=transitions,
+                    model=model,
+                    send_event=True,
+                    queued=True,
+                    auto_transitions=False
+                )
+
+            def entry_initial(self, event_data):
+                raise NotImplementedError
+
+            def entry_done(self, event_data):
+                raise NotImplementedError
+
+        class MainMachine(GenericMachine):
+            def __init__(self):
+                states = [
+                    {"name": "nested", "children": NestedMachine(), "remap": {"done": "done"}},
+                ]
+                transitions = [
+                    ["go", "initial", "nested"],
+                ]
+                super().__init__(states, transitions, model=self)
+
+            def entry_done(self, event_data):
+                print("job finished")
+
+        class NestedMachine(GenericMachine):
+            def __init__(self):
+                states = [
+                    {"name": "deeper", "children": DeeperMachine(), "remap": {"done": "done"}},
+                ]
+                transitions = [
+                    ["go", "initial", "deeper"],
+                ]
+                super().__init__(states, transitions)
+
+            def entry_initial(self, event_data):
+                event_data.model.go()
+
+        class DeeperMachine(GenericMachine):
+            def __init__(self):
+                states = [
+                    {"name": "working", "on_enter": self.entry_working},
+                ]
+                transitions = [
+                    ["go", "initial", "working"],
+                    ["go", "working", "done"],
+                ]
+                super().__init__(states, transitions, model=self)
+
+            def entry_initial(self, event_data):
+                event_data.model.go()
+
+            def entry_working(self, event_data):
+                event_data.model.go()
+
+        machine = MainMachine()
+        machine.go()
+        assert machine.is_done()

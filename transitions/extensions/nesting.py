@@ -434,7 +434,7 @@ class HierarchicalMachine(Machine):
                     state = dict(name=state, **state.value)
             if isinstance(state, string_types):
                 if remap is not None and state in remap:
-                    return
+                    continue
                 domains = state.split(self.state_cls.separator, 1)
                 if len(domains) > 1:
                     try:
@@ -456,7 +456,7 @@ class HierarchicalMachine(Machine):
                                      "Consider changing the NestedState.separator to avoid this issue."
                                      "".format(state.name, self.state_cls.separator))
                 if remap is not None and state.name in remap:
-                    return
+                    continue
                 new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
                                                ignore_invalid_triggers=ignore, **kwargs)
                 if state.name in self.states:
@@ -465,7 +465,7 @@ class HierarchicalMachine(Machine):
                 self._init_state(new_state)
             elif isinstance(state, dict):
                 if remap is not None and state['name'] in remap:
-                    return
+                    continue
                 state = state.copy()  # prevent messing with the initially passed dict
                 remap = state.pop('remap', None)
                 if 'ignore_invalid_triggers' not in state:
@@ -486,6 +486,8 @@ class HierarchicalMachine(Machine):
                 remapped_transitions = []
                 with self(new_state.name):
                     self.add_states(state_children, remap=remap, **kwargs)
+                    if transitions:
+                        self.add_transitions(transitions)
                     if remap is not None:
                         drop_event = []
                         for evt in self.events.values():
@@ -524,8 +526,6 @@ class HierarchicalMachine(Machine):
                                 drop_event.append(trigger)
                         for e in drop_event:
                             del self.events[e]
-                    if transitions:
-                        self.add_transitions(transitions)
                 self.add_transitions(remapped_transitions)
             elif isinstance(state, NestedState):
                 if state.name in self.states:
