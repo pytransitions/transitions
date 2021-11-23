@@ -9,6 +9,7 @@ import sys
 import tempfile
 from os.path import getsize
 from os import unlink
+from functools import partial
 
 from transitions.extensions.nesting import NestedState
 from transitions.extensions import MachineFactory
@@ -656,6 +657,27 @@ class TestNestedTransitions(TestTransitions):
         self.assertEqual(len(transitions) + 1, len(m.get_nested_triggers()))
         self.assertEqual(2, len(m.get_nested_triggers(['C', '1'])))
         self.assertEqual(2, len(m.get_nested_triggers(['C'])))
+
+    def test_stop_transition_evaluation(self):
+        states = ['A', {'name': 'B', 'states': ['C', 'D']}]
+        transitions = [['next', 'A', 'B_C'], ['next', 'B_C', 'B_D'], ['next', 'B', 'A']]
+        mock = MagicMock()
+
+        def process_error(event_data):
+            assert isinstance(event_data.error, ValueError)
+            mock()
+
+        m = self.machine_cls(states=states, transitions=transitions, initial='A', send_event=True)
+        m.on_enter_B_D(partial(self.stuff.this_raises, ValueError()))
+        m.next()
+        with self.assertRaises(ValueError):
+            m.next()
+        assert m.is_B_D()
+        assert m.to_B_C()
+        m.on_exception = process_error
+        m.next()
+        assert mock.called
+        assert m.is_B_D()
 
 
 class TestSeparatorsBase(TestCase):
