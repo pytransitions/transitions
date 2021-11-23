@@ -108,49 +108,6 @@ class NestedEvent(Event):
             successfully executed (True if successful, False if not).
         """
         machine = event_data.machine
-        # Save the current scope (_machine.scoped, _machine.states, _machine.events) in partial
-        # since queued transitions could otherwise loose their scope.
-        func = partial(self._trigger, event_data,
-                       (machine.scoped, machine.states, machine.events, machine.prefix_path))
-        # pylint: disable=protected-access
-        # noinspection PyProtectedMember
-        # Machine._process should not be called somewhere else. That's why it should not be exposed
-        # to Machine users.
-        return machine._process(func)
-
-    def _trigger(self, event_data, _scope):
-        """ Internal trigger function called by the ``HierarchicalMachine`` instance. This should not
-        be called directly but via the public method ``HierarchicalMachine.process``. In contrast to
-        the inherited ``Event._trigger``, this requires a scope tuple to process triggers in the right context.
-        Args:
-            _model (object): The currently processed model
-            _machine (HierarchicalMachine): The machine that should be used to process the event
-            _scope (Tuple): A tuple containing information about the currently scoped object, states an transitions.
-            args and kwargs: Optional positional or named arguments that will
-                be passed onto the EventData object, enabling arbitrary state
-                information to be passed on to downstream triggered functions.
-        Returns: boolean indicating whether or not a transition was
-            successfully executed (True if successful, False if not).
-        """
-        if _scope[0] != event_data.machine.scoped:
-            with event_data.machine(_scope):
-                return self._trigger_scoped(event_data)
-        else:
-            return self._trigger_scoped(event_data)
-
-    def _trigger_scoped(self, event_data):
-        """ Internal scope-adjusted trigger function called by the ``NestedEvent._trigger`` instance. This should not
-        be called directly.
-        Args:
-            _model (object): The currently processed model
-            _machine (HierarchicalMachine): The machine that should be used to process the event
-            args and kwargs: Optional positional or named arguments that will
-                be passed onto the EventData object, enabling arbitrary state
-                information to be passed on to downstream triggered functions.
-        Returns: boolean indicating whether or not a transition was
-            successfully executed (True if successful, False if not).
-        """
-        machine = event_data.machine
         model = event_data.model
         state_tree = machine.build_state_tree(getattr(model, machine.model_attribute), machine.state_cls.separator)
         state_tree = reduce(dict.get, machine.get_global_name(join=False), state_tree)
@@ -854,10 +811,14 @@ class HierarchicalMachine(Machine):
         """
         event_data = EventData(state=None, event=None, machine=self, model=_model, args=args, kwargs=kwargs)
         event_data.result = None
+
+        return self._process(partial(self._trigger_event, event_data, _trigger))
+
+    def _trigger_event(self, event_data, trigger):
         try:
             with self():
-                res = self._trigger_event(event_data, _trigger, None)
-            event_data.result = self._check_event_result(res, _model, _trigger)
+                res = self._trigger_event_nested(event_data, trigger, None)
+            event_data.result = self._check_event_result(res, event_data.model, trigger)
         except Exception as err:
             event_data.error = err
             if self.on_exception:
@@ -1061,7 +1022,7 @@ class HierarchicalMachine(Machine):
             a_state = self.get_state(state_name)
             return a_state.value if isinstance(a_state.value, Enum) else state_name
 
-    def _trigger_event(self, event_data, trigger, _state_tree):
+    def _trigger_event_nested(self, event_data, trigger, _state_tree):
         model = event_data.model
         if _state_tree is None:
             _state_tree = self.build_state_tree(listify(getattr(model, self.model_attribute)),
@@ -1070,7 +1031,7 @@ class HierarchicalMachine(Machine):
         for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    tmp = self._trigger_event(event_data, trigger, value)
+                    tmp = self._trigger_event_nested(event_data, trigger, value)
                     if tmp is not None:
                         res[key] = tmp
             if res.get(key, False) is False and trigger in self.events:

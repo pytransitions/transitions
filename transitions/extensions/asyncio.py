@@ -252,29 +252,6 @@ class NestedAsyncEvent(NestedEvent):
             successfully executed (True if successful, False if not).
         """
         machine = event_data.machine
-        func = partial(self._trigger, event_data,
-                       (machine.scoped, machine.states, machine.events, machine.prefix_path))
-
-        return await machine.process_context(func, event_data.model)
-
-    async def _trigger(self, _event_data, _scope):
-        """ Internal trigger function called by the ``HierarchicalMachine`` instance. This should not
-        be called directly but via the public method ``HierarchicalMachine.process``. In contrast to
-        the inherited ``Event._trigger``, this requires a scope tuple to process triggers in the right context.
-        Args:
-            _event_data (EventData): The currently processed event
-            _scope (Tuple): A tuple containing information about the currently scoped object, states an transitions.
-        Returns: boolean indicating whether or not a transition was
-            successfully executed (True if successful, False if not).
-        """
-        if _scope[0] != _event_data.machine.scoped:
-            with _event_data.machine(_scope):
-                return await self._trigger_scoped(_event_data)
-        else:
-            return await self._trigger_scoped(_event_data)
-
-    async def _trigger_scoped(self, event_data):
-        machine = event_data.machine
         model = event_data.model
         state_tree = machine.build_state_tree(getattr(model, machine.model_attribute), machine.state_cls.separator)
         state_tree = reduce(dict.get, machine.get_global_name(join=False), state_tree)
@@ -539,10 +516,14 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
         """
         event_data = EventData(state=None, event=None, machine=self, model=_model, args=args, kwargs=kwargs)
         event_data.result = None
+
+        return await self.process_context(partial(self._trigger_event, event_data, _trigger), _model)
+
+    async def _trigger_event(self, event_data, trigger):
         try:
             with self():
-                res = await self._trigger_event(event_data, _trigger, None)
-            event_data.result = self._check_event_result(res, _model, _trigger)
+                res = await self._trigger_event_nested(event_data, trigger, None)
+            event_data.result = self._check_event_result(res, event_data.model, trigger)
         except Exception as err:
             event_data.error = err
             if self.on_exception:
@@ -560,7 +541,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                               str(err))
         return event_data.result
 
-    async def _trigger_event(self, event_data, _trigger, _state_tree):
+    async def _trigger_event_nested(self, event_data, _trigger, _state_tree):
         model = event_data.model
         if _state_tree is None:
             _state_tree = self.build_state_tree(listify(getattr(model, self.model_attribute)),
@@ -569,7 +550,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
         for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    tmp = await self._trigger_event(event_data, _trigger, value)
+                    tmp = await self._trigger_event_nested(event_data, _trigger, value)
                     if tmp is not None:
                         res[key] = tmp
             if not res.get(key, None) and _trigger in self.events:
