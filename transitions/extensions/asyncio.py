@@ -24,7 +24,7 @@ import copy
 
 from ..core import State, Condition, Transition, EventData, listify
 from ..core import Event, MachineError, Machine
-from .nesting import HierarchicalMachine, NestedState, NestedEvent, NestedTransition, _resolve_order
+from .nesting import HierarchicalMachine, NestedState, NestedEvent, NestedTransition, resolve_order
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -127,7 +127,7 @@ class AsyncTransition(Transition):
     async def execute(self, event_data):
         """ Executes the transition.
         Args:
-            event_data: An instance of class EventData.
+            event_data (EventData): An instance of class EventData.
         Returns: boolean indicating whether or not the transition was
             successfully executed (True if successful, False if not).
         """
@@ -214,7 +214,7 @@ class AsyncEvent(Event):
         state = self.machine.get_state(getattr(model, self.machine.model_attribute))
         event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
         try:
-            if self._is_valid_trigger(state):
+            if self._is_valid_source(state):
                 await self._process(event_data)
         except Exception as err:
             event_data.error = err
@@ -255,7 +255,7 @@ class NestedAsyncEvent(NestedEvent):
         model = event_data.model
         state_tree = machine.build_state_tree(getattr(model, machine.model_attribute), machine.state_cls.separator)
         state_tree = reduce(dict.get, machine.get_global_name(join=False), state_tree)
-        ordered_states = _resolve_order(state_tree)
+        ordered_states = resolve_order(state_tree)
         done = set()
         event_data.event = self
         for state_path in ordered_states:
@@ -561,7 +561,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
 
     async def _can_trigger(self, model, trigger, *args, **kwargs):
         state_tree = self.build_state_tree(getattr(model, self.model_attribute), self.state_cls.separator)
-        ordered_states = _resolve_order(state_tree)
+        ordered_states = resolve_order(state_tree)
         for state_path in ordered_states:
             with self():
                 return await self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)

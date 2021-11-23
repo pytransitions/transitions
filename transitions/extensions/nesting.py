@@ -31,7 +31,7 @@ def _build_state_list(state_tree, separator, prefix=[]):
 
 # custom breadth-first tree exploration
 # makes sure that ALL children are evaluated before parents in parallel states
-def _resolve_order(state_tree):
+def resolve_order(state_tree):
     s = state_tree
     q = []
     res = []
@@ -92,18 +92,12 @@ class NestedEvent(Event):
 
     def trigger(self, event_data):
         """ Executes all transitions that match the current state,
-        halting as soon as one successfully completes. More precisely, it prepares a partial
-        of the internal ``_trigger`` function, passes this to ``machine._process``.
+        halting as soon as one successfully completes.
         It is up to the machine's configuration of the Event whether processing happens queued (sequentially) or
         whether further Events are processed as they occur. NOTE: This should only
         be called by HierarchicalMachine instances.
         Args:
-            _model (object): The currently processed model
-            _machine (HierarchicalMachine): Since NestedEvents can be used in multiple machine instances, this one
-                                            will be used to determine the current state separator and the current scope.
-            args and kwargs: Optional positional or named arguments that will
-                be passed onto the EventData object, enabling arbitrary state
-                information to be passed on to downstream triggered functions.
+            event_data (EventData): The currently processed event
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
@@ -111,7 +105,7 @@ class NestedEvent(Event):
         model = event_data.model
         state_tree = machine.build_state_tree(getattr(model, machine.model_attribute), machine.state_cls.separator)
         state_tree = reduce(dict.get, machine.get_global_name(join=False), state_tree)
-        ordered_states = _resolve_order(state_tree)
+        ordered_states = resolve_order(state_tree)
         done = set()
         event_data.event = self
         for state_path in ordered_states:
@@ -233,7 +227,7 @@ class NestedTransition(Transition):
         scoped_tree = reduce(dict.get, scope + root, state_tree)
         exit_partials = [partial(machine.get_state(root + state_name).scoped_exit,
                                  event_data, scope + root + state_name[:-1])
-                         for state_name in _resolve_order(scoped_tree)]
+                         for state_name in resolve_order(scoped_tree)]
         if dst_name_path:
             new_states, enter_partials = self._enter_nested(root, dst_name_path, scope + root, event_data)
         else:
@@ -681,7 +675,7 @@ class HierarchicalMachine(Machine):
 
     def _can_trigger(self, model, trigger, *args, **kwargs):
         state_tree = self.build_state_tree(getattr(model, self.model_attribute), self.state_cls.separator)
-        ordered_states = _resolve_order(state_tree)
+        ordered_states = resolve_order(state_tree)
         for state_path in ordered_states:
             with self():
                 return self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)

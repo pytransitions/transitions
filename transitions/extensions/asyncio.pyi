@@ -1,5 +1,5 @@
 from ..core import Condition as Condition, Event as Event, EventData as EventData, Machine as Machine, MachineError as MachineError, State as State, Transition as Transition, listify as listify
-from .nesting import HierarchicalMachine as HierarchicalMachine, NestedEvent as NestedEvent, NestedState as NestedState, NestedTransition as NestedTransition, _resolve_order as _resolve_order
+from .nesting import HierarchicalMachine as HierarchicalMachine, NestedEvent as NestedEvent, NestedState as NestedState, NestedTransition as NestedTransition
 from typing import Any, Optional, List, Type, Dict, Deque, Callable, Union, Iterable
 from asyncio import Task
 from logging import Logger
@@ -37,8 +37,7 @@ class AsyncEvent(Event):
     async def _process(self, event_data: EventData) -> bool: ...
 
 class NestedAsyncEvent(NestedEvent):
-    async def trigger(self, _model: object, _machine: HierarchicalAsyncMachine, *args, **kwargs) -> bool: ...
-    async def _trigger(self, _model: object, _machine: HierarchicalAsyncMachine, *args, **kwargs) -> bool: ...
+    async def trigger(self, event_data: EventData) -> bool: ...
     async def _process(self, event_data: EventData) -> bool: ...
 
 class AsyncMachine(Machine):

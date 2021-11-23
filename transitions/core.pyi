@@ -1,4 +1,5 @@
 from logging import Logger
+from functools import partial
 from typing import Any, Optional, Callable, Union, Iterable, List, Dict, DefaultDict, Type, Deque, OrderedDict, Tuple
 
 try:
@@ -24,7 +25,7 @@ def _prep_ordered_arg(desired_length: int, arguments: CallbacksArg) -> CallbackL
 
 class State:
     dynamic_methods: List[str]
-    _name: str
+    _name: Union[str, Enum]
     ignore_invalid_triggers: bool
     on_enter: CallbackList
     on_exit: CallbackList
@@ -70,17 +71,17 @@ class Transition:
 TransitionConfig = Union[List[str], Dict[str, Any], Transition]
 
 class EventData:
-    state: State
-    event: Event
-    machine: Machine
+    state: Optional[State]
+    event: Optional[Event]
+    machine: Optional[Machine]
     model: object
-    args: List[Any]
+    args: Tuple[Any]
     kwargs: Dict[str, Any]
-    transition: Transition
-    error: Exception
-    result: bool
-    def __init__(self, state: State, event: Event, machine: Machine, model: object,
-                 args: List[Any], kwargs: Dict[str, Any]) -> None: ...
+    transition: Optional[Transition]
+    error: Optional[Exception]
+    result: Optional[bool]
+    def __init__(self, state: Optional[State], event: Optional[Event], machine: Machine, model: object,
+                 args: Tuple[Any], kwargs: Dict[str, Any]) -> None: ...
     def update(self, state: Union[State, str, Enum]) -> None: ...
     def __repr__(self) -> str: ...
 
@@ -93,6 +94,7 @@ class Event:
     def trigger(self, model: object, *args, **kwargs) -> bool: ...
     def _trigger(self, model: object, *args, **kwargs) -> bool: ...
     def _process(self, event_data: EventData) -> bool: ...
+    def _is_valid_source(self, state: State) -> bool: ...
     def __repr__(self) -> str: ...
     def add_callback(self, trigger: str, func: Callback) -> None: ...
 
@@ -105,13 +107,13 @@ class Machine:
     event_cls: Type[Event]
     self_literal: str
     _queued: bool
-    _transition_queue: Deque[Callable]
+    _transition_queue: Deque[partial]
     _before_state_change: CallbackList
     _after_state_change: CallbackList
     _prepare_event: CallbackList
     _finalize_event: CallbackList
     _on_exception: CallbackList
-    _initial: str
+    _initial: Optional[str]
     states: OrderedDict[str, State]
     events: Dict[str, Event]
     send_event: bool
@@ -180,7 +182,7 @@ class Machine:
     def _checked_assignment(self, model: object, name: str, func: Callable) -> None: ...
     def _add_trigger_to_model(self, trigger: str, model: object) -> None: ...
     def _get_trigger(self, model: object, trigger_name: str, *args, **kwargs) -> bool: ...
-    def get_triggers(self, *args: List[StateIdentifier]) -> List[str]: ...
+    def get_triggers(self, *args) -> List[str]: ...
     def add_transition(self, trigger: str,
                        source: Union[StateIdentifier, List[StateIdentifier]],
                        dest: StateIdentifier, conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
@@ -196,12 +198,12 @@ class Machine:
                         source: StateIdentifier = ..., dest: StateIdentifier = ...) -> List[Transition]: ...
     def remove_transition(self, trigger: str, source: str = ..., dest: str = ...) -> None: ...
     def dispatch(self, trigger: str, *args, **kwargs) -> bool: ...
-    def callbacks(self, funcs: List[Union[str, Callable]], event_data: EventData) -> None: ...
+    def callbacks(self, funcs: Iterable[Union[str, Callable]], event_data: EventData) -> None: ...
     def callback(self, func: Union[str, Callable], event_data: EventData) -> None: ...
     @staticmethod
     def resolve_callable(func: Union[str, Callable], event_data: EventData): ...
     def _has_state(self, state: StateIdentifier, raise_error: bool = ...) -> bool: ...
-    def _process(self, trigger: Callable) -> bool: ...
+    def _process(self, trigger: partial) -> bool: ...
     @classmethod
     def _identify_callback(cls, name: str) -> Tuple[Optional[str], Optional[str]]: ...
     def __getattr__(self, name: str) -> Any: ...

@@ -3,8 +3,24 @@ from .diagrams import GraphMachine, TransitionGraphSupport
 from .locking import LockedMachine
 from .markup import MarkupMachine
 from .nesting import HierarchicalMachine, NestedEvent, NestedTransition
-from transitions.extensions.asyncio import AsyncMachine, AsyncTransition,HierarchicalAsyncMachine ,NestedAsyncTransition
 from typing import Type, Dict, Tuple, Callable
+
+try:
+    from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
+    from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
+except (ImportError, SyntaxError):
+    class AsyncMachine:  # Mocks for Python version 3.6 and earlier
+        pass
+
+    class AsyncTransition:
+        pass
+
+    class HierarchicalAsyncMachine:
+        pass
+
+    class NestedAsyncTransition:
+        pass
+
 
 class MachineFactory:
     @staticmethod
