@@ -2,4 +2,4 @@
     to determine transitions' version during runtime.
 """
 
-__version__ = '0.8.10'
+__version__ = '0.9.0'
