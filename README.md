@@ -984,7 +984,7 @@ lump.state
 >>> 'liquid'
 ```
 
-Here you get to consolidate all state machine functionality into your existing model, which often feels more natural way than sticking all of the functionality we want in a separate standalone `Machine` instance.
+Here you get to consolidate all state machine functionality into your existing model, which often feels more natural than sticking all of the functionality we want in a separate standalone `Machine` instance.
 
 A machine can handle multiple models which can be passed as a list like `Machine(model=[model1, model2, ...])`.
 In cases where you want to add models *as well as* the machine instance itself, you can pass the class variable placeholder (string) `Machine.self_literal` during initialization like `Machine(model=[Machine.self_literal, model1, ...])`.
@@ -1253,8 +1253,8 @@ Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a m
 
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
-Transitions includes an extension module which allows to nest states.
-This allows to create contexts and to model cases where states are related to certain subtasks in the state machine.
+Transitions includes an extension module which allows nesting states.
+This allows us to create contexts and to model cases where states are related to certain subtasks in the state machine.
 To create a nested state, either import `NestedState` from transitions or use a dictionary with the initialization arguments `name` and `children`.
 Optionally, `initial` can be used to define a sub state to transit to, when the nested state is entered.
 
@@ -1330,7 +1330,7 @@ If a transition is not known to the current state it will be delegated to its pa
 **This means that in the standard configuration, state names in HSMs MUST NOT contain underscores.**
 For `transitions` it's impossible to tell whether `machine.add_state('state_name')` should add a state named `state_name` or add a substate `name` to the state `state`.
 In some cases this is not sufficient however.
-For instance if state names consists of more than one word and you want/need to use underscore to separate them instead of `CamelCase`.
+For instance if state names consist of more than one word and you want/need to use underscore to separate them instead of `CamelCase`.
 To deal with this, you can change the character used for separation quite easily.
 You can even use fancy unicode characters if you use Python 3.
 Setting the separator to something else than underscore changes some of the behaviour (auto_transition and setting callbacks) though:
@@ -1514,7 +1514,7 @@ As mentioned above, using `remap` will **copy** events and transitions since the
 If a reused state machine does not have a final state, you can of course add the transitions manually.
 If 'counter' had no 'done' state, we could just add `['done', 'counter_3', 'waiting']` to achieve the same behaviour.
 
-In cases where you want states and transitions to be copied by value rather than reference (for instance, if you want to keep the pre-0.8 behaviour) you can do so by creating a `NestedState` and assign deep copies of the machine's events and states to it.
+In cases where you want states and transitions to be copied by value rather than reference (for instance, if you want to keep the pre-0.8 behaviour) you can do so by creating a `NestedState` and assigning deep copies of the machine's events and states to it.
 
 ```python
 from transitions.extensions.nesting import NestedState
@@ -1699,7 +1699,7 @@ asyncio.get_event_loop().run_until_complete(asyncio.gather(m2.go(), m1.go()))
 assert m1.state == m2.state
 ```
 
-This example illustrates actually two things:
+This example actually illustrates two things:
 First, that 'go' called in m1's transition from `A` to be `B` is not cancelled and second, calling `m2.fix()` will
 halt the transition attempt of m2 from `A` to `B` by executing 'fix' from `A` to `C`.
 This separation would not be possible without `contextvars`.
@@ -1708,7 +1708,7 @@ This means that after `conditions` have been evaluated, a transition is executed
 Tasks will only be cancelled when run as a `before` callback or later.
 
 `AsyncMachine` features a model-special queue mode which can be used when `queued='model'` is passed to the constructor.
-With model-specific queue, events will only be queued when they belong to the same model.
+With a model-specific queue, events will only be queued when they belong to the same model.
 Furthermore, a raised exception will only clear the event queue of the model that raised that exception.
 For the sake of simplicity, let's assume that every event in `asyncion.gather` below is not triggered at the same time but slightly delayed:
 
@@ -1796,7 +1796,7 @@ Currently, transitions comes equipped with the following state features:
     
 * **Volatile** -- initialises an object every time a state is entered
     - keyword: `volatile` (class, optional) -- every time the state is entered an object of type class will be assigned to the model. The attribute name is defined by `hook`. If omitted, an empty VolatileObject will be created instead
-    - keyword: `hook` (string, default='scope') -- The model's attribute name fore the temporal object.
+    - keyword: `hook` (string, default='scope') -- The model's attribute name for the temporal object.
 
 You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit`. Your extension may inherit from *State* but will also work without it.
 Using `@add_state_features` has a drawback which is that decorated machines cannot be pickled (more precisely, the dynamically generated `CustomState` cannot be pickled).
