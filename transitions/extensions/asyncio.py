@@ -32,36 +32,29 @@ _LOGGER.addHandler(logging.NullHandler())
 
 
 class AsyncState(State):
-    """A persistent representation of a state managed by a ``Machine``. Callback execution is done asynchronously.
-
-    Attributes:
-        name (str): State name which is also assigned to the model(s).
-        on_enter (list): Callbacks awaited when a state is entered.
-        on_exit (list): Callbacks awaited when a state is entered.
-        ignore_invalid_triggers (bool): Indicates if unhandled/invalid triggers should raise an exception.
-    """
+    """ A persistent representation of a state managed by a ``Machine``. Callback execution is done asynchronously. """
 
     async def enter(self, event_data):
-        """ Triggered when a state is entered. """
+        """ Triggered when a state is entered.
+        Args:
+            event_data: (AsyncEventData): The currently processed event.
+        """
         _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
         await event_data.machine.callbacks(self.on_enter, event_data)
         _LOGGER.info("%sFinished processing state %s enter callbacks.", event_data.machine.name, self.name)
 
     async def exit(self, event_data):
-        """ Triggered when a state is exited. """
+        """ Triggered when a state is exited.
+        Args:
+            event_data: (AsyncEventData): The currently processed event.
+        """
         _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
         await event_data.machine.callbacks(self.on_exit, event_data)
         _LOGGER.info("%sFinished processing state %s exit callbacks.", event_data.machine.name, self.name)
 
 
 class NestedAsyncState(NestedState, AsyncState):
-    """ A state that allows substates. Callback execution is done asynchronously.
-    Attributes:
-        states (OrderedDict): A list of substates of the current state.
-        events (dict): A list of events defined for the nested state.
-        initial (str): Name of a child which should be entered when the state is entered.
-        exit_stack (defaultdict): A list of currently active substates
-    """
+    """ A state that allows substates. Callback execution is done asynchronously. """
 
     async def scoped_enter(self, event_data, scope=None):
         self._scope = scope or []
@@ -75,14 +68,7 @@ class NestedAsyncState(NestedState, AsyncState):
 
 
 class AsyncCondition(Condition):
-    """ A helper class to await condition checks in the intended way.
-
-    Attributes:
-        func (callable): The function to call for the condition check
-        target (bool): Indicates the target state--i.e., when True,
-                the condition-checking callback should return True to pass,
-                and when False, the callback should return False to pass.
-    """
+    """ A helper class to await condition checks in the intended way. """
 
     async def check(self, event_data):
         """ Check whether the condition passes.
@@ -101,19 +87,7 @@ class AsyncCondition(Condition):
 
 
 class AsyncTransition(Transition):
-    """ Representation of an asynchronous transition managed by a ``AsyncMachine`` instance.
-
-    Attributes:
-        source (str): Source state of the transition.
-        dest (str): Destination state of the transition.
-        prepare (list): Callbacks executed before conditions checks.
-        conditions (list): Callbacks evaluated to determine if
-            the transition should be executed.
-        before (list): Callbacks executed before the transition is executed
-            but only if condition checks have been successful.
-        after (list): Callbacks executed after the transition is executed
-            but only if condition checks have been successful.
-    """
+    """ Representation of an asynchronous transition managed by a ``AsyncMachine`` instance. """
 
     condition_cls = AsyncCondition
 
@@ -168,19 +142,7 @@ class AsyncTransition(Transition):
 
 
 class NestedAsyncTransition(AsyncTransition, NestedTransition):
-    """ Representation of an asynchronous transition managed by a ``HierarchicalMachine`` instance.
-
-    Attributes:
-        source (str): Source state of the transition.
-        dest (str): Destination state of the transition.
-        prepare (list): Callbacks executed before conditions checks.
-        conditions (list): Callbacks evaluated to determine if
-            the transition should be executed.
-        before (list): Callbacks executed before the transition is executed
-            but only if condition checks have been successful.
-        after (list): Callbacks executed after the transition is executed
-            but only if condition checks have been successful.
-    """
+    """ Representation of an asynchronous transition managed by a ``HierarchicalMachine`` instance. """
     async def _change_state(self, event_data):
         if hasattr(event_data.machine, "model_graphs"):
             graph = event_data.machine.model_graphs[id(event_data.model)]
@@ -192,6 +154,10 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
         self._update_model(event_data, state_tree)
         for func in enter_partials:
             await func()
+
+
+class AsyncEventData(EventData):
+    pass
 
 
 class AsyncEvent(Event):
@@ -212,7 +178,7 @@ class AsyncEvent(Event):
 
     async def _trigger(self, model, *args, **kwargs):
         state = self.machine.get_state(getattr(model, self.machine.model_attribute))
-        event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
+        event_data = AsyncEventData(state, self, self.machine, model, args=args, kwargs=kwargs)
         try:
             if self._is_valid_source(state):
                 await self._process(event_data)
@@ -400,7 +366,7 @@ class AsyncMachine(Machine):
         This function is called by an `AsyncEvent` to make callbacks processed in Event._trigger cancellable.
         Using asyncio this will result in a try-catch block catching CancelledEvents.
         Args:
-            func (callable): The partial of Event._trigger with all parameters already assigned
+            func (partial): The partial of Event._trigger with all parameters already assigned
             model (object): The currently processed model
 
         Returns:
@@ -413,7 +379,7 @@ class AsyncMachine(Machine):
             else:
                 self.async_tasks[id(model)] = [asyncio.current_task()]
             try:
-                res = await self._process(func, model)
+                res = await self._process_async(func, model)
             except asyncio.CancelledError:
                 res = False
             finally:
@@ -421,7 +387,7 @@ class AsyncMachine(Machine):
                 if len(self.async_tasks[id(model)]) == 0:
                     del self.async_tasks[id(model)]
         else:
-            res = await self._process(func, model)
+            res = await self._process_async(func, model)
         return res
 
     def remove_model(self, model):
@@ -443,7 +409,7 @@ class AsyncMachine(Machine):
             self._transition_queue.extend(new_queue)
 
     async def _can_trigger(self, model, trigger, *args, **kwargs):
-        e = EventData(None, None, self, model, args, kwargs)
+        e = AsyncEventData(None, None, self, model, args, kwargs)
         state = self.get_model_state(model).name
 
         for trigger_name in self.get_triggers(state):
@@ -460,7 +426,10 @@ class AsyncMachine(Machine):
                     return True
         return False
 
-    async def _process(self, trigger, model):
+    def _process(self, trigger):
+        raise RuntimeError("AsyncMachine should not call `Machine._process`. Use `Machine._process_async` instead.")
+
+    async def _process_async(self, trigger, model):
         # default processing
         if not self.has_queue:
             if not self._transition_queue:
@@ -567,7 +536,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                 return await self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
 
     async def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
-        e = EventData(None, None, self, model, args, kwargs)
+        e = AsyncEventData(None, None, self, model, args, kwargs)
         if trigger in self.events:
             source_path = copy.copy(path)
             while source_path:
