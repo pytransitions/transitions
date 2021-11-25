@@ -295,12 +295,13 @@ class NestedTransition(Transition):
     # Prevent deep copying of callback lists since these include either references to callable or
     # strings. Deep copying a method reference would lead to the creation of an entire new (model) object
     # (see https://github.com/pytransitions/transitions/issues/248)
+    # TODO: When conditions are handled like other dynamic callbacks the key == "conditions" clause can be removed
     def __deepcopy__(self, memo):
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
         for key, value in self.__dict__.items():
-            if key in cls.dynamic_methods:
+            if key in cls.dynamic_methods or key == "conditions":
                 setattr(result, key, copy.copy(value))
             else:
                 setattr(result, key, copy.deepcopy(value, memo))

@@ -403,3 +403,28 @@ class TestReuse(TestCase):
         machine = MainMachine()
         machine.go()
         assert machine.is_done()
+
+    def test_reuse_callback_copy(self):
+
+        selfs = []
+
+        class Model(object):
+
+            def check_self(self):
+                selfs.append(self)
+                return True
+
+        m = Model()
+
+        transitions = [
+            {"trigger": "go", "source": "A", "dest": "B",
+             "conditions": m.check_self, "prepare": m.check_self, "before": m.check_self, "after": m.check_self}
+        ]
+
+        child = self.machine_cls(None, states=["A", "B"], transitions=transitions, initial="A")
+        parent = self.machine_cls(m, states=[{"name": "P", "states": child, "remap": {}}], initial="P")
+        m.go()
+        self.assertEqual("P_B", m.state)
+        # selfs should only contain references to the same model. If the set is larger than one this means
+        # that at some poin the model was falsely copied.
+        self.assertEqual(1, len(set(selfs)))
