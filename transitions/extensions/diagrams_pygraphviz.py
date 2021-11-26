@@ -7,25 +7,17 @@
 """
 
 import logging
+import pygraphviz as pgv
 
 from .nesting import NestedState
 from .diagrams import BaseGraph
-import pygraphviz as pgv
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
 
-# this is a workaround for dill issues when partials and super is used in conjunction
-# without it, Python 3.0 - 3.3 will not support pickling
-# https://github.com/pytransitions/transitions/issues/236
-_super = super
-
 
 class Graph(BaseGraph):
-    """ Graph creation for transitions.core.Machine.
-        Attributes:
-            machine (object): Reference to the related machine.
-    """
+    """ Graph creation for transitions.core.Machine. """
 
     def _add_nodes(self, states, container):
         for state in states:
@@ -124,7 +116,7 @@ class NestedGraph(Graph):
 
     def __init__(self, *args, **kwargs):
         self.seen_transitions = []
-        _super(NestedGraph, self).__init__(*args, **kwargs)
+        super(NestedGraph, self).__init__(*args, **kwargs)
 
     def _add_nodes(self, states, container, prefix='', default_style='default'):
         for state in states:
@@ -239,16 +231,15 @@ def _get_subgraph(graph, name):
 # the official copy method does not close the file handle
 # which causes ResourceWarnings
 def _copy_agraph(graph):
-    from tempfile import TemporaryFile
+    from tempfile import TemporaryFile  # pylint: disable=import-outside-toplevel; Only required for special cases
 
-    fh = TemporaryFile()
-    if hasattr(fh, "file"):
-        fhandle = fh.file
-    else:
-        fhandle = fh
-
-    graph.write(fhandle)
-    fh.seek(0)
-    res = graph.__class__(filename=fhandle)
-    fhandle.close()
+    with TemporaryFile() as tmp:
+        if hasattr(tmp, "file"):
+            fhandle = tmp.file
+        else:
+            fhandle = tmp
+        graph.write(fhandle)
+        tmp.seek(0)
+        res = graph.__class__(filename=fhandle)
+        fhandle.close()
     return res

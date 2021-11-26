@@ -1,13 +1,27 @@
-from six import string_types, iteritems
+"""
+    transitions.extensions.markup
+    -----------------------------
+
+    This module extends machines with markup functionality that can be used to retrieve the current machine
+    configuration as a dictionary. This is used as the foundation for diagram generation with Graphviz but can
+    also be used to store and transfer machines.
+"""
+
 from functools import partial
-import itertools
 import importlib
+import itertools
+import numbers
+
+from six import string_types, iteritems
 
 from ..core import Machine, Enum
-import numbers
+from .nesting import HierarchicalMachine
 
 
 class MarkupMachine(Machine):
+    """ Extends transitions.core.Machine with the capability to generate a dictionary representation of itself,
+    its events, states and models.
+    """
 
     # Special attributes such as NestedState._name/_parent or Transition._condition are handled differently
     state_attributes = ['on_exit', 'on_enter', 'ignore_invalid_triggers', 'timeout', 'on_timeout', 'tags', 'label']
@@ -19,10 +33,11 @@ class MarkupMachine(Machine):
         self._needs_update = True
 
         if self._markup:
-            models_markup = self._markup.pop('models', [])
+            # remove models from config to process them AFTER the base machine has been initialized
+            models = self._markup.pop('models', [])
             super(MarkupMachine, self).__init__(None, **self._markup)
-            for m in models_markup:
-                self._add_markup_model(m)
+            for mod in models:
+                self._add_markup_model(mod)
         else:
             super(MarkupMachine, self).__init__(*args, **kwargs)
             self._markup['before_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
@@ -36,21 +51,31 @@ class MarkupMachine(Machine):
 
     @property
     def auto_transitions_markup(self):
+        """ Whether auto transitions should be included in the markup. """
         return self._auto_transitions_markup
 
     @auto_transitions_markup.setter
     def auto_transitions_markup(self, value):
+        """ Whether auto transitions should be included in the markup. """
         self._auto_transitions_markup = value
         self._needs_update = True
 
     @property
     def markup(self):
+        """ Returns the machine's configuration as a markup dictionary.
+        Returns:
+            dict of machine configuration parameters.
+        """
         self._markup['models'] = self._convert_models()
         return self.get_markup_config()
 
     # the only reason why this not part of markup property is that pickle
     # has issues with properties during __setattr__ (self.markup is not set)
     def get_markup_config(self):
+        """ Generates and returns all machine markup parameters except models.
+        Returns:
+            dict of machine configuration parameters.
+        """
         if self._needs_update:
             self._convert_states_and_transitions(self._markup)
             self._needs_update = False
@@ -69,6 +94,10 @@ class MarkupMachine(Machine):
 
     @staticmethod
     def format_references(func):
+        """ Creates a string representation of referenced callbacks.
+        Returns:
+            str that represents a callback reference.
+        """
         try:
             return func.__name__
         except AttributeError:
@@ -159,12 +188,15 @@ class MarkupMachine(Machine):
                 pass
         return False
 
-    @classmethod
     def _identify_callback(self, name):
         callback_type, target = super(MarkupMachine, self)._identify_callback(name)
         if callback_type:
             self._needs_update = True
         return callback_type, target
+
+
+class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine):
+    """ Extends transitions.extensions.nesting.HierarchicalMachine with markup capabilities. """
 
 
 def rep(func, format_references=None):
@@ -177,16 +209,16 @@ def rep(func, format_references=None):
 
 
 def _convert(obj, attributes, format_references):
-    s = {}
+    definition = {}
     for key in attributes:
         val = getattr(obj, key, False)
         if not val:
             continue
         if isinstance(val, string_types):
-            s[key] = val
+            definition[key] = val
         else:
             try:
-                s[key] = [rep(v, format_references) for v in iter(val)]
+                definition[key] = [rep(v, format_references) for v in iter(val)]
             except TypeError:
-                s[key] = rep(val, format_references)
-    return s
+                definition[key] = rep(val, format_references)
+    return definition

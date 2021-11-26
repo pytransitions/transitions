@@ -1,9 +1,8 @@
 from ..core import Machine, State
-from .diagrams import GraphMachine, TransitionGraphSupport
+from .diagrams import GraphMachine, NestedGraphTransition
 from .locking import LockedMachine
-from .markup import MarkupMachine
-from .nesting import HierarchicalMachine, NestedEvent, NestedTransition
-from typing import Type, Dict, Tuple, Callable
+from .nesting import HierarchicalMachine, NestedEvent
+from typing import Type, Dict, Tuple, Callable, Union
 
 try:
     from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
@@ -25,13 +24,7 @@ except (ImportError, SyntaxError):
 class MachineFactory:
     @staticmethod
     def get_predefined(graph: bool = ..., nested: bool = ...,
-                       locked: bool = ..., asyncio: bool = ...) -> Type[Machine]: ...
-
-class NestedGraphTransition(TransitionGraphSupport, NestedTransition): ...
-class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine): ...
-
-class HierarchicalGraphMachine(GraphMachine, HierarchicalMarkupMachine):
-    transition_cls: NestedGraphTransition
+                       locked: bool = ..., asyncio: bool = ...) -> Union[Type[Machine], Type[HierarchicalMachine]]: ...
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
     event_cls: NestedEvent

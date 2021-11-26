@@ -18,11 +18,6 @@ from .diagrams import BaseGraph
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
 
-# this is a workaround for dill issues when partials and super is used in conjunction
-# without it, Python 3.0 - 3.3 will not support pickling
-# https://github.com/pytransitions/transitions/issues/236
-_super = super
-
 
 class Graph(BaseGraph):
     """ Graph creation for transitions.core.Machine.
@@ -31,9 +26,9 @@ class Graph(BaseGraph):
     """
 
     def __init__(self, machine):
-        self.custom_styles = None
+        self.custom_styles = {}
         self.reset_styling()
-        _super(Graph, self).__init__(machine)
+        super(Graph, self).__init__(machine)
 
     def set_previous_transition(self, src, dst):
         self.custom_styles["edge"][src][dst] = "previous"
@@ -121,7 +116,8 @@ class Graph(BaseGraph):
         Generates and saves an image of the state machine using graphviz. Note that `prog` and `args` are only part
         of the signature to mimic `Agraph.draw` and thus allow to easily switch between graph backends.
         Args:
-            filename (str or file descriptor or stream or None): path and name of image output, file descriptor, stream object or None
+            filename (str or file descriptor or stream or None): path and name of image output, file descriptor,
+            stream object or None
             format (str): Optional format of the output file
             prog (str): ignored
             args (str): ignored
@@ -141,10 +137,9 @@ class Graph(BaseGraph):
             graph.render(filename, format=format if format else "png", cleanup=True)
         except (TypeError, AttributeError):
             if format is None:
-                raise ValueError(
-                    "Parameter 'format' must not be None when filename is no valid file path."
-                ) from None
+                raise ValueError("Parameter 'format' must not be None when filename is no valid file path.") from None
             filename.write(graph.pipe(format))
+        return None
 
 
 class NestedGraph(Graph):
@@ -152,12 +147,12 @@ class NestedGraph(Graph):
 
     def __init__(self, *args, **kwargs):
         self._cluster_states = []
-        _super(NestedGraph, self).__init__(*args, **kwargs)
+        super(NestedGraph, self).__init__(*args, **kwargs)
 
     def set_previous_transition(self, src, dst):
         src_name = self._get_global_name(src.split(self.machine.state_cls.separator))
         dst_name = self._get_global_name(dst.split(self.machine.state_cls.separator))
-        _super(NestedGraph, self).set_previous_transition(src_name, dst_name)
+        super(NestedGraph, self).set_previous_transition(src_name, dst_name)
 
     def _add_nodes(self, states, container):
         self._add_nested_nodes(states, container, prefix="", default_style="default")

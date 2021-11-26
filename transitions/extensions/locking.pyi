@@ -7,7 +7,6 @@ from threading import Lock
 from ..core import StateIdentifier, State
 
 _LOGGER: Logger
-_super = super
 
 
 class PicklableLock(ContextManager):

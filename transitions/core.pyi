@@ -8,7 +8,8 @@ try:
 except ImportError:
     # If enum is not available, create dummy classes for type checks
     class Enum:
-        pass
+        name: str
+        value: Any
 
     class EnumMeta:
         pass
@@ -92,7 +93,7 @@ class Event:
     def __init__(self, name: str, machine: Machine) -> None: ...
     def add_transition(self, transition: Transition) -> None: ...
     def trigger(self, model: object, *args, **kwargs) -> bool: ...
-    def _trigger(self, model: object, *args, **kwargs) -> bool: ...
+    def _trigger(self, event_data: EventData) -> bool: ...
     def _process(self, event_data: EventData) -> bool: ...
     def _is_valid_source(self, state: State) -> bool: ...
     def __repr__(self) -> str: ...
@@ -125,7 +126,7 @@ class Machine:
     def __init__(self, model: Optional[Union[Machine.self_literal, object]]=...,
                  states: Optional[List[StateConfig]] = ...,
                  initial: Optional[StateIdentifier] = ...,
-                 transitions: Optional[List[TransitionConfig]] = ..., send_event: bool = ...,
+                 transitions: Optional[Union[TransitionConfig, List[TransitionConfig]]] = ..., send_event: bool = ...,
                  auto_transitions: bool = ..., ordered_transitions: bool = ...,
                  ignore_invalid_triggers: Optional[bool] = ...,
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,

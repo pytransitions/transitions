@@ -2,10 +2,15 @@ from .diagrams import BaseGraph as BaseGraph
 from .nesting import NestedState as NestedState
 from typing import Any, List, Dict, Union, Optional
 from logging import Logger
-from pygraphviz import AGraph
+
+try:
+    from pygraphviz import AGraph
+except ImportError:
+    class AGraph:
+
+        style_attributes: Dict[str, Union[str, Dict[str, Union[str, Dict[str, str]]]]]
 
 _LOGGER: Logger
-_super = super
 
 
 class Graph(BaseGraph):
@@ -22,9 +27,10 @@ class Graph(BaseGraph):
 class NestedGraph(Graph):
     seen_transitions: Any
     def __init__(self, *args, **kwargs) -> None: ...
-    def _add_nodes(self, states: List[Dict[str, str]], container: AGraph, prefix: str = ..., default_style: str = ...) -> None: ...
+    def _add_nodes(self, states: List[Dict[str, Union[str, List[Dict[str, str]]]]],
+                   container: AGraph, prefix: str = ..., default_style: str = ...) -> None: ...
     def _add_edges(self, transitions: List[Dict[str, str]], container: AGraph) -> None: ...
-    def set_node_style(self, state: Dict[str, str], style: str) -> None: ...
+    def set_node_style(self, state: str, style: str) -> None: ...
     def set_previous_transition(self, src: str, dst: str) -> None: ...
 
 def _get_subgraph(graph: AGraph, name: str) -> Optional[AGraph]: ...

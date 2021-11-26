@@ -157,7 +157,7 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
 
 
 class AsyncEventData(EventData):
-    pass
+    """ A redefinition of the base EventData intended to easy type checking. """
 
 
 class AsyncEvent(Event):
@@ -173,16 +173,16 @@ class AsyncEvent(Event):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        func = partial(self._trigger, model, *args, **kwargs)
+        func = partial(self._trigger, EventData(None, self, self.machine, model, args=args, kwargs=kwargs))
         return await self.machine.process_context(func, model)
 
-    async def _trigger(self, model, *args, **kwargs):
-        state = self.machine.get_state(getattr(model, self.machine.model_attribute))
-        event_data = AsyncEventData(state, self, self.machine, model, args=args, kwargs=kwargs)
+    async def _trigger(self, event_data):
+        event_data.state = self.machine.get_state(getattr(event_data.model, self.machine.model_attribute))
         try:
-            if self._is_valid_source(state):
+            if self._is_valid_source(event_data.state):
                 await self._process(event_data)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+            _LOGGER.error("%sException was raised while processing the trigger: %s", self.machine.name, err)
             event_data.error = err
             if self.machine.on_exception:
                 await self.machine.callbacks(self.machine.on_exception, event_data)
@@ -208,12 +208,12 @@ class NestedAsyncEvent(NestedEvent):
     This Event requires a (subclass of) `HierarchicalAsyncMachine`.
     """
 
-    async def trigger(self, event_data):
+    async def trigger_nested(self, event_data):
         """ Serially execute all transitions that match the current state,
         halting as soon as one successfully completes. NOTE: This should only
         be called by HierarchicalMachine instances.
         Args:
-            event_data (EventData): The currently processed event.
+            event_data (AsyncEventData): The currently processed event.
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
@@ -409,7 +409,7 @@ class AsyncMachine(Machine):
             self._transition_queue.extend(new_queue)
 
     async def _can_trigger(self, model, trigger, *args, **kwargs):
-        e = AsyncEventData(None, None, self, model, args, kwargs)
+        evt = AsyncEventData(None, None, self, model, args, kwargs)
         state = self.get_model_state(model).name
 
         for trigger_name in self.get_triggers(state):
@@ -420,9 +420,9 @@ class AsyncMachine(Machine):
                     _ = self.get_state(transition.dest)
                 except ValueError:
                     continue
-                await self.callbacks(self.prepare_event, e)
-                await self.callbacks(transition.prepare, e)
-                if all(await self.await_all([partial(c.check, e) for c in transition.conditions])):
+                await self.callbacks(self.prepare_event, evt)
+                await self.callbacks(transition.prepare, evt)
+                if all(await self.await_all([partial(c.check, evt) for c in transition.conditions])):
                     return True
         return False
 
@@ -466,14 +466,14 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
     transition_cls = NestedAsyncTransition
     event_cls = NestedAsyncEvent
 
-    async def trigger_event(self, _model, _trigger, *args, **kwargs):
+    async def trigger_event(self, model, trigger, *args, **kwargs):
         """ Processes events recursively and forwards arguments if suitable events are found.
         This function is usually bound to models with model and trigger arguments already
         resolved as a partial. Execution will halt when a nested transition has been executed
         successfully.
         Args:
-            _model (object): targeted model
-            _trigger (str): event name
+            model (object): targeted model
+            trigger (str): event name
             *args: positional parameters passed to the event and its callbacks
             **kwargs: keyword arguments passed to the event and its callbacks
         Returns:
@@ -483,17 +483,17 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                           is not True. Note that a transition which is not executed due to conditions
                           is still considered valid.
         """
-        event_data = EventData(state=None, event=None, machine=self, model=_model, args=args, kwargs=kwargs)
+        event_data = AsyncEventData(state=None, event=None, machine=self, model=model, args=args, kwargs=kwargs)
         event_data.result = None
 
-        return await self.process_context(partial(self._trigger_event, event_data, _trigger), _model)
+        return await self.process_context(partial(self._trigger_event, event_data, trigger), model)
 
     async def _trigger_event(self, event_data, trigger):
         try:
             with self():
                 res = await self._trigger_event_nested(event_data, trigger, None)
             event_data.result = self._check_event_result(res, event_data.model, trigger)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.on_exception:
                 await self.callbacks(self.on_exception, event_data)
@@ -503,7 +503,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
             try:
                 await self.callbacks(self.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.name)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.name,
                               type(err).__name__,
@@ -523,7 +523,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                     if tmp is not None:
                         res[key] = tmp
             if not res.get(key, None) and _trigger in self.events:
-                tmp = await self.events[_trigger].trigger(event_data)
+                tmp = await self.events[_trigger].trigger_nested(event_data)
                 if tmp is not None:
                     res[key] = tmp
         return None if not res or all(v is None for v in res.values()) else any(res.values())
@@ -536,7 +536,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                 return await self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
 
     async def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
-        e = AsyncEventData(None, None, self, model, args, kwargs)
+        evt = AsyncEventData(None, None, self, model, args, kwargs)
         if trigger in self.events:
             source_path = copy.copy(path)
             while source_path:
@@ -546,9 +546,9 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                         _ = self.get_state(transition.dest)
                     except ValueError:
                         continue
-                    await self.callbacks(self.prepare_event, e)
-                    await self.callbacks(transition.prepare, e)
-                    if all(await self.await_all([partial(c.check, e) for c in transition.conditions])):
+                    await self.callbacks(self.prepare_event, evt)
+                    await self.callbacks(transition.prepare, evt)
+                    if all(await self.await_all([partial(c.check, evt) for c in transition.conditions])):
                         return True
                 source_path.pop(-1)
         if path:

@@ -20,17 +20,14 @@ import abc
 import six
 
 from transitions import Transition
-from transitions.extensions.markup import MarkupMachine
+from transitions.extensions.markup import MarkupMachine, HierarchicalMarkupMachine
+from transitions.extensions.nesting import NestedTransition
+
 from transitions.core import listify
 
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
-
-# this is a workaround for dill issues when partials and super is used in conjunction
-# without it, Python 3.0 - 3.3 will not support pickling
-# https://github.com/pytransitions/transitions/issues/236
-_super = super
 
 
 class TransitionGraphSupport(Transition):
@@ -40,7 +37,7 @@ class TransitionGraphSupport(Transition):
 
     def __init__(self, *args, **kwargs):
         label = kwargs.pop("label", None)
-        _super(TransitionGraphSupport, self).__init__(*args, **kwargs)
+        super(TransitionGraphSupport, self).__init__(*args, **kwargs)
         if label:
             self.label = label
 
@@ -48,7 +45,7 @@ class TransitionGraphSupport(Transition):
         graph = event_data.machine.model_graphs[id(event_data.model)]
         graph.reset_styling()
         graph.set_previous_transition(self.source, self.dest)
-        _super(TransitionGraphSupport, self)._change_state(
+        super(TransitionGraphSupport, self)._change_state(
             event_data
         )  # pylint: disable=protected-access
         graph = event_data.machine.model_graphs[
@@ -143,7 +140,7 @@ class GraphMachine(MarkupMachine):
         self.graph_cls = self._init_graphviz_engine(kwargs.pop("use_pygraphviz", True))
 
         _LOGGER.debug("Using graph engine %s", self.graph_cls)
-        _super(GraphMachine, self).__init__(*args, **kwargs)
+        super(GraphMachine, self).__init__(*args, **kwargs)
 
         # for backwards compatibility assign get_combined_graph to get_graph
         # if model is not the machine
@@ -151,26 +148,27 @@ class GraphMachine(MarkupMachine):
             setattr(self, "get_graph", self.get_combined_graph)
 
     def _init_graphviz_engine(self, use_pygraphviz):
+        """ Imports diagrams (py)graphviz backend based on machine configuration """
         if use_pygraphviz:
             try:
                 # state class needs to have a separator and machine needs to be a context manager
                 if hasattr(self.state_cls, "separator") and hasattr(self, "__enter__"):
-                    from .diagrams_pygraphviz import (
+                    from .diagrams_pygraphviz import (  # pylint: disable=import-outside-toplevel
                         NestedGraph as Graph,
-                    )  # pylint: disable=import-outside-toplevel
+                    )
 
                     self.machine_attributes.update(self.hierarchical_machine_attributes)
                 else:
-                    from .diagrams_pygraphviz import (
+                    from .diagrams_pygraphviz import (  # pylint: disable=import-outside-toplevel
                         Graph,
-                    )  # pylint: disable=import-outside-toplevel
+                    )
                 return Graph
             except ImportError:
-                pass
+                _LOGGER.warning("%sCould not import pygraphviz backend. Will try graphviz backend next", self.name)
         if hasattr(self.state_cls, "separator") and hasattr(self, "__enter__"):
-            from .diagrams_graphviz import (
+            from .diagrams_graphviz import (  # pylint: disable=import-outside-toplevel
                 NestedGraph as Graph,
-            )  # pylint: disable=import-outside-toplevel
+            )
 
             self.machine_attributes.update(self.hierarchical_machine_attributes)
         else:
@@ -178,6 +176,16 @@ class GraphMachine(MarkupMachine):
         return Graph
 
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
+        """ This method will be bound as a partial to models and return a graph object to be drawn or manipulated.
+        Args:
+            model (object): The model that `_get_graph` was bound to. This parameter will be set by `GraphMachine`.
+            title (str): The title of the created graph.
+            force_new (bool): Whether a new graph should be generated even if another graph already exists. This should
+            be true whenever the model's state or machine's transitions/states/events have changed.
+            show_roi (bool): If set to True, only render states that are active and/or can be reached from
+                the current state.
+        Returns: AGraph (pygraphviz) or Digraph (graphviz) graph instance that can be drawn.
+        """
         if force_new:
             grph = self.graph_cls(self)
             self.model_graphs[id(model)] = grph
@@ -187,11 +195,11 @@ class GraphMachine(MarkupMachine):
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:
-            m = self.model_graphs[id(model)]
+            grph = self.model_graphs[id(model)]
         except KeyError:
             _ = self._get_graph(model, title, force_new=True)
-            m = self.model_graphs[id(model)]
-        return m.get_graph(title=title, roi_state=getattr(model, self.model_attribute) if show_roi else None)
+            grph = self.model_graphs[id(model)]
+        return grph.get_graph(title=title, roi_state=getattr(model, self.model_attribute) if show_roi else None)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
         """ This method is currently equivalent to 'get_graph' of the first machine's model.
@@ -199,10 +207,11 @@ class GraphMachine(MarkupMachine):
         of all models.
         Args:
             title (str): Title of the resulting graph.
-            force_new (bool): If set to True, (re-)generate the model's graph.
+            force_new (bool): Whether a new graph should be generated even if another graph already exists. This should
+            be true whenever the model's state or machine's transitions/states/events have changed.
             show_roi (bool): If set to True, only render states that are active and/or can be reached from
                 the current state.
-        Returns: AGraph of the first machine's model.
+        Returns: AGraph (pygraphviz) or Digraph (graphviz) graph instance that can be drawn.
         """
         _LOGGER.info(
             "Returning graph of the first model. In future releases, this "
@@ -226,7 +235,7 @@ class GraphMachine(MarkupMachine):
         self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs
     ):
         """ Calls the base method and regenerates all models's graphs. """
-        _super(GraphMachine, self).add_states(
+        super(GraphMachine, self).add_states(
             states,
             on_enter=on_enter,
             on_exit=on_exit,
@@ -236,32 +245,28 @@ class GraphMachine(MarkupMachine):
         for model in self.models:
             model.get_graph(force_new=True)
 
-    def add_transition(
-        self,
-        trigger,
-        source,
-        dest,
-        conditions=None,
-        unless=None,
-        before=None,
-        after=None,
-        prepare=None,
-        **kwargs
-    ):
+    def add_transition(self, trigger, source, dest, conditions=None, unless=None, before=None, after=None,
+                       prepare=None, **kwargs):
         """ Calls the base method and regenerates all models's graphs. """
-        _super(GraphMachine, self).add_transition(
-            trigger,
-            source,
-            dest,
-            conditions=conditions,
-            unless=unless,
-            before=before,
-            after=after,
-            prepare=prepare,
-            **kwargs
-        )
+        super(GraphMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
+                                                 before=before, after=after, prepare=prepare, **kwargs)
         for model in self.models:
             model.get_graph(force_new=True)
+
+
+class NestedGraphTransition(TransitionGraphSupport, NestedTransition):
+    """
+        A transition type to be used with (subclasses of) `HierarchicalGraphMachine` and
+        `LockedHierarchicalGraphMachine`.
+    """
+
+
+class HierarchicalGraphMachine(GraphMachine, HierarchicalMarkupMachine):
+    """
+        A hierarchical state machine with graph support.
+    """
+
+    transition_cls = NestedGraphTransition
 
 
 @six.add_metaclass(abc.ABCMeta)

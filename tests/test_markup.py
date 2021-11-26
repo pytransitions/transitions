@@ -4,9 +4,7 @@ except ImportError:
     pass
 
 from transitions.core import Enum
-from transitions.extensions.markup import MarkupMachine, rep
-from transitions.extensions import MachineFactory
-from transitions.extensions.factory import HierarchicalMarkupMachine
+from transitions.extensions.markup import MarkupMachine, HierarchicalMarkupMachine, rep
 from .utils import Stuff
 from functools import partial
 

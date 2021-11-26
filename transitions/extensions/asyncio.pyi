@@ -8,7 +8,6 @@ from enum import Enum
 from contextvars import ContextVar
 
 from ..core import StateIdentifier, CallbacksArg, CallbackList
-from .nesting import StateTree
 
 _LOGGER: Logger
 
@@ -34,7 +33,7 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
     async def _change_state(self, event_data: AsyncEventData) -> None: ...
 
 class AsyncEventData(EventData):
-    machine: AsyncMachine
+    machine: Union[AsyncMachine, HierarchicalAsyncMachine]
     transition: AsyncTransition
     source_name: Optional[str]
     source_path: Optional[List[str]]
@@ -44,17 +43,17 @@ class AsyncEvent(Event):
     transitions: DefaultDict[str, List[AsyncTransition]]
 
     async def trigger(self, model: object, *args, **kwargs) -> bool: ...
-    async def _trigger(self, model: object, *args, **kwargs) -> bool: ...
+    async def _trigger(self, event_data: AsyncEventData) -> bool: ...
     async def _process(self, event_data: AsyncEventData) -> bool: ...
 
 class NestedAsyncEvent(NestedEvent):
     transitions: DefaultDict[str, List[NestedAsyncTransition]]
 
-    async def trigger(self, event_data: AsyncEventData) -> bool: ...
+    async def trigger_nested(self, event_data: AsyncEventData) -> bool: ...
     async def _process(self, event_data: AsyncEventData) -> bool: ...
 
 class AsyncMachine(Machine):
-    state_cls: Type[Union[AsyncState, NestedAsyncState]]
+    state_cls: Type[NestedAsyncState]
     transition_cls: Type[AsyncTransition]
     event_cls: Type[AsyncEvent]
     async_tasks: Dict[int, List[Task]]
@@ -82,7 +81,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
     state_cls: Type[NestedAsyncState]
     transition_cls: Type[NestedAsyncTransition]
     event_cls: Type[NestedAsyncEvent]
-    async def trigger_event(self, _model: object, _trigger: str, *args, **kwargs): ...
+    async def trigger_event(self, model: object, trigger: str, *args, **kwargs): ...
     async def _trigger_event(self, event_data: AsyncEventData, trigger: str) -> bool: ...
 
 

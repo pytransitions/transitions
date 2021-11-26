@@ -11,31 +11,29 @@ from functools import partial
 
 from ..core import Machine
 
-from .nesting import HierarchicalMachine, NestedTransition, NestedEvent
+from .nesting import HierarchicalMachine, NestedEvent
 from .locking import LockedMachine
-from .diagrams import GraphMachine, TransitionGraphSupport
-from .markup import MarkupMachine
+from .diagrams import GraphMachine, NestedGraphTransition, HierarchicalGraphMachine
+
 try:
     from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
     from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
 except (ImportError, SyntaxError):
-    class AsyncMachine:  # Mocks for Python version 3.6 and earlier
-        pass
+    class AsyncMachine:
+        """ A mock of AsyncMachine for Python 3.6 and earlier. """
 
     class AsyncTransition:
-        pass
+        """ A mock of AsyncTransition for Python 3.6 and earlier. """
 
     class HierarchicalAsyncMachine:
-        pass
+        """ A mock of HierarchicalAsyncMachine for Python 3.6 and earlier. """
 
     class NestedAsyncTransition:
-        pass
+        """ A mock of NestedAsyncTransition for Python 3.6 and earlier. """
 
 
 class MachineFactory(object):
-    """
-        Convenience factory for machine class retrieval.
-    """
+    """ Convenience factory for machine class retrieval. """
 
     # get one of the predefined classes which fulfill the criteria
     @staticmethod
@@ -51,27 +49,7 @@ class MachineFactory(object):
         try:
             return _CLASS_MAP[(graph, nested, locked, asyncio)]
         except KeyError:
-            raise ValueError("Feature combination not (yet) supported")
-
-
-class NestedGraphTransition(TransitionGraphSupport, NestedTransition):
-    """
-        A transition type to be used with (subclasses of) `HierarchicalGraphMachine` and
-        `LockedHierarchicalGraphMachine`.
-    """
-    pass
-
-
-class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine):
-    pass
-
-
-class HierarchicalGraphMachine(GraphMachine, HierarchicalMarkupMachine):
-    """
-        A hierarchical state machine with graph support.
-    """
-
-    transition_cls = NestedGraphTransition
+            raise ValueError("Feature combination not (yet) supported") from KeyError
 
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
@@ -113,11 +91,13 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):
 
 
 class AsyncGraphMachine(GraphMachine, AsyncMachine):
+    """ A machine that supports asynchronous event/callback processing with Graphviz support. """
 
     transition_cls = AsyncTransition
 
 
 class HierarchicalAsyncGraphMachine(GraphMachine, HierarchicalAsyncMachine):
+    """ A hierarchical machine that supports asynchronous event/callback processing with Graphviz support. """
 
     transition_cls = NestedAsyncTransition
 
