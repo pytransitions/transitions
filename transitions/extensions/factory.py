@@ -49,7 +49,7 @@ class MachineFactory(object):
         try:
             return _CLASS_MAP[(graph, nested, locked, asyncio)]
         except KeyError:
-            raise ValueError("Feature combination not (yet) supported") from KeyError
+            raise ValueError("Feature combination not (yet) supported")  # from KeyError
 
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):

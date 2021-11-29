@@ -342,7 +342,7 @@ class TestReuse(TestCase):
                 ]
                 states += generic_states
 
-                super().__init__(
+                super(GenericMachine, self).__init__(
                     states=states,
                     transitions=transitions,
                     model=model,
@@ -365,7 +365,7 @@ class TestReuse(TestCase):
                 transitions = [
                     ["go", "initial", "nested"],
                 ]
-                super().__init__(states, transitions, model=self)
+                super(MainMachine, self).__init__(states, transitions, model=self)
 
             def entry_done(self, event_data):
                 print("job finished")
@@ -378,7 +378,7 @@ class TestReuse(TestCase):
                 transitions = [
                     ["go", "initial", "deeper"],
                 ]
-                super().__init__(states, transitions)
+                super(NestedMachine, self).__init__(states, transitions)
 
             def entry_initial(self, event_data):
                 event_data.model.go()
@@ -392,7 +392,7 @@ class TestReuse(TestCase):
                     ["go", "initial", "working"],
                     ["go", "working", "done"],
                 ]
-                super().__init__(states, transitions, model=self)
+                super(DeeperMachine, self).__init__(states, transitions, model=self)
 
             def entry_initial(self, event_data):
                 event_data.model.go()

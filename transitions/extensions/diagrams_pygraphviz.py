@@ -7,7 +7,11 @@
 """
 
 import logging
-import pygraphviz as pgv
+
+try:
+    import pygraphviz as pgv
+except ImportError:
+    pgv = None
 
 from .nesting import NestedState
 from .diagrams import BaseGraph

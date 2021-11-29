@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
     transitions.extensions.nesting
     ------------------------------
@@ -686,7 +687,7 @@ class HierarchicalMachine(Machine):
                 except KeyError:
                     raise ValueError(
                         "State '%s' is not a registered state." % self.state_cls.separator.join(hint)
-                    ) from KeyError
+                    )  # from KeyError
         elif state[0] not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state[0]]

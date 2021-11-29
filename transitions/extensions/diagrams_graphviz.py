@@ -11,7 +11,10 @@ from functools import partial
 from collections import defaultdict
 from os.path import splitext
 
-import graphviz as pgv
+try:
+    import graphviz as pgv
+except ImportError:
+    pgv = None
 
 from .diagrams import BaseGraph
 
@@ -137,7 +140,9 @@ class Graph(BaseGraph):
             graph.render(filename, format=format if format else "png", cleanup=True)
         except (TypeError, AttributeError):
             if format is None:
-                raise ValueError("Parameter 'format' must not be None when filename is no valid file path.") from None
+                raise ValueError(
+                    "Parameter 'format' must not be None when filename is no valid file path."
+                )  # from None
             filename.write(graph.pipe(format))
         return None
 

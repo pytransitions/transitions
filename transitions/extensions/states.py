@@ -85,7 +85,7 @@ class Timeout(State):
             try:
                 self.on_timeout = kwargs.pop('on_timeout')
             except KeyError:
-                raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.") from KeyError
+                raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.")  # from KeyError
         else:
             self._on_timeout = kwargs.pop('on_timeout', [])
         self.runner = {}
