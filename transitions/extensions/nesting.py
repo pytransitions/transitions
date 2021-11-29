@@ -314,7 +314,7 @@ class NestedTransition(Transition):
     # Prevent deep copying of callback lists since these include either references to callable or
     # strings. Deep copying a method reference would lead to the creation of an entire new (model) object
     # (see https://github.com/pytransitions/transitions/issues/248)
-    # TODO: When conditions are handled like other dynamic callbacks the key == "conditions" clause can be removed
+    # Note: When conditions are handled like other dynamic callbacks the key == "conditions" clause can be removed
     def __deepcopy__(self, memo):
         cls = self.__class__
         result = cls.__new__(cls)
@@ -448,114 +448,18 @@ class HierarchicalMachine(Machine):
                 elif isinstance(state.value, dict):
                     state = dict(name=state, **state.value)
             if isinstance(state, string_types):
-                if remap is not None and state in remap:
-                    continue
-                domains = state.split(self.state_cls.separator, 1)
-                if len(domains) > 1:
-                    try:
-                        self.get_state(domains[0])
-                    except ValueError:
-                        self.add_state(domains[0], on_enter=on_enter, on_exit=on_exit,
-                                       ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
-                    with self(domains[0]):
-                        self.add_states(domains[1], on_enter=on_enter, on_exit=on_exit,
-                                        ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
-                else:
-                    if state in self.states:
-                        raise ValueError("State {0} cannot be added since it already exists.".format(state))
-                    new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
-                                                   ignore_invalid_triggers=ignore, **kwargs)
-                    self.states[new_state.name] = new_state
-                    self._init_state(new_state)
+                self._add_string_state(state, on_enter, on_exit, ignore, remap, **kwargs)
             elif isinstance(state, Enum):
-                if self.state_cls.separator in state.name:
-                    raise ValueError("State '{0}' contains '{1}' which is used as state name separator. "
-                                     "Consider changing the NestedState.separator to avoid this issue."
-                                     "".format(state.name, self.state_cls.separator))
-                if remap is not None and state.name in remap:
-                    continue
-                new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
-                                               ignore_invalid_triggers=ignore, **kwargs)
-                if state.name in self.states:
-                    raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
-                self.states[new_state.name] = new_state
-                self._init_state(new_state)
+                self._add_enum_state(state, on_enter, on_exit, ignore, remap, **kwargs)
             elif isinstance(state, dict):
-                if remap is not None and state['name'] in remap:
-                    continue
-                state = state.copy()  # prevent messing with the initially passed dict
-                remap = state.pop('remap', None)
-                if 'ignore_invalid_triggers' not in state:
-                    state['ignore_invalid_triggers'] = ignore
-
-                # parallel: [states] is just a short handle for {children: [states], initial: [state_names]}
-                state_parallel = state.pop('parallel', [])
-                if state_parallel:
-                    state_children = state_parallel
-                    state['initial'] = [s['name'] if isinstance(s, dict)
-                                        else s for s in state_children]
-                else:
-                    state_children = state.pop('children', state.pop('states', []))
-                transitions = state.pop('transitions', [])
-                new_state = self._create_state(**state)
-                self.states[new_state.name] = new_state
-                self._init_state(new_state)
-                remapped_transitions = []
-                with self(new_state.name):
-                    self.add_states(state_children, remap=remap, **kwargs)
-                    if transitions:
-                        self.add_transitions(transitions)
-                    if remap is not None:
-                        drop_event = []
-                        for evt in self.events.values():
-                            self.events[evt.name] = copy.copy(evt)
-                        for trigger, event in self.events.items():
-                            drop_source = []
-                            event.transitions = copy.deepcopy(event.transitions)
-                            for source_name, trans_source in event.transitions.items():
-                                if source_name in remap:
-                                    drop_source.append(source_name)
-                                    continue
-                                drop_trans = []
-                                for trans in trans_source:
-                                    if trans.dest in remap:
-                                        conditions, unless = [], []
-                                        for cond in trans.conditions:
-                                            # split a list in two lists based on the accessors (cond.target) truth value
-                                            (unless, conditions)[cond.target].append(cond.func)
-                                        remapped_transitions.append({
-                                            'trigger': trigger,
-                                            'source': new_state.name + self.state_cls.separator + trans.source,
-                                            'dest': remap[trans.dest],
-                                            'conditions': conditions,
-                                            'unless': unless,
-                                            'prepare': trans.prepare,
-                                            'before': trans.before,
-                                            'after': trans.after})
-                                        drop_trans.append(trans)
-                                for d_trans in drop_trans:
-                                    trans_source.remove(d_trans)
-                                if not trans_source:
-                                    drop_source.append(source_name)
-                            for d_source in drop_source:
-                                del event.transitions[d_source]
-                            if not event.transitions:
-                                drop_event.append(trigger)
-                        for d_event in drop_event:
-                            del self.events[d_event]
-                self.add_transitions(remapped_transitions)
+                self._add_dict_state(state, ignore, remap, **kwargs)
             elif isinstance(state, NestedState):
                 if state.name in self.states:
                     raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
                 self.states[state.name] = state
                 self._init_state(state)
             elif isinstance(state, HierarchicalMachine):
-                new_states = [s for s in state.states.values() if remap is None or s not in remap]
-                self.add_states(new_states)
-                for evt in state.events.values():
-                    self.events[evt.name] = evt
-                if self.scoped.initial is None:
-                    self.scoped.initial = state.initial
+                self._add_machine_states(state, remap)
             elif isinstance(state, State) and not isinstance(state, NestedState):
                 raise ValueError("A passed state object must derive from NestedState! "
                                  "A default State object is not sufficient")
@@ -820,13 +724,13 @@ class HierarchicalMachine(Machine):
         """
         self.get_state(state_name).add_callback('exit', callback)
 
-    def set_state(self, states, model=None):
+    def set_state(self, state, model=None):
         """ Set the current state.
         Args:
-            states (list of str or Enum or State): value of state(s) to be set
+            state (list of str or Enum or State): value of state(s) to be set
             model (optional[object]): targeted model; if not set, all models will be set to 'state'
         """
-        values = [self._set_state(value) for value in listify(states)]
+        values = [self._set_state(value) for value in listify(state)]
         models = self.models if model is None else listify(model)
         for mod in models:
             setattr(mod, self.model_attribute, values if len(values) > 1 else values[0])
@@ -922,6 +826,79 @@ class HierarchicalMachine(Machine):
                     self._add_trigger_to_model(event.name, model)
             for a_state in self.states.values():
                 self._add_model_to_state(a_state, model)
+
+    def _add_dict_state(self, state, ignore_invalid_triggers, remap, **kwargs):
+        if remap is not None and state['name'] in remap:
+            return
+        state = state.copy()  # prevent messing with the initially passed dict
+        remap = state.pop('remap', None)
+        if 'ignore_invalid_triggers' not in state:
+            state['ignore_invalid_triggers'] = ignore_invalid_triggers
+
+        # parallel: [states] is just a short handle for {children: [states], initial: [state_names]}
+        state_parallel = state.pop('parallel', [])
+        if state_parallel:
+            state_children = state_parallel
+            state['initial'] = [s['name'] if isinstance(s, dict)
+                                else s for s in state_children]
+        else:
+            state_children = state.pop('children', state.pop('states', []))
+        transitions = state.pop('transitions', [])
+        new_state = self._create_state(**state)
+        self.states[new_state.name] = new_state
+        self._init_state(new_state)
+        remapped_transitions = []
+        with self(new_state.name):
+            self.add_states(state_children, remap=remap, **kwargs)
+            if transitions:
+                self.add_transitions(transitions)
+            if remap is not None:
+                remapped_transitions.extend(self._remap_state(new_state, remap))
+
+        self.add_transitions(remapped_transitions)
+
+    def _add_enum_state(self, state, on_enter, on_exit, ignore_invalid_triggers, remap, **kwargs):
+        if remap is not None and state.name in remap:
+            return
+        if self.state_cls.separator in state.name:
+            raise ValueError("State '{0}' contains '{1}' which is used as state name separator. "
+                             "Consider changing the NestedState.separator to avoid this issue."
+                             "".format(state.name, self.state_cls.separator))
+        if state.name in self.states:
+            raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
+        new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
+                                       ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+        self.states[new_state.name] = new_state
+        self._init_state(new_state)
+
+    def _add_machine_states(self, state, remap):
+        new_states = [s for s in state.states.values() if remap is None or s not in remap]
+        self.add_states(new_states)
+        for evt in state.events.values():
+            self.events[evt.name] = evt
+        if self.scoped.initial is None:
+            self.scoped.initial = state.initial
+
+    def _add_string_state(self, state, on_enter, on_exit, ignore_invalid_triggers, remap, **kwargs):
+        if remap is not None and state in remap:
+            return
+        domains = state.split(self.state_cls.separator, 1)
+        if len(domains) > 1:
+            try:
+                self.get_state(domains[0])
+            except ValueError:
+                self.add_state(domains[0], on_enter=on_enter, on_exit=on_exit,
+                               ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+            with self(domains[0]):
+                self.add_states(domains[1], on_enter=on_enter, on_exit=on_exit,
+                                ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+        else:
+            if state in self.states:
+                raise ValueError("State {0} cannot be added since it already exists.".format(state))
+            new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
+                                           ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+            self.states[new_state.name] = new_state
+            self._init_state(new_state)
 
     def _add_trigger_to_model(self, trigger, model):
         trig_func = partial(self.trigger_event, model, trigger)
@@ -1069,6 +1046,47 @@ class HierarchicalMachine(Machine):
         else:
             super(HierarchicalMachine, self.__class__).initial.fset(self, value)
         return self._initial[0] if isinstance(self._initial, list) and len(self._initial) == 1 else self._initial
+
+    def _remap_state(self, state, remap):
+        drop_event = []
+        remapped_transitions = []
+        for evt in self.events.values():
+            self.events[evt.name] = copy.copy(evt)
+        for trigger, event in self.events.items():
+            drop_source = []
+            event.transitions = copy.deepcopy(event.transitions)
+            for source_name, trans_source in event.transitions.items():
+                if source_name in remap:
+                    drop_source.append(source_name)
+                    continue
+                drop_trans = []
+                for trans in trans_source:
+                    if trans.dest in remap:
+                        conditions, unless = [], []
+                        for cond in trans.conditions:
+                            # split a list in two lists based on the accessors (cond.target) truth value
+                            (unless, conditions)[cond.target].append(cond.func)
+                        remapped_transitions.append({
+                            'trigger': trigger,
+                            'source': state.name + self.state_cls.separator + trans.source,
+                            'dest': remap[trans.dest],
+                            'conditions': conditions,
+                            'unless': unless,
+                            'prepare': trans.prepare,
+                            'before': trans.before,
+                            'after': trans.after})
+                        drop_trans.append(trans)
+                for d_trans in drop_trans:
+                    trans_source.remove(d_trans)
+                if not trans_source:
+                    drop_source.append(source_name)
+            for d_source in drop_source:
+                del event.transitions[d_source]
+            if not event.transitions:
+                drop_event.append(trigger)
+        for d_event in drop_event:
+            del self.events[d_event]
+        return remapped_transitions
 
     def _resolve_initial(self, models, state_name_path, prefix=None):
         prefix = prefix or []

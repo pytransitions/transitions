@@ -62,7 +62,9 @@ disable=print-statement,parameter-unpacking,unpacking-in-except,old-raise-syntax
     using-cmp-argument,eq-without-hash,div-method,idiv-method,rdiv-method,exception-message-attribute,invalid-str-codec,
     sys-max-int,bad-python3-import,deprecated-string-function,deprecated-str-translate-call,
     too-few-public-methods,
-    super-with-arguments, useless-object-inheritance
+    super-with-arguments,
+    useless-object-inheritance,
+    raise-missing-from
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
