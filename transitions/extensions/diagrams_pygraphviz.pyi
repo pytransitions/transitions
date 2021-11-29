@@ -1,5 +1,4 @@
-from .diagrams import BaseGraph as BaseGraph
-from .nesting import NestedState as NestedState
+from .diagrams_base import BaseGraph
 from typing import Any, List, Dict, Union, Optional
 from logging import Logger
 

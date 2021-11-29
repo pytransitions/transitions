@@ -1,21 +1,11 @@
-import abc
-from transitions.core import StateIdentifier, StateConfig, CallbacksArg, Transition, Machine, State
+from transitions.core import StateIdentifier, StateConfig, CallbacksArg, Transition, Machine
 from transitions.extensions.nesting import NestedTransition
+from transitions.extensions.diagrams_base import BaseGraph, GraphModelProtocol, GraphProtocol
 from transitions.extensions.markup import MarkupMachine, HierarchicalMarkupMachine
 from logging import Logger
-from typing import Any, Type, List, Dict, Union, Optional, Protocol, IO, Tuple, Generator
+from typing import Any, Type, List, Dict, Union, Optional, Generator
 
 _LOGGER: Logger
-
-
-class GraphProtocol(Protocol):
-
-    def draw(self, filename: Optional[str, IO], format:Optional[str] = ...,
-             prog: Optional[str] = ..., args:str = ...) -> Optional[str]: ...
-
-class GraphModelProtocol(Protocol):
-
-    def get_graph(self, title=None, force_new=False, show_roi=False) -> GraphProtocol: ...
 
 
 class TransitionGraphSupport(Transition):
@@ -61,26 +51,5 @@ class NestedGraphTransition(TransitionGraphSupport, NestedTransition): ...
 
 class HierarchicalGraphMachine(GraphMachine, HierarchicalMarkupMachine):
     transition_cls: Type[NestedGraphTransition]
-
-
-class BaseGraph(metaclass=abc.ABCMeta):
-    machine: Union[GraphMachine, HierarchicalGraphMachine]
-    fsm_graph: Optional[GraphProtocol]
-    def __init__(self, machine: GraphMachine) -> None: ...
-    @abc.abstractmethod
-    def generate(self) -> None: ...
-    @abc.abstractmethod
-    def set_previous_transition(self, src: str, dst: str) -> None: ...
-    @abc.abstractmethod
-    def reset_styling(self) -> None: ...
-    @abc.abstractmethod
-    def set_node_style(self, state: str, style: str) -> None: ...
-    @abc.abstractmethod
-    def get_graph(self, title: Optional[str] = ..., roi_state: Optional[str] = ...) -> GraphProtocol: ...
-    def _convert_state_attributes(self, state: Dict[str, str]) -> str: ...
-    def _transition_label(self, tran: Dict[str, str]) -> str: ...
-    def _get_global_name(self, path: List[str]) -> str: ...
-    def _get_elements(self) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]: ...
-
 
 def _flatten(item: List[Union[list, tuple, set, object]]) -> Generator[object]: ...

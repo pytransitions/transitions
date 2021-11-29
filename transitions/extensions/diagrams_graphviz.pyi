@@ -1,5 +1,6 @@
 from ..core import State
-from .diagrams import BaseGraph, GraphMachine
+from .diagrams import GraphMachine
+from .diagrams_base import BaseGraph
 from logging import Logger
 from typing import Type, Optional, Dict, List, Union, IO, DefaultDict
 try:

@@ -16,7 +16,7 @@ try:
 except ImportError:
     pgv = None
 
-from .diagrams import BaseGraph
+from .diagrams_base import BaseGraph
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
