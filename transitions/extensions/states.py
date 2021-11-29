@@ -85,7 +85,7 @@ class Timeout(State):
             try:
                 self.on_timeout = kwargs.pop('on_timeout')
             except KeyError:
-                raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.")
+                raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.") from KeyError
         else:
             self._on_timeout = kwargs.pop('on_timeout', [])
         self.runner = {}
@@ -229,7 +229,6 @@ def add_state_features(*args):
 
         class CustomState(type('CustomState', args, {}), cls.state_cls):
             """ The decorated State. It is based on the State class used by the decorated Machine. """
-            pass
 
         method_list = sum([c.dynamic_methods for c in inspect.getmro(CustomState) if hasattr(c, 'dynamic_methods')], [])
         CustomState.dynamic_methods = list(set(method_list))
@@ -240,4 +239,3 @@ def add_state_features(*args):
 
 class VolatileObject(object):
     """ Empty Python object which can be used to assign attributes to."""
-    pass

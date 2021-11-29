@@ -6,7 +6,7 @@
     and the composition of multiple hierarchical state machines.
 """
 
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 import copy
 from functools import partial, reduce
 import inspect
@@ -343,6 +343,7 @@ class HierarchicalMachine(Machine):
         self._stack = []
         self.prefix_path = []
         self.scoped = self
+        self._next_scope = None
         super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
     def __call__(self, to_scope=None):
@@ -571,6 +572,13 @@ class HierarchicalMachine(Machine):
                                                         unless, before, after, prepare, **kwargs)
 
     def get_global_name(self, state=None, join=True):
+        """ Returns the name of the passed state in context of the current prefix/scope.
+        Args:
+            state (str, Enum or NestedState): The state to be analyzed.
+            join (bool): Whether this method should join the path elements or not
+        Returns:
+            str or list(str) of the global state name
+        """
         domains = copy.copy(self.prefix_path)
         if state:
             state_name = state.name if hasattr(state, 'name') else state
@@ -581,6 +589,10 @@ class HierarchicalMachine(Machine):
         return self.state_cls.separator.join(domains) if join else domains
 
     def get_nested_state_names(self):
+        """ Returns a list of global names of all states of a machine.
+        Returns:
+            list(str) of global state names.
+        """
         ordered_states = []
         for state in self.states.values():
             ordered_states.append(self.get_global_name(state))
@@ -589,6 +601,15 @@ class HierarchicalMachine(Machine):
         return ordered_states
 
     def get_nested_transitions(self, trigger="", src_path=None, dest_path=None):
+        """ Retrieves a list of all transitions matching the passed requirements.
+        Args:
+            trigger (str): If set, return only transitions related to this trigger.
+            src_path (list(str)): If set, return only transitions with this source state.
+            dest_path (list(str)): If set, return only transitions with this destination.
+
+        Returns:
+            list(NestedTransitions) of valid transitions.
+        """
         if src_path and dest_path:
             src = self.state_cls.separator.join(src_path)
             dest = self.state_cls.separator.join(dest_path)
@@ -617,6 +638,12 @@ class HierarchicalMachine(Machine):
         return transitions
 
     def get_nested_triggers(self, src_path=None):
+        """ Retrieves a list of valid triggers.
+        Args:
+            src_path (list(str)): A list representation of the source state's name.
+        Returns:
+            list(str) of valid trigger names.
+        """
         if src_path:
             triggers = super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(src_path))
             if len(src_path) > 1 and src_path[0] in self.states:
@@ -630,7 +657,13 @@ class HierarchicalMachine(Machine):
         return triggers
 
     def get_state(self, state, hint=None):
-        """ Return the State instance with the passed name. """
+        """ Return the State instance with the passed name.
+        Args:
+            state (str, Enum or list(str)): A state name, enum or state path
+            hint (list(str)): A state path to check for the state in question
+        Returns:
+            NestedState that belongs to the passed str (list) or Enum.
+        """
         if isinstance(state, Enum):
             state = self._get_enum_path(state)
         elif isinstance(state, string_types):
@@ -651,12 +684,20 @@ class HierarchicalMachine(Machine):
                             state = state.states[elem]
                         return state
                 except KeyError:
-                    raise ValueError("State '%s' is not a registered state." % self.state_cls.separator.join(hint))
+                    raise ValueError(
+                        "State '%s' is not a registered state." % self.state_cls.separator.join(hint)
+                    ) from KeyError
         elif state[0] not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state[0]]
 
     def get_states(self, states):
+        """ Retrieves a list of NestedStates.
+        Args:
+            states (str, Enum or list of str or Enum): Names/values of the states to retrieve.
+        Returns:
+            list(NestedStates) belonging to the passed identifiers.
+        """
         res = []
         for state in states:
             if isinstance(state, list):
@@ -673,7 +714,7 @@ class HierarchicalMachine(Machine):
             dest (str, State or Enum): Limits list to transitions to a certain state.
             delegate (Optional[bool]): If True, consider delegations to parents of source
         Returns:
-            list of NestedTransitions matching the request.
+            list(NestedTransitions): All transitions matching the request.
         """
         with self():
             source_path = [] if source == "*" \
@@ -704,7 +745,7 @@ class HierarchicalMachine(Machine):
                 return self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
 
     def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
-        e = NestedEventData(None, None, self, model, args, kwargs)
+        evt = NestedEventData(None, None, self, model, args, kwargs)
         if trigger in self.events:
             source_path = copy.copy(path)
             while source_path:
@@ -714,9 +755,9 @@ class HierarchicalMachine(Machine):
                         _ = self.get_state(transition.dest)
                     except ValueError:
                         continue
-                    self.callbacks(self.prepare_event, e)
-                    self.callbacks(transition.prepare, e)
-                    if all(c.check(e) for c in transition.conditions):
+                    self.callbacks(self.prepare_event, evt)
+                    self.callbacks(transition.prepare, evt)
+                    if all(c.check(evt) for c in transition.conditions):
                         return True
                 source_path.pop(-1)
         if path:
@@ -750,7 +791,7 @@ class HierarchicalMachine(Machine):
         """
 
         state = state or self
-        return trigger in state.events or any([self.has_trigger(trigger, sta) for sta in state.states.values()])
+        return trigger in state.events or any(self.has_trigger(trigger, sta) for sta in state.states.values())
 
     def is_state(self, state_name, model, allow_substates=False):
         current_name = getattr(model, self.model_attribute)
@@ -837,7 +878,7 @@ class HierarchicalMachine(Machine):
             with self():
                 res = self._trigger_event_nested(event_data, trigger, None)
             event_data.result = self._check_event_result(res, event_data.model, trigger)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.on_exception:
                 self.callbacks(self.on_exception, event_data)
@@ -847,7 +888,7 @@ class HierarchicalMachine(Machine):
             try:
                 self.callbacks(self.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.name)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.name,
                               type(err).__name__,
@@ -878,8 +919,8 @@ class HierarchicalMachine(Machine):
             for event in self.events.values():
                 if not hasattr(model, event.name):
                     self._add_trigger_to_model(event.name, model)
-            for state in self.states.values():
-                self._add_model_to_state(state, model)
+            for a_state in self.states.values():
+                self._add_model_to_state(a_state, model)
 
     def _add_trigger_to_model(self, trigger, model):
         trig_func = partial(self.trigger_event, model, trigger)
@@ -896,8 +937,15 @@ class HierarchicalMachine(Machine):
         else:
             self._checked_assignment(model, trigger, trig_func)
 
-    # converts a list of current states into a hierarchical state tree
     def build_state_tree(self, model_states, separator, tree=None):
+        """ Converts a list of current states into a hierarchical state tree.
+        Args:
+            model_states (str or list(str)):
+            separator (str): The character used to separate state names
+            tree (OrderedDict): The current branch to use. If not passed, create a new tree.
+        Returns:
+            OrderedDict: A state tree dictionary
+        """
         tree = tree if tree is not None else OrderedDict()
         if isinstance(model_states, list):
             for state in model_states:
@@ -948,8 +996,7 @@ class HierarchicalMachine(Machine):
                     if self.has_trigger(trigger):
                         raise MachineError(msg)
                     # or AttributeError (invalid event) is appropriate
-                    else:
-                        raise AttributeError("Do not know event named '%s'." % trigger)
+                    raise AttributeError("Do not know event named '%s'." % trigger)
             _LOGGER.warning(msg)
             res = False
         return res
@@ -1039,9 +1086,8 @@ class HierarchicalMachine(Machine):
     def _set_state(self, state_name):
         if isinstance(state_name, list):
             return [self._set_state(value) for value in state_name]
-        else:
-            a_state = self.get_state(state_name)
-            return a_state.value if isinstance(a_state.value, Enum) else state_name
+        a_state = self.get_state(state_name)
+        return a_state.value if isinstance(a_state.value, Enum) else state_name
 
     def _trigger_event_nested(self, event_data, trigger, _state_tree):
         model = event_data.model
