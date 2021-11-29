@@ -19,19 +19,19 @@ try:
 except ImportError:
     # If enum is not available, create dummy classes for type checks
     class Enum:
-        pass
+        """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
 
     class EnumMeta:
-        pass
+        """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
 
 import inspect
 import itertools
 import logging
+import warnings
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
 from six import string_types
-import warnings
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -113,13 +113,14 @@ class State(object):
 
     @property
     def name(self):
+        """ The name of the state. """
         if isinstance(self._name, Enum):
             return self._name.name
-        else:
-            return self._name
+        return self._name
 
     @property
     def value(self):
+        """ The state's value. For string states this will be equivalent to the name attribute. """
         return self._name
 
     def enter(self, event_data):
@@ -413,7 +414,7 @@ class Event(object):
         try:
             if self._is_valid_source(event_data.state):
                 self._process(event_data)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.machine.on_exception:
                 self.machine.callbacks(self.machine.on_exception, event_data)
@@ -423,7 +424,7 @@ class Event(object):
             try:
                 self.machine.callbacks(self.machine.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.machine.name,
                               type(err).__name__,
@@ -448,8 +449,7 @@ class Event(object):
             if ignore:
                 _LOGGER.warning(msg)
                 return False
-            else:
-                raise MachineError(msg)
+            raise MachineError(msg)
         return True
 
     def __repr__(self):
@@ -612,8 +612,7 @@ class Machine(object):
         if initial is None:
             if self.initial is None:
                 raise ValueError("No initial state configured for machine, must specify when adding model.")
-            else:
-                initial = self.initial
+            initial = self.initial
 
         for mod in models:
             mod = self if mod is self.self_literal else mod
@@ -876,7 +875,7 @@ class Machine(object):
             setattr(model, name, func)
 
     def _can_trigger(self, model, trigger, *args, **kwargs):
-        e = EventData(None, None, self, model, args, kwargs)
+        evt = EventData(None, None, self, model, args, kwargs)
         state = self.get_model_state(model).name
 
         for trigger_name in self.get_triggers(state):
@@ -887,9 +886,9 @@ class Machine(object):
                     _ = self.get_state(transition.dest)
                 except ValueError:
                     continue
-                self.callbacks(self.prepare_event, e)
-                self.callbacks(transition.prepare, e)
-                if all(c.check(e) for c in transition.conditions):
+                self.callbacks(self.prepare_event, evt)
+                self.callbacks(transition.prepare, evt)
+                if all(c.check(evt) for c in transition.conditions):
                     return True
         return False
 
@@ -929,7 +928,7 @@ class Machine(object):
         Returns:
             list of transition/trigger names.
         """
-        names = set([state.name if hasattr(state, 'name') else state for state in args])
+        names = {state.name if hasattr(state, 'name') else state for state in args}
         return [t for (t, ev) in self.events.items() if any(name in ev.transitions for name in names)]
 
     def add_transition(self, trigger, source, dest, conditions=None,
@@ -1138,7 +1137,7 @@ class Machine(object):
         Returns:
             bool The truth value of all triggers combined with AND
         """
-        return all([getattr(model, trigger)(*args, **kwargs) for model in self.models])
+        return all(getattr(model, trigger)(*args, **kwargs) for model in self.models)
 
     def callbacks(self, funcs, event_data):
         """ Triggers a list of callbacks """
@@ -1185,11 +1184,11 @@ class Machine(object):
                     return func_wrapper
             except AttributeError:
                 try:
-                    mod, name = func.rsplit('.', 1)
-                    m = __import__(mod)
-                    for n in mod.split('.')[1:]:
-                        m = getattr(m, n)
-                    func = getattr(m, name)
+                    module_name, func_name = func.rsplit('.', 1)
+                    module = __import__(module_name)
+                    for submodule_name in module_name.split('.')[1:]:
+                        module = getattr(module, submodule_name)
+                    func = getattr(module, func_name)
                 except (ImportError, AttributeError, ValueError):
                     raise AttributeError("Callable with name '%s' could neither be retrieved from the passed "
                                          "model nor imported from a module." % func)
@@ -1209,8 +1208,7 @@ class Machine(object):
             if not self._transition_queue:
                 # if trigger raises an Error, it has to be handled by the Machine.process caller
                 return trigger()
-            else:
-                raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
+            raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
 
         # process queued events
         self._transition_queue.append(trigger)
@@ -1265,7 +1263,7 @@ class Machine(object):
                                          .format(target, id(self)))
                 return partial(self.events[target].add_callback, callback_type)
 
-            elif callback_type in self.state_cls.dynamic_methods:
+            if callback_type in self.state_cls.dynamic_methods:
                 state = self.get_state(target)
                 return partial(state.add_callback, callback_type[3:])
 
