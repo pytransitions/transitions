@@ -36,6 +36,7 @@ A lightweight, object-oriented state machine implementation in Python with many 
         - [Ordered transitions](#ordered-transitions)
         - [Queued transitions](#queued-transitions)
         - [Conditional transitions](#conditional-transitions)
+        - [Check transitions](#check-transitions)
         - [Callbacks](#transition-callbacks)
     - [Callable resolution](#resolution)
     - [Callback execution order](#execution-order)
@@ -472,7 +473,7 @@ This behavior is generally desirable, since it helps alert you to problems in yo
 
 If you need to know which transitions are valid from a certain state, you can use `get_triggers`:
 
-```
+```python
 m.get_triggers('solid')
 >>> ['melt', 'sublimate']
 m.get_triggers('liquid')
@@ -680,6 +681,24 @@ lump.heat(temp=74)
 ```
 
 ... would pass the `temp=74` optional kwarg to the `is_flammable()` check (possibly wrapped in an `EventData` instance). For more on this, see the [Passing data](#passing-data) section below.
+
+#### <a name="check-transitions"></a>Check transitions
+
+If you want to check whether a transition is possible before you execute it ('look before you leap'), you can use `may_<trigger_name>` convenience functions that have been attached to your model:
+
+```python
+# check if the current temperature is hot enough to trigger a transition
+if lump.may_heat():
+    lump.heat()
+```
+
+This will execute all `prepare` callbacks and evaluate the conditions assigned to the potential transitions.
+Transition checks can also be used when a transition's destination is not available (yet):
+
+```python
+machine.add_transition('elevate', 'solid', 'spiritual')
+assert not lump.may_elevate()  # not ready yet :(
+```
 
 #### <a name="transition-callbacks"></a>Callbacks
 You can attach callbacks to transitions as well as states. Every transition has `'before'` and `'after'` attributes that contain a list of methods to call before and after the transition executes:
