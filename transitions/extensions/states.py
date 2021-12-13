@@ -96,7 +96,7 @@ class Timeout(State):
         """
         if self.timeout > 0:
             timer = Timer(self.timeout, self._process_timeout, args=(event_data,))
-            timer.setDaemon(True)
+            timer.daemon = True
             timer.start()
             self.runner[id(event_data.model)] = timer
         return super(Timeout, self).enter(event_data)

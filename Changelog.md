@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.11 ()
+
+Release 0.8.11 is the last 0.8 release and contains fixes for Python 3.10 compatibility issues
+
+- Bug #559: Rewrote an async test and replaced `setDaemon` with `daemon` property assignment for thread handling (thanks @debalance)
+
 ## 0.8.10 (October 2021)
 
 Release 0.8.10 is a minor release and contains two bug fixes for the HSM extension and changes how the 'self' literal string is handled.

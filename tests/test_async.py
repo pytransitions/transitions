@@ -130,8 +130,6 @@ class TestAsync(TestTransitions):
         self.assertTrue(mock.called)
 
     def test_multiple_models(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
         m1 = self.machine_cls(states=['A', 'B', 'C'], initial='A', name="m1")
         m2 = self.machine_cls(states=['A'], initial='A', name='m2')
@@ -141,12 +139,13 @@ class TestAsync(TestTransitions):
         m1.add_transition(trigger='reset', source='C', dest='A')
         m2.add_transition(trigger='go', source='A', dest=None, conditions=m1.is_C, after=m1.reset)
 
-        loop.run_until_complete(asyncio.gather(m1.go(),  # should block before B
-                                               self.call_delayed(m1.fix, 0.05),  # should cancel task and go to C
-                                               self.call_delayed(m1.check, 0.07),  # should exit before m1.fix
-                                               self.call_delayed(m2.go, 0.1)))  # should cancel m1.fix
-        assert m1.is_A()
-        loop.close()
+        async def run():
+            _ = asyncio.gather(m1.go(),  # should block before B
+                               self.call_delayed(m1.fix, 0.05),  # should cancel task and go to C
+                               self.call_delayed(m1.check, 0.07),  # should exit before m1.fix
+                               self.call_delayed(m2.go, 0.1))  # should cancel m1.fix
+            assert m1.is_A()
+        asyncio.run(run())
 
     def test_async_callback_arguments(self):
 
