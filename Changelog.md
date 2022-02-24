@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.11 ()
+## 0.8.11 (February 2022)
 
 Release 0.8.11 is the last 0.8 release and contains fixes for Python 3.10 compatibility issues
 
