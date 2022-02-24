@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0 ()
+
+Release 0.9.0 is a major release and contains improvements to ease development, adds some new features and removes the legacy hierarchical machine:
+
+- removed legacy implementation of `HierarchicalMachine` from the package
+- removed `_super` workaround related to dill (see https://github.com/pytransitions/transitions/issues/236)
+- Bug #554: Fix issues related to scopes and queueing in `HierachicalMachine` (thanks @jankrejci)
+- Feature: Add pyi stub files for better type hinting
+- Feature: Reviewed and improved method documentation
+- Feature #549: Add `may` transition check to transitions (thnaks @artofhuman)
+- Feature #552: Refactored error handling to be able to handle `MachineError` in `on_exception` callbacks (thanks @kpihus)
+- PR #461: Add `Retry` state to supported state stereotypes (thanks @rgov)
+
 ## 0.8.11 (February 2022)
 
 Release 0.8.11 is the last 0.8 release and contains fixes for Python 3.10 compatibility issues
