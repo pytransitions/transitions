@@ -5,6 +5,7 @@
     This module contains mix ins which can be used to extend state functionality.
 """
 
+from collections import Counter
 from threading import Timer
 import logging
 import inspect
@@ -84,7 +85,7 @@ class Timeout(State):
             try:
                 self.on_timeout = kwargs.pop('on_timeout')
             except KeyError:
-                raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.")
+                raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.")  # from KeyError
         else:
             self._on_timeout = kwargs.pop('on_timeout', [])
         self.runner = {}
@@ -161,13 +162,73 @@ class Volatile(State):
             pass
 
 
+class Retry(State):
+    """ The Retry mix-in sets a limit on the number of times a state may be
+        re-entered from itself.
+
+        The first time a state is entered it does not count as a retry. Thus with
+        `retries=3` the state can be entered four times before it fails.
+
+        When the retry limit is exceeded, the state is not entered and instead the
+        `on_failure` callback is invoked on the model. For example,
+
+            Retry(retries=3, on_failure='to_failed')
+
+        transitions the model directly to the 'failed' state, if the machine has
+        automatic transitions enabled (the default).
+
+        Attributes:
+            retries (int): Number of retries to allow before failing.
+            on_failure (str): Function to invoke on the model when the retry limit
+                is excheeded.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Args:
+            **kwargs: If kwargs contains `retries`, then limit the number of times
+                the state may be re-entered from itself. The argument `on_failure`,
+                which is the function to invoke on the model when the retry limit
+                is exceeded, must also be provided.
+        """
+        self.retries = kwargs.pop('retries', 0)
+        self.on_failure = kwargs.pop('on_failure', None)
+        self.retry_counts = Counter()
+        if self.retries > 0 and self.on_failure is None:
+            raise AttributeError("Retry state requires 'on_failure' when "
+                                 "'retries' is set.")
+        super(Retry, self).__init__(*args, **kwargs)
+
+    def enter(self, event_data):
+        k = id(event_data.model)
+
+        # If we are entering from a different state, then this is our first try;
+        # reset the retry counter.
+        if event_data.transition.source != self.name:
+            _LOGGER.debug('%sRetry limit for state %s reset (came from %s)',
+                          event_data.machine.name, self.name,
+                          event_data.transition.source)
+            self.retry_counts[k] = 0
+
+        # If we have tried too many times, invoke our failure callback instead
+        if self.retry_counts[k] > self.retries > 0:
+            _LOGGER.info('%sRetry count for state %s exceeded limit (%i)',
+                         event_data.machine.name, self.name, self.retries)
+            event_data.machine.callback(self.on_failure, event_data)
+            return
+
+        # Otherwise, increment the retry count and continue per normal
+        _LOGGER.debug('%sRetry count for state %s is now %i',
+                      event_data.machine.name, self.name, self.retry_counts[k])
+        self.retry_counts.update((k,))
+        super(Retry, self).enter(event_data)
+
+
 def add_state_features(*args):
     """ State feature decorator. Should be used in conjunction with a custom Machine class. """
     def _class_decorator(cls):
 
         class CustomState(type('CustomState', args, {}), cls.state_cls):
             """ The decorated State. It is based on the State class used by the decorated Machine. """
-            pass
 
         method_list = sum([c.dynamic_methods for c in inspect.getmro(CustomState) if hasattr(c, 'dynamic_methods')], [])
         CustomState.dynamic_methods = list(set(method_list))
@@ -178,4 +239,3 @@ def add_state_features(*args):
 
 class VolatileObject(object):
     """ Empty Python object which can be used to assign attributes to."""
-    pass

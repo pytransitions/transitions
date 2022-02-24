@@ -18,10 +18,6 @@ from transitions.core import Machine, Event, listify
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
 
-# this is a workaround for dill issues when partials and super is used in conjunction
-# without it, Python 3.0 - 3.3 will not support pickling
-# https://github.com/pytransitions/transitions/issues/236
-_super = super
 
 try:
     from contextlib import nested  # Python 2
@@ -42,7 +38,7 @@ except ImportError:
             yield contexts
 
 
-class PicklableLock(object):
+class PicklableLock:
     """ A wrapper for threading.Lock which discards its state during pickling and
         is reinitialized unlocked when unpickled.
     """
@@ -64,13 +60,13 @@ class PicklableLock(object):
 
 
 class IdentManager:
+    """  Manages the identity of threads to detect whether the current thread already has a lock. """
 
     def __init__(self):
         self.current = 0
 
     def __enter__(self):
         self.current = get_ident()
-        pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.current = 0
@@ -87,9 +83,9 @@ class LockedEvent(Event):
         # to Machine users.
         if self.machine._ident.current != get_ident():
             with nested(*self.machine.model_context_map[id(model)]):
-                return _super(LockedEvent, self).trigger(model, *args, **kwargs)
+                return super(LockedEvent, self).trigger(model, *args, **kwargs)
         else:
-            return _super(LockedEvent, self).trigger(model, *args, **kwargs)
+            return super(LockedEvent, self).trigger(model, *args, **kwargs)
 
 
 class LockedMachine(Machine):
@@ -113,7 +109,7 @@ class LockedMachine(Machine):
         self.machine_context.append(self._ident)
         self.model_context_map = defaultdict(list)
 
-        _super(LockedMachine, self).__init__(*args, **kwargs)
+        super(LockedMachine, self).__init__(*args, **kwargs)
 
     # When we attempt to pickle a locked machine, using IDs wont suffice to unpickle the contexts since
     # IDs have changed. We use a 'reference' store with objects as dictionary keys to resolve the newly created
@@ -142,14 +138,12 @@ class LockedMachine(Machine):
         """
         models = listify(model)
         model_context = listify(model_context) if model_context is not None else []
-        output = _super(LockedMachine, self).add_model(models, initial)
+        super(LockedMachine, self).add_model(models, initial)
 
         for mod in models:
             mod = self if mod is self.self_literal else mod
             self.model_context_map[id(mod)].extend(self.machine_context)
             self.model_context_map[id(mod)].extend(model_context)
-
-        return output
 
     def remove_model(self, model):
         """ Extends `transitions.core.Machine.remove_model` by removing model specific context maps
@@ -159,10 +153,10 @@ class LockedMachine(Machine):
         for mod in models:
             del self.model_context_map[id(mod)]
 
-        return _super(LockedMachine, self).remove_model(models)
+        return super(LockedMachine, self).remove_model(models)
 
     def __getattribute__(self, item):
-        get_attr = _super(LockedMachine, self).__getattribute__
+        get_attr = super(LockedMachine, self).__getattribute__
         tmp = get_attr(item)
         if not item.startswith('_') and inspect.ismethod(tmp):
             return partial(get_attr('_locked_method'), tmp)
@@ -170,9 +164,9 @@ class LockedMachine(Machine):
 
     def __getattr__(self, item):
         try:
-            return _super(LockedMachine, self).__getattribute__(item)
+            return super(LockedMachine, self).__getattribute__(item)
         except AttributeError:
-            return _super(LockedMachine, self).__getattr__(item)
+            return super(LockedMachine, self).__getattr__(item)
 
     # Determine if the returned method is a partial and make sure the returned partial has
     # not been created by Machine.__getattr__.

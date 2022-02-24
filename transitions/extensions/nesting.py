@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
-from collections import OrderedDict, defaultdict
+"""
+    transitions.extensions.nesting
+    ------------------------------
+
+    Implements a hierarchical state machine based on transitions.core.Machine. Supports nested states, parallel states
+    and the composition of multiple hierarchical state machines.
+"""
+
+from collections import OrderedDict
 import copy
 from functools import partial, reduce
 import inspect
@@ -12,14 +20,10 @@ from ..core import State, Machine, Transition, Event, listify, MachineError, Enu
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
 
-# this is a workaround for dill issues when partials and super is used in conjunction
-# without it, Python 3.0 - 3.3 will not support pickling
-# https://github.com/pytransitions/transitions/issues/236
-_super = super
-
 
 # converts a hierarchical tree into a list of current states
-def _build_state_list(state_tree, separator, prefix=[]):
+def _build_state_list(state_tree, separator, prefix=None):
+    prefix = prefix or []
     res = []
     for key, value in state_tree.items():
         if value:
@@ -29,22 +33,27 @@ def _build_state_list(state_tree, separator, prefix=[]):
     return res if len(res) > 1 else res[0]
 
 
-# custom breadth-first tree exploration
-# makes sure that ALL children are evaluated before parents in parallel states
-def _resolve_order(state_tree):
-    s = state_tree
-    q = []
+def resolve_order(state_tree):
+    """ Converts a (model) state tree into a list of state paths. States are ordered in the way in which states
+    should be visited to process the event correctly (Breadth-first). This makes sure that ALL children are evaluated
+    before parents in parallel states.
+    Args:
+        state_tree (dict): A dictionary representation of the model's state.
+    Returns:
+        list of lists of str representing the order of states to be processed.
+    """
+    queue = []
     res = []
-    p = []
+    prefix = []
     while True:
-        for k in reversed(list(s.keys())):
-            pk = p + [k]
-            res.append(pk)
-            if s[k]:
-                q.append((pk, s[k]))
-        if not q:
+        for state_name in reversed(list(state_tree.keys())):
+            scope = prefix + [state_name]
+            res.append(scope)
+            if state_tree[state_name]:
+                queue.append((scope, state_tree[state_name]))
+        if not queue:
             break
-        p, s = q.pop(0)
+        prefix, state_tree = queue.pop(0)
     return reversed(res)
 
 
@@ -68,7 +77,7 @@ class FunctionWrapper(object):
             path.
         Args:
             func (callable): Function to be called at the end of the path.
-            path (string): Remaining segment of the substate path.
+            path (list of strings): Remaining segment of the substate path.
         """
         if path:
             name = path[0]
@@ -90,113 +99,59 @@ class NestedEvent(Event):
         This subclass is NOT compatible with simple Machine instances.
     """
 
-    def trigger(self, _model, _machine, *args, **kwargs):
+    def trigger(self, model, *args, **kwargs):
+        raise RuntimeError("NestedEvent.trigger must not be called directly. Call Machine.trigger_event instead.")
+
+    def trigger_nested(self, event_data):
         """ Executes all transitions that match the current state,
-        halting as soon as one successfully completes. More precisely, it prepares a partial
-        of the internal ``_trigger`` function, passes this to ``machine._process``.
+        halting as soon as one successfully completes.
         It is up to the machine's configuration of the Event whether processing happens queued (sequentially) or
         whether further Events are processed as they occur. NOTE: This should only
         be called by HierarchicalMachine instances.
         Args:
-            _model (object): The currently processed model
-            _machine (HierarchicalMachine): Since NestedEvents can be used in multiple machine instances, this one
-                                            will be used to determine the current state separator and the current scope.
-            args and kwargs: Optional positional or named arguments that will
-                be passed onto the EventData object, enabling arbitrary state
-                information to be passed on to downstream triggered functions.
+            event_data (NestedEventData): The currently processed event
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        # Save the current scope (_machine.scoped, _machine.states, _machine.events) in partial
-        # since queued transitions could otherwise loose their scope.
-        func = partial(self._trigger, _model, _machine,
-                       (_machine.scoped, _machine.states, _machine.events, _machine.prefix_path),
-                       *args, **kwargs)
-        # pylint: disable=protected-access
-        # noinspection PyProtectedMember
-        # Machine._process should not be called somewhere else. That's why it should not be exposed
-        # to Machine users.
-        return _machine._process(func)
-
-    def _trigger(self, _model, _machine, _scope, *args, **kwargs):
-        """ Internal trigger function called by the ``HierarchicalMachine`` instance. This should not
-        be called directly but via the public method ``HierarchicalMachine.process``. In contrast to
-        the inherited ``Event._trigger``, this requires a scope tuple to process triggers in the right context.
-        Args:
-            _model (object): The currently processed model
-            _machine (HierarchicalMachine): The machine that should be used to process the event
-            _scope (Tuple): A tuple containing information about the currently scoped object, states an transitions.
-            args and kwargs: Optional positional or named arguments that will
-                be passed onto the EventData object, enabling arbitrary state
-                information to be passed on to downstream triggered functions.
-        Returns: boolean indicating whether or not a transition was
-            successfully executed (True if successful, False if not).
-        """
-        if _scope[0] != _machine.scoped:
-            with _machine(_scope):
-                return self._trigger_scoped(_model, _machine, *args, **kwargs)
-        else:
-            return self._trigger_scoped(_model, _machine, *args, **kwargs)
-
-    def _trigger_scoped(self, _model, _machine, *args, **kwargs):
-        """ Internal scope-adjusted trigger function called by the ``NestedEvent._trigger`` instance. This should not
-        be called directly.
-        Args:
-            _model (object): The currently processed model
-            _machine (HierarchicalMachine): The machine that should be used to process the event
-            args and kwargs: Optional positional or named arguments that will
-                be passed onto the EventData object, enabling arbitrary state
-                information to be passed on to downstream triggered functions.
-        Returns: boolean indicating whether or not a transition was
-            successfully executed (True if successful, False if not).
-        """
-        state_tree = _machine._build_state_tree(getattr(_model, _machine.model_attribute), _machine.state_cls.separator)
-        state_tree = reduce(dict.get, _machine.get_global_name(join=False), state_tree)
-        ordered_states = _resolve_order(state_tree)
+        machine = event_data.machine
+        model = event_data.model
+        state_tree = machine.build_state_tree(getattr(model, machine.model_attribute), machine.state_cls.separator)
+        state_tree = reduce(dict.get, machine.get_global_name(join=False), state_tree)
+        ordered_states = resolve_order(state_tree)
         done = set()
-        res = None
+        event_data.event = self
         for state_path in ordered_states:
-            state_name = _machine.state_cls.separator.join(state_path)
+            state_name = machine.state_cls.separator.join(state_path)
             if state_name not in done and state_name in self.transitions:
-                state = _machine.get_state(state_name)
-                event_data = EventData(state, self, _machine, _model, args=args, kwargs=kwargs)
+                event_data.state = machine.get_state(state_name)
                 event_data.source_name = state_name
                 event_data.source_path = copy.copy(state_path)
-                res = self._process(event_data)
-                if res:
+                self._process(event_data)
+                if event_data.result:
                     elems = state_path
                     while elems:
-                        done.add(_machine.state_cls.separator.join(elems))
+                        done.add(machine.state_cls.separator.join(elems))
                         elems.pop()
-        return res
+        return event_data.result
 
     def _process(self, event_data):
         machine = event_data.machine
         machine.callbacks(event_data.machine.prepare_event, event_data)
         _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", machine.name)
+        for trans in self.transitions[event_data.source_name]:
+            event_data.transition = trans
+            event_data.result = trans.execute(event_data)
+            if event_data.result:
+                break
 
-        try:
-            for trans in self.transitions[event_data.source_name]:
-                event_data.transition = trans
-                if trans.execute(event_data):
-                    event_data.result = True
-                    break
-        except Exception as err:
-            event_data.error = err
-            if self.machine.on_exception:
-                self.machine.callbacks(self.machine.on_exception, event_data)
-            else:
-                raise
-        finally:
-            try:
-                machine.callbacks(machine.finalize_event, event_data)
-                _LOGGER.debug("%sExecuted machine finalize callbacks", machine.name)
-            except Exception as err:
-                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
-                              self.machine.name,
-                              type(err).__name__,
-                              str(err))
-        return event_data.result
+
+class NestedEventData(EventData):
+    """ Collection of relevant data related to the ongoing nested transition attempt. """
+
+    def __init__(self, state, event, machine, model, args, kwargs):
+        super(NestedEventData, self).__init__(state, event, machine, model, args, kwargs)
+        self.source_path = None
+        self.source_name = None
 
 
 class NestedState(State):
@@ -204,8 +159,8 @@ class NestedState(State):
     Attributes:
         states (OrderedDict): A list of substates of the current state.
         events (dict): A list of events defined for the nested state.
-        initial (list, str, NestedState or Enum): (Name of a) child or list of children that should be entered when the state is entered.
-        exit_stack (defaultdict): A list of currently active substates
+        initial (list, str, NestedState or Enum): (Name of a) child or list of children that should be entered when the
+        state is entered.
     """
 
     separator = '_'
@@ -215,8 +170,8 @@ class NestedState(State):
     """
 
     def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, initial=None):
-        _super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
-                                           ignore_invalid_triggers=ignore_invalid_triggers)
+        super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
+                                          ignore_invalid_triggers=ignore_invalid_triggers)
         self.initial = initial
         self.events = {}
         self.states = OrderedDict()
@@ -232,20 +187,30 @@ class NestedState(State):
     def add_substates(self, states):
         """ Adds a list of states to the current state.
         Args:
-            states (list): List of states to add to the current state.
+            states (list): List of state to add to the current state.
         """
         for state in listify(states):
             self.states[state.name] = state
 
-    def scoped_enter(self, event_data, scope=[]):
-        self._scope = scope
+    def scoped_enter(self, event_data, scope=None):
+        """ Enters a state with the provided scope.
+        Args:
+            event_data (NestedEventData): The currently processed event.
+            scope (list(str)): Names of the state's parents starting with the top most parent.
+        """
+        self._scope = scope or []
         try:
             self.enter(event_data)
         finally:
             self._scope = []
 
-    def scoped_exit(self, event_data, scope=[]):
-        self._scope = scope
+    def scoped_exit(self, event_data, scope=None):
+        """ Exits a state with the provided scope.
+        Args:
+            event_data (NestedEventData): The currently processed event.
+            scope (list(str)): Names of the state's parents starting with the top most parent.
+        """
+        self._scope = scope or []
         try:
             self.exit(event_data)
         finally:
@@ -253,32 +218,20 @@ class NestedState(State):
 
     @property
     def name(self):
-        return self.separator.join(self._scope + [_super(NestedState, self).name])
+        return self.separator.join(self._scope + [super(NestedState, self).name])
 
 
 class NestedTransition(Transition):
-    """ A transition which handles entering and leaving nested states.
-
-    Attributes:
-        source (str): Source state of the transition.
-        dest (str): Destination state of the transition.
-        prepare (list): Callbacks executed before conditions checks.
-        conditions (list): Callbacks evaluated to determine if
-            the transition should be executed.
-        before (list): Callbacks executed before the transition is executed
-            but only if condition checks have been successful.
-        after (list): Callbacks executed after the transition is executed
-            but only if condition checks have been successful.
-    """
+    """ A transition which handles entering and leaving nested states. """
 
     def _resolve_transition(self, event_data):
-        machine = event_data.machine
         dst_name_path = self.dest.split(event_data.machine.state_cls.separator)
-        _ = machine.get_state(dst_name_path)
-        model_states = listify(getattr(event_data.model, machine.model_attribute))
-        state_tree = machine._build_state_tree(model_states, machine.state_cls.separator)
+        _ = event_data.machine.get_state(dst_name_path)
+        state_tree = event_data.machine.build_state_tree(
+            listify(getattr(event_data.model, event_data.machine.model_attribute)),
+            event_data.machine.state_cls.separator)
 
-        scope = machine.get_global_name(join=False)
+        scope = event_data.machine.get_global_name(join=False)
         src_name_path = event_data.source_path
         if src_name_path == dst_name_path:
             root = src_name_path[:-1]  # exit and enter the same state
@@ -291,9 +244,9 @@ class NestedTransition(Transition):
                 tmp_tree = tmp_tree.get(dst_name_path[0], None) if len(dst_name_path) > 0 else None
 
         scoped_tree = reduce(dict.get, scope + root, state_tree)
-        exit_partials = [partial(machine.get_state(root + state_name).scoped_exit,
+        exit_partials = [partial(event_data.machine.get_state(root + state_name).scoped_exit,
                                  event_data, scope + root + state_name[:-1])
-                         for state_name in _resolve_order(scoped_tree)]
+                         for state_name in resolve_order(scoped_tree)]
         if dst_name_path:
             new_states, enter_partials = self._enter_nested(root, dst_name_path, scope + root, event_data)
         else:
@@ -329,7 +282,7 @@ class NestedTransition(Transition):
         elif event_data.machine.scoped.initial:
             new_states = OrderedDict()
             enter_partials = []
-            q = []
+            queue = []
             prefix = prefix_path
             scoped_tree = new_states
             initial_names = [i.name if hasattr(i, 'name') else i for i in listify(event_data.machine.scoped.initial)]
@@ -340,12 +293,12 @@ class NestedTransition(Transition):
                     enter_partials.append(partial(state.scoped_enter, event_data, prefix))
                     scoped_tree[state.name] = OrderedDict()
                     if state.initial:
-                        q.append((scoped_tree[state.name], prefix + [state.name],
-                                  [state.states[i.name] if hasattr(i, 'name') else state.states[i]
-                                   for i in listify(state.initial)]))
-                if not q:
+                        queue.append((scoped_tree[state.name], prefix + [state.name],
+                                     [state.states[i.name] if hasattr(i, 'name') else state.states[i]
+                                     for i in listify(state.initial)]))
+                if not queue:
                     break
-                scoped_tree, prefix, initial_states = q.pop(0)
+                scoped_tree, prefix, initial_states = queue.pop(0)
             return new_states, enter_partials
         else:
             return {}, []
@@ -361,12 +314,13 @@ class NestedTransition(Transition):
     # Prevent deep copying of callback lists since these include either references to callable or
     # strings. Deep copying a method reference would lead to the creation of an entire new (model) object
     # (see https://github.com/pytransitions/transitions/issues/248)
+    # Note: When conditions are handled like other dynamic callbacks the key == "conditions" clause can be removed
     def __deepcopy__(self, memo):
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
         for key, value in self.__dict__.items():
-            if key in cls.dynamic_methods:
+            if key in cls.dynamic_methods or key == "conditions":
                 setattr(result, key, copy.copy(value))
             else:
                 setattr(result, key, copy.deepcopy(value, memo))
@@ -390,7 +344,8 @@ class HierarchicalMachine(Machine):
         self._stack = []
         self.prefix_path = []
         self.scoped = self
-        _super(HierarchicalMachine, self).__init__(*args, **kwargs)
+        self._next_scope = None
+        super(HierarchicalMachine, self).__init__(*args, **kwargs)
 
     def __call__(self, to_scope=None):
         if isinstance(to_scope, string_types):
@@ -422,7 +377,7 @@ class HierarchicalMachine(Machine):
             the added model.
         """
         models = [self if mod is self.self_literal else mod for mod in listify(model)]
-        _super(HierarchicalMachine, self).add_model(models, initial=initial)
+        super(HierarchicalMachine, self).add_model(models, initial=initial)
         initial_name = getattr(models[0], self.model_attribute)
         if hasattr(initial_name, 'name'):
             initial_name = initial_name.name
@@ -456,16 +411,16 @@ class HierarchicalMachine(Machine):
                                 after=None, prepare=None, **kwargs):
         if states is None:
             states = self.get_nested_state_names()
-        _super(HierarchicalMachine, self).add_ordered_transitions(states=states, trigger=trigger, loop=loop,
-                                                                  loop_includes_initial=loop_includes_initial,
-                                                                  conditions=conditions,
-                                                                  unless=unless, before=before, after=after,
-                                                                  prepare=prepare, **kwargs)
+        super(HierarchicalMachine, self).add_ordered_transitions(states=states, trigger=trigger, loop=loop,
+                                                                 loop_includes_initial=loop_includes_initial,
+                                                                 conditions=conditions,
+                                                                 unless=unless, before=before, after=after,
+                                                                 prepare=prepare, **kwargs)
 
     def add_states(self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs):
         """ Add new nested state(s).
         Args:
-            states (list, str, dict, Enum, NestedState or Machine): a list, a NestedState instance, the
+            states (list, str, dict, Enum, NestedState or HierarchicalMachine): a list, a NestedState instance, the
                 name of a new state, an enumeration (member) or a dict with keywords to pass on to the
                 NestedState initializer. If a list, each element can be a string, dict, NestedState or
                 enumeration member.
@@ -493,112 +448,18 @@ class HierarchicalMachine(Machine):
                 elif isinstance(state.value, dict):
                     state = dict(name=state, **state.value)
             if isinstance(state, string_types):
-                if remap is not None and state in remap:
-                    return
-                domains = state.split(self.state_cls.separator, 1)
-                if len(domains) > 1:
-                    try:
-                        self.get_state(domains[0])
-                    except ValueError:
-                        self.add_state(domains[0], on_enter=on_enter, on_exit=on_exit, ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
-                    with self(domains[0]):
-                        self.add_states(domains[1], on_enter=on_enter, on_exit=on_exit, ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
-                else:
-                    if state in self.states:
-                        raise ValueError("State {0} cannot be added since it already exists.".format(state))
-                    new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
-                                                   ignore_invalid_triggers=ignore, **kwargs)
-                    self.states[new_state.name] = new_state
-                    self._init_state(new_state)
+                self._add_string_state(state, on_enter, on_exit, ignore, remap, **kwargs)
             elif isinstance(state, Enum):
-                if self.state_cls.separator in state.name:
-                    raise ValueError("State '{0}' contains '{1}' which is used as state name separator. "
-                                     "Consider changing the NestedState.separator to avoid this issue."
-                                     "".format(state.name, self.state_cls.separator))
-                if remap is not None and state.name in remap:
-                    return
-                new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
-                                               ignore_invalid_triggers=ignore, **kwargs)
-                if state.name in self.states:
-                    raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
-                self.states[new_state.name] = new_state
-                self._init_state(new_state)
+                self._add_enum_state(state, on_enter, on_exit, ignore, remap, **kwargs)
             elif isinstance(state, dict):
-                if remap is not None and state['name'] in remap:
-                    return
-                state = state.copy()  # prevent messing with the initially passed dict
-                remap = state.pop('remap', None)
-                if 'ignore_invalid_triggers' not in state:
-                    state['ignore_invalid_triggers'] = ignore
-
-                # parallel: [states] is just a short handle for {children: [states], initial: [state_names]}
-                state_parallel = state.pop('parallel', [])
-                if state_parallel:
-                    state_children = state_parallel
-                    state['initial'] = [s['name'] if isinstance(s, dict)
-                                        else s for s in state_children]
-                else:
-                    state_children = state.pop('children', state.pop('states', []))
-                transitions = state.pop('transitions', [])
-                new_state = self._create_state(**state)
-                self.states[new_state.name] = new_state
-                self._init_state(new_state)
-                remapped_transitions = []
-                with self(new_state.name):
-                    self.add_states(state_children, remap=remap, **kwargs)
-                    if remap is not None:
-                        drop_event = []
-                        for evt in self.events.values():
-                            self.events[evt.name] = copy.copy(evt)
-                        for trigger, event in self.events.items():
-                            drop_source = []
-                            event.transitions = copy.deepcopy(event.transitions)
-                            for source_name, trans_source in event.transitions.items():
-                                if source_name in remap:
-                                    drop_source.append(source_name)
-                                    continue
-                                drop_trans = []
-                                for trans in trans_source:
-                                    if trans.dest in remap:
-                                        conditions, unless = [], []
-                                        for cond in trans.conditions:
-                                            # split a list in two lists based on the accessors (cond.target) truth value
-                                            (unless, conditions)[cond.target].append(cond.func)
-                                        remapped_transitions.append({
-                                            'trigger': trigger,
-                                            'source': new_state.name + self.state_cls.separator + trans.source,
-                                            'dest': remap[trans.dest],
-                                            'conditions': conditions,
-                                            'unless': unless,
-                                            'prepare': trans.prepare,
-                                            'before': trans.before,
-                                            'after': trans.after})
-                                        drop_trans.append(trans)
-                                for t in drop_trans:
-                                    trans_source.remove(t)
-                                if not trans_source:
-                                    drop_source.append(source_name)
-                            for s in drop_source:
-                                del event.transitions[s]
-                            if not event.transitions:
-                                drop_event.append(trigger)
-                        for e in drop_event:
-                            del self.events[e]
-                    if transitions:
-                        self.add_transitions(transitions)
-                self.add_transitions(remapped_transitions)
+                self._add_dict_state(state, ignore, remap, **kwargs)
             elif isinstance(state, NestedState):
                 if state.name in self.states:
                     raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
                 self.states[state.name] = state
                 self._init_state(state)
-            elif isinstance(state, Machine):
-                new_states = [s for s in state.states.values() if remap is None or s not in remap]
-                self.add_states(new_states)
-                for ev in state.events.values():
-                    self.events[ev.name] = ev
-                if self.scoped.initial is None:
-                    self.scoped.initial = state.initial
+            elif isinstance(state, HierarchicalMachine):
+                self._add_machine_states(state, remap)
             elif isinstance(state, State) and not isinstance(state, NestedState):
                 raise ValueError("A passed state object must derive from NestedState! "
                                  "A default State object is not sufficient")
@@ -612,10 +473,17 @@ class HierarchicalMachine(Machine):
                       for s in listify(source)]
         if dest != self.wildcard_same:
             dest = self.state_cls.separator.join(self._get_enum_path(dest)) if isinstance(dest, Enum) else dest
-        _super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions,
-                                                         unless, before, after, prepare, **kwargs)
+        super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions,
+                                                        unless, before, after, prepare, **kwargs)
 
     def get_global_name(self, state=None, join=True):
+        """ Returns the name of the passed state in context of the current prefix/scope.
+        Args:
+            state (str, Enum or NestedState): The state to be analyzed.
+            join (bool): Whether this method should join the path elements or not
+        Returns:
+            str or list(str) of the global state name
+        """
         domains = copy.copy(self.prefix_path)
         if state:
             state_name = state.name if hasattr(state, 'name') else state
@@ -626,6 +494,10 @@ class HierarchicalMachine(Machine):
         return self.state_cls.separator.join(domains) if join else domains
 
     def get_nested_state_names(self):
+        """ Returns a list of global names of all states of a machine.
+        Returns:
+            list(str) of global state names.
+        """
         ordered_states = []
         for state in self.states.values():
             ordered_states.append(self.get_global_name(state))
@@ -634,36 +506,51 @@ class HierarchicalMachine(Machine):
         return ordered_states
 
     def get_nested_transitions(self, trigger="", src_path=None, dest_path=None):
+        """ Retrieves a list of all transitions matching the passed requirements.
+        Args:
+            trigger (str): If set, return only transitions related to this trigger.
+            src_path (list(str)): If set, return only transitions with this source state.
+            dest_path (list(str)): If set, return only transitions with this destination.
+
+        Returns:
+            list(NestedTransitions) of valid transitions.
+        """
         if src_path and dest_path:
             src = self.state_cls.separator.join(src_path)
             dest = self.state_cls.separator.join(dest_path)
-            transitions = _super(HierarchicalMachine, self).get_transitions(trigger, src, dest)
+            transitions = super(HierarchicalMachine, self).get_transitions(trigger, src, dest)
             if len(src_path) > 1 and len(dest_path) > 1:
                 with self(src_path[0]):
                     transitions.extend(self.get_nested_transitions(trigger, src_path[1:], dest_path[1:]))
         elif src_path:
             src = self.state_cls.separator.join(src_path)
-            transitions = _super(HierarchicalMachine, self).get_transitions(trigger, src, "*")
+            transitions = super(HierarchicalMachine, self).get_transitions(trigger, src, "*")
             if len(src_path) > 1:
                 with self(src_path[0]):
                     transitions.extend(self.get_nested_transitions(trigger, src_path[1:], None))
         elif dest_path:
             dest = self.state_cls.separator.join(dest_path)
-            transitions = _super(HierarchicalMachine, self).get_transitions(trigger, "*", dest)
+            transitions = super(HierarchicalMachine, self).get_transitions(trigger, "*", dest)
             if len(dest_path) > 1:
                 for state_name in self.states:
                     with self(state_name):
                         transitions.extend(self.get_nested_transitions(trigger, None, dest_path[1:]))
         else:
-            transitions = _super(HierarchicalMachine, self).get_transitions(trigger, "*", "*")
+            transitions = super(HierarchicalMachine, self).get_transitions(trigger, "*", "*")
             for state_name in self.states:
                 with self(state_name):
                     transitions.extend(self.get_nested_transitions(trigger, None, None))
         return transitions
 
     def get_nested_triggers(self, src_path=None):
+        """ Retrieves a list of valid triggers.
+        Args:
+            src_path (list(str)): A list representation of the source state's name.
+        Returns:
+            list(str) of valid trigger names.
+        """
         if src_path:
-            triggers = _super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(src_path))
+            triggers = super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(src_path))
             if len(src_path) > 1 and src_path[0] in self.states:
                 with self(src_path[0]):
                     triggers.extend(self.get_nested_triggers(src_path[1:]))
@@ -675,7 +562,13 @@ class HierarchicalMachine(Machine):
         return triggers
 
     def get_state(self, state, hint=None):
-        """ Return the State instance with the passed name. """
+        """ Return the State instance with the passed name.
+        Args:
+            state (str, Enum or list(str)): A state name, enum or state path
+            hint (list(str)): A state path to check for the state in question
+        Returns:
+            NestedState that belongs to the passed str (list) or Enum.
+        """
         if isinstance(state, Enum):
             state = self._get_enum_path(state)
         elif isinstance(state, string_types):
@@ -696,12 +589,20 @@ class HierarchicalMachine(Machine):
                             state = state.states[elem]
                         return state
                 except KeyError:
-                    raise ValueError("State '%s' is not a registered state." % self.state_cls.separator.join(hint))
+                    raise ValueError(
+                        "State '%s' is not a registered state." % self.state_cls.separator.join(hint)
+                    )  # from KeyError
         elif state[0] not in self.states:
             raise ValueError("State '%s' is not a registered state." % state)
         return self.states[state[0]]
 
     def get_states(self, states):
+        """ Retrieves a list of NestedStates.
+        Args:
+            states (str, Enum or list of str or Enum): Names/values of the states to retrieve.
+        Returns:
+            list(NestedStates) belonging to the passed identifiers.
+        """
         res = []
         for state in states:
             if isinstance(state, list):
@@ -717,6 +618,8 @@ class HierarchicalMachine(Machine):
             source (str, State or Enum): Limits list to transitions from a certain state.
             dest (str, State or Enum): Limits list to transitions to a certain state.
             delegate (Optional[bool]): If True, consider delegations to parents of source
+        Returns:
+            list(NestedTransitions): All transitions matching the request.
         """
         with self():
             source_path = [] if source == "*" \
@@ -739,6 +642,34 @@ class HierarchicalMachine(Machine):
                 source_path.pop()
             return matches
 
+    def _can_trigger(self, model, trigger, *args, **kwargs):
+        state_tree = self.build_state_tree(getattr(model, self.model_attribute), self.state_cls.separator)
+        ordered_states = resolve_order(state_tree)
+        for state_path in ordered_states:
+            with self():
+                return self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
+
+    def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
+        evt = NestedEventData(None, None, self, model, args, kwargs)
+        if trigger in self.events:
+            source_path = copy.copy(path)
+            while source_path:
+                state_name = self.state_cls.separator.join(source_path)
+                for transition in self.events[trigger].transitions.get(state_name, []):
+                    try:
+                        _ = self.get_state(transition.dest)
+                    except ValueError:
+                        continue
+                    self.callbacks(self.prepare_event, evt)
+                    self.callbacks(transition.prepare, evt)
+                    if all(c.check(evt) for c in transition.conditions):
+                        return True
+                source_path.pop(-1)
+        if path:
+            with self(path.pop(0)):
+                return self._can_trigger_nested(model, trigger, path, *args, **kwargs)
+        return False
+
     def get_triggers(self, *args):
         """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """
         triggers = []
@@ -750,7 +681,8 @@ class HierarchicalMachine(Machine):
                     with self(state_path[0]):
                         triggers.extend(self.get_nested_triggers(state_path[1:]))
                 while state_path:  # check all valid transitions for parent states
-                    triggers.extend(_super(HierarchicalMachine, self).get_triggers(self.state_cls.separator.join(state_path)))
+                    triggers.extend(super(HierarchicalMachine, self).get_triggers(
+                        self.state_cls.separator.join(state_path)))
                     state_path.pop()
         return triggers
 
@@ -764,7 +696,7 @@ class HierarchicalMachine(Machine):
         """
 
         state = state or self
-        return trigger in state.events or any([self.has_trigger(trigger, sta) for sta in state.states.values()])
+        return trigger in state.events or any(self.has_trigger(trigger, sta) for sta in state.states.values())
 
     def is_state(self, state_name, model, allow_substates=False):
         current_name = getattr(model, self.model_attribute)
@@ -792,13 +724,13 @@ class HierarchicalMachine(Machine):
         """
         self.get_state(state_name).add_callback('exit', callback)
 
-    def set_state(self, states, model=None):
+    def set_state(self, state, model=None):
         """ Set the current state.
         Args:
-            states (list of str or Enum or State): value of state(s) to be set
+            state (list of str or Enum or State): value of state(s) to be set
             model (optional[object]): targeted model; if not set, all models will be set to 'state'
         """
-        values = [self._set_state(value) for value in listify(states)]
+        values = [self._set_state(value) for value in listify(state)]
         models = self.models if model is None else listify(model)
         for mod in models:
             setattr(mod, self.model_attribute, values if len(values) > 1 else values[0])
@@ -814,8 +746,8 @@ class HierarchicalMachine(Machine):
         if isinstance(current_state, list):
             raise MachineError("Cannot use 'to_state' from parallel state")
 
-        event = EventData(self.get_state(current_state), Event('to', self), self,
-                          model, args=args, kwargs=kwargs)
+        event = NestedEventData(self.get_state(current_state), Event('to', self), self,
+                                model, args=args, kwargs=kwargs)
         if isinstance(current_state, Enum):
             event.source_path = self._get_enum_path(current_state)
             event.source_name = self.state_cls.separator.join(event.source_path)
@@ -824,14 +756,14 @@ class HierarchicalMachine(Machine):
             event.source_path = current_state.split(self.state_cls.separator)
         self._create_transition(event.source_name, state_name).execute(event)
 
-    def trigger_event(self, _model, _trigger, *args, **kwargs):
+    def trigger_event(self, model, trigger, *args, **kwargs):
         """ Processes events recursively and forwards arguments if suitable events are found.
         This function is usually bound to models with model and trigger arguments already
         resolved as a partial. Execution will halt when a nested transition has been executed
         successfully.
         Args:
-            _model (object): targeted model
-            _trigger (str): event name
+            model (object): targeted model
+            trigger (str): event name
             *args: positional parameters passed to the event and its callbacks
             **kwargs: keyword arguments passed to the event and its callbacks
         Returns:
@@ -841,9 +773,32 @@ class HierarchicalMachine(Machine):
                           is not True. Note that a transition which is not executed due to conditions
                           is still considered valid.
         """
-        with self():
-            res = self._trigger_event(_model, _trigger, None, *args, **kwargs)
-        return self._check_event_result(res, _model, _trigger)
+        event_data = NestedEventData(state=None, event=None, machine=self, model=model, args=args, kwargs=kwargs)
+        event_data.result = None
+
+        return self._process(partial(self._trigger_event, event_data, trigger))
+
+    def _trigger_event(self, event_data, trigger):
+        try:
+            with self():
+                res = self._trigger_event_nested(event_data, trigger, None)
+            event_data.result = self._check_event_result(res, event_data.model, trigger)
+        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+            event_data.error = err
+            if self.on_exception:
+                self.callbacks(self.on_exception, event_data)
+            else:
+                raise
+        finally:
+            try:
+                self.callbacks(self.finalize_event, event_data)
+                _LOGGER.debug("%sExecuted machine finalize callbacks", self.name)
+            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
+                              self.name,
+                              type(err).__name__,
+                              str(err))
+        return event_data.result
 
     def _add_model_to_state(self, state, model):
         name = self.get_global_name(state)
@@ -869,11 +824,85 @@ class HierarchicalMachine(Machine):
             for event in self.events.values():
                 if not hasattr(model, event.name):
                     self._add_trigger_to_model(event.name, model)
-            for state in self.states.values():
-                self._add_model_to_state(state, model)
+            for a_state in self.states.values():
+                self._add_model_to_state(a_state, model)
+
+    def _add_dict_state(self, state, ignore_invalid_triggers, remap, **kwargs):
+        if remap is not None and state['name'] in remap:
+            return
+        state = state.copy()  # prevent messing with the initially passed dict
+        remap = state.pop('remap', None)
+        if 'ignore_invalid_triggers' not in state:
+            state['ignore_invalid_triggers'] = ignore_invalid_triggers
+
+        # parallel: [states] is just a short handle for {children: [states], initial: [state_names]}
+        state_parallel = state.pop('parallel', [])
+        if state_parallel:
+            state_children = state_parallel
+            state['initial'] = [s['name'] if isinstance(s, dict)
+                                else s for s in state_children]
+        else:
+            state_children = state.pop('children', state.pop('states', []))
+        transitions = state.pop('transitions', [])
+        new_state = self._create_state(**state)
+        self.states[new_state.name] = new_state
+        self._init_state(new_state)
+        remapped_transitions = []
+        with self(new_state.name):
+            self.add_states(state_children, remap=remap, **kwargs)
+            if transitions:
+                self.add_transitions(transitions)
+            if remap is not None:
+                remapped_transitions.extend(self._remap_state(new_state, remap))
+
+        self.add_transitions(remapped_transitions)
+
+    def _add_enum_state(self, state, on_enter, on_exit, ignore_invalid_triggers, remap, **kwargs):
+        if remap is not None and state.name in remap:
+            return
+        if self.state_cls.separator in state.name:
+            raise ValueError("State '{0}' contains '{1}' which is used as state name separator. "
+                             "Consider changing the NestedState.separator to avoid this issue."
+                             "".format(state.name, self.state_cls.separator))
+        if state.name in self.states:
+            raise ValueError("State {0} cannot be added since it already exists.".format(state.name))
+        new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
+                                       ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+        self.states[new_state.name] = new_state
+        self._init_state(new_state)
+
+    def _add_machine_states(self, state, remap):
+        new_states = [s for s in state.states.values() if remap is None or s not in remap]
+        self.add_states(new_states)
+        for evt in state.events.values():
+            self.events[evt.name] = evt
+        if self.scoped.initial is None:
+            self.scoped.initial = state.initial
+
+    def _add_string_state(self, state, on_enter, on_exit, ignore_invalid_triggers, remap, **kwargs):
+        if remap is not None and state in remap:
+            return
+        domains = state.split(self.state_cls.separator, 1)
+        if len(domains) > 1:
+            try:
+                self.get_state(domains[0])
+            except ValueError:
+                self.add_state(domains[0], on_enter=on_enter, on_exit=on_exit,
+                               ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+            with self(domains[0]):
+                self.add_states(domains[1], on_enter=on_enter, on_exit=on_exit,
+                                ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+        else:
+            if state in self.states:
+                raise ValueError("State {0} cannot be added since it already exists.".format(state))
+            new_state = self._create_state(state, on_enter=on_enter, on_exit=on_exit,
+                                           ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
+            self.states[new_state.name] = new_state
+            self._init_state(new_state)
 
     def _add_trigger_to_model(self, trigger, model):
         trig_func = partial(self.trigger_event, model, trigger)
+        self._add_may_transition_func_for_trigger(trigger, model)
         # FunctionWrappers are only necessary if a custom separator is used
         if trigger.startswith('to_') and self.state_cls.separator != '_':
             path = trigger[3:].split(self.state_cls.separator)
@@ -886,12 +915,19 @@ class HierarchicalMachine(Machine):
         else:
             self._checked_assignment(model, trigger, trig_func)
 
-    # converts a list of current states into a hierarchical state tree
-    def _build_state_tree(self, model_states, separator, tree=None):
+    def build_state_tree(self, model_states, separator, tree=None):
+        """ Converts a list of current states into a hierarchical state tree.
+        Args:
+            model_states (str or list(str)):
+            separator (str): The character used to separate state names
+            tree (OrderedDict): The current branch to use. If not passed, create a new tree.
+        Returns:
+            OrderedDict: A state tree dictionary
+        """
         tree = tree if tree is not None else OrderedDict()
         if isinstance(model_states, list):
             for state in model_states:
-                _ = self._build_state_tree(state, separator, tree)
+                _ = self.build_state_tree(state, separator, tree)
         else:
             tmp = tree
             if isinstance(model_states, (Enum, EnumMeta)):
@@ -903,7 +939,8 @@ class HierarchicalMachine(Machine):
                 tmp = tmp.setdefault(elem.name if hasattr(elem, 'name') else elem, OrderedDict())
         return tree
 
-    def _get_enum_path(self, enum_state, prefix=[]):
+    def _get_enum_path(self, enum_state, prefix=None):
+        prefix = prefix or []
         if enum_state.name in self.states and self.states[enum_state.name].value == enum_state:
             return prefix + [enum_state.name]
         for name in self.states:
@@ -911,9 +948,10 @@ class HierarchicalMachine(Machine):
                 res = self._get_enum_path(enum_state, prefix=prefix + [name])
                 if res:
                     return res
-        return []
+        raise ValueError("Could not find path of {0}.".format(enum_state))
 
-    def _get_state_path(self, state, prefix=[]):
+    def _get_state_path(self, state, prefix=None):
+        prefix = prefix or []
         if state in self.states.values():
             return prefix + [state.name]
         for name in self.states:
@@ -936,8 +974,7 @@ class HierarchicalMachine(Machine):
                     if self.has_trigger(trigger):
                         raise MachineError(msg)
                     # or AttributeError (invalid event) is appropriate
-                    else:
-                        raise AttributeError("Do not know event named '%s'." % trigger)
+                    raise AttributeError("Do not know event named '%s'." % trigger)
             _LOGGER.warning(msg)
             res = False
         return res
@@ -965,7 +1002,7 @@ class HierarchicalMachine(Machine):
         Raises:
             ValueError: When raise_error is True and state is not registered
         """
-        found = _super(HierarchicalMachine, self)._has_state(state)
+        found = super(HierarchicalMachine, self)._has_state(state)
         if not found:
             for a_state in self.states:
                 with self(a_state):
@@ -998,19 +1035,61 @@ class HierarchicalMachine(Machine):
             if len(path) > 1:
                 state_name, suffix = path
                 # make sure the passed state has been created already
-                _super(HierarchicalMachine, self.__class__).initial.fset(self, state_name)
+                super(HierarchicalMachine, self.__class__).initial.fset(self, state_name)
                 with self(state_name):
                     self.initial = suffix
                     self._initial = state_name + self.state_cls.separator + self._initial
             else:
-                _super(HierarchicalMachine, self.__class__).initial.fset(self, value)
+                super(HierarchicalMachine, self.__class__).initial.fset(self, value)
         elif isinstance(value, (list, tuple)):
             return [self._recursive_initial(v) for v in value]
         else:
-            _super(HierarchicalMachine, self.__class__).initial.fset(self, value)
+            super(HierarchicalMachine, self.__class__).initial.fset(self, value)
         return self._initial[0] if isinstance(self._initial, list) and len(self._initial) == 1 else self._initial
 
-    def _resolve_initial(self, models, state_name_path, prefix=[]):
+    def _remap_state(self, state, remap):
+        drop_event = []
+        remapped_transitions = []
+        for evt in self.events.values():
+            self.events[evt.name] = copy.copy(evt)
+        for trigger, event in self.events.items():
+            drop_source = []
+            event.transitions = copy.deepcopy(event.transitions)
+            for source_name, trans_source in event.transitions.items():
+                if source_name in remap:
+                    drop_source.append(source_name)
+                    continue
+                drop_trans = []
+                for trans in trans_source:
+                    if trans.dest in remap:
+                        conditions, unless = [], []
+                        for cond in trans.conditions:
+                            # split a list in two lists based on the accessors (cond.target) truth value
+                            (unless, conditions)[cond.target].append(cond.func)
+                        remapped_transitions.append({
+                            'trigger': trigger,
+                            'source': state.name + self.state_cls.separator + trans.source,
+                            'dest': remap[trans.dest],
+                            'conditions': conditions,
+                            'unless': unless,
+                            'prepare': trans.prepare,
+                            'before': trans.before,
+                            'after': trans.after})
+                        drop_trans.append(trans)
+                for d_trans in drop_trans:
+                    trans_source.remove(d_trans)
+                if not trans_source:
+                    drop_source.append(source_name)
+            for d_source in drop_source:
+                del event.transitions[d_source]
+            if not event.transitions:
+                drop_event.append(trigger)
+        for d_event in drop_event:
+            del self.events[d_event]
+        return remapped_transitions
+
+    def _resolve_initial(self, models, state_name_path, prefix=None):
+        prefix = prefix or []
         if state_name_path:
             state_name = state_name_path.pop(0)
             with self(state_name):
@@ -1026,23 +1105,24 @@ class HierarchicalMachine(Machine):
     def _set_state(self, state_name):
         if isinstance(state_name, list):
             return [self._set_state(value) for value in state_name]
-        else:
-            a_state = self.get_state(state_name)
-            return a_state.value if isinstance(a_state.value, Enum) else state_name
+        a_state = self.get_state(state_name)
+        return a_state.value if isinstance(a_state.value, Enum) else state_name
 
-    def _trigger_event(self, _model, _trigger, _state_tree, *args, **kwargs):
+    def _trigger_event_nested(self, event_data, trigger, _state_tree):
+        model = event_data.model
         if _state_tree is None:
-            _state_tree = self._build_state_tree(listify(getattr(_model, self.model_attribute)),
-                                                 self.state_cls.separator)
+            _state_tree = self.build_state_tree(listify(getattr(model, self.model_attribute)),
+                                                self.state_cls.separator)
         res = {}
         for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    tmp = self._trigger_event(_model, _trigger, value, *args, **kwargs)
+                    tmp = self._trigger_event_nested(event_data, trigger, value)
                     if tmp is not None:
                         res[key] = tmp
-            if res.get(key, False) is False and _trigger in self.events:
-                tmp = self.events[_trigger].trigger(_model, self, *args, **kwargs)
+            if res.get(key, False) is False and trigger in self.events:
+                event_data.event = self.events[trigger]
+                tmp = event_data.event.trigger_nested(event_data)
                 if tmp is not None:
                     res[key] = tmp
         return None if not res or all(v is None for v in res.values()) else any(res.values())

@@ -7,6 +7,7 @@ include MANIFEST
 include *.ini
 include conftest.py
 
+recursive-include transitions *.pyi
 recursive-include examples *.ipynb
 recursive-include tests *.py
 recursive-exclude examples/.ipynb_checkpoints *.ipynb

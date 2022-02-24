@@ -9,6 +9,7 @@ import sys
 import tempfile
 from os.path import getsize
 from os import unlink
+from functools import partial
 
 from transitions.extensions.nesting import NestedState
 from transitions.extensions import MachineFactory
@@ -627,6 +628,78 @@ class TestNestedTransitions(TestTransitions):
         machine = self.machine_cls(states=states, queued=True, initial='b')
         machine.to_b_c()
 
+    def test_machine_may_transitions_for_generated_triggers(self):
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
+        m = self.stuff.machine_cls(states=states, initial='A')
+        assert m.may_to_A()
+        m.to_A()
+        assert m.may_to_B()
+        m.to_B()
+        assert m.may_to_C()
+        m.to_C()
+        assert m.may_to_C_1()
+        m.to_C_1()
+        assert m.may_to_D()
+        m.to_D()
+
+    def test_get_nested_triggers(self):
+        transitions = [
+            ['goB', 'A', 'B'],
+            ['goC', 'B', 'C'],
+            ['goA', '*', 'A'],
+            ['goF1', ['C{0}1'.format(self.machine_cls.separator), 'C{0}2'.format(self.machine_cls.separator)], 'F'],
+            ['goF2', 'C', 'F']
+        ]
+        m = self.machine_cls(states=test_states, transitions=transitions, auto_transitions=False, initial='A')
+        self.assertEqual(1, len(m.get_nested_triggers(['C', '1'])))
+        with m('C'):
+            m.add_transition('goC1', '1', '2')
+        self.assertEqual(len(transitions) + 1, len(m.get_nested_triggers()))
+        self.assertEqual(2, len(m.get_nested_triggers(['C', '1'])))
+        self.assertEqual(2, len(m.get_nested_triggers(['C'])))
+
+    def test_stop_transition_evaluation(self):
+        states = ['A', {'name': 'B', 'states': ['C', 'D']}]
+        transitions = [['next', 'A', 'B_C'], ['next', 'B_C', 'B_D'], ['next', 'B', 'A']]
+        mock = MagicMock()
+
+        def process_error(event_data):
+            assert isinstance(event_data.error, ValueError)
+            mock()
+
+        m = self.machine_cls(states=states, transitions=transitions, initial='A', send_event=True)
+        m.on_enter_B_D(partial(self.stuff.this_raises, ValueError()))
+        m.next()
+        with self.assertRaises(ValueError):
+            m.next()
+        assert m.is_B_D()
+        assert m.to_B_C()
+        m.on_exception = process_error
+        m.next()
+        assert mock.called
+        assert m.is_B_D()
+
+    def test_nested_queued_remap(self):
+        states = ['A', 'done',
+                  {'name': 'B', 'remap': {'done': 'done'},
+                   'initial': 'initial',
+                   'transitions': [['go', 'initial', 'a']],
+                   'states': ['done', 'initial', {'name': 'a', 'remap': {'done': 'done'},
+                                                  'initial': 'initial',
+                                                  'transitions': [['go', 'initial', 'x']],
+                                                  'states': ['done', 'initial',
+                                                             {'name': 'x',
+                                                              'remap': {'done': 'done'},
+                                                              'initial': 'initial',
+                                                              'states': ['initial', 'done'],
+                                                              'transitions': [['done', 'initial', 'done']]}]}]}]
+        m = self.machine_cls(states=states, initial='A', queued=True)
+        m.on_enter_B('go')
+        m.on_enter_B_a('go')
+        m.on_enter_B_a_x_initial('done')
+        m.to_B()
+        assert m.is_done()
+
 
 class TestSeparatorsBase(TestCase):
 
@@ -803,6 +876,32 @@ class TestSeparatorsBase(TestCase):
         self.assertEqual('C', machine.state)
         machine.reset()  # exit C, enter A
         self.assertEqual('A', machine.state)
+
+    def test_machine_may_transitions(self):
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
+        transitions = [
+            {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
+            {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'run_fast', 'source': 'C', 'dest': 'C{0}1'.format(self.separator)},
+            {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
+        ]
+        m = self.stuff.machine_cls(
+            states=states, transitions=transitions, initial='A', auto_transitions=False
+        )
+        assert m.may_walk()
+        assert not m.may_run()
+        assert not m.may_run_fast()
+        assert not m.may_sprint()
+
+        m.walk()
+        assert not m.may_walk()
+        assert m.may_run()
+        assert not m.may_run_fast()
+
+        m.run()
+        assert m.may_run_fast()
+        assert m.may_sprint()
+        m.run_fast()
 
 
 class TestSeparatorsSlash(TestSeparatorsBase):

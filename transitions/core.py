@@ -19,19 +19,19 @@ try:
 except ImportError:
     # If enum is not available, create dummy classes for type checks
     class Enum:
-        pass
+        """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
 
     class EnumMeta:
-        pass
+        """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
 
 import inspect
 import itertools
 import logging
+import warnings
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
 from six import string_types
-import warnings
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -113,13 +113,14 @@ class State(object):
 
     @property
     def name(self):
+        """ The name of the state. """
         if isinstance(self._name, Enum):
             return self._name.name
-        else:
-            return self._name
+        return self._name
 
     @property
     def value(self):
+        """ The state's value. For string states this will be equivalent to the name attribute. """
         return self._name
 
     def enter(self, event_data):
@@ -152,7 +153,7 @@ class Condition(object):
     """ A helper class to call condition checks in the intended way.
 
     Attributes:
-        func (callable): The function to call for the condition check
+        func (str or callable): The function to call for the condition check
         target (bool): Indicates the target state--i.e., when True,
                 the condition-checking callback should return True to pass,
                 and when False, the callback should return False to pass.
@@ -161,7 +162,7 @@ class Condition(object):
     def __init__(self, func, target=True):
         """
         Args:
-            func (str): Name of the condition-checking callable
+            func (str or callable): Name of the condition-checking callable
             target (bool): Indicates the target state--i.e., when True,
                 the condition-checking callback should return True to pass,
                 and when False, the callback should return False to pass.
@@ -290,7 +291,7 @@ class Transition(object):
         Args:
             trigger (str): The type of triggering event. Must be one of
                 'before', 'after' or 'prepare'.
-            func (str): The name of the callback function.
+            func (str or callable): The name of the callback function or a callable.
         """
         callback_list = getattr(self, trigger)
         callback_list.append(func)
@@ -313,7 +314,7 @@ class EventData(object):
         kwargs (dict): Optional keyword arguments from trigger method
             to store internally for possible later use.
         transition (Transition): Currently active transition. Will be assigned during triggering.
-        error (Error): In case a triggered event causes an Error, it is assigned here and passed on.
+        error (Exception): In case a triggered event causes an Error, it is assigned here and passed on.
         result (bool): True in case a transition has been successful, False otherwise.
     """
 
@@ -393,49 +394,27 @@ class Event(object):
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        func = partial(self._trigger, model, *args, **kwargs)
+        func = partial(self._trigger, EventData(None, self, self.machine, model, args=args, kwargs=kwargs))
         # pylint: disable=protected-access
         # noinspection PyProtectedMember
         # Machine._process should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
         return self.machine._process(func)
 
-    def _trigger(self, model, *args, **kwargs):
+    def _trigger(self, event_data):
         """ Internal trigger function called by the ``Machine`` instance. This should not
         be called directly but via the public method ``Machine.process``.
         Args:
-            model (object): The currently processed model
-            args and kwargs: Optional positional or named arguments that will
-                be passed onto the EventData object, enabling arbitrary state
-                information to be passed on to downstream triggered functions.
+            event_data (EventData): The currently processed event. State, result and (potentially) error might be
+            overridden.
         Returns: boolean indicating whether or not a transition was
             successfully executed (True if successful, False if not).
         """
-        state = self.machine.get_model_state(model)
-        if state.name not in self.transitions:
-            msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
-                                                               state.name)
-            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
-                else self.machine.ignore_invalid_triggers
-            if ignore:
-                _LOGGER.warning(msg)
-                return False
-            else:
-                raise MachineError(msg)
-        event_data = EventData(state, self, self.machine, model, args=args, kwargs=kwargs)
-        return self._process(event_data)
-
-    def _process(self, event_data):
-        self.machine.callbacks(self.machine.prepare_event, event_data)
-        _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
-
+        event_data.state = self.machine.get_model_state(event_data.model)
         try:
-            for trans in self.transitions[event_data.state.name]:
-                event_data.transition = trans
-                if trans.execute(event_data):
-                    event_data.result = True
-                    break
-        except Exception as err:
+            if self._is_valid_source(event_data.state):
+                self._process(event_data)
+        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.machine.on_exception:
                 self.machine.callbacks(self.machine.on_exception, event_data)
@@ -445,13 +424,33 @@ class Event(object):
             try:
                 self.machine.callbacks(self.machine.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.machine.name,
                               type(err).__name__,
                               str(err))
-
         return event_data.result
+
+    def _process(self, event_data):
+        self.machine.callbacks(self.machine.prepare_event, event_data)
+        _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
+        for trans in self.transitions[event_data.state.name]:
+            event_data.transition = trans
+            if trans.execute(event_data):
+                event_data.result = True
+                break
+
+    def _is_valid_source(self, state):
+        if state.name not in self.transitions:
+            msg = "%sCan't trigger event %s from state %s!" % (self.machine.name, self.name,
+                                                               state.name)
+            ignore = state.ignore_invalid_triggers if state.ignore_invalid_triggers is not None \
+                else self.machine.ignore_invalid_triggers
+            if ignore:
+                _LOGGER.warning(msg)
+                return False
+            raise MachineError(msg)
+        return True
 
     def __repr__(self):
         return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
@@ -613,8 +612,7 @@ class Machine(object):
         if initial is None:
             if self.initial is None:
                 raise ValueError("No initial state configured for machine, must specify when adding model.")
-            else:
-                initial = self.initial
+            initial = self.initial
 
         for mod in models:
             mod = self if mod is self.self_literal else mod
@@ -641,7 +639,7 @@ class Machine(object):
         if len(self._transition_queue) > 0:
             # the first element of the list is currently executed. Keeping it for further Machine._process(ing)
             self._transition_queue = deque(
-                [self._transition_queue[0]] + [e for e in self._transition_queue if e.args[0] not in models])
+                [self._transition_queue[0]] + [e for e in self._transition_queue if e.args[0].model not in models])
 
     @classmethod
     def _create_transition(cls, *args, **kwargs):
@@ -756,7 +754,7 @@ class Machine(object):
         """ Check whether the current state matches the named state. This function is not called directly
             but assigned as partials to model instances (e.g. is_A -> partial(_is_state, 'A', model)).
         Args:
-            state (str): name of the checked state
+            state (str or Enum): name of the checked state or Enum
             model: model to be checked
         Returns:
             bool: Whether the model's current state is state.
@@ -764,6 +762,13 @@ class Machine(object):
         return getattr(model, self.model_attribute) == state
 
     def get_model_state(self, model):
+        """
+            Get the state of a model
+        Args:
+            model (object): the stateful model
+        Returns:
+            State: The State object related to the model's state
+        """
         return self.get_state(getattr(model, self.model_attribute))
 
     def set_state(self, state, model=None):
@@ -833,8 +838,6 @@ class Machine(object):
                             method_name = 'to_%s' % a_state
                         else:
                             method_name = 'to_%s_%s' % (self.model_attribute, a_state)
-                            self.add_transition('to_%s' % a_state, self.wildcard_all, a_state,
-                                                prepare=partial(_warning_wrapper_to, 'to_%s' % a_state))
                         self.add_transition(method_name, self.wildcard_all, a_state)
 
                     # add auto transition with source <state> to <a_state>
@@ -843,8 +846,6 @@ class Machine(object):
                             method_name = 'to_%s' % a_state
                         else:
                             method_name = 'to_%s_%s' % (self.model_attribute, a_state)
-                            self.add_transition('to_%s' % a_state, state.name, a_state,
-                                                prepare=partial(_warning_wrapper_to, 'to_%s' % a_state))
                         self.add_transition(method_name, state.name, a_state)
 
     def _add_model_to_state(self, state, model):
@@ -857,7 +858,6 @@ class Machine(object):
             method_name = 'is_%s' % state.name
         else:
             method_name = 'is_%s_%s' % (self.model_attribute, state.name)
-            self._checked_assignment(model, 'is_%s' % state.name, partial(_warning_wrapper_is, method_name, func))
         self._checked_assignment(model, method_name, func)
 
         # Add dynamic method callbacks (enter/exit) if there are existing bound methods in the model
@@ -874,8 +874,30 @@ class Machine(object):
         else:
             setattr(model, name, func)
 
+    def _can_trigger(self, model, trigger, *args, **kwargs):
+        evt = EventData(None, None, self, model, args, kwargs)
+        state = self.get_model_state(model).name
+
+        for trigger_name in self.get_triggers(state):
+            if trigger_name != trigger:
+                continue
+            for transition in self.events[trigger_name].transitions[state]:
+                try:
+                    _ = self.get_state(transition.dest)
+                except ValueError:
+                    continue
+                self.callbacks(self.prepare_event, evt)
+                self.callbacks(transition.prepare, evt)
+                if all(c.check(evt) for c in transition.conditions):
+                    return True
+        return False
+
+    def _add_may_transition_func_for_trigger(self, trigger, model):
+        self._checked_assignment(model, "may_%s" % trigger, partial(self._can_trigger, model, trigger))
+
     def _add_trigger_to_model(self, trigger, model):
         self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
+        self._add_may_transition_func_for_trigger(trigger, model)
 
     def _get_trigger(self, model, trigger_name, *args, **kwargs):
         """Convenience function added to the model to trigger events by name.
@@ -906,7 +928,7 @@ class Machine(object):
         Returns:
             list of transition/trigger names.
         """
-        names = set([state.name if hasattr(state, 'name') else state for state in args])
+        names = {state.name if hasattr(state, 'name') else state for state in args}
         return [t for (t, ev) in self.events.items() if any(name in ev.transitions for name in names)]
 
     def add_transition(self, trigger, source, dest, conditions=None,
@@ -917,10 +939,10 @@ class Machine(object):
                 transition. This will be attached to the currently specified
                 model (e.g., passing trigger='advance' will create a new
                 advance() method in the model that triggers the transition.)
-            source(str or list): The name of the source state--i.e., the state we
+            source(str, Enum or list): The name of the source state--i.e., the state we
                 are transitioning away from. This can be a single state, a
                 list of states or an asterisk for all states.
-            dest (str): The name of the destination State--i.e., the state
+            dest (str or Enum): The name of the destination State--i.e., the state
                 we are transitioning into. This can be a single state or an
                 equal sign to specify that the transition should be reflexive
                 so that the destination will be the same as the source for
@@ -1083,8 +1105,8 @@ class Machine(object):
         """ Removes a transition from the Machine and all models.
         Args:
             trigger (str): Trigger name of the transition.
-            source (str): Limits removal to transitions from a certain state.
-            dest (str): Limits removal to transitions to a certain state.
+            source (str, Enum or State): Limits removal to transitions from a certain state.
+            dest (str, Enum or State): Limits removal to transitions to a certain state.
         """
         source = listify(source) if source != "*" else source
         dest = listify(dest) if dest != "*" else dest
@@ -1115,7 +1137,7 @@ class Machine(object):
         Returns:
             bool The truth value of all triggers combined with AND
         """
-        return all([getattr(model, trigger)(*args, **kwargs) for model in self.models])
+        return all(getattr(model, trigger)(*args, **kwargs) for model in self.models)
 
     def callbacks(self, funcs, event_data):
         """ Triggers a list of callbacks """
@@ -1162,11 +1184,11 @@ class Machine(object):
                     return func_wrapper
             except AttributeError:
                 try:
-                    mod, name = func.rsplit('.', 1)
-                    m = __import__(mod)
-                    for n in mod.split('.')[1:]:
-                        m = getattr(m, n)
-                    func = getattr(m, name)
+                    module_name, func_name = func.rsplit('.', 1)
+                    module = __import__(module_name)
+                    for submodule_name in module_name.split('.')[1:]:
+                        module = getattr(module, submodule_name)
+                    func = getattr(module, func_name)
                 except (ImportError, AttributeError, ValueError):
                     raise AttributeError("Callable with name '%s' could neither be retrieved from the passed "
                                          "model nor imported from a module." % func)
@@ -1186,8 +1208,7 @@ class Machine(object):
             if not self._transition_queue:
                 # if trigger raises an Error, it has to be handled by the Machine.process caller
                 return trigger()
-            else:
-                raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
+            raise MachineError("Attempt to process events synchronously while transition queue is not empty!")
 
         # process queued events
         self._transition_queue.append(trigger)
@@ -1242,7 +1263,7 @@ class Machine(object):
                                          .format(target, id(self)))
                 return partial(self.events[target].add_callback, callback_type)
 
-            elif callback_type in self.state_cls.dynamic_methods:
+            if callback_type in self.state_cls.dynamic_methods:
                 state = self.get_state(target)
                 return partial(state.add_callback, callback_type[3:])
 
@@ -1264,21 +1285,3 @@ class MachineError(Exception):
 
     def __str__(self):
         return repr(self.value)
-
-
-# TODO: Remove in 0.9.0
-def _warning_wrapper_is(meth_name, func, *args, **kwargs):
-    warnings.warn("Starting from transitions version 0.8.3, 'is_<state_name>' convenience functions will be"
-                  " assigned to 'is_<model_attribute>_<state_name>' when 'model_attribute "
-                  "!= \"state\"'. In 0.9.0, 'is_<state_name>' will NOT be assigned anymore when "
-                  "'model_attribute != \"state\"'! Please adjust your code and use "
-                  "'{0}' instead.".format(meth_name), DeprecationWarning)
-    return func(*args, **kwargs)
-
-
-def _warning_wrapper_to(meth_name, *args, **kwargs):
-    warnings.warn("Starting from transitions version 0.8.3, 'to_<state_name>' convenience functions will be"
-                  " assigned to 'to_<model_attribute>_<state_name>' when 'model_attribute "
-                  "!= \"state\"'. In 0.9.0, 'to_<state_name>' will NOT be assigned anymore when "
-                  "'model_attribute != \"state\"'! Please adjust your code and use "
-                  "'{0}' instead.".format(meth_name), DeprecationWarning)

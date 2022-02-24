@@ -1,11 +1,13 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.8.11-orange.svg)](https://github.com/pytransitions/transitions)
+
+[![Version](https://img.shields.io/badge/version-v0.9.0-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://github.com/pytransitions/transitions/actions/workflows/pytest.yml/badge.svg)](https://github.com/pytransitions/transitions/actions?query=workflow%3Apytest)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
 [![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.11.svg)](https://github.com/pytransitions/transitions/compare/0.8.11...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb)
+
 <!-- [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions) -->
 <!--[![Name](Image)](Link)-->
 
@@ -19,39 +21,39 @@ A lightweight, object-oriented state machine implementation in Python with many 
 
     python setup.py install
 
-
 ## Table of Contents
+
 - [Quickstart](#quickstart)
 - [Non-Quickstart](#the-non-quickstart)
-    - [Basic initialization](#basic-initialization)
-    - [States](#states)
-        - [Callbacks](#state-callbacks)
-        - [Checking state](#checking-state)
-        - [Enumerations](#enum-state)
-    - [Transitions](#transitions)
-        - [Automatic transitions](#automatic-transitions-for-all-states)
-        - [Transitioning from multiple states](#transitioning-from-multiple-states)
-        - [Reflexive transitions from multiple states](#reflexive-from-multiple-states)
-        - [Internal transitions](#internal-transitions)
-        - [Ordered transitions](#ordered-transitions)
-        - [Queued transitions](#queued-transitions)
-        - [Conditional transitions](#conditional-transitions)
-        - [Callbacks](#transition-callbacks)
-    - [Callable resolution](#resolution)
-    - [Callback execution order](#execution-order)
-    - [Passing data](#passing-data)
-    - [Alternative initialization patterns](#alternative-initialization-patterns)
-    - [Logging](#logging)
-    - [(Re-)Storing machine instances](#restoring)
-    - [Extensions](#extensions)
-        - [Diagrams](#diagrams)
-        - [Hierarchical State Machine](#hsm)
-        - [Threading](#threading)
-        - [Async](#async)
-        - [State features](#state-features)
-        - [Django](#django-support)
-    - [Bug reports etc.](#bug-reports)
-
+  - [Basic initialization](#basic-initialization)
+  - [States](#states)
+    - [Callbacks](#state-callbacks)
+    - [Checking state](#checking-state)
+    - [Enumerations](#enum-state)
+  - [Transitions](#transitions)
+    - [Automatic transitions](#automatic-transitions-for-all-states)
+    - [Transitioning from multiple states](#transitioning-from-multiple-states)
+    - [Reflexive transitions from multiple states](#reflexive-from-multiple-states)
+    - [Internal transitions](#internal-transitions)
+    - [Ordered transitions](#ordered-transitions)
+    - [Queued transitions](#queued-transitions)
+    - [Conditional transitions](#conditional-transitions)
+    - [Check transitions](#check-transitions)
+    - [Callbacks](#transition-callbacks)
+  - [Callable resolution](#resolution)
+  - [Callback execution order](#execution-order)
+  - [Passing data](#passing-data)
+  - [Alternative initialization patterns](#alternative-initialization-patterns)
+  - [Logging](#logging)
+  - [(Re-)Storing machine instances](#restoring)
+  - [Extensions](#extensions)
+    - [Diagrams](#diagrams)
+    - [Hierarchical State Machine](#hsm)
+    - [Threading](#threading)
+    - [Async](#async)
+    - [State features](#state-features)
+    - [Django](#django-support)
+  - [Bug reports etc.](#bug-reports)
 
 ## Quickstart
 
@@ -278,10 +280,11 @@ gas = State('gas')
 machine.add_states([solid, liquid, gas])
 ```
 
-States are initialized *once* when added to the machine and will persist until they are removed from it. In other words: if you alter the attributes of a state object, this change will NOT be reset the next time you enter that state. Have a look at how to [extend state features](#state-features) in case you require some other behaviour.
+States are initialized _once_ when added to the machine and will persist until they are removed from it. In other words: if you alter the attributes of a state object, this change will NOT be reset the next time you enter that state. Have a look at how to [extend state features](#state-features) in case you require some other behaviour.
 
 #### <a name="state-callbacks"></a>Callbacks
-A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization by passing them to a `State` object constructor, in a state property dictionary, or add them later. 
+
+A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization by passing them to a `State` object constructor, in a state property dictionary, or add them later.
 
 For convenience, whenever a new `State` is added to a `Machine`, the methods `on_enter_«state name»` and `on_exit_«state name»` are dynamically created on the Machine (not on the model!), which allow you to dynamically add new enter and exit callbacks later if you need them.
 
@@ -317,7 +320,7 @@ lump.sublimate()
 >>> 'hello, new state!'
 ```
 
-Note that `on_enter_«state name»` callback will *not* fire when a Machine is first initialized. For example if you have an `on_enter_A()` callback defined, and initialize the `Machine` with `initial='A'`, `on_enter_A()` will not be fired until the next time you enter state `A`. (If you need to make sure `on_enter_A()` fires at initialization, you can simply create a dummy initial state and then explicitly call `to_A()` inside the `__init__` method.)
+Note that `on_enter_«state name»` callback will _not_ fire when a Machine is first initialized. For example if you have an `on_enter_A()` callback defined, and initialize the `Machine` with `initial='A'`, `on_enter_A()` will not be fired until the next time you enter state `A`. (If you need to make sure `on_enter_A()` fires at initialization, you can simply create a dummy initial state and then explicitly call `to_A()` inside the `__init__` method.)
 
 In addition to passing in callbacks when initializing a `State`, or adding them dynamically, it's also possible to define callbacks in the model class itself, which may increase code clarity. For example:
 
@@ -402,6 +405,7 @@ You can mix enums and strings if you like (e.g. `[States.RED, 'ORANGE', States.Y
 Thus, it is not possible to have the states `'GREEN'` and `States.GREEN` at the same time.
 
 ### <a name="transitions"></a>Transitions
+
 Some of the above examples already illustrate the use of transitions in passing, but here we'll explore them in more detail.
 
 As with states, each transition is represented internally as its own object – an instance of class `Transition`. The quickest way to initialize a set of transitions is to pass a dictionary, or list of dictionaries, to the `Machine` initializer. We already saw this above:
@@ -472,7 +476,7 @@ This behavior is generally desirable, since it helps alert you to problems in yo
 
 If you need to know which transitions are valid from a certain state, you can use `get_triggers`:
 
-```
+```python
 m.get_triggers('solid')
 >>> ['melt', 'sublimate']
 m.get_triggers('liquid')
@@ -485,6 +489,7 @@ m.get_triggers('solid', 'liquid', 'gas', 'plasma')
 ```
 
 #### <a name="automatic-transitions-for-all-states"></a>Automatic transitions for all states
+
 In addition to any transitions added explicitly, a `to_«state»()` method is created automatically whenever a state is added to a `Machine` instance. This method transitions to the target state no matter which state the machine is currently in:
 
 ```python
@@ -499,6 +504,7 @@ lump.state
 If you desire, you can disable this behavior by setting `auto_transitions=False` in the `Machine` initializer.
 
 #### <a name="transitioning-from-multiple-states"></a>Transitioning from multiple states
+
 A given trigger can be attached to multiple transitions, some of which can potentially begin or end in the same state. For example:
 
 ```python
@@ -519,6 +525,7 @@ machine.add_transition('to_liquid', '*', 'liquid')
 Note that wildcard transitions will only apply to states that exist at the time of the add_transition() call. Calling a wildcard-based transition when the model is in a state added after the transition was defined will elicit an invalid transition message, and will not transition to the target state.
 
 #### <a name="reflexive-from-multiple-states"></a>Reflexive transitions from multiple states
+
 A reflexive trigger (trigger that has the same state as source and destination) can easily be added specifying `=` as destination.
 This is handy if the same reflexive trigger should be added to multiple states.
 For example:
@@ -530,6 +537,7 @@ machine.add_transition('touch', ['liquid', 'gas', 'plasma'], '=', after='change_
 This will add reflexive transitions for all three states with `touch()` as trigger and with `change_shape` executed after each trigger.
 
 #### <a name="internal-transitions"></a>Internal transitions
+
 In contrast to reflexive transitions, internal transitions will never actually leave the state.
 This means that transition-related callbacks such as `before` or `after` will be processed while state-related callbacks `exit` or `enter` will not.
 To define a transition to be internal, set the destination to `None`.
@@ -539,6 +547,7 @@ machine.add_transition('internal', ['liquid', 'gas'], None, after='change_shape'
 ```
 
 #### <a name="ordered-transitions"></a> Ordered transitions
+
 A common desire is for state transitions to follow a strict linear sequence. For instance, given states `['A', 'B', 'C']`, you might want valid transitions for `A` → `B`, `B` → `C`, and `C` → `A` (but no other pairs).
 
 To facilitate this behavior, Transitions provides an `add_ordered_transitions()` method in the `Machine` class:
@@ -609,9 +618,11 @@ machine.advance()
 ```
 
 The execution order of this example is
+
 ```
 prepare -> before -> on_enter_B -> on_enter_C -> after.
 ```
+
 If queued processing is enabled, a transition will be finished before the next transition is triggered:
 
 ```python
@@ -623,9 +634,11 @@ machine.advance()
 ```
 
 This results in
+
 ```
 prepare -> before -> on_enter_B -> queue(to_C) -> after  -> on_enter_C.
 ```
+
 **Important note:** when processing events in a queue, the trigger call will _always_ return `True`, since there is no way to determine at queuing time whether a transition involving queued calls will ultimately complete successfully. This is true even when only a single event is processed.
 
 ```python
@@ -648,8 +661,8 @@ class Model:
         self.machine.remove_model(self)  # aaaand it's gone
 ```
 
-
 #### <a name="conditional-transitions"></a>Conditional transitions
+
 Sometimes you only want a particular transition to execute if a specific condition occurs. You can do this by passing a method, or list of methods, in the `conditions` argument:
 
 ```python
@@ -681,7 +694,26 @@ lump.heat(temp=74)
 
 ... would pass the `temp=74` optional kwarg to the `is_flammable()` check (possibly wrapped in an `EventData` instance). For more on this, see the [Passing data](#passing-data) section below.
 
+#### <a name="check-transitions"></a>Check transitions
+
+If you want to check whether a transition is possible before you execute it ('look before you leap'), you can use `may_<trigger_name>` convenience functions that have been attached to your model:
+
+```python
+# check if the current temperature is hot enough to trigger a transition
+if lump.may_heat():
+    lump.heat()
+```
+
+This will execute all `prepare` callbacks and evaluate the conditions assigned to the potential transitions.
+Transition checks can also be used when a transition's destination is not available (yet):
+
+```python
+machine.add_transition('elevate', 'solid', 'spiritual')
+assert not lump.may_elevate()  # not ready yet :(
+```
+
 #### <a name="transition-callbacks"></a>Callbacks
+
 You can attach callbacks to transitions as well as states. Every transition has `'before'` and `'after'` attributes that contain a list of methods to call before and after the transition executes:
 
 ```python
@@ -715,7 +747,7 @@ class Matter(object):
     @property
     def is_really_hot(self):
         return self.heat
-    
+
 
 states=['solid', 'liquid', 'gas', 'plasma']
 
@@ -734,7 +766,7 @@ lump.melt()
 
 Note that `prepare` will not be called unless the current state is a valid source for the named transition.
 
-Default actions meant to be executed before or after *every* transition can be passed to `Machine` during initialization with
+Default actions meant to be executed before or after _every_ transition can be passed to `Machine` during initialization with
 `before_state_change` and `after_state_change` respectively:
 
 ```python
@@ -751,9 +783,9 @@ lump.to_gas()
 >>> "where'd all the liquid go?"
 ```
 
-There are also two keywords for callbacks which should be executed *independently* a) of how many transitions are possible,
+There are also two keywords for callbacks which should be executed _independently_ a) of how many transitions are possible,
 b) if any transition succeeds and c) even if an error is raised during the execution of some other callback.
-Callbacks passed to `Machine` with `prepare_event` will be executed *once* before processing possible transitions
+Callbacks passed to `Machine` with `prepare_event` will be executed _once_ before processing possible transitions
 (and their individual `prepare` callbacks) takes place.
 Callbacks of `finalize_event` will be executed regardless of the success of the processed transitions.
 Note that if an error occurred it will be attached to `event_data` as `error` and can be retrieved with `send_event=True`.
@@ -808,7 +840,6 @@ print(lump.state)
 # >>> initial
 ```
 
-
 ### <a name="resolution"></a>Callable resolution
 
 As you have probably already realized, the standard way of passing callables to states, conditions and transitions is by name. When processing callbacks and conditions, `transitions` will use their name to retrieve the related callable from the model. If the method cannot be retrieved and it contains dots, `transitions` will treat the name as a path to a module function and try to import it. Alternatively, you can pass names of properties or attributes. They will be wrapped into functions but cannot receive event data for obvious reasons. You can also pass callables such as (bound) functions directly. As mentioned earlier, you can also pass lists/tuples of callables names to the callback parameters. Callbacks will be executed in the order they were added.
@@ -847,8 +878,8 @@ model.imported()
 The callable resolution is done in `Machine.resolve_callable`.
 This method can be overridden in case more complex callable resolution strategies are required.
 
-
 **Example**
+
 ```python
 class CustomMachine(Machine):
     @staticmethod
@@ -864,25 +895,26 @@ execute triggers by name such as `lump.trigger("melt")` or dispatch events on mu
 (see section about multiple models in [alternative initialization patterns](#alternative-initialization-patterns)).
 Callbacks on transitions are then executed in the following order:
 
-|      Callback                  | Current State |               Comments                                      |
-|--------------------------------|:-------------:|-------------------------------------------------------------|
-| `'machine.prepare_event'`      | `source`      | executed *once* before individual transitions are processed |
-| `'transition.prepare'`         | `source`      | executed as soon as the transition starts                   |
-| `'transition.conditions'`      | `source`      | conditions *may* fail and halt the transition               |
-| `'transition.unless'`          | `source`      | conditions *may* fail and halt the transition               |
-| `'machine.before_state_change'`| `source`      | default callbacks declared on model                         |
-| `'transition.before'`          | `source`      |                                                             |
-| `'state.on_exit'`              | `source`      | callbacks declared on the source state                      |
-| `<STATE CHANGE>`               |               |                                                             |
-| `'state.on_enter'`             | `destination` | callbacks declared on the destination state                 |
-| `'transition.after'`           | `destination` |                                                             |
-| `'machine.after_state_change'` | `destination` | default callbacks declared on model                         |
-| `'machine.on_exception'`       | `source/destination` | callbacks will be executed when an exception has been raised |
-| `'machine.finalize_event'`     | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
+| Callback                        |    Current State     | Comments                                                                                    |
+| ------------------------------- | :------------------: | ------------------------------------------------------------------------------------------- |
+| `'machine.prepare_event'`       |       `source`       | executed _once_ before individual transitions are processed                                 |
+| `'transition.prepare'`          |       `source`       | executed as soon as the transition starts                                                   |
+| `'transition.conditions'`       |       `source`       | conditions _may_ fail and halt the transition                                               |
+| `'transition.unless'`           |       `source`       | conditions _may_ fail and halt the transition                                               |
+| `'machine.before_state_change'` |       `source`       | default callbacks declared on model                                                         |
+| `'transition.before'`           |       `source`       |                                                                                             |
+| `'state.on_exit'`               |       `source`       | callbacks declared on the source state                                                      |
+| `<STATE CHANGE>`                |                      |                                                                                             |
+| `'state.on_enter'`              |    `destination`     | callbacks declared on the destination state                                                 |
+| `'transition.after'`            |    `destination`     |                                                                                             |
+| `'machine.after_state_change'`  |    `destination`     | default callbacks declared on model                                                         |
+| `'machine.on_exception'`        | `source/destination` | callbacks will be executed when an exception has been raised                                |
+| `'machine.finalize_event'`      | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
 If any callback raises an exception, the processing of callbacks is not continued. This means that when an error occurs before the transition (in `state.on_exit` or earlier), it is halted. In case there is a raise after the transition has been conducted (in `state.on_enter` or later), the state change persists and no rollback is happening. Callbacks specified in `machine.finalize_event` will always be executed unless the exception is raised by a finalizing callback itself. Note that each callback sequence has to be finished before the next stage is executed. Blocking callbacks will halt the execution order and therefore block the `trigger` or `dispatch` call itself. If you want callbacks to be executed in parallel, you could have a look at the [extensions](#extensions) `AsyncMachine` for asynchronous processing or `LockedMachine` for threading.
 
 ### <a name="passing-data"></a>Passing data
+
 Sometimes you need to pass the callback functions registered at machine initialization some data that reflects the model's current state.
 Transitions allows you to do this in two different ways.
 
@@ -987,7 +1019,7 @@ lump.state
 Here you get to consolidate all state machine functionality into your existing model, which often feels more natural than sticking all of the functionality we want in a separate standalone `Machine` instance.
 
 A machine can handle multiple models which can be passed as a list like `Machine(model=[model1, model2, ...])`.
-In cases where you want to add models *as well as* the machine instance itself, you can pass the class variable placeholder (string) `Machine.self_literal` during initialization like `Machine(model=[Machine.self_literal, model1, ...])`.
+In cases where you want to add models _as well as_ the machine instance itself, you can pass the class variable placeholder (string) `Machine.self_literal` during initialization like `Machine(model=[Machine.self_literal, model1, ...])`.
 You can also create a standalone machine, and register models dynamically via `machine.add_model` by passing `model=None` to the constructor.
 Furthermore, you can use `machine.dispatch` to trigger events on all currently added models.
 Remember to call `machine.remove_model` if machine is long-lasting and your models are temporary and should be garbage collected:
@@ -1024,7 +1056,7 @@ del lump2  # lump2 is garbage collected
 
 If you don't provide an initial state in the state machine constructor, `transitions` will create and add a default state called `'initial'`.
 If you do not want a default initial state, you can pass `initial=None`.
-However, in this case you need to pass an initial state every time you add a model. 
+However, in this case you need to pass an initial state every time you add a model.
 
 ```python
 machine = Machine(model=None, states=states, transitions=transitions, initial=None)
@@ -1034,7 +1066,7 @@ machine.add_model(Matter())
 machine.add_model(Matter(), initial='liquid')
 ```
 
-Models with multiple states could attach multiple machines using different `model_attribute` values. As mentioned in [Checking state](#checking-state), this will add custom `is/to_<model_attribute>_<state_name>` functions: 
+Models with multiple states could attach multiple machines using different `model_attribute` values. As mentioned in [Checking state](#checking-state), this will add custom `is/to_<model_attribute>_<state_name>` functions:
 
 ```python
 lump = Matter()
@@ -1082,7 +1114,7 @@ import dill as pickle # only required for Python 3.3 and earlier
 
 m = Machine(states=['A', 'B', 'C'], initial='A')
 m.to_B()
-m.state  
+m.state
 >>> B
 
 # store the machine
@@ -1129,19 +1161,19 @@ This approach targets experimental use since in this case the underlying classes
 However, classes can also be directly imported from `transitions.extensions`. The naming scheme is as follows:
 
 |                                | Diagrams | Nested | Locked | Asyncio |
-| -----------------------------: | :------: | :----: | :----: | :---: |
-| Machine                        | ✘        | ✘      | ✘      | ✘ |
-| GraphMachine                   | ✓        | ✘      | ✘      | ✘ |
-| HierarchicalMachine            | ✘        | ✓      | ✘      | ✘ |
-| LockedMachine                  | ✘        | ✘      | ✓      | ✘ |
-| HierarchicalGraphMachine       | ✓        | ✓      | ✘      | ✘ |
-| LockedGraphMachine             | ✓        | ✘      | ✓      | ✘ |
-| LockedHierarchicalMachine      | ✘        | ✓      | ✓      | ✘ |
-| LockedHierarchicalGraphMachine | ✓        | ✓      | ✓      | ✘ |
-| AsyncMachine                   | ✘        | ✘      | ✘      | ✓ |
-| AsyncGraphMachine              | ✓        | ✘      | ✘      | ✓ |
-| HierarchicalAsyncMachine       | ✘        | ✓      | ✘      | ✓ |
-| HierarchicalAsyncGraphMachine  | ✓        | ✓      | ✘      | ✓ |
+| -----------------------------: | :------: | :----: | :----: | :-----: |
+|                        Machine |    ✘     |   ✘    |   ✘    |    ✘    |
+|                   GraphMachine |    ✓     |   ✘    |   ✘    |    ✘    |
+|            HierarchicalMachine |    ✘     |   ✓    |   ✘    |    ✘    |
+|                  LockedMachine |    ✘     |   ✘    |   ✓    |    ✘    |
+|       HierarchicalGraphMachine |    ✓     |   ✓    |   ✘    |    ✘    |
+|             LockedGraphMachine |    ✓     |   ✘    |   ✓    |    ✘    |
+|      LockedHierarchicalMachine |    ✘     |   ✓    |   ✓    |    ✘    |
+| LockedHierarchicalGraphMachine |    ✓     |   ✓    |   ✓    |    ✘    |
+|                   AsyncMachine |    ✘     |   ✘    |   ✘    |    ✓    |
+|              AsyncGraphMachine |    ✓     |   ✘    |   ✘    |    ✓    |
+|       HierarchicalAsyncMachine |    ✘     |   ✓    |   ✘    |    ✓    |
+|  HierarchicalAsyncGraphMachine |    ✓     |   ✓    |   ✘    |    ✓    |
 
 To use a feature-rich state machine, one could write:
 
@@ -1154,12 +1186,13 @@ machine = LHGMachine(model, states, transitions)
 #### <a name="diagrams"></a> Diagrams
 
 Additional Keywords:
-* `title` (optional): Sets the title of the generated image.
-* `show_conditions` (default False): Shows conditions at transition edges
-* `show_auto_transitions` (default False): Shows auto transitions in graph
-* `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
 
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed:   
+- `title` (optional): Sets the title of the generated image.
+- `show_conditions` (default False): Shows conditions at transition edges
+- `show_auto_transitions` (default False): Shows auto transitions in graph
+- `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
+
+Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed:  
 To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
 
     sudo apt-get install graphviz graphviz-dev  # Ubuntu and Debian
@@ -1171,8 +1204,8 @@ Now you can install the actual Python packages
     pip install graphviz pygraphviz # install graphviz and/or pygraphviz manually...
     pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras which currently depends on pygraphviz
 
-Currently, `GraphMachine` will use `pygraphviz` when available and fall back to `graphviz` when `pygraphviz` cannot be 
-found. This can be overridden by passing `use_pygraphviz=False` to the constructor. Note that this default might change 
+Currently, `GraphMachine` will use `pygraphviz` when available and fall back to `graphviz` when `pygraphviz` cannot be
+found. This can be overridden by passing `use_pygraphviz=False` to the constructor. Note that this default might change
 in the future and `pygraphviz` support may be dropped.
 With `Model.get_graph()` you can get the current graph or the region of interest (roi) and draw it like this:
 
@@ -1250,7 +1283,6 @@ This should produce something similar to this:
 If the format of references does not suit your needs, you can override the static method `GraphMachine.format_references`. If you want to skip reference entirely, just let `GraphMachine.format_references` return `None`.
 Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example about how to use and edit graphs.
 
-
 ### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
 Transitions includes an extension module which allows nesting states.
@@ -1289,7 +1321,7 @@ machine.state # phew, what a ride
 # machine.on_enter_caffeinated_running('callback_method')
 ```
 
-A configuration making use of  `initial` could look like this:
+A configuration making use of `initial` could look like this:
 
 ```python
 # ...
@@ -1305,9 +1337,10 @@ transitions = [
 ]
 # ...
 ```
-The `initial` keyword of the `HierarchicalMachine` constructor accepts nested states (e.g. `initial='caffeinated_running'`) and a list of states which is considered to be a parallel state (e.g. `initial=['A', 'B']`) or the current state of another model (`initial=model.state`) which should be effectively one of the previous mentioned options. Note that when passing a string, `transition` will check the targeted state for `initial` substates and use this as an entry state. This will be done recursively until a substate does not mention an initial state. Parallel states or a state passed as a list will be used 'as is' and no further initial evaluation will be conducted. 
 
-Note that your previously created state object *must be* a `NestedState` or a derived class of it.
+The `initial` keyword of the `HierarchicalMachine` constructor accepts nested states (e.g. `initial='caffeinated_running'`) and a list of states which is considered to be a parallel state (e.g. `initial=['A', 'B']`) or the current state of another model (`initial=model.state`) which should be effectively one of the previous mentioned options. Note that when passing a string, `transition` will check the targeted state for `initial` substates and use this as an entry state. This will be done recursively until a substate does not mention an initial state. Parallel states or a state passed as a list will be used 'as is' and no further initial evaluation will be conducted.
+
+Note that your previously created state object _must be_ a `NestedState` or a derived class of it.
 The standard `State` class used in simple `Machine` instances lacks features required for nesting.
 
 ```python
@@ -1320,8 +1353,8 @@ m.add_state(NestedState('D'))  # fine as well
 m.add_state(State('E'))  # does not work!
 ```
 
-Some things that have to be considered when working with nested states: State *names are concatenated* with `NestedState.separator`.
-Currently the separator is set to underscore ('_') and therefore behaves similar to the basic machine.
+Some things that have to be considered when working with nested states: State _names are concatenated_ with `NestedState.separator`.
+Currently the separator is set to underscore ('\_') and therefore behaves similar to the basic machine.
 This means a substate `bar` from state `foo` will be known by `foo_bar`. A substate `baz` of `bar` will be referred to as `foo_bar_baz` and so on.
 When entering a substate, `enter` will be called for all parent states. The same is true for exiting substates.
 Third, nested states can overwrite transition behaviour of their parents.
@@ -1384,7 +1417,7 @@ assert machine.is_C.s2() is False
 assert machine.is_C.s2(allow_substates=True)  # FunctionWrapper support allow_substate as well
 ```
 
-*new in 0.8.0*  
+_new in 0.8.0_  
 You can use enumerations in HSMs as well but keep in mind that `Enum` are compared by value.
 If you have a value more than once in a state tree those states cannot be distinguished.
 
@@ -1396,7 +1429,7 @@ machine.to_B()
 machine.is_GREEN()  # returns True even though the actual state is B_GREEN
 ```
 
-*new in 0.8.0*  
+_new in 0.8.0_  
 `HierarchicalMachine` has been rewritten from scratch to support parallel states and better isolation of nested states.
 This involves some tweaks based on community feedback.
 To get an idea of processing order and configuration have a look at the following example:
@@ -1434,14 +1467,14 @@ machine.reset()
 ```
 
 When using `parallel` instead of `children`, `transitions` will enter all states of the passed list at the same time.
-Which substate to enter is defined by `initial` which should *always* point to a direct substate.
+Which substate to enter is defined by `initial` which should _always_ point to a direct substate.
 A novel feature is to define local transitions by passing the `transitions` keyword in a state definition.
 The above defined transition `['go', 'a', 'b']` is only valid in `C_1`.
 While you can reference substates as done in `['go', '2_z', '2_x']` you cannot reference parent states directly in locally defined transitions.
 When a parent state is exited, its children will also be exited.
 In addition to the processing order of transitions known from `Machine` where transitions are considered in the order they were added, `HierarchicalMachine` considers hierarchy as well.
 Transitions defined in substates will be evaluated first (e.g. `C_1_a` is left before `C_2_z`) and transitions defined with wildcard `*` will (for now) only add transitions to root states (in this example `A`, `B`, `C`)
-Starting with *0.8.0* nested states can be added directly and will issue the creation of parent states on-the-fly:
+Starting with _0.8.0_ nested states can be added directly and will issue the creation of parent states on-the-fly:
 
 ```python
 m = HierarchicalMachine(states=['A'], initial='A')
@@ -1450,12 +1483,11 @@ m.to_B_1()
 assert m.is_B(allow_substates=True)
 ```
 
-
 #### Reuse of previously created HSMs
 
 Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
-Before *0.8.0*, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
-However, since *0.8.0* `(Nested)State` instances are just **referenced** which means changes in one machine's collection of states and events will influence the other machine instance. Models and their state will not be shared though.
+Before _0.8.0_, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
+However, since _0.8.0_ `(Nested)State` instances are just **referenced** which means changes in one machine's collection of states and events will influence the other machine instance. Models and their state will not be shared though.
 Note that events and transitions are also copied by reference and will be shared by both instances if you do not use the `remap` keyword.
 This change was done to be more in line with `Machine` which also uses passed `State` instances by reference.
 
@@ -1520,7 +1552,7 @@ In cases where you want states and transitions to be copied by value rather than
 from transitions.extensions.nesting import NestedState
 from copy import deepcopy
 
-# ... configuring and creating counter 
+# ... configuring and creating counter
 
 counting_state = NestedState(name="counting", initial='1')
 counting_state.states = deepcopy(counter.states)
@@ -1617,7 +1649,6 @@ machine.add_model(model, model_context=lock3)
 
 It's important that all user-provided context managers are re-entrant since the state machine will call them multiple
 times, even in the context of a single trigger invocation.
-
 
 #### <a name="async"></a> Using async callbacks
 
@@ -1726,7 +1757,7 @@ asyncio.gather(model1.event1(), model1.error(), model1.event3(), model2.event1()
 # (model1.event1, model2.event1) -> (model1.error, model2.event2) -> model2.event3
 ```
 
-Note that queue modes must not be changed after machine construction. 
+Note that queue modes must not be changed after machine construction.
 
 #### <a name="state-features"></a>Adding features to states
 
@@ -1778,27 +1809,28 @@ assert hero.entourage == 3  # At least he is not alone
 
 Currently, transitions comes equipped with the following state features:
 
-* **Timeout** -- triggers an event after some time has passed
-    - keyword: `timeout` (int, optional) -- if passed, an entered state will timeout after `timeout` seconds
-    - keyword: `on_timeout` (string/callable, optional) -- will be called when timeout time has been reached
-    - will raise an `AttributeError` when `timeout` is set but `on_timeout` is not
-    - Note: A timeout is triggered in a thread. This implies several limitations (e.g. catching Exceptions raised in timeouts). Consider an event queue for more sophisticated applications.
+- **Timeout** -- triggers an event after some time has passed
 
-* **Tags** -- adds tags to states
-    - keyword: `tags` (list, optional) -- assigns tags to a state
-    - `State.is_<tag_name>` will return `True` when the state has been tagged with `tag_name`, else `False`
+  - keyword: `timeout` (int, optional) -- if passed, an entered state will timeout after `timeout` seconds
+  - keyword: `on_timeout` (string/callable, optional) -- will be called when timeout time has been reached
+  - will raise an `AttributeError` when `timeout` is set but `on_timeout` is not
+  - Note: A timeout is triggered in a thread. This implies several limitations (e.g. catching Exceptions raised in timeouts). Consider an event queue for more sophisticated applications.
 
-* **Error** -- raises a `MachineError` when a state cannot be left 
-    - inherits from `Tags` (if you use `Error` do not use `Tags`)
-    - keyword: `accepted` (bool, optional) -- marks a state as accepted
-    - alternatively the keyword `tags` can be passed, containing 'accepted'
-    - Note: Errors will only be raised if `auto_transitions` has been set to `False`. Otherwise every state can be exited with `to_<state>` methods.
-    
-* **Volatile** -- initialises an object every time a state is entered
-    - keyword: `volatile` (class, optional) -- every time the state is entered an object of type class will be assigned to the model. The attribute name is defined by `hook`. If omitted, an empty VolatileObject will be created instead
-    - keyword: `hook` (string, default='scope') -- The model's attribute name for the temporal object.
+- **Tags** -- adds tags to states
 
-You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects *Mixins*. This means your extension should always call the overridden methods `__init__`, `enter` and `exit`. Your extension may inherit from *State* but will also work without it.
+  - keyword: `tags` (list, optional) -- assigns tags to a state
+  - `State.is_<tag_name>` will return `True` when the state has been tagged with `tag_name`, else `False`
+
+- **Error** -- raises a `MachineError` when a state cannot be left
+  - inherits from `Tags` (if you use `Error` do not use `Tags`)
+  - keyword: `accepted` (bool, optional) -- marks a state as accepted
+  - alternatively the keyword `tags` can be passed, containing 'accepted'
+  - Note: Errors will only be raised if `auto_transitions` has been set to `False`. Otherwise every state can be exited with `to_<state>` methods.
+- **Volatile** -- initialises an object every time a state is entered
+  - keyword: `volatile` (class, optional) -- every time the state is entered an object of type class will be assigned to the model. The attribute name is defined by `hook`. If omitted, an empty VolatileObject will be created instead
+  - keyword: `hook` (string, default='scope') -- The model's attribute name for the temporal object.
+
+You can write your own `State` extensions and add them the same way. Just note that `add_state_features` expects _Mixins_. This means your extension should always call the overridden methods `__init__`, `enter` and `exit`. Your extension may inherit from _State_ but will also work without it.
 Using `@add_state_features` has a drawback which is that decorated machines cannot be pickled (more precisely, the dynamically generated `CustomState` cannot be pickled).
 This might be a reason to write a dedicated custom state class instead.
 Depending on the chosen state machine, your custom state class may need to provide certain state features. For instance, `HierarchicalMachine` requires your custom state to be an instance of `NestedState` (`State` is not sufficient). To inject your states you can either assign them to your `Machine`'s class attribute `state_cls` or override `Machine.create_state` in case you need some specific procedures done whenever a state is created:
@@ -1813,10 +1845,10 @@ class CustomMachine(Machine):
     # Use MyState as state class
     state_cls = MyState
 
-    
+
 class VerboseMachine(Machine):
 
-    # `Machine._create_state` is a class method but we can 
+    # `Machine._create_state` is a class method but we can
     # override it to be an instance method
     def _create_state(self, *args, **kwargs):
         print("Creating a new state with machine '{0}'".format(self.name))
@@ -1849,7 +1881,6 @@ You should consider passing `queued=True` to the `TimeoutMachine` constructor. T
 You can have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb) for some inspiration or checkout `django-transitions`.
 It has been developed by Christian Ledermann and is also hosted on [Github](https://github.com/PrimarySite/django-transitions).
 [The documentation](https://django-transitions.readthedocs.io/en/latest/) contains some usage examples.
-
 
 ### <a name="bug-reports"></a>I have a [bug report/issue/question]...
 

@@ -325,3 +325,106 @@ class TestReuse(TestCase):
         machine.to_Child()
         machine.go()
         self.assertTrue(machine.is_Child_2())
+
+    def test_reuse_wrong_class(self):
+        m1 = MachineFactory.get_predefined()(states=['A', 'B'], initial='A')
+        with self.assertRaises(ValueError):
+            m2 = MachineFactory.get_predefined(nested=True)(states=['X', {'name': 'Y', 'states': m1}], initial='Y')
+
+    def test_reuse_remap(self):
+
+        class GenericMachine(self.machine_cls):
+
+            def __init__(self, states, transitions, model=None):
+                generic_states = [
+                    {"name": "initial", "on_enter": self.entry_initial},
+                    {"name": "done", "on_enter": self.entry_done},
+                ]
+                states += generic_states
+
+                super(GenericMachine, self).__init__(
+                    states=states,
+                    transitions=transitions,
+                    model=model,
+                    send_event=True,
+                    queued=True,
+                    auto_transitions=False
+                )
+
+            def entry_initial(self, event_data):
+                raise NotImplementedError
+
+            def entry_done(self, event_data):
+                raise NotImplementedError
+
+        class MainMachine(GenericMachine):
+            def __init__(self):
+                states = [
+                    {"name": "nested", "children": NestedMachine(), "remap": {"done": "done"}},
+                ]
+                transitions = [
+                    ["go", "initial", "nested"],
+                ]
+                super(MainMachine, self).__init__(states, transitions, model=self)
+
+            def entry_done(self, event_data):
+                print("job finished")
+
+        class NestedMachine(GenericMachine):
+            def __init__(self):
+                states = [
+                    {"name": "deeper", "children": DeeperMachine(), "remap": {"done": "done"}},
+                ]
+                transitions = [
+                    ["go", "initial", "deeper"],
+                ]
+                super(NestedMachine, self).__init__(states, transitions)
+
+            def entry_initial(self, event_data):
+                event_data.model.go()
+
+        class DeeperMachine(GenericMachine):
+            def __init__(self):
+                states = [
+                    {"name": "working", "on_enter": self.entry_working},
+                ]
+                transitions = [
+                    ["go", "initial", "working"],
+                    ["go", "working", "done"],
+                ]
+                super(DeeperMachine, self).__init__(states, transitions, model=self)
+
+            def entry_initial(self, event_data):
+                event_data.model.go()
+
+            def entry_working(self, event_data):
+                event_data.model.go()
+
+        machine = MainMachine()
+        machine.go()
+        assert machine.is_done()
+
+    def test_reuse_callback_copy(self):
+
+        selfs = []
+
+        class Model(object):
+
+            def check_self(self):
+                selfs.append(self)
+                return True
+
+        m = Model()
+
+        transitions = [
+            {"trigger": "go", "source": "A", "dest": "B",
+             "conditions": m.check_self, "prepare": m.check_self, "before": m.check_self, "after": m.check_self}
+        ]
+
+        child = self.machine_cls(None, states=["A", "B"], transitions=transitions, initial="A")
+        parent = self.machine_cls(m, states=[{"name": "P", "states": child, "remap": {}}], initial="P")
+        m.go()
+        self.assertEqual("P_B", m.state)
+        # selfs should only contain references to the same model. If the set is larger than one this means
+        # that at some poin the model was falsely copied.
+        self.assertEqual(1, len(set(selfs)))
