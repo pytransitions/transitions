@@ -113,8 +113,7 @@ class Graph(BaseGraph):
         return fsm_graph
 
     # pylint: disable=redefined-builtin,unused-argument
-    @staticmethod
-    def draw(graph, filename, format=None, prog="dot", args=""):
+    def draw(self, graph, filename, format=None, prog="dot", args=""):
         """
         Generates and saves an image of the state machine using graphviz. Note that `prog` and `args` are only part
         of the signature to mimic `Agraph.draw` and thus allow to easily switch between graph backends.

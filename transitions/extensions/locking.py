@@ -180,8 +180,7 @@ class LockedMachine(Machine):
                 state.add_callback(prefix[3:], callback)
 
     # this needs to be overridden by the HSM variant to resolve names correctly
-    @staticmethod
-    def _get_qualified_state_name(state):
+    def _get_qualified_state_name(self, state):
         return state.name
 
     def _locked_method(self, func, *args, **kwargs):

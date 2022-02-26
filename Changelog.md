@@ -12,6 +12,8 @@ Release 0.9.0 is a major release and contains improvements to ease development, 
 - Feature #549: Add `may` transition check to transitions (thnaks @artofhuman)
 - Feature #552: Refactored error handling to be able to handle `MachineError` in `on_exception` callbacks (thanks @kpihus)
 - PR #461: Add `Retry` state to supported state stereotypes (thanks @rgov)
+- `Machine._identify_callback` has been converted to instance method from class method
+- `LockedMachine._get_qualified_state_name` has been converted to instance method from static method
 
 ## 0.8.11 (February 2022)
 

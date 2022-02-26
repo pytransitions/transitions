@@ -19,3 +19,4 @@ MANIFEST
 pylint.log
 sandbox*
 coverage.xml
+.dmypy.json

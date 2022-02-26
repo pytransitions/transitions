@@ -8,16 +8,17 @@ try:
     from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
     from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
 except (ImportError, SyntaxError):
-    class AsyncMachine:  # Mocks for Python version 3.6 and earlier
+    # Mocks for Python version 3.6 and earlier
+    class AsyncMachine:  # type: ignore
         pass
 
-    class AsyncTransition:
+    class AsyncTransition:  # type: ignore
         pass
 
-    class HierarchicalAsyncMachine:
+    class HierarchicalAsyncMachine:  # type: ignore
         pass
 
-    class NestedAsyncTransition:
+    class NestedAsyncTransition:  # type: ignore
         pass
 
 
@@ -27,23 +28,26 @@ class MachineFactory:
                        locked: bool = ..., asyncio: bool = ...) -> Union[Type[Machine], Type[HierarchicalMachine]]: ...
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
-    event_cls: NestedEvent
+    # replaces LockedEvent with NestedEvent; method overridden by LockedEvent is not used in HSMs
+    event_cls: Type[NestedEvent]  # type: ignore
     def _get_qualified_state_name(self, state: State) -> str: ...
 
-class LockedGraphMachine(GraphMachine, LockedMachine):
+class LockedGraphMachine(GraphMachine, LockedMachine):  # type: ignore
     @staticmethod
-    def format_references(func): ...
+    def format_references(func: Callable) -> str: ...
 
-class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):
-    transition_cls: NestedGraphTransition
-    event_cls: NestedEvent
+class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):  # type: ignore
+    transition_cls: Type[NestedGraphTransition]
+    event_cls: Type[NestedEvent]
     @staticmethod
     def format_references(func: Callable) -> str: ...
 
 class AsyncGraphMachine(GraphMachine, AsyncMachine):
-    transition_cls: AsyncTransition
+    # AsyncTransition already considers graph models when necessary
+    transition_cls: Type[AsyncTransition]  # type: ignore
 
-class HierarchicalAsyncGraphMachine(GraphMachine, HierarchicalAsyncMachine):
-    transition_cls: NestedAsyncTransition
+class HierarchicalAsyncGraphMachine(GraphMachine, HierarchicalAsyncMachine):  # type: ignore
+    # AsyncTransition already considers graph models when necessary
+    transition_cls: Type[NestedAsyncTransition]  # type: ignore
 
 _CLASS_MAP: Dict[Tuple[bool, bool, bool, bool], Type[Machine]]

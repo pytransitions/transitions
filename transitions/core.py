@@ -18,10 +18,11 @@ try:
     from enum import Enum, EnumMeta
 except ImportError:
     # If enum is not available, create dummy classes for type checks
-    class Enum:
+    # typing must be prevent redefinition issues with mypy
+    class Enum:  # type:ignore
         """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
 
-    class EnumMeta:
+    class EnumMeta:  # type:ignore
         """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
 
 import inspect
@@ -1227,10 +1228,9 @@ class Machine(object):
                 raise
         return True
 
-    @classmethod
-    def _identify_callback(cls, name):
+    def _identify_callback(self, name):
         # Does the prefix match a known callback?
-        for callback in itertools.chain(cls.state_cls.dynamic_methods, cls.transition_cls.dynamic_methods):
+        for callback in itertools.chain(self.state_cls.dynamic_methods, self.transition_cls.dynamic_methods):
             if name.startswith(callback):
                 callback_type = callback
                 break
@@ -1238,10 +1238,10 @@ class Machine(object):
             return None, None
 
         # Extract the target by cutting the string after the type and separator
-        target = name[len(callback_type) + len(cls.separator):]
+        target = name[len(callback_type) + len(self.separator):]
 
         # Make sure there is actually a target to avoid index error and enforce _ as a separator
-        if target == '' or name[len(callback_type)] != cls.separator:
+        if target == '' or name[len(callback_type)] != self.separator:
             return None, None
 
         return callback_type, target

@@ -13,9 +13,20 @@ from functools import partial, reduce
 import inspect
 import logging
 
+try:
+    # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
+    from enum import Enum, EnumMeta
+except ImportError:
+    # If enum is not available, create dummy classes for type checks
+    class Enum:  # type: ignore
+        """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
+
+    class EnumMeta:  # type: ignore
+        """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
+
 from six import string_types
 
-from ..core import State, Machine, Transition, Event, listify, MachineError, Enum, EnumMeta, EventData
+from ..core import State, Machine, Transition, Event, listify, MachineError, EventData
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -698,15 +709,15 @@ class HierarchicalMachine(Machine):
         state = state or self
         return trigger in state.events or any(self.has_trigger(trigger, sta) for sta in state.states.values())
 
-    def is_state(self, state_name, model, allow_substates=False):
-        current_name = getattr(model, self.model_attribute)
+    def is_state(self, state, model, allow_substates=False):
         if allow_substates:
-            if isinstance(current_name, Enum):
-                current_name = self.state_cls.separator.join(self._get_enum_path(current_name))
-            if isinstance(state_name, Enum):
-                state_name = self.state_cls.separator.join(self._get_enum_path(state_name))
+            current = getattr(model, self.model_attribute)
+            current_name = self.state_cls.separator.join(self._get_enum_path(current))\
+                if isinstance(current, Enum) else current
+            state_name = self.state_cls.separator.join(self._get_enum_path(state))\
+                if isinstance(state, Enum) else state
             return current_name.startswith(state_name)
-        return current_name == state_name
+        return getattr(model, self.model_attribute) == state
 
     def on_enter(self, state_name, callback):
         """ Helper function to add callbacks to states in case a custom state separator is used.

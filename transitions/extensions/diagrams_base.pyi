@@ -12,7 +12,7 @@ class GraphProtocol(Protocol):
 
 class GraphModelProtocol(Protocol):
 
-    def get_graph(self, title=None, force_new=False, show_roi=False) -> GraphProtocol: ...
+    def get_graph(self, title: Optional[str]=None, force_new: bool=False, show_roi: bool=False) -> GraphProtocol: ...
 
 
 class BaseGraph(metaclass=abc.ABCMeta):

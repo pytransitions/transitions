@@ -2,9 +2,10 @@ import numbers
 
 from ..core import Machine, StateIdentifier, CallbacksArg, StateConfig, Event
 from .nesting import HierarchicalMachine
-from typing import  List, Dict, Union, Optional, Callable, Tuple
+from typing import  List, Dict, Union, Optional, Callable, Tuple, Any
 
-MarkupConfig = Dict[str, Union[List, str, 'MarkupConfig']]
+# mypy does not support recursive definitions (yet), we need to use Any instead of 'MarkupConfig'
+MarkupConfig = Dict[str, Union[List, str, Any]]
 
 class MarkupMachine(Machine):
     state_attributes: List[str]
@@ -12,7 +13,7 @@ class MarkupMachine(Machine):
     _markup: MarkupConfig
     _auto_transitions_markup: bool
     _needs_update: bool
-    def __init__(self, *args, **kwargs) -> None: ...
+    def __init__(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
     @property
     def auto_transitions_markup(self) -> bool: ...
     @auto_transitions_markup.setter
@@ -24,10 +25,10 @@ class MarkupMachine(Machine):
                        source: Union[StateIdentifier, List[StateIdentifier]],
                        dest: StateIdentifier, conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
                        before: CallbacksArg = ..., after: CallbacksArg = ..., prepare: CallbacksArg = ...,
-                       **kwargs) -> None: ...
+                       **kwargs: Dict[str, Any]) -> None: ...
     def add_states(self, states: Union[List[StateConfig], StateConfig],
                    on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
-                   ignore_invalid_triggers: Optional[bool] = ..., **kwargs) -> None: ...    @staticmethod
+                   ignore_invalid_triggers: Optional[bool] = ..., **kwargs: Dict[str, Any]) -> None: ...
     @staticmethod
     def format_references(func: Callable) -> str: ...
     def _convert_states_and_transitions(self, root: MarkupConfig) -> None: ...
@@ -40,7 +41,7 @@ class MarkupMachine(Machine):
     def _identify_callback(self, name: str) -> Tuple[Optional[str], Optional[str]]: ...
 
 
-class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine):
+class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine):  # type: ignore
     pass
 
 

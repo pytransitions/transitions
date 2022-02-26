@@ -9,9 +9,9 @@
 
 from functools import partial
 
-from ..core import Machine
+from ..core import Machine, Transition
 
-from .nesting import HierarchicalMachine, NestedEvent
+from .nesting import HierarchicalMachine, NestedEvent, NestedTransition
 from .locking import LockedMachine
 from .diagrams import GraphMachine, NestedGraphTransition, HierarchicalGraphMachine
 
@@ -19,16 +19,16 @@ try:
     from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
     from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
 except (ImportError, SyntaxError):
-    class AsyncMachine:
+    class AsyncMachine(Machine):  # type: ignore
         """ A mock of AsyncMachine for Python 3.6 and earlier. """
 
-    class AsyncTransition:
+    class AsyncTransition(Transition):  # type: ignore
         """ A mock of AsyncTransition for Python 3.6 and earlier. """
 
-    class HierarchicalAsyncMachine:
+    class HierarchicalAsyncMachine(HierarchicalMachine):  # type: ignore
         """ A mock of HierarchicalAsyncMachine for Python 3.6 and earlier. """
 
-    class NestedAsyncTransition:
+    class NestedAsyncTransition(NestedTransition):  # type: ignore
         """ A mock of NestedAsyncTransition for Python 3.6 and earlier. """
 
 
