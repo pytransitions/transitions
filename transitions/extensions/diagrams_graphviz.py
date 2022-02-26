@@ -38,7 +38,7 @@ class Graph(BaseGraph):
         self.set_node_style(src, "previous")
 
     def set_node_style(self, state, style):
-        self.custom_styles["node"][state] = style
+        self.custom_styles["node"][state.name if hasattr(state, "name") else state] = style
 
     def reset_styling(self):
         self.custom_styles = {
@@ -153,6 +153,10 @@ class NestedGraph(Graph):
     def __init__(self, *args, **kwargs):
         self._cluster_states = []
         super(NestedGraph, self).__init__(*args, **kwargs)
+
+    def set_node_style(self, state, style):
+        for state_name in self._get_state_names(state):
+            super(NestedGraph, self).set_node_style(state_name, style)
 
     def set_previous_transition(self, src, dst):
         src_name = self._get_global_name(src.split(self.machine.state_cls.separator))

@@ -19,6 +19,7 @@ _LOGGER: Logger
 Callback = Union[str, Callable]
 CallbackList = Iterable[Callback]
 CallbacksArg = Optional[Union[Callback, CallbackList]]
+ModelState = Union[str, Enum, List]
 
 def listify(obj: Union[None, list, tuple, EnumMeta, Any]) -> Union[list, tuple, EnumMeta]: ...
 

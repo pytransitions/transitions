@@ -87,7 +87,7 @@ class Graph(BaseGraph):
         return self.fsm_graph
 
     def set_node_style(self, state, style):
-        node = self.fsm_graph.get_node(state)
+        node = self.fsm_graph.get_node(state.name if hasattr(state, "name") else state)
         style_attr = self.fsm_graph.style_attributes.get('node', {}).get(style)
         node.attr.update(style_attr)
 
@@ -181,6 +181,10 @@ class NestedGraph(Graph):
                 container.add_edge(src_name, dst_name, **edge_attr)
 
     def set_node_style(self, state, style):
+        for state_name in self._get_state_names(state):
+            self._set_node_style(state_name, style)
+
+    def _set_node_style(self, state, style):
         try:
             node = self.fsm_graph.get_node(state)
             style_attr = self.fsm_graph.style_attributes.get('node', {}).get(style)

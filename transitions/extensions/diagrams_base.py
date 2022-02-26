@@ -47,9 +47,9 @@ class BaseGraph(object):
 
     @abc.abstractmethod
     def set_node_style(self, state, style):
-        """ Sets the style of a node state
+        """ Sets the style of nodes associated with a model state
         Args:
-            state (str): Name of the state
+            state (str, Enum or list): Name of the state(s) or Enum(s)
             style (str): Name of the style
         """
 
@@ -75,6 +75,15 @@ class BaseGraph(object):
             if "timeout" in state:
                 label += r'\l- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
         return label
+
+    def _get_state_names(self, state):
+        if isinstance(state, (list, tuple, set)):
+            for res in state:
+                for inner in self._get_state_names(res):
+                    yield inner
+        else:
+            yield self.machine.state_cls.separator.join(self.machine._get_enum_path(state))\
+                if hasattr(state, "name") else state
 
     def _transition_label(self, tran):
         edge_label = tran.get("label", tran["trigger"])

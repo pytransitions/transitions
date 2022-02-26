@@ -47,10 +47,7 @@ class TransitionGraphSupport(Transition):
         graph = event_data.machine.model_graphs[
             id(event_data.model)
         ]  # graph might have changed during change_event
-        for state in _flatten(
-            listify(getattr(event_data.model, event_data.machine.model_attribute))
-        ):
-            graph.set_node_style(self.dest if hasattr(state, "name") else state, "active")
+        graph.set_node_style(getattr(event_data.model, event_data.machine.model_attribute), "active")
 
 
 class GraphMachine(MarkupMachine):
@@ -183,19 +180,18 @@ class GraphMachine(MarkupMachine):
         Returns: AGraph (pygraphviz) or Digraph (graphviz) graph instance that can be drawn.
         """
         if force_new:
-            grph = self.graph_cls(self)
-            self.model_graphs[id(model)] = grph
+            graph = self.graph_cls(self)
+            self.model_graphs[id(model)] = graph
             try:
-                for state in _flatten(listify(getattr(model, self.model_attribute))):
-                    grph.set_node_style(self.dest if hasattr(state, "name") else state, "active")
+                graph.set_node_style(getattr(model, self.model_attribute), "active")
             except AttributeError:
                 _LOGGER.info("Could not set active state of diagram")
         try:
-            grph = self.model_graphs[id(model)]
+            graph = self.model_graphs[id(model)]
         except KeyError:
             _ = self._get_graph(model, title, force_new=True)
-            grph = self.model_graphs[id(model)]
-        return grph.get_graph(title=title, roi_state=getattr(model, self.model_attribute) if show_roi else None)
+            graph = self.model_graphs[id(model)]
+        return graph.get_graph(title=title, roi_state=getattr(model, self.model_attribute) if show_roi else None)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
         """ This method is currently equivalent to 'get_graph' of the first machine's model.
@@ -263,12 +259,3 @@ class HierarchicalGraphMachine(GraphMachine, HierarchicalMarkupMachine):
     """
 
     transition_cls = NestedGraphTransition
-
-
-def _flatten(item):
-    for elem in item:
-        if isinstance(elem, (list, tuple, set)):
-            for res in _flatten(elem):
-                yield res
-        else:
-            yield elem

@@ -948,7 +948,11 @@ class HierarchicalMachine(Machine):
                 res = self._get_enum_path(enum_state, prefix=prefix + [name])
                 if res:
                     return res
-        raise ValueError("Could not find path of {0}.".format(enum_state))
+        # if we reach this point without a prefix, we looped over all nested states
+        # and could not find a suitable enum state
+        if not prefix:
+            raise ValueError("Could not find path of {0}.".format(enum_state))
+        return None
 
     def _get_state_path(self, state, prefix=None):
         prefix = prefix or []
