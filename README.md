@@ -1741,7 +1741,7 @@ Tasks will only be cancelled when run as a `before` callback or later.
 `AsyncMachine` features a model-special queue mode which can be used when `queued='model'` is passed to the constructor.
 With a model-specific queue, events will only be queued when they belong to the same model.
 Furthermore, a raised exception will only clear the event queue of the model that raised that exception.
-For the sake of simplicity, let's assume that every event in `asyncion.gather` below is not triggered at the same time but slightly delayed:
+For the sake of simplicity, let's assume that every event in `asyncio.gather` below is not triggered at the same time but slightly delayed:
 
 ```python
 asyncio.gather(model1.event1(), model1.event2(), model2.event1())
