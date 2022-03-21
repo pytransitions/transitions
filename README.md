@@ -155,7 +155,7 @@ MachineError: "Can't trigger event clean_up from state asleep!"
 >>> batman.kittens_rescued
 0
 
-# We now take you live to the scene of a horrific kitten entreement...
+# We now take you live to the scene of a horrific kitten entreatment...
 >>> batman.distress_call()
 'Beauty, eh?'
 >>> batman.state
