@@ -44,7 +44,7 @@ class Error(Tags):
     def __init__(self, *args, **kwargs):
         """
         Args:
-            **kwargs: If kwargs contains the keywork `accepted` add the 'accepted' tag to a tag list
+            **kwargs: If kwargs contains the keyword `accepted` add the 'accepted' tag to a tag list
                 which will be forwarded to the Tags constructor.
         """
         tags = kwargs.get('tags', [])
@@ -180,7 +180,7 @@ class Retry(State):
         Attributes:
             retries (int): Number of retries to allow before failing.
             on_failure (str): Function to invoke on the model when the retry limit
-                is excheeded.
+                is exceeded.
     """
     def __init__(self, *args, **kwargs):
         """
