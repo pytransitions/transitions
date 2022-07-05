@@ -586,7 +586,7 @@ class AsyncTimeout(AsyncState):
             except KeyError:
                 raise AttributeError("Timeout state requires 'on_timeout' when timeout is set.") from None
         else:
-            self._on_timeout = kwargs.pop("on_timeout", [])
+            self.on_timeout = kwargs.pop("on_timeout", None)
         self.runner = {}
         super().__init__(*args, **kwargs)
 
