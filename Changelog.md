@@ -9,7 +9,7 @@ Release 0.9.0 is a major release and contains improvements to ease development, 
 - Bug #554: Fix issues related to scopes and queueing in `HierachicalMachine` (thanks @jankrejci)
 - Feature: Add pyi stub files for better type hinting
 - Feature: Reviewed and improved method documentation
-- Feature #549: Add `may` transition check to transitions (thnaks @artofhuman)
+- Feature #549: Add `may` transition check to transitions (thanks @artofhuman)
 - Feature #552: Refactored error handling to be able to handle `MachineError` in `on_exception` callbacks (thanks @kpihus)
 - PR #461: Add `Retry` state to supported state stereotypes (thanks @rgov)
 - `Machine._identify_callback` has been converted to instance method from class method
