@@ -74,7 +74,8 @@ class BaseGraph(object):
                 label += r"\l- exit:\l  + " + r"\l  + ".join(state["on_exit"])
             if "timeout" in state:
                 label += r'\l- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
-        return label
+        # end each label with a left-aligned newline
+        return label + r"\l"
 
     def _get_state_names(self, state):
         if isinstance(state, (list, tuple, set)):
