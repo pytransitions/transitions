@@ -35,7 +35,7 @@ setup(
     maintainer_email='aleneum@gmail.com',
     url='http://github.com/pytransitions/transitions',
     packages=find_packages(exclude=['tests', 'test_*']),
-    package_data={'transitions': ['data/*'],
+    package_data={'transitions': ['py.typed', 'data/*'],
                   'transitions.tests': ['data/*']
                   },
     include_package_data=True,
