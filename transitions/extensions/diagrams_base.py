@@ -1,7 +1,7 @@
 """
     transitions.extensions.diagrams_base
     ------------------------------------
-z
+
     The class BaseGraph implements the common ground for Graphviz backends.
 """
 
