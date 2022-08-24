@@ -479,11 +479,14 @@ class HierarchicalMachine(Machine):
 
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None, **kwargs):
-        if source != self.wildcard_all:
-            source = [self.state_cls.separator.join(self._get_enum_path(s)) if isinstance(s, Enum) else s
-                      for s in listify(source)]
-        if dest != self.wildcard_same:
-            dest = self.state_cls.separator.join(self._get_enum_path(dest)) if isinstance(dest, Enum) else dest
+        if source == self.wildcard_all and dest == self.wildcard_same:
+            source = self.get_nested_state_names()
+        else:
+            if source != self.wildcard_all:
+                source = [self.state_cls.separator.join(self._get_enum_path(s)) if isinstance(s, Enum) else s
+                          for s in listify(source)]
+            if dest != self.wildcard_same:
+                dest = self.state_cls.separator.join(self._get_enum_path(dest)) if isinstance(dest, Enum) else dest
         super(HierarchicalMachine, self).add_transition(trigger, source, dest, conditions,
                                                         unless, before, after, prepare, **kwargs)
 

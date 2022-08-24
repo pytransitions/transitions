@@ -17,7 +17,7 @@ class FunctionWrapper:
 
 class NestedEvent(Event):
     def trigger_nested(self, event_data: NestedEventData) -> bool: ...
-    def _process(self, event_data: NestedEventData) -> bool: ...  # type: ignore[override] 
+    def _process(self, event_data: NestedEventData) -> bool: ...  # type: ignore[override]
 
 
 class NestedEventData(EventData):

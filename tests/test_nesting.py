@@ -700,6 +700,19 @@ class TestNestedTransitions(TestTransitions):
         m.to_B()
         assert m.is_done()
 
+    # https://github.com/pytransitions/transitions/issues/568
+    def test_wildcard_src_reflexive_dest(self):
+        states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
+        machine = self.machine_cls(states=states, transitions=[["reflexive", "*", "="]], initial="A")
+        self.assertTrue(machine.is_A())
+        machine.reflexive()
+        self.assertTrue(machine.is_A())
+        state_name = 'C{0}2'.format(self.state_cls.separator)
+        machine.set_state(state_name)
+        self.assertEqual(state_name, machine.state)
+        machine.reflexive()
+        self.assertEqual(state_name, machine.state)
+
 
 class TestSeparatorsBase(TestCase):
 
