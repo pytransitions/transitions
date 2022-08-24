@@ -243,18 +243,20 @@ class NestedTransition(Transition):
             event_data.machine.state_cls.separator)
 
         scope = event_data.machine.get_global_name(join=False)
-        src_name_path = event_data.source_path
-        if src_name_path == dst_name_path:
-            root = src_name_path[:-1]  # exit and enter the same state
-            dst_name_path = dst_name_path[-1:]
-        else:
-            tmp_tree = state_tree.get(dst_name_path[0], None)
-            root = []
-            while tmp_tree is not None:
-                root.append(dst_name_path.pop(0))
-                tmp_tree = tmp_tree.get(dst_name_path[0], None) if len(dst_name_path) > 0 else None
+        tmp_tree = state_tree.get(dst_name_path[0], None)
+        root = []
+        while tmp_tree is not None:
+            root.append(dst_name_path.pop(0))
+            tmp_tree = tmp_tree.get(dst_name_path[0], None) if len(dst_name_path) > 0 else None
+
+        # when destination is empty this means we are already in the state we want to enter
+        # this means we deal with a reflexive transition here as internal transitions have been already dealt with
+        # the 'root' of src and dest will be set to the parent and dst (and src) substate will be set as st
+        if not dst_name_path:
+            dst_name_path = [root.pop()]
 
         scoped_tree = reduce(dict.get, scope + root, state_tree)
+
         exit_partials = [partial(event_data.machine.get_state(root + state_name).scoped_exit,
                                  event_data, scope + root + state_name[:-1])
                          for state_name in resolve_order(scoped_tree)]
