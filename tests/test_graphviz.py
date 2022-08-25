@@ -9,7 +9,7 @@ from .test_core import TestTransitions
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState
 from transitions.extensions.states import add_state_features, Timeout, Tags
-from unittest import skipIf, mock
+from unittest import skipIf
 import tempfile
 import os
 import re
@@ -247,18 +247,22 @@ class TestDiagrams(TestTransitions):
         b1.close()
 
     def test_graphviz_fallback(self):
-        from transitions.extensions.diagrams_graphviz import Graph
-        from transitions.extensions import diagrams_pygraphviz
-        from importlib import reload
-        with mock.patch.dict('sys.modules', {'pygraphviz': None}):
-            # load and reload diagrams_pygraphviz to make sure
-            # an ImportError is raised for pygraphviz
+        try:
+            from unittest import mock  # will raise an ImportError in Python 2.7
+            from transitions.extensions.diagrams_graphviz import Graph
+            from transitions.extensions import diagrams_pygraphviz
+            from importlib import reload
+            with mock.patch.dict('sys.modules', {'pygraphviz': None}):
+                # load and reload diagrams_pygraphviz to make sure
+                # an ImportError is raised for pygraphviz
+                reload(diagrams_pygraphviz)
+                m = self.machine_cls(states=['A', 'B', 'C'], initial='A', use_pygraphviz=True)
+            # make sure to reload after test is done to avoid side effects with other tests
             reload(diagrams_pygraphviz)
-            m = self.machine_cls(states=['A', 'B', 'C'], initial='A', use_pygraphviz=True)
-        # make sure to reload after test is done to avoid side effects with other tests
-        reload(diagrams_pygraphviz)
-        print(m.graph_cls, pgv)
-        self.assertTrue(issubclass(m.graph_cls, Graph))
+            print(m.graph_cls, pgv)
+            self.assertTrue(issubclass(m.graph_cls, Graph))
+        except ImportError:
+            pass
 
 
 @skipIf(pgv is None, 'Graph diagram test requires graphviz')
