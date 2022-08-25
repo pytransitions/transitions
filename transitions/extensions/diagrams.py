@@ -147,17 +147,19 @@ class GraphMachine(MarkupMachine):
                 # state class needs to have a separator and machine needs to be a context manager
                 if hasattr(self.state_cls, "separator") and hasattr(self, "__enter__"):
                     from .diagrams_pygraphviz import (  # pylint: disable=import-outside-toplevel
-                        NestedGraph as Graph,
+                        NestedGraph as Graph, pgv
                     )
 
                     self.machine_attributes.update(self.hierarchical_machine_attributes)
                 else:
                     from .diagrams_pygraphviz import (  # pylint: disable=import-outside-toplevel
-                        Graph,
+                        Graph, pgv
                     )
+                if pgv is None:
+                    raise ImportError
                 return Graph
             except ImportError:
-                _LOGGER.warning("%sCould not import pygraphviz backend. Will try graphviz backend next", self.name)
+                _LOGGER.warning("Could not import pygraphviz backend. Will try graphviz backend next")
         if hasattr(self.state_cls, "separator") and hasattr(self, "__enter__"):
             from .diagrams_graphviz import (  # pylint: disable=import-outside-toplevel
                 NestedGraph as Graph,
