@@ -340,7 +340,9 @@ class TestAsync(TestTransitions):
         class TimeoutMachine(self.machine_cls):
             pass
 
-        states = ['A', {'name': 'B', 'timeout': 0.2, 'on_timeout': ['to_C', timeout_called]}, 'C']
+        states = ['A',
+                  {'name': 'B', 'timeout': 0.2, 'on_timeout': ['to_C', timeout_called]},
+                  {'name': 'C', 'timeout': 0, 'on_timeout': 'to_D'}, 'D']
         m = TimeoutMachine(states=states, initial='A')
         with self.assertRaises(AttributeError):
             m.add_state('Fail', timeout=1)
@@ -355,6 +357,12 @@ class TestAsync(TestTransitions):
             await asyncio.sleep(0.3)
             self.assertTrue(m.is_C())  # now timeout should have been processed
             self.assertTrue(timeout_called.called)
+            m.get_state('C').timeout = 0.05
+            await m.to_B()
+            await asyncio.sleep(0.3)
+            self.assertTrue(m.is_D())
+            self.assertEqual(2, timeout_called.call_count)
+
         asyncio.run(run())
 
     def test_callback_order(self):
