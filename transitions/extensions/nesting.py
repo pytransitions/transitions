@@ -250,8 +250,8 @@ class NestedTransition(Transition):
             tmp_tree = tmp_tree.get(dst_name_path[0], None) if len(dst_name_path) > 0 else None
 
         # when destination is empty this means we are already in the state we want to enter
-        # this means we deal with a reflexive transition here as internal transitions have been already dealt with
-        # the 'root' of src and dest will be set to the parent and dst (and src) substate will be set as st
+        # we deal with a reflexive transition here as internal transitions have been already dealt with
+        # the 'root' of src and dest will be set to the parent and dst (and src) substate will be set as destination
         if not dst_name_path:
             dst_name_path = [root.pop()]
 
