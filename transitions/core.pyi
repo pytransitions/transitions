@@ -2,17 +2,9 @@ from logging import Logger
 from functools import partial
 from typing import Any, Optional, Callable, Sequence, Union, Iterable, List, Dict, DefaultDict, Type, Deque, OrderedDict, Tuple, Literal
 
-try:
-    # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
-    from enum import Enum, EnumMeta
-except ImportError:
-    # If enum is not available, create dummy classes for type checks
-    class Enum:  # type:ignore
-        name: str
-        value: Any
 
-    class EnumMeta:  # type:ignore
-        pass
+# Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
+from enum import Enum, EnumMeta
 
 _LOGGER: Logger
 
@@ -78,13 +70,13 @@ class EventData:
     event: Optional[Event]
     machine: Optional[Machine]
     model: object
-    args: Tuple[Any]
+    args: Iterable[Any]
     kwargs: Dict[str, Any]
     transition: Optional[Transition]
     error: Optional[Exception]
     result: Optional[bool]
     def __init__(self, state: Optional[State], event: Optional[Event], machine: Machine, model: object,
-                 args: Tuple[Any], kwargs: Dict[str, Any]) -> None: ...
+                 args: Iterable[Any], kwargs: Dict[str, Any]) -> None: ...
     def update(self, state: Union[State, str, Enum]) -> None: ...
     def __repr__(self) -> str: ...
 
@@ -139,11 +131,11 @@ class Machine:
                   initial: Optional[StateIdentifier] = ...) -> None: ...
     def remove_model(self, model: ModelParameter) -> None: ...
     @classmethod
-    def _create_transition(cls, *args: List, **kwargs: Dict[str, Any]) -> Transition: ...
+    def _create_transition(cls, *args: Any, **kwargs: Any) -> Transition: ...
     @classmethod
-    def _create_event(cls, *args: List, **kwargs: Dict[str, Any]) -> Event: ...
+    def _create_event(cls, *args: Any, **kwargs: Any) -> Event: ...
     @classmethod
-    def _create_state(cls, *args: List, **kwargs: Dict[str, Any]) -> State: ...
+    def _create_state(cls, *args: Any, **kwargs: Any) -> State: ...
     @property
     def initial(self) -> Optional[str]: ...
     @initial.setter
@@ -184,7 +176,7 @@ class Machine:
     def _checked_assignment(self, model: object, name: str, func: Callable) -> None: ...
     def _add_trigger_to_model(self, trigger: str, model: object) -> None: ...
     def _get_trigger(self, model: object, trigger_name: str, *args: List, **kwargs: Dict[str, Any]) -> bool: ...
-    def get_triggers(self, *args: List) -> List[str]: ...
+    def get_triggers(self, *args: Union[str, Enum, State]) -> List[str]: ...
     def add_transition(self, trigger: str,
                        source: Union[StateIdentifier, List[StateIdentifier]],
                        dest: StateIdentifier, conditions: CallbacksArg = ..., unless: CallbacksArg = ...,

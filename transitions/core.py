@@ -18,7 +18,6 @@ try:
     from enum import Enum, EnumMeta
 except ImportError:
     # If enum is not available, create dummy classes for type checks
-    # typing must be prevent redefinition issues with mypy
     class Enum:  # type:ignore
         """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
 
@@ -259,7 +258,7 @@ class Transition(object):
         """ Execute the transition.
         Args:
             event_data: An instance of class EventData.
-        Returns: boolean indicating whether or not the transition was
+        Returns: boolean indicating whether the transition was
             successfully executed (True if successful, False if not).
         """
         _LOGGER.debug("%sInitiating transition from state %s to state %s...",
@@ -392,7 +391,7 @@ class Event(object):
             args and kwargs: Optional positional or named arguments that will
                 be passed onto the EventData object, enabling arbitrary state
                 information to be passed on to downstream triggered functions.
-        Returns: boolean indicating whether or not a transition was
+        Returns: boolean indicating whether a transition was
             successfully executed (True if successful, False if not).
         """
         func = partial(self._trigger, EventData(None, self, self.machine, model, args=args, kwargs=kwargs))
@@ -408,7 +407,7 @@ class Event(object):
         Args:
             event_data (EventData): The currently processed event. State, result and (potentially) error might be
             overridden.
-        Returns: boolean indicating whether or not a transition was
+        Returns: boolean indicating whether a transition was
             successfully executed (True if successful, False if not).
         """
         event_data.state = self.machine.get_model_state(event_data.model)
@@ -663,14 +662,14 @@ class Machine(object):
     def initial(self, value):
         if isinstance(value, State):
             if value.name not in self.states:
-                self.add_state(value)
+                self.add_states(value)
             else:
                 _ = self._has_state(value, raise_error=True)
             self._initial = value.name
         else:
             state_name = value.name if isinstance(value, Enum) else value
             if state_name not in self.states:
-                self.add_state(state_name)
+                self.add_states(state_name)
             self._initial = state_name
 
     @property
@@ -1015,7 +1014,7 @@ class Machine(object):
                 is None, all states in the current instance will be used.
             trigger (str): The name of the trigger method that advances to
                 the next state in the sequence.
-            loop (boolean): Whether or not to add a transition from the last
+            loop (boolean): Whether to add a transition from the last
                 state to the first state.
             loop_includes_initial (boolean): If no initial state was defined in
                 the machine, setting this to True will cause the _initial state
