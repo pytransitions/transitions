@@ -28,20 +28,8 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.txt -r requirements_diagrams.txt 
         python -m pip install -U -r requirements_test.txt
+        python python -c "print 'hello'" > /dev/null 2>&1 || pip install -r requirements_mypy.txt
     - name: Test with pytest
       run: |
         coverage run --source=transitions -m pytest --doctest-modules tests/
-    - name: Coveralls
-      uses: AndreMiras/coveralls-python-action@develop
-      with:
-        parallel: true
-        flag-name: Test with pytest
-      
-  coveralls_finish:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-    - name: Coveralls Finished
-      uses: AndreMiras/coveralls-python-action@develop
-      with:
-        parallel-finished: true
+
