@@ -284,7 +284,10 @@ class Transition(object):
         event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
         event_data.update(getattr(event_data.model, event_data.machine.model_attribute))
-        event_data.machine.get_state(self.dest).enter(event_data)
+        dest_state = event_data.machine.get_state(self.dest)
+        dest_state.enter(event_data)
+        if getattr(dest_state, 'is_final', False):
+            event_data.machine.callbacks(event_data.machine.on_final, event_data)
 
     def add_callback(self, trigger, func):
         """Add a new before, after, or prepare callback.
@@ -508,7 +511,7 @@ class Machine(object):
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
                  queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 **kwargs):
+                 on_final=None, **kwargs):
         """
         Args:
             model (object or list): The object(s) whose states we want to manage. If set to `Machine.self_literal`
@@ -573,6 +576,7 @@ class Machine(object):
         self._prepare_event = []
         self._finalize_event = []
         self._on_exception = []
+        self._on_final = []
         self._initial = None
 
         self.states = OrderedDict()
@@ -585,6 +589,7 @@ class Machine(object):
         self.after_state_change = after_state_change
         self.finalize_event = finalize_event
         self.on_exception = on_exception
+        self.on_final = on_final
         self.name = name + ": " if name is not None else ""
         self.model_attribute = model_attribute
 
@@ -739,6 +744,16 @@ class Machine(object):
     @on_exception.setter
     def on_exception(self, value):
         self._on_exception = listify(value)
+
+    @property
+    def on_final(self):
+        """Callbacks will be executed when the reached state is tagged with 'final'"""
+        return self._on_final
+
+    # this should make sure that finalize_event is always a list
+    @on_final.setter
+    def on_final(self, value):
+        self._on_final = listify(value)
 
     def get_state(self, state):
         """Return the State instance with the passed name."""

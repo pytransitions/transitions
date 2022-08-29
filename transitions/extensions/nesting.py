@@ -174,13 +174,16 @@ class NestedState(State):
         such as '↦' (limited to Python 3 though).
     """
 
-    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, initial=None):
+    dynamic_methods = State.dynamic_methods + ['on_final']
+
+    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, initial=None, on_final=None):
         super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
                                           ignore_invalid_triggers=ignore_invalid_triggers)
         self.initial = initial
         self.events = {}
         self.states = OrderedDict()
         self._scope = []
+        self.on_final = listify(on_final) if on_final else []
 
     def add_substate(self, state):
         """Adds a state as a substate.
@@ -280,6 +283,44 @@ class NestedTransition(Transition):
         self._update_model(event_data, state_tree)
         for func in enter_partials:
             func()
+        with event_data.machine():
+            self._final_check(event_data, state_tree, enter_partials)
+
+    def _final_check(self, event_data, state_tree, enter_partials):
+        # processes states with children
+        if state_tree:
+            all_children_final = True
+            needs_update = False
+            for child_res in (self._final_check_nested(state, event_data, state_tree, enter_partials) for state in state_tree):
+                # if one child is not considered final, processing can stop
+                if child_res == 0:
+                    all_children_final = False
+                    break
+                # if one child has recently transitioned to a final state, we need to update all parents
+                elif child_res == 2:
+                    needs_update = True
+            # if and only if all other children are also in a final state and a child has recently reached a final
+            # state OR the scoped state has just been entered, trigger callbacks
+            if all_children_final:
+                if needs_update or any(event_data.machine.scoped.scoped_enter == part.func for part in enter_partials):
+                    event_data.machine.callbacks(event_data.machine.scoped.on_final, event_data)
+                    # inform parent that an update occurred
+                    return 2
+                # this state and all its children are in a final state but haven't been altered in this transition
+                return 1
+        # if a state is a leaf state OR has children not in a final state
+        if getattr(event_data.machine.scoped, 'is_final', False):
+            # if the state itself is considered final and has recently been entered trigger callbacks
+            # thus, a state with non-final children may still trigger callbacks if itself is considered final
+            if any(event_data.machine.scoped.scoped_enter == part.func for part in enter_partials):
+                event_data.machine.callbacks(event_data.machine.scoped.on_final, event_data)
+                return 2
+            return 1
+        return 0
+
+    def _final_check_nested(self, state, event_data, state_tree, enter_partials):
+        with event_data.machine(state):
+            return self._final_check(event_data, state_tree[state], enter_partials)
 
     def _enter_nested(self, root, dest, prefix_path, event_data):
         if root:
