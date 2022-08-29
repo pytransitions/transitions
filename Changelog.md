@@ -1,19 +1,26 @@
 # Changelog
 
-## 0.9.0 ()
+## 0.9.0 (September 2022)
 
 Release 0.9.0 is a major release and contains improvements to ease development, adds some new features and removes the legacy hierarchical machine:
 
 - removed legacy implementation of `HierarchicalMachine` from the package
-- removed `_super` workaround related to dill (see https://github.com/pytransitions/transitions/issues/236)
+- Bug #551: Fix active state styling in `GraphMachine` (thanks @betaboon)
 - Bug #554: Fix issues related to scopes and queueing in `HierachicalMachine` (thanks @jankrejci)
+- Bug #568: Reflexive transitions (dest: '=') had not been resolved correctly when source was a wildcard (thanks @jnu)
+- Bug #568: HSM did not detect reflexive transitions if src was a parent state (thanks @lostcontrol)
+- Bug #569: Fix implicit fallback to `graphviz` when `pygraphviz` was not installed (thanks @FridjofAmundsen)
+- Bug #580: Fix `on_timeout` callback resolution when timeout had been initialized with `timeout=0` (thanks @Rysbai)
+- Bug #582: Last label in `GraphSupport` was not correctly aligned when `show_attributes=True` (thanks @spagh-eddie)
 - Feature: Add pyi stub files for better type hinting
 - Feature: Reviewed and improved method documentation
 - Feature #549: Add `may` transition check to transitions (thanks @artofhuman)
 - Feature #552: Refactored error handling to be able to handle `MachineError` in `on_exception` callbacks (thanks @kpihus)
+- Feature: Add `mypy` to test workflow
 - PR #461: Add `Retry` state to supported state stereotypes (thanks @rgov)
-- `Machine._identify_callback` has been converted to instance method from class method
-- `LockedMachine._get_qualified_state_name` has been converted to instance method from static method
+- Internal: `Machine._identify_callback` has been converted to instance method from class method
+- Internal: `LockedMachine._get_qualified_state_name` has been converted to instance method from static method
+- Internal: `_super` workaround related to dill (see https://github.com/pytransitions/transitions/issues/236)
 
 ## 0.8.11 (February 2022)
 
