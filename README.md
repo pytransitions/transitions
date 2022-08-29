@@ -370,6 +370,48 @@ machine = Machine(lump, states=['A', 'B', 'C'])
 
 Now, any time `lump` transitions to state `A`, the `on_enter_A()` method defined in the `Matter` class will fire.
 
+_Experimental in 0.9.0:_
+When you use the [Tag feature](#state-features) (described in more detail below) you can make use of `on_final` callbacks.
+
+```python
+from transitions import Machine
+from transitions.extensions.states import Tags as State
+
+states = [State(name='idling'),
+          State(name='rescuing_kitten'),
+          State(name='offender_escaped', tags='final'),
+          State(name='offender_caught', tags='final')]
+
+transitions = [["called", "idling", "rescuing_kitten"],  # we will come when  called
+               {"trigger": "intervene",
+                "source": "rescuing_kitten",
+                "dest": "offender_caught",  # we will catch the offender
+                "unless": "offender_is_faster"},  # unless they are faster
+               ["intervene", "rescuing_kitten", "offender_gone"]]
+
+
+class FinalSuperhero(object):
+
+    def __init__(self, speed):
+        self.machine = Machine(self, states=states, transitions=transitions, initial="idling", on_final="claim_success")
+        self.speed = speed
+
+    def offender_is_faster(self):
+        self.speed < 15
+
+    def claim_success(self):
+        print("The kitten is safe.")
+
+
+hero = FinalSuperhero(speed=10)  # we are not in shape today
+hero.called()
+assert hero.is_rescuing_kitten()
+hero.intervene()
+# >>> 'The kitten is safe'
+assert hero.machine.get_state(hero.state).is_final  # it's over
+assert hero.is_offender_gone()  # maybe next time
+```
+
 #### <a name="checking-state"></a>Checking state
 
 You can always check the current state of the model by either:
@@ -1473,7 +1515,6 @@ assert machine.is_C.s2() is False
 assert machine.is_C.s2(allow_substates=True)  # FunctionWrapper support allow_substate as well
 ```
 
-_new in 0.8.0_  
 You can use enumerations in HSMs as well but keep in mind that `Enum` are compared by value.
 If you have a value more than once in a state tree those states cannot be distinguished.
 
@@ -1485,7 +1526,6 @@ machine.to_B()
 machine.is_GREEN()  # returns True even though the actual state is B_GREEN
 ```
 
-_new in 0.8.0_  
 `HierarchicalMachine` has been rewritten from scratch to support parallel states and better isolation of nested states.
 This involves some tweaks based on community feedback.
 To get an idea of processing order and configuration have a look at the following example:
@@ -1537,6 +1577,66 @@ m = HierarchicalMachine(states=['A'], initial='A')
 m.add_state('B_1_a')
 m.to_B_1()
 assert m.is_B(allow_substates=True)
+```
+
+_Experimental in 0.9.0:_
+When you extend your states with a `is_final` property (for instance by using the [Tag feature](#state-features) described below) you can make use of `on_final` callbacks either in states or on the HSM itself. Callbacks will be triggered if a) the state itself is tagged with `final` and has just been entered or b) all substates are considered final and at least one substate just entered a final state. In case of b) all parents will be considered final as well if condition b) holds true for them. This might be useful in cases where processing happens in parallel and your HSM or any parent state should be notified when all substates have reached a final state:
+
+
+```python
+from transitions.extensions import HierarchicalMachine
+from transitions.extensions.states import add_state_features, Tags
+
+
+@add_state_features(Tags)
+class FinalHSM(HierarchicalMachine):
+
+    def final_event_raised(self, event_data):
+        # one way to get the currently finalized state is via the scoped attribute of the machine passed
+        # with 'event_data'. However, this is done here to keep the example short. In most cases dedicated
+        # final callbacks will probably result in cleaner and more comprehensible code.
+        print("{} is final!".format(event_data.machine.scoped.name or "Machine"))
+
+
+# We initialize this parallel HSM in state A:
+#        / X
+#       /   / yI
+# A -> B - Y - yII [final]
+#        \ Z - zI
+#            \ zII [final]
+
+states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'tags': ['final'], 'on_final': 'final_event_raised'},
+                                          {'name': 'Y', 'transitions': [['final_Y', 'yI', 'yII']],
+                                           'initial': 'yI',
+                                           'on_final': 'final_event_raised',
+                                           'states':
+                                               ['yI', {'name': 'yII', 'tags': ['final']}]
+                                           },
+                                          {'name': 'Z', 'transitions': [['final_Z', 'zI', 'zII']],
+                                           'initial': 'zI',
+                                           'on_final': 'final_event_raised',
+                                           'states':
+                                               ['zI', {'name': 'zII', 'tags': ['final']}]
+                                           },
+                                          ],
+                "on_final": 'final_event_raised'}]
+
+machine = FinalHSM(states=states, on_final='final_event_raised', initial='A', send_event=True)
+# X will emit a final event right away
+machine.to_B()
+# >>> X is final!
+print(machine.state)
+# >>> ['B_X', 'B_Y_yI', 'B_Z_zI']
+# Y's substate is final now and will trigger 'on_final' on Y
+machine.final_Y()
+# >>> Y is final!
+print(machine.state)
+# >>> ['B_X', 'B_Y_yII', 'B_Z_zI']
+# Z's substate becomes final which also makes all children of B final and thus machine itself
+machine.final_Z()
+# >>> Z is final!
+# >>> B is final!
+# >>> Machine is final!
 ```
 
 #### Reuse of previously created HSMs
@@ -1930,7 +2030,7 @@ asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.3)]))
 assert m.is_C()   # now timeout should have been processed
 ```
 
-You should consider passing `queued=True` to the `TimeoutMachine` constructor. This will make sure that events are processed sequentially and avoid asynchronous [racing conditions](https://github.com/pytransitions/transitions/issues/459) that may appear when timeout and event happen in close proximity.
+You should consider passing `queued=True` to the `TimeoutMachine` constructor. This will make sure that events are processed sequentially and avoid asynchronous [racing conditions](https://github.com/pytransitions/transitions/issues/459) that may appear when timeout and event happen in proximity.
 
 #### <a name="django-support"></a> Using transitions together with Django
 

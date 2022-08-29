@@ -14,10 +14,13 @@ except ImportError:
 
 class TestTransitions(TestCase):
 
+    def setUp(self):
+        self.machine_cls = Machine
+
     def test_tags(self):
 
         @add_state_features(Tags)
-        class CustomMachine(Machine):
+        class CustomMachine(self.machine_cls):
             pass
 
         states = [{"name": "A", "tags": ["initial", "success", "error_state"]}]
@@ -31,7 +34,7 @@ class TestTransitions(TestCase):
     def test_error(self):
 
         @add_state_features(Error)
-        class CustomMachine(Machine):
+        class CustomMachine(self.machine_cls):
             pass
 
         states = ['A', 'B', 'F',
@@ -53,7 +56,7 @@ class TestTransitions(TestCase):
 
     def test_error_callback(self):
         @add_state_features(Error)
-        class CustomMachine(Machine):
+        class CustomMachine(self.machine_cls):
             pass
 
         mock_callback = MagicMock()
@@ -72,7 +75,7 @@ class TestTransitions(TestCase):
         mock = MagicMock()
 
         @add_state_features(Timeout)
-        class CustomMachine(Machine):
+        class CustomMachine(self.machine_cls):
 
             def timeout(self):
                 mock()
@@ -102,7 +105,7 @@ class TestTransitions(TestCase):
         counter = MagicMock()
 
         @add_state_features(Timeout)
-        class CustomMachine(Machine):
+        class CustomMachine(self.machine_cls):
             pass
 
         class Model(object):
@@ -143,7 +146,7 @@ class TestTransitions(TestCase):
         timeout_mock = MagicMock()
 
         @add_state_features(Timeout)
-        class CustomMachine(Machine):
+        class CustomMachine(self.machine_cls):
             pass
 
         states = ['A', {'name': 'B', 'timeout': 0.05, 'on_timeout': ['to_A', timeout_mock]}]
@@ -164,7 +167,7 @@ class TestTransitions(TestCase):
                 self.value += 1
 
         @add_state_features(Volatile)
-        class CustomMachine(Machine):
+        class CustomMachine(self.machine_cls):
             pass
 
         states = ['A', {'name': 'B', 'volatile': TemporalState}]
@@ -187,6 +190,70 @@ class TestTransitions(TestCase):
         self.assertFalse(hasattr(m.scope, 'foo'))
         # value should be reset
         self.assertEqual(m.scope.value, 5)
+
+    def test_final_state(self):
+        final_mock = MagicMock()
+
+        @add_state_features(Tags)
+        class CustomMachine(self.machine_cls):
+            pass
+
+        machine = CustomMachine(states=['A', {'name': 'B', 'tags': ['final']}], on_final=final_mock, initial='A')
+        self.assertFalse(final_mock.called)
+        machine.to_B()
+        self.assertTrue(final_mock.called)
+        machine.to_A()
+        self.assertEqual(1, final_mock.call_count)
+        machine.to_B()
+        self.assertEqual(2, final_mock.call_count)
+
+
+class TestStatesNested(TestTransitions):
+
+    def setUp(self):
+        self.machine_cls = MachineFactory.get_predefined(locked=True, nested=True, graph=True)
+
+    def test_final_state_nested(self):
+        final_mock_B = MagicMock()
+        final_mock_Y = MagicMock()
+        final_mock_Z = MagicMock()
+        final_mock_machine = MagicMock()
+        mocks = [final_mock_B, final_mock_Y, final_mock_Z, final_mock_machine]
+
+        @add_state_features(Tags)
+        class CustomMachine(self.machine_cls):
+            pass
+
+        states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'tags': ['final']},
+                                                  {'name': 'Y', 'transitions': [['final_Y', 'yI', 'yII']],
+                                                   'initial': 'yI',
+                                                   'on_final': final_mock_Y,
+                                                   'states':
+                                                       ['yI', {'name': 'yII', 'tags': ['final']}]
+                                                   },
+                                                  {'name': 'Z', 'transitions': [['final_Z', 'zI', 'zII']],
+                                                   'initial': 'zI',
+                                                   'on_final': final_mock_Z,
+                                                   'states':
+                                                       ['zI', {'name': 'zII', 'tags': ['final']}]
+                                                   },
+                                                  ],
+                        "on_final": final_mock_B}]
+
+        machine = CustomMachine(states=states, on_final=final_mock_machine,
+                                initial='A')
+        self.assertFalse(any(mock.called for mock in mocks))
+        machine.to_B()
+        self.assertFalse(any(mock.called for mock in mocks))
+        machine.final_Y()
+        self.assertTrue(final_mock_Y.called)
+        self.assertFalse(final_mock_Z.called or final_mock_B.called or final_mock_machine.called)
+        machine.final_Z()
+        self.assertTrue(all(mock.called for mock in mocks))
+        self.assertEqual(1, final_mock_Y.call_count)
+        self.assertEqual(1, final_mock_Z.call_count)
+        self.assertEqual(1, final_mock_B.call_count)
+        self.assertEqual(1, final_mock_machine.call_count)
 
 
 class TestStatesDiagramsLockedNested(TestDiagramsLockedNested):
