@@ -1,11 +1,14 @@
 import numbers
 
-from ..core import Machine, StateIdentifier, CallbacksArg, StateConfig, Event
+from ..core import Machine, StateIdentifier, CallbacksArg, StateConfig, Event, TransitionConfig, ModelParameter
 from .nesting import HierarchicalMachine
-from typing import  List, Dict, Union, Optional, Callable, Tuple, Any
+from typing import  List, Dict, Union, Optional, Callable, Tuple, Any, Type, Sequence, TypedDict
+
+from enum import Enum
 
 # mypy does not support recursive definitions (yet), we need to use Any instead of 'MarkupConfig'
-MarkupConfig = Dict[str, Union[List, str, Any]]
+class MarkupConfig(TypedDict):
+    transitions: List[TransitionConfig]
 
 class MarkupMachine(Machine):
     state_attributes: List[str]
@@ -13,7 +16,18 @@ class MarkupMachine(Machine):
     _markup: MarkupConfig
     _auto_transitions_markup: bool
     _needs_update: bool
-    def __init__(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
+    def __init__(self, model: Optional[ModelParameter]=...,
+                 states: Optional[Union[Sequence[StateConfig], Type[Enum]]] = ...,
+                 initial: Optional[StateIdentifier] = ...,
+                 transitions: Optional[Union[TransitionConfig, Sequence[TransitionConfig]]] = ...,
+                 send_event: bool = ..., auto_transitions: bool = ..., ordered_transitions: bool = ...,
+                 ignore_invalid_triggers: Optional[bool] = ...,
+                 before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
+                 name: str = ..., queued: bool = ...,
+                 prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
+                 model_attribute: str = ..., on_exception: CallbacksArg = ...,
+                 markup: Optional[MarkupConfig] = ..., auto_transitions_markup: bool = ...,
+                 **kwargs: Dict[str, Any]) -> None: ...
     @property
     def auto_transitions_markup(self) -> bool: ...
     @auto_transitions_markup.setter
@@ -23,10 +37,11 @@ class MarkupMachine(Machine):
     def get_markup_config(self) -> MarkupConfig: ...
     def add_transition(self, trigger: str,
                        source: Union[StateIdentifier, List[StateIdentifier]],
-                       dest: StateIdentifier, conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
+                       dest: Optional[StateIdentifier] = ...,
+                       conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
                        before: CallbacksArg = ..., after: CallbacksArg = ..., prepare: CallbacksArg = ...,
                        **kwargs: Dict[str, Any]) -> None: ...
-    def add_states(self, states: Union[List[StateConfig], StateConfig],
+    def add_states(self, states: Union[Sequence[StateConfig], StateConfig],
                    on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
                    ignore_invalid_triggers: Optional[bool] = ..., **kwargs: Dict[str, Any]) -> None: ...
     @staticmethod

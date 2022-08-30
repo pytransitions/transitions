@@ -1,9 +1,13 @@
-from transitions.core import StateIdentifier, StateConfig, CallbacksArg, Transition, EventData
+from transitions.core import (
+    StateIdentifier, StateConfig, CallbacksArg, Transition, EventData, TransitionConfig, ModelParameter
+)
 from transitions.extensions.nesting import NestedTransition
 from transitions.extensions.diagrams_base import BaseGraph, GraphModelProtocol, GraphProtocol
 from transitions.extensions.markup import MarkupMachine, HierarchicalMarkupMachine
 from logging import Logger
-from typing import Any, Literal, Type, List, Dict, Union, Optional, Generator
+from typing import Any, Literal, Sequence, Type, List, Dict, Union, Optional, Generator
+
+from enum import Enum
 
 _LOGGER: Logger
 
@@ -31,7 +35,18 @@ class GraphMachine(MarkupMachine):
     models: List[GraphModelProtocol]
     def __getstate__(self) -> Dict[str, Any]: ...
     def __setstate__(self, state: Dict[str, Any]) -> None: ...
-    def __init__(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
+    def __init__(self, model: Optional[ModelParameter]=...,
+                 states: Optional[Union[List[StateConfig], Type[Enum]]] = ...,
+                 initial: Optional[StateIdentifier] = ...,
+                 transitions: Optional[Union[TransitionConfig, List[TransitionConfig]]] = ..., send_event: bool = ...,
+                 auto_transitions: bool = ..., ordered_transitions: bool = ...,
+                 ignore_invalid_triggers: Optional[bool] = ...,
+                 before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
+                 name: str = ..., queued: bool = ...,
+                 prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
+                 model_attribute: str = ..., on_exception: CallbacksArg = ...,
+                 title: str = ..., show_conditions: bool = ..., show_state_attributes: bool = ...,
+                 show_auto_transitions: bool = ..., use_pygraphviz: bool = ..., **kwargs: Dict[str, Any]) -> None: ...
     def _init_graphviz_engine(self, use_pygraphviz: bool) -> Type[BaseGraph]: ...
     def _get_graph(self, model: GraphModelProtocol, title: Optional[str] = ..., force_new: bool = ...,
                    show_roi: bool = ...) -> GraphProtocol: ...
@@ -39,12 +54,13 @@ class GraphMachine(MarkupMachine):
                            show_roi: bool = ...) -> GraphProtocol: ...
     def add_model(self, model: Union[Union[Literal['self'], object], List[Union[Literal['self'], object]]],
                   initial: Optional[StateIdentifier] = ...) -> None: ...
-    def add_states(self, states: Union[List[StateConfig], StateConfig],
+    def add_states(self, states: Union[Sequence[StateConfig], StateConfig],
                    on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
                    ignore_invalid_triggers: Optional[bool] = ..., **kwargs: Dict[str, Any]) -> None: ...
     def add_transition(self, trigger: str,
                        source: Union[StateIdentifier, List[StateIdentifier]],
-                       dest: StateIdentifier, conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
+                       dest: Optional[StateIdentifier] = ...,
+                       conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
                        before: CallbacksArg = ..., after: CallbacksArg = ..., prepare: CallbacksArg = ...,
                        **kwargs: Dict[str, Any]) -> None: ...
 

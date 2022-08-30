@@ -1,6 +1,6 @@
-from ..core import Condition, Event, EventData, Machine, State, Transition
+from ..core import Condition, Event, EventData, Machine, State, Transition, StateConfig, ModelParameter, TransitionConfig
 from .nesting import HierarchicalMachine, NestedEvent, NestedState, NestedTransition
-from typing import Any, Optional, List, Type, Dict, Deque, Callable, Union, Iterable, DefaultDict, Literal
+from typing import Any, Optional, List, Type, Dict, Deque, Callable, Union, Iterable, DefaultDict, Literal, Sequence
 from asyncio import Task
 from functools import partial
 from logging import Logger
@@ -58,10 +58,20 @@ class AsyncMachine(Machine):
     event_cls: Type[AsyncEvent]
     async_tasks: Dict[int, List[Task]]
     events: Dict[str, AsyncEvent]  # type: ignore
+    queued: Union[bool, Literal["model"]]
     protected_tasks: List[Task]
     current_context: ContextVar
     _transition_queue_dict: Dict[int, Deque[Callable]]
-    def __init__(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
+    def __init__(self, model: Optional[ModelParameter] = ...,
+                 states: Optional[Union[List[StateConfig], Type[Enum]]] = ...,
+                 initial: Optional[StateIdentifier] = ...,
+                 transitions: Optional[Union[TransitionConfig, Sequence[TransitionConfig]]] = ...,
+                 send_event: bool = ..., auto_transitions: bool = ..., ordered_transitions: bool = ...,
+                 ignore_invalid_triggers: Optional[bool] = ...,
+                 before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
+                 name: str = ..., queued: Union[bool, Literal["model"]] = ...,
+                 prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
+                 model_attribute: str = ..., on_exception: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
     def add_model(self, model: Union[Union[Literal["self"], object], List[Union[Literal["self"], object]]],
                   initial: Optional[StateIdentifier] = ...) -> None: ...
     async def dispatch(self, trigger: str, *args: List, **kwargs: Dict[str, Any]) -> bool: ...  # type: ignore[override]

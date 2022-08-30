@@ -4,6 +4,7 @@ except ImportError:
     pass
 
 import sys
+from typing import TYPE_CHECKING
 
 from .utils import InheritedStuff
 from .utils import Stuff, DummyModel
@@ -12,13 +13,15 @@ from functools import partial
 from transitions import Machine, MachineError, State, EventData
 from transitions.core import listify, _prep_ordered_arg
 from unittest import TestCase, skipIf
-import warnings
 import weakref
 
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock
+    from mock import MagicMock  # type: ignore
+
+if TYPE_CHECKING:
+    from typing import List, Union, Dict, Callable
 
 
 def on_exit_A(event):
@@ -100,7 +103,7 @@ class TestTransitions(TestCase):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
+        ]  # type: List[Union[List[str], Dict[str, str]]]
         m = Machine(states=states, transitions=transitions, initial='A')
         m.walk()
         self.assertEqual(m.state, 'B')
@@ -218,7 +221,7 @@ class TestTransitions(TestCase):
         self.assertEqual(s.message, 'Hello World!')
         s.reverse()
         self.assertEqual(s.state, 'A')
-        self.assertTrue(s.message.startswith('So long'))
+        self.assertTrue(s.message is not None and s.message.startswith('So long'))
 
     def test_before_after_callback_addition(self):
         m = Machine(Stuff(), states=['A', 'B', 'C'], initial='A')
@@ -281,8 +284,8 @@ class TestTransitions(TestCase):
         s.go_f()
         self.assertEqual(s.state, 'F')
         self.assertEqual(s.exit_message, 'E go home...')
-        assert 'I am F!' in s.message
-        assert 'Hello F!' in s.message
+        self.assertIn('I am F!', s.message or "")
+        self.assertIn('Hello F!', s.message or "")
 
     def test_inheritance(self):
         states = ['A', 'B', 'C', 'D', 'E']
@@ -317,16 +320,16 @@ class TestTransitions(TestCase):
         m.add_transition(
             trigger='advance', source='A', dest='B', before='set_message')
         s.advance(message='Hallo. My name is Inigo Montoya.')
-        self.assertTrue(s.message.startswith('Hallo.'))
+        self.assertTrue(s.message is not None and s.message.startswith('Hallo.'))
         s.to_A()
         s.advance('Test as positional argument')
-        self.assertTrue(s.message.startswith('Test as'))
+        self.assertTrue(s.message is not None and s.message.startswith('Test as'))
         # Now wrap arguments in an EventData instance
         m.send_event = True
         m.add_transition(
             trigger='advance', source='B', dest='C', before='extract_message')
         s.advance(message='You killed my father. Prepare to die.')
-        self.assertTrue(s.message.startswith('You'))
+        self.assertTrue(s.message is not None and s.message.startswith('You'))
 
     def test_send_event_data_conditions(self):
         states = ['A', 'B', 'C', 'D']
@@ -347,7 +350,7 @@ class TestTransitions(TestCase):
         self.assertEqual(s.state, 'B')
 
     def test_auto_transitions(self):
-        states = ['A', {'name': 'B'}, State(name='C')]
+        states = ['A', {'name': 'B'}, State(name='C')]  # type: List[Union[str, Dict[str, str], State]]
         m = Machine(states=states, initial='A', auto_transitions=True)
         m.to_B()
         self.assertEqual(m.state, 'B')
@@ -487,10 +490,11 @@ class TestTransitions(TestCase):
                     before_state_change=before_state_change,
                     after_state_change=after_state_change, send_event=True,
                     initial='A', auto_transitions=True)
-
+        self.assertEqual(before_state_change, m.before_state_change[0])
+        self.assertEqual(after_state_change, m.after_state_change[0])
         m.to_B()
-        self.assertTrue(m.before_state_change[0].called)
-        self.assertTrue(m.after_state_change[0].called)
+        self.assertTrue(before_state_change.called)
+        self.assertTrue(after_state_change.called)
 
     def test_state_callbacks(self):
 
@@ -604,7 +608,7 @@ class TestTransitions(TestCase):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B', 'before': change_state},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
+        ]  # type: List[Dict[str, Union[str, Callable]]]
 
         m = Machine(states=states, transitions=transitions, initial='A')
         m.walk(machine=m)
@@ -814,7 +818,7 @@ class TestTransitions(TestCase):
         m = Machine(model=[s1, s2], states=states,
                     initial=states[0])
         self.assertEqual(len(m.models), 2)
-        self.assertEqual(len(m.model), 2)
+        self.assertTrue(isinstance(m.model, list) and len(m.model) == 2)
         m.add_transition('advance', 'A', 'B')
         s1.advance()
         self.assertEqual(s1.state, 'B')
@@ -1023,7 +1027,8 @@ class TestTransitions(TestCase):
         self.assertTrue(len(_prep_ordered_arg(3, None)) == 3)
         self.assertTrue(all(a is None for a in _prep_ordered_arg(3, None)))
         with self.assertRaises(ValueError):
-            _prep_ordered_arg(3, [None, None])
+            # deliberately passing wrong arguments
+            _prep_ordered_arg(3, [None, None])  # type: ignore
 
     def test_ordered_transition_callback(self):
         class Model:

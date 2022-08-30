@@ -9,7 +9,7 @@ from .test_graphviz import TestDiagramsLockedNested
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock
+    from mock import MagicMock  # type: ignore
 
 
 class TestTransitions(TestCase):

@@ -39,19 +39,31 @@ class MarkupMachine(Machine):
     state_attributes = ['on_exit', 'on_enter', 'ignore_invalid_triggers', 'timeout', 'on_timeout', 'tags', 'label']
     transition_attributes = ['source', 'dest', 'prepare', 'before', 'after', 'label']
 
-    def __init__(self, *args, **kwargs):
-        self._markup = kwargs.pop('markup', {})
-        self._auto_transitions_markup = kwargs.pop('auto_transitions_markup', False)
+    def __init__(self, model=Machine.self_literal, states=None, initial='initial', transitions=None,
+                 send_event=False, auto_transitions=True,
+                 ordered_transitions=False, ignore_invalid_triggers=None,
+                 before_state_change=None, after_state_change=None, name=None,
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
+                 markup=None, auto_transitions_markup=False, **kwargs):
+        self._markup = markup or {}
+        self._auto_transitions_markup = auto_transitions_markup
         self._needs_update = True
 
         if self._markup:
             # remove models from config to process them AFTER the base machine has been initialized
             models = self._markup.pop('models', [])
-            super(MarkupMachine, self).__init__(None, **self._markup)
+            super(MarkupMachine, self).__init__(model=None, **self._markup)
             for mod in models:
                 self._add_markup_model(mod)
         else:
-            super(MarkupMachine, self).__init__(*args, **kwargs)
+            super(MarkupMachine, self).__init__(
+                model=model, states=states, initial=initial, transitions=transitions,
+                send_event=send_event, auto_transitions=auto_transitions,
+                ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
+                before_state_change=before_state_change, after_state_change=after_state_change, name=name,
+                queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
+                model_attribute=model_attribute, on_exception=on_exception, **kwargs
+            )
             self._markup['before_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
             self._markup['after_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
             self._markup['prepare_event'] = [x for x in (rep(f) for f in self.prepare_event) if x]

@@ -269,7 +269,7 @@ class AsyncMachine(Machine):
             Callbacks mentioned here will also be called if a transition or condition check raised an error.
         on_exception: A callable called when an event raises an exception. If not set,
             the Exception will be raised instead.
-        queued (bool): Whether transitions in callbacks should be executed immediately (False) or sequentially.
+        queued (bool or str): Whether transitions in callbacks should be executed immediately (False) or sequentially.
         send_event (bool): When True, any arguments passed to trigger methods will be wrapped in an EventData
             object, allowing indirect and encapsulated access to data. When False, all positional and keyword
             arguments will be passed directly to all callback methods.
@@ -288,9 +288,19 @@ class AsyncMachine(Machine):
     protected_tasks = []
     current_context = contextvars.ContextVar('current_context', default=None)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, model=Machine.self_literal, states=None, initial='initial', transitions=None,
+                 send_event=False, auto_transitions=True,
+                 ordered_transitions=False, ignore_invalid_triggers=None,
+                 before_state_change=None, after_state_change=None, name=None,
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
+                 **kwargs):
         self._transition_queue_dict = {}
-        super().__init__(*args, **kwargs)
+        super().__init__(model=model, states=states, initial=initial, transitions=transitions,
+                         send_event=send_event, auto_transitions=auto_transitions,
+                         ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
+                         before_state_change=before_state_change, after_state_change=after_state_change, name=name,
+                         queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
+                         model_attribute=model_attribute, on_exception=on_exception, **kwargs)
         if self.has_queue is True:
             # _DictionaryMock sets and returns ONE internal value and ignores the passed key
             self._transition_queue_dict = _DictionaryMock(self._transition_queue)

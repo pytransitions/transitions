@@ -5,7 +5,7 @@ from os.path import exists
 try:
     import mypy
 except ImportError:
-    mypy = None
+    mypy = None  # type: ignore
 
 
 class TestCodeFormat(unittest.TestCase):

@@ -1,4 +1,4 @@
-from ..core import Event, EventData, Machine, State, Transition, CallbacksArg, Callback, ModelParameter
+from ..core import Event, EventData, Machine, State, Transition, CallbacksArg, Callback, ModelParameter, TransitionConfig
 from collections import defaultdict as defaultdict
 from typing import OrderedDict, Sequence, Union, List, Dict, Optional, Type, Tuple, Callable, Any
 from types import TracebackType
@@ -76,7 +76,16 @@ class HierarchicalMachine(Machine):
     _initial: Optional[str]
     prefix_path: List[str]
     scoped: Union[NestedState, HierarchicalMachine]
-    def __init__(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
+    def __init__(self, model: Optional[ModelParameter]=...,
+                 states: Optional[Union[Sequence[NestedStateConfig], Type[Enum]]] = ...,
+                 initial: Optional[NestedStateIdentifier] = ...,
+                 transitions: Optional[Union[TransitionConfig, Sequence[TransitionConfig]]] = ...,
+                 send_event: bool = ..., auto_transitions: bool = ..., ordered_transitions: bool = ...,
+                 ignore_invalid_triggers: Optional[bool] = ...,
+                 before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
+                 name: str = ..., queued: bool = ...,
+                 prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
+                 model_attribute: str = ..., on_exception: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
     _next_scope: Optional[ScopeTuple]
     def __call__(self, to_scope: Optional[Union[ScopeTuple, str, Enum]] = ...) -> HierarchicalMachine: ...
     def __enter__(self) -> None: ...
@@ -96,7 +105,8 @@ class HierarchicalMachine(Machine):
                    ignore_invalid_triggers: Optional[bool] = ..., **kwargs: Dict[str, Any]) -> None: ...
     def add_transition(self, trigger: str,  # type: ignore[override]
                        source: Union[NestedStateIdentifier, List[NestedStateIdentifier]],
-                       dest: Optional[NestedStateIdentifier], conditions: CallbacksArg = ...,
+                       dest: Optional[NestedStateIdentifier] = ...,
+                       conditions: CallbacksArg = ...,
                        unless: CallbacksArg = ..., before: CallbacksArg = ..., after: CallbacksArg = ...,
                        prepare: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
     def get_global_name(self, state: NestedStateIdentifier = ..., join: bool = ...) -> Union[str, List[str]]: ...

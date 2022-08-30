@@ -119,21 +119,32 @@ class GraphMachine(MarkupMachine):
             except AttributeError as err:
                 _LOGGER.warning("Graph for model could not be initialized after pickling: %s", err)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, model=MarkupMachine.self_literal, states=None, initial='initial', transitions=None,
+                 send_event=False, auto_transitions=True,
+                 ordered_transitions=False, ignore_invalid_triggers=None,
+                 before_state_change=None, after_state_change=None, name=None,
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
+                 title="State Machine", show_conditions=False, show_state_attributes=False, show_auto_transitions=False,
+                 use_pygraphviz=True, **kwargs):
         # remove graph config from keywords
-        self.title = kwargs.pop("title", "State Machine")
-        self.show_conditions = kwargs.pop("show_conditions", False)
-        self.show_state_attributes = kwargs.pop("show_state_attributes", False)
+        self.title = title
+        self.show_conditions = show_conditions
+        self.show_state_attributes = show_state_attributes
         # in MarkupMachine this switch is called 'with_auto_transitions'
         # keep 'auto_transitions_markup' for backwards compatibility
-        kwargs["auto_transitions_markup"] = kwargs.get(
-            "auto_transitions_markup", False
-        ) or kwargs.pop("show_auto_transitions", False)
+        kwargs["auto_transitions_markup"] = show_auto_transitions
         self.model_graphs = {}
-        self.graph_cls = self._init_graphviz_engine(kwargs.pop("use_pygraphviz", True))
+        self.graph_cls = self._init_graphviz_engine(use_pygraphviz)
 
         _LOGGER.debug("Using graph engine %s", self.graph_cls)
-        super(GraphMachine, self).__init__(*args, **kwargs)
+        super(GraphMachine, self).__init__(
+            model=model, states=states, initial=initial, transitions=transitions,
+            send_event=send_event, auto_transitions=auto_transitions,
+            ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
+            before_state_change=before_state_change, after_state_change=after_state_change, name=name,
+            queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
+            model_attribute=model_attribute, on_exception=on_exception, **kwargs
+        )
 
         # for backwards compatibility assign get_combined_graph to get_graph
         # if model is not the machine

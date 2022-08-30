@@ -5,11 +5,13 @@ try:
 except ImportError:
     pass
 
+from re import I
 import sys
 import tempfile
 from os.path import getsize
 from os import unlink
 from functools import partial
+from typing import TYPE_CHECKING, Type
 
 from transitions.extensions.nesting import NestedState
 from transitions.extensions import MachineFactory
@@ -21,13 +23,17 @@ from .utils import Stuff, DummyModel
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock
+    from mock import MagicMock  # type: ignore
 
 try:
     # Just to skip tests if graphviz not installed
     import graphviz as pgv  # @UnresolvedImport
 except ImportError:  # pragma: no cover
     pgv = None
+
+
+if TYPE_CHECKING:
+    from typing import List, Dict, Union
 
 
 default_separator = NestedState.separator
@@ -112,7 +118,7 @@ class TestNestedTransitions(TestTransitions):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'},
             {'trigger': 'run', 'source': 'C', 'dest': 'C%s1' % State.separator}
-        ]
+        ]  # type: List[Union[List[str], Dict[str, str]]]
         m = self.stuff.machine_cls(states=states, transitions=transitions, initial='A')
         m.walk()
         self.assertEqual(m.state, 'B')

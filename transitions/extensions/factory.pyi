@@ -1,5 +1,5 @@
 from ..core import Machine, State
-from .diagrams import GraphMachine, NestedGraphTransition
+from .diagrams import GraphMachine, NestedGraphTransition, HierarchicalGraphMachine
 from .locking import LockedMachine
 from .nesting import HierarchicalMachine, NestedEvent
 from typing import Type, Dict, Tuple, Callable, Union
@@ -25,7 +25,12 @@ except (ImportError, SyntaxError):
 class MachineFactory:
     @staticmethod
     def get_predefined(graph: bool = ..., nested: bool = ...,
-                       locked: bool = ..., asyncio: bool = ...) -> Union[Type[Machine], Type[HierarchicalMachine]]: ...
+                       locked: bool = ..., asyncio: bool = ...) -> Union[
+        Type[Machine], Type[HierarchicalMachine], Type[AsyncMachine], Type[HierarchicalAsyncMachine],
+        Type[GraphMachine], Type[HierarchicalGraphMachine], Type[AsyncGraphMachine],
+        Type[HierarchicalAsyncGraphMachine], Type[LockedMachine], Type[LockedHierarchicalMachine],
+        Type[LockedGraphMachine], Type[LockedHierarchicalGraphMachine]
+    ]: ...
 
 class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
     # replaces LockedEvent with NestedEvent; method overridden by LockedEvent is not used in HSMs

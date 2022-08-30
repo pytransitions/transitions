@@ -15,7 +15,7 @@ from .utils import Stuff, DummyModel, SomeContext
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock
+    from mock import MagicMock  # type: ignore
 
 
 logger = logging.getLogger(__name__)

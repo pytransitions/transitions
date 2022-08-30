@@ -350,7 +350,12 @@ class HierarchicalMachine(Machine):
     transition_cls = NestedTransition
     event_cls = NestedEvent
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, model=Machine.self_literal, states=None, initial='initial', transitions=None,
+                 send_event=False, auto_transitions=True,
+                 ordered_transitions=False, ignore_invalid_triggers=None,
+                 before_state_change=None, after_state_change=None, name=None,
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
+                 **kwargs):
         assert issubclass(self.state_cls, NestedState)
         assert issubclass(self.event_cls, NestedEvent)
         assert issubclass(self.transition_cls, NestedTransition)
@@ -358,7 +363,14 @@ class HierarchicalMachine(Machine):
         self.prefix_path = []
         self.scoped = self
         self._next_scope = None
-        super(HierarchicalMachine, self).__init__(*args, **kwargs)
+        super(HierarchicalMachine, self).__init__(
+            model=model, states=states, initial=initial, transitions=transitions,
+            send_event=send_event, auto_transitions=auto_transitions,
+            ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
+            before_state_change=before_state_change, after_state_change=after_state_change, name=name,
+            queued=queued, prepare_event=prepare_event, finalize_event=finalize_event, model_attribute=model_attribute,
+            on_exception=on_exception, **kwargs
+        )
 
     def __call__(self, to_scope=None):
         if isinstance(to_scope, string_types):

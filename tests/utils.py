@@ -58,7 +58,7 @@ class Stuff(object):
         self.message = "Nice to meet you"
 
     def hello_F(self):
-        if not hasattr(self, 'message'):
+        if self.message is None:
             self.message = ''
         self.message += "Hello F!"
 

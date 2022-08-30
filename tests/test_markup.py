@@ -3,7 +3,7 @@ try:
 except ImportError:
     pass
 
-from transitions.core import Enum
+from typing import TYPE_CHECKING
 from transitions.extensions.markup import MarkupMachine, HierarchicalMarkupMachine, rep
 from .utils import Stuff
 from functools import partial
@@ -14,12 +14,15 @@ from unittest import TestCase, skipIf
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock
+    from mock import MagicMock  # type: ignore
 
 try:
     import enum
 except ImportError:
-    enum = None
+    enum = None  # type: ignore
+
+if TYPE_CHECKING:
+    from typing import List, Dict, Type, Union, Callable
 
 
 class SimpleModel(object):
@@ -87,12 +90,12 @@ class TestMarkupMachine(TestCase):
 
     def setUp(self):
         self.machine_cls = MarkupMachine
-        self.states = ['A', 'B', 'C', 'D']
+        self.states = ['A', 'B', 'C', 'D']  # type: Union[List[Union[str, Dict]], Type[enum.Enum]]
         self.transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
+        ]  # type: List[Union[List[str], Dict[str, Union[str, enum.Enum]]]]
         self.num_trans = len(self.transitions)
         self.num_auto = len(self.states) ** 2
 
@@ -135,17 +138,17 @@ class TestMarkupMachine(TestCase):
         m2 = self.machine_cls(states=self.states, transitions=self.transitions, initial='A',
                               auto_transitions_markup=True)
 
-        self.assertEqual(len(m1.markup.get('transitions')), self.num_trans)
-        self.assertEqual(len(m2.markup.get('transitions')), self.num_trans + self.num_auto)
+        self.assertEqual(len(m1.markup['transitions']), self.num_trans)
+        self.assertEqual(len(m2.markup['transitions']), self.num_trans + self.num_auto)
         m1.add_transition('go', 'A', 'B')
         m2.add_transition('go', 'A', 'B')
         self.num_trans += 1
-        self.assertEqual(len(m1.markup.get('transitions')), self.num_trans)
-        self.assertEqual(len(m2.markup.get('transitions')), self.num_trans + self.num_auto)
+        self.assertEqual(len(m1.markup['transitions']), self.num_trans)
+        self.assertEqual(len(m2.markup['transitions']), self.num_trans + self.num_auto)
         m1.auto_transitions_markup = True
         m2.auto_transitions_markup = False
-        self.assertEqual(len(m1.markup.get('transitions')), self.num_trans + self.num_auto)
-        self.assertEqual(len(m2.markup.get('transitions')), self.num_trans)
+        self.assertEqual(len(m1.markup['transitions']), self.num_trans + self.num_auto)
+        self.assertEqual(len(m2.markup['transitions']), self.num_trans)
 
 
 class TestMarkupHierarchicalMachine(TestMarkupMachine):
@@ -177,7 +180,7 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
                        {'trigger': 'go',
                         'source': '1',
                         'dest': '2'}],
-                   'initial': '2'}]
+                   'initial': '2'}]  # type: List[Dict]
         machine = self.machine_cls(states=states, initial='A', auto_transitions=False, name='TestMachine')
         markup = {k: v for k, v in machine.markup.items() if v and k != 'models'}
         self.assertEqual(dict(initial='A', states=states, name='TestMachine'), markup)
@@ -186,7 +189,7 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
 @skipIf(enum is None, "enum is not available")
 class TestMarkupMachineEnum(TestMarkupMachine):
 
-    class States(Enum):
+    class States(enum.Enum):
         A = 1
         B = 2
         C = 3

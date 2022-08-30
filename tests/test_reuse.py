@@ -3,9 +3,10 @@ try:
 except ImportError:
     pass
 
+from typing import TYPE_CHECKING
 from transitions import MachineError
 from transitions.extensions import MachineFactory
-from transitions.extensions.nesting import NestedState
+from transitions.extensions.nesting import NestedState, HierarchicalMachine
 
 from .utils import Stuff
 
@@ -14,7 +15,11 @@ from unittest import TestCase
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock
+    from mock import MagicMock  # type: ignore
+
+
+if TYPE_CHECKING:
+    from typing import List, Union, Dict, Any
 
 
 test_states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
@@ -29,7 +34,7 @@ class TestReuseSeparatorBase(TestCase):
         class CustomState(NestedState):
             separator = self.separator
 
-        class CustomMachine(MachineFactory.get_predefined(nested=True)):
+        class CustomMachine(HierarchicalMachine):
             state_cls = CustomState
 
         self.states = test_states
@@ -38,10 +43,11 @@ class TestReuseSeparatorBase(TestCase):
         self.stuff = Stuff(self.states, self.machine_cls)
 
     def test_wrong_nesting(self):
-
-        correct = ['A', {'name': 'B', 'children': self.stuff.machine}]
+        correct = ['A', {'name': 'B', 'children': self.stuff.machine}] \
+            # type: List[Union[str, Dict[str, Union[str, HierarchicalMachine]]]]
         wrong_type = ['A', {'name': 'B', 'children': self.stuff}]
-        siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}]
+        siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}] \
+            # type: List[Union[str, Dict[str, Union[str, List[Union[str, HierarchicalMachine]]]]]]
         collision = ['A', {'name': 'B', 'children': ['A', self.stuff.machine]}]
 
         m = self.machine_cls(states=correct)
@@ -51,10 +57,10 @@ class TestReuseSeparatorBase(TestCase):
             m.to_B_C_3_a()
 
         with self.assertRaises(ValueError):
-            m = self.machine_cls(states=wrong_type)
+            m = self.machine_cls(states=wrong_type)  # type: ignore
 
         with self.assertRaises(ValueError):
-            m = self.machine_cls(states=collision)
+            m = self.machine_cls(states=collision)  # type:ignore
 
         m = self.machine_cls(states=siblings)
         if m.state_cls.separator != '_':
@@ -73,7 +79,7 @@ class TestReuse(TestCase):
 
     def setUp(self):
         self.states = test_states
-        self.machine_cls = MachineFactory.get_predefined(nested=True)
+        self.machine_cls = HierarchicalMachine
         self.state_cls = self.machine_cls.state_cls
         self.stuff = Stuff(self.states, self.machine_cls)
 
@@ -91,7 +97,8 @@ class TestReuse(TestCase):
         counter = self.machine_cls(states=states, transitions=transitions, before_state_change='check',
                                    after_state_change='clear', initial='1')
 
-        new_states = ['A', 'B', {'name': 'C', 'children': counter}]
+        new_states = ['A', 'B', {'name': 'C', 'children': counter}] \
+            # type: List[Union[str, Dict[str, Union[str, HierarchicalMachine]]]]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
             {'trigger': 'forward', 'source': 'B', 'dest': 'C%s1' % State.separator},
@@ -145,7 +152,8 @@ class TestReuse(TestCase):
 
         new_states = ['A', 'B', {'name': 'C', 'children':
                       [counter, {'name': 'X', 'children': ['will', 'be', 'filtered', 'out']}],
-                      'remap': {'finished': 'A', 'X': 'A'}}]
+                      'remap': {'finished': 'A', 'X': 'A'}}] \
+            # type: List[Union[str, Dict[str, Union[str, Dict, List]]]]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
             {'trigger': 'forward', 'source': 'B', 'dest': 'C%s1' % State.separator},
@@ -194,12 +202,13 @@ class TestReuse(TestCase):
             ['decrease', '3', '2'],
             ['decrease', '2', '1'],
             {'trigger': 'done', 'source': '3', 'dest': 'done', 'conditions': 'this_passes'},
-        ]
+        ]  # type: List[Union[List[str], Dict[str, str]]]
 
         counter = self.machine_cls(states=count_states, transitions=count_trans, initial='1')
         counter.increase()  # love my counter
         states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
-        states_remap = ['waiting', 'collecting', {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}]
+        states_remap = ['waiting', 'collecting', {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}] \
+            # type: List[Union[str, Dict[str, Union[str, HierarchicalMachine, Dict]]]]
 
         transitions = [
             ['collect', '*', 'collecting'],
@@ -229,7 +238,7 @@ class TestReuse(TestCase):
         self.assertEqual(collector.state, 'waiting')
 
         # # same as above but with states and therefore stateless embedding
-        states_remap[2]['children'] = count_states
+        states_remap[2]['children'] = count_states  # type: ignore
         transitions.append(['increase', 'counting%s1' % State.separator, 'counting%s2' % State.separator])
         transitions.append(['increase', 'counting%s2' % State.separator, 'counting%s3' % State.separator])
         transitions.append(['done', 'counting%s3' % State.separator, 'waiting'])
@@ -271,7 +280,7 @@ class TestReuse(TestCase):
     def test_reuse_self_reference(self):
         separator = self.state_cls.separator
 
-        class Nested(self.machine_cls):
+        class Nested(self.machine_cls):  # type: ignore
 
             def __init__(self, parent):
                 self.parent = parent
@@ -284,7 +293,7 @@ class TestReuse(TestCase):
                 self.mock()
                 self.parent.print_top()
 
-        class Top(self.machine_cls):
+        class Top(self.machine_cls):  # type: ignore
 
             def print_msg(self):
                 self.mock()
@@ -315,7 +324,7 @@ class TestReuse(TestCase):
             "states": ["1", "2"],
             "transitions": [['go', '1', '2']],
             "initial": "1"
-        }
+        }  # type: Dict[str, Any]
         simple_cls = MachineFactory.get_predefined()
         simple = simple_cls(**simple_config)
         self.assertTrue(simple.is_1())
@@ -333,7 +342,7 @@ class TestReuse(TestCase):
 
     def test_reuse_remap(self):
 
-        class GenericMachine(self.machine_cls):
+        class GenericMachine(self.machine_cls):  # type: ignore
 
             def __init__(self, states, transitions, model=None):
                 generic_states = [
@@ -357,32 +366,6 @@ class TestReuse(TestCase):
             def entry_done(self, event_data):
                 raise NotImplementedError
 
-        class MainMachine(GenericMachine):
-            def __init__(self):
-                states = [
-                    {"name": "nested", "children": NestedMachine(), "remap": {"done": "done"}},
-                ]
-                transitions = [
-                    ["go", "initial", "nested"],
-                ]
-                super(MainMachine, self).__init__(states, transitions, model=self)
-
-            def entry_done(self, event_data):
-                print("job finished")
-
-        class NestedMachine(GenericMachine):
-            def __init__(self):
-                states = [
-                    {"name": "deeper", "children": DeeperMachine(), "remap": {"done": "done"}},
-                ]
-                transitions = [
-                    ["go", "initial", "deeper"],
-                ]
-                super(NestedMachine, self).__init__(states, transitions)
-
-            def entry_initial(self, event_data):
-                event_data.model.go()
-
         class DeeperMachine(GenericMachine):
             def __init__(self):
                 states = [
@@ -399,6 +382,32 @@ class TestReuse(TestCase):
 
             def entry_working(self, event_data):
                 event_data.model.go()
+
+        class NestedMachine(GenericMachine):
+            def __init__(self):
+                states = [
+                    {"name": "deeper", "children": DeeperMachine(), "remap": {"done": "done"}},
+                ]
+                transitions = [
+                    ["go", "initial", "deeper"],
+                ]
+                super(NestedMachine, self).__init__(states, transitions)
+
+            def entry_initial(self, event_data):
+                event_data.model.go()
+
+        class MainMachine(GenericMachine):
+            def __init__(self):
+                states = [
+                    {"name": "nested", "children": NestedMachine(), "remap": {"done": "done"}},
+                ]
+                transitions = [
+                    ["go", "initial", "nested"],
+                ]
+                super(MainMachine, self).__init__(states, transitions, model=self)
+
+            def entry_done(self, event_data):
+                print("job finished")
 
         machine = MainMachine()
         machine.go()

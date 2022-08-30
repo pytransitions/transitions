@@ -2,17 +2,16 @@ from logging import Logger
 from functools import partial
 from typing import Any, Optional, Callable, Sequence, Union, Iterable, List, Dict, DefaultDict, Type, Deque, OrderedDict, Tuple, Literal
 
-
 # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
 from enum import Enum, EnumMeta
 
 _LOGGER: Logger
 
 Callback = Union[str, Callable]
-CallbackList = Iterable[Callback]
+CallbackList = List[Callback]
 CallbacksArg = Optional[Union[Callback, CallbackList]]
 ModelState = Union[str, Enum, List]
-ModelParameter = Union[Union[Literal['self'], object], List[Union[Literal['self'], object]]]
+ModelParameter = Union[Union[Literal['self'], Any], List[Union[Literal['self'], Any]]]
 
 def listify(obj: Union[None, list, tuple, EnumMeta, Any]) -> Union[list, tuple, EnumMeta]: ...
 
@@ -24,7 +23,7 @@ class State:
     ignore_invalid_triggers: bool
     on_enter: CallbackList
     on_exit: CallbackList
-    def __init__(self, name: str, on_enter: CallbacksArg, on_exit: CallbacksArg,
+    def __init__(self, name: str, on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
                  ignore_invalid_triggers: bool = ...) -> None: ...
     @property
     def name(self) -> str: ...
@@ -117,11 +116,11 @@ class Machine:
     name: str
     model_attribute: str
     models: List[Any]
-    def __init__(self, model: Optional[Union[Literal['self'], object]]=...,
-                 states: Optional[List[StateConfig]] = ...,
+    def __init__(self, model: Optional[ModelParameter] = ...,
+                 states: Optional[Union[Sequence[StateConfig], Type[Enum]]] = ...,
                  initial: Optional[StateIdentifier] = ...,
-                 transitions: Optional[Union[TransitionConfig, List[TransitionConfig]]] = ..., send_event: bool = ...,
-                 auto_transitions: bool = ..., ordered_transitions: bool = ...,
+                 transitions: Optional[Union[TransitionConfig, Sequence[TransitionConfig]]] = ...,
+                 send_event: bool = ..., auto_transitions: bool = ..., ordered_transitions: bool = ...,
                  ignore_invalid_triggers: Optional[bool] = ...,
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
                  name: str = ..., queued: bool = ...,
@@ -168,8 +167,10 @@ class Machine:
     def is_state(self, state: Union[str, Enum], model: object) -> bool: ...
     def get_model_state(self, model: object) -> State: ...
     def set_state(self, state: StateIdentifier, model: Optional[object] = ...) -> None: ...
-    def add_state(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
-    def add_states(self, states: Union[List[StateConfig], StateConfig],
+    def add_state(self, states: Union[Sequence[StateConfig], StateConfig],
+                   on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
+                   ignore_invalid_triggers: Optional[bool] = ..., **kwargs: Dict[str, Any]) -> None: ...
+    def add_states(self, states: Union[Sequence[StateConfig], StateConfig],
                    on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
                    ignore_invalid_triggers: Optional[bool] = ..., **kwargs: Dict[str, Any]) -> None: ...
     def _add_model_to_state(self, state: State, model: object) -> None: ...
@@ -179,15 +180,20 @@ class Machine:
     def get_triggers(self, *args: Union[str, Enum, State]) -> List[str]: ...
     def add_transition(self, trigger: str,
                        source: Union[StateIdentifier, List[StateIdentifier]],
-                       dest: StateIdentifier, conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
+                       dest: Optional[StateIdentifier] = ...,
+                       conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
                        before: CallbacksArg = ..., after: CallbacksArg = ..., prepare: CallbacksArg = ...,
                        **kwargs: Dict[str, Any]) -> None: ...
     def add_transitions(self, transitions: Union[TransitionConfig, List[TransitionConfig]]) -> None: ...
-    def add_ordered_transitions(self, states: Optional[Sequence[State]] = ...,
+    def add_ordered_transitions(self, states: Optional[Sequence[Union[str, State]]] = ...,
                                 trigger: str = ..., loop: bool = ...,
                                 loop_includes_initial: bool = ...,
-                                conditions: CallbacksArg = ..., unless: CallbacksArg = ..., before: CallbacksArg = ...,
-                                after: CallbacksArg = ..., prepare: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
+                                conditions: Optional[Sequence[Union[Callback, None]]] = ...,
+                                unless: Optional[Sequence[Union[Callback, None]]] = ...,
+                                before: Optional[Sequence[Union[Callback, None]]] = ...,
+                                after: Optional[Sequence[Union[Callback, None]]] = ...,
+                                prepare: CallbacksArg = ...,
+                                **kwargs: Dict[str, Any]) -> None: ...
     def get_transitions(self, trigger: str = ...,
                         source: StateIdentifier = ..., dest: StateIdentifier = ...) -> List[Transition]: ...
     def remove_transition(self, trigger: str, source: str = ..., dest: str = ...) -> None: ...
