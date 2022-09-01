@@ -1,6 +1,6 @@
 from ..core import Event, EventData, Machine, State, Transition, CallbacksArg, Callback, ModelParameter, TransitionConfig
 from collections import defaultdict as defaultdict
-from typing import OrderedDict, Sequence, Union, List, Dict, Optional, Type, Tuple, Callable, Any
+from typing import OrderedDict, Sequence, Union, List, Dict, Optional, Type, Tuple, Callable, Any, Collection
 from types import TracebackType
 from logging import Logger
 from enum import Enum
@@ -35,7 +35,7 @@ class NestedState(State):
     events: Dict[str, NestedEvent]
     states: OrderedDict[str, NestedState]
     _scope: List[str]
-    def __init__(self, name: str, on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
+    def __init__(self, name: Union[str, Enum], on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
                  ignore_invalid_triggers: bool = ..., initial: Optional[str] = ...) -> None: ...
     def add_substate(self, state: NestedState) -> None: ...
     def add_substates(self, states: List[NestedState]) -> None: ...
@@ -44,10 +44,10 @@ class NestedState(State):
     @property
     def name(self) -> str: ...
 
-NestedStateIdentifier = Union[str, Enum, NestedState]
-NestedStateConfig =  Union[NestedStateIdentifier, Dict[str, Any], 'HierarchicalMachine']
+NestedStateIdentifier = Union[str, Enum, NestedState, Sequence[Union[str, Enum, NestedState, Sequence[Any]]]]
+NestedStateConfig =  Union[NestedStateIdentifier, Dict[str, Any], Collection[str], 'HierarchicalMachine']
 # mypy does not support cyclic definitions, use Any instead of `StateTree`
-StateTree = OrderedDict[str, Union[NestedState, Any]]
+StateTree = OrderedDict[str, Any]
 
 def _build_state_list(state_tree: StateTree, separator: str,
                       prefix: Optional[List[str]] = ...) -> Union[str, List[str]]: ...
@@ -83,7 +83,7 @@ class HierarchicalMachine(Machine):
                  send_event: bool = ..., auto_transitions: bool = ..., ordered_transitions: bool = ...,
                  ignore_invalid_triggers: Optional[bool] = ...,
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
-                 name: str = ..., queued: bool = ...,
+                 name: str = ..., queued: Union[bool, str] = ...,
                  prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
                  model_attribute: str = ..., on_exception: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
     _next_scope: Optional[ScopeTuple]
@@ -137,7 +137,7 @@ class HierarchicalMachine(Machine):
                           ignore_invalid_triggers: bool, remap: Optional[Dict[str, str]],
                           **kwargs: Dict[str, Any]) -> None: ...
     def _add_trigger_to_model(self, trigger: str, model: object) -> None: ...
-    def build_state_tree(self, model_states: Union[str, Enum, List[Union[str, Enum]]],
+    def build_state_tree(self, model_states: Union[str, Enum, Sequence[Union[str, Enum, Sequence[Any]]]],
                          separator: str, tree: Optional[StateTree] = ...) -> StateTree: ...
     @classmethod
     def _create_transition(cls, *args: List, **kwargs: Dict[str, Any]) -> NestedTransition: ...

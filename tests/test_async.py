@@ -1,19 +1,23 @@
-from transitions.extensions import MachineFactory
+from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine
+from transitions.extensions.factory import AsyncGraphMachine, HierarchicalAsyncGraphMachine
 
 try:
     import asyncio
 except (ImportError, SyntaxError):
-    asyncio = None
+    asyncio = None  # type: ignore
 
 
 from unittest.mock import MagicMock
 from unittest import skipIf
 from functools import partial
 import weakref
-from .test_core import TestTransitions, MachineError
+from .test_core import TestTransitions, MachineError, TYPE_CHECKING
 from .utils import DummyModel
 from .test_graphviz import pgv as gv
 from .test_pygraphviz import pgv
+
+if TYPE_CHECKING:
+    from typing import Type
 
 
 @skipIf(asyncio is None, "AsyncMachine requires asyncio and contextvars suppport")
@@ -49,7 +53,7 @@ class TestAsync(TestTransitions):
 
     def setUp(self):
         super(TestAsync, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(asyncio=True)
+        self.machine_cls = AsyncMachine  # type: Type[AsyncMachine]
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
     def test_new_state_in_enter_callback(self):
@@ -87,7 +91,7 @@ class TestAsync(TestTransitions):
             mock()
 
         m = self.machine
-        m.after_state_change = async_process
+        m.after_state_change = [async_process]
         asyncio.run(m.go())
         self.assertEqual(m.state, 'B')
         self.assertTrue(mock.called)
@@ -308,7 +312,7 @@ class TestAsync(TestTransitions):
         async def run():
             m1 = DummyModel()
             m2 = DummyModel()
-            self.machine_cls = MachineFactory.get_predefined(asyncio=True, nested=True)
+            self.machine_cls = HierarchicalAsyncMachine
             m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions,
                                  initial='A', queued=True, send_event=True)
             await asyncio.gather(m1.go(), m2.go(),
@@ -337,7 +341,7 @@ class TestAsync(TestTransitions):
         timeout_called = MagicMock()
 
         @add_state_features(AsyncTimeout)
-        class TimeoutMachine(self.machine_cls):
+        class TimeoutMachine(self.machine_cls):  # type: ignore
             pass
 
         states = ['A',
@@ -481,11 +485,11 @@ class TestAsync(TestTransitions):
 
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
-class AsyncGraphMachine(TestAsync):
+class TestAsyncGraphMachine(TestAsync):
 
     def setUp(self):
         super(TestAsync, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(graph=True, asyncio=True)
+        self.machine_cls = AsyncGraphMachine  # type: Type[AsyncGraphMachine]
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
 
@@ -493,7 +497,7 @@ class TestHierarchicalAsync(TestAsync):
 
     def setUp(self):
         super(TestAsync, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(nested=True, asyncio=True)
+        self.machine_cls = HierarchicalAsyncMachine  # type: Type[HierarchicalAsyncMachine]
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
     def test_nested_async(self):
@@ -528,9 +532,9 @@ class TestHierarchicalAsync(TestAsync):
 
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
-class AsyncHierarchicalGraphMachine(TestHierarchicalAsync):
+class TestAsyncHierarchicalGraphMachine(TestHierarchicalAsync):
 
     def setUp(self):
         super(TestHierarchicalAsync, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(graph=True, asyncio=True, nested=True)
+        self.machine_cls = HierarchicalAsyncGraphMachine  # type: Type[HierarchicalAsyncGraphMachine]
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')

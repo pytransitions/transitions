@@ -1,13 +1,21 @@
 from unittest import TestCase, skipIf
 
+from transitions.core import Machine
+from transitions.extensions.diagrams import GraphMachine, HierarchicalGraphMachine
+from transitions.extensions.nesting import HierarchicalMachine
+
+
 try:
     import enum
 except ImportError:
-    enum = None
+    enum = None  # type: ignore
 
-from transitions.extensions import MachineFactory
+from .test_core import TYPE_CHECKING
 from .test_pygraphviz import pgv
 from .test_graphviz import pgv as gv
+
+if TYPE_CHECKING:
+    from typing import Type, List, Union, Dict
 
 
 @skipIf(enum is None, "enum is not available")
@@ -18,7 +26,7 @@ class TestEnumsAsStates(TestCase):
             RED = 1
             YELLOW = 2
             GREEN = 3
-        self.machine_cls = MachineFactory.get_predefined()
+        self.machine_cls = Machine
         self.States = States
 
     def test_pass_enums_as_states(self):
@@ -159,7 +167,7 @@ class TestEnumsAsStates(TestCase):
             pass
 
         t = TrafficLight()
-        m = MachineFactory.get_predefined()(states=self.States, model=t, initial=self.States.RED, auto_transitions=False)
+        m = Machine(states=self.States, model=t, initial=self.States.RED, auto_transitions=False)
         m.add_transition('go', self.States.RED, self.States.GREEN)
         m.add_transition('stop', self.States.YELLOW, self.States.RED)
         assert t.may_go()
@@ -171,11 +179,12 @@ class TestNestedStateEnums(TestEnumsAsStates):
 
     def setUp(self):
         super(TestNestedStateEnums, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(nested=True)
+        self.machine_cls = HierarchicalMachine  # type: Type[HierarchicalMachine]
 
     def test_root_enums(self):
         states = [self.States.RED, self.States.YELLOW,
-                  {'name': self.States.GREEN, 'children': ['tick', 'tock'], 'initial': 'tick'}]
+                  {'name': self.States.GREEN, 'children': ['tick', 'tock'], 'initial': 'tick'}] \
+            # type: List[Union[enum.Enum, Dict]]
         m = self.machine_cls(states=states, initial=self.States.GREEN)
         self.assertTrue(m.is_GREEN(allow_substates=True))
         self.assertTrue(m.is_GREEN_tick())
@@ -184,7 +193,8 @@ class TestNestedStateEnums(TestEnumsAsStates):
 
     def test_nested_enums(self):
         states = ['A', self.States.GREEN,
-                  {'name': 'C', 'children': self.States, 'initial': self.States.GREEN}]
+                  {'name': 'C', 'children': self.States, 'initial': self.States.GREEN}] \
+            # type: List[Union[str, enum.Enum,Dict]]
         m1 = self.machine_cls(states=states, initial='C')
         m2 = self.machine_cls(states=states, initial='A')
         self.assertEqual(m1.state, self.States.GREEN)
@@ -309,11 +319,11 @@ class TestNestedStateEnums(TestEnumsAsStates):
             self.machine_cls(states=UnderscoreEnum)
 
         # changing the separator should make it work
-        class DotNestedState(self.machine_cls.state_cls):
+        class DotNestedState(self.machine_cls.state_cls):  # type: ignore
             separator = '.'
 
         # make custom machine use custom state with dot separator
-        class DotMachine(self.machine_cls):
+        class DotMachine(self.machine_cls):  # type: ignore
             state_cls = DotNestedState
 
         m = DotMachine(states=UnderscoreEnum)
@@ -376,7 +386,7 @@ class TestEnumWithGraph(TestEnumsAsStates):
 
     def setUp(self):
         super(TestEnumWithGraph, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(graph=True)
+        self.machine_cls = GraphMachine  # type: Type[GraphMachine]
 
     def test_get_graph(self):
         m = self.machine_cls(states=self.States, initial=self.States.GREEN)
@@ -394,7 +404,7 @@ class TestNestedStateGraphEnums(TestNestedStateEnums):
 
     def setUp(self):
         super(TestNestedStateGraphEnums, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(nested=True, graph=True)
+        self.machine_cls = HierarchicalGraphMachine
 
     def test_invalid_enum_path(self):
         class States(enum.Enum):

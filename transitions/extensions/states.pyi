@@ -2,7 +2,7 @@ from ..core import State, EventData, Callback
 
 from logging import Logger
 from threading import Timer
-from typing import List, Union, Any, Dict, Optional
+from typing import List, Union, Any, Dict, Optional, Type
 
 _LOGGER: Logger
 
@@ -37,6 +37,6 @@ class Volatile(State):
     def enter(self, event_data: EventData) -> None: ...
     def exit(self, event_data: EventData) -> None: ...
 
-def add_state_features(*args: List) -> Any: ...
+def add_state_features(*args: Type) -> Any: ...
 
 class VolatileObject: ...

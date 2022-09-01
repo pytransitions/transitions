@@ -32,7 +32,7 @@ class MachineFactory:
         Type[LockedGraphMachine], Type[LockedHierarchicalGraphMachine]
     ]: ...
 
-class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):
+class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):  # type: ignore[misc]
     # replaces LockedEvent with NestedEvent; method overridden by LockedEvent is not used in HSMs
     event_cls: Type[NestedEvent]  # type: ignore
     def _get_qualified_state_name(self, state: State) -> str: ...

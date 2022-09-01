@@ -1,5 +1,5 @@
-from transitions.core import Event, Machine
-from typing import Any, Dict, ContextManager, Literal, Optional, Type, List, DefaultDict, Union, Callable
+from transitions.core import Event, Machine, ModelParameter, TransitionConfig, CallbacksArg, StateConfig
+from typing import Any, Dict, ContextManager, Literal, Optional, Type, List, DefaultDict, Union, Callable, Sequence
 from types import TracebackType
 from logging import Logger
 from threading import Lock
@@ -7,6 +7,8 @@ from threading import Lock
 from ..core import StateIdentifier, State
 
 _LOGGER: Logger
+
+from enum import Enum
 
 
 class PicklableLock(ContextManager):
@@ -35,7 +37,18 @@ class LockedMachine(Machine):
     _ident: IdentManager
     machine_context: List[ContextManager]
     model_context_map: DefaultDict[int, List[ContextManager]]
-    def __init__(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
+    def __init__(self, model: Optional[ModelParameter] = ...,
+                 states: Optional[Union[Sequence[StateConfig], Type[Enum]]] = ...,
+                 initial: Optional[StateIdentifier] = ...,
+                 transitions: Optional[Union[TransitionConfig, Sequence[TransitionConfig]]] = ...,
+                 send_event: bool = ..., auto_transitions: bool = ..., ordered_transitions: bool = ...,
+                 ignore_invalid_triggers: Optional[bool] = ...,
+                 before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
+                 name: str = ..., queued: bool = ...,
+                 prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
+                 model_attribute: str = ..., on_exception: CallbacksArg = ...,
+                 machine_context: Optional[Union[List[ContextManager], ContextManager]] = ...,
+                 **kwargs: Dict[str, Any]) -> None: ...
     def __getstate__(self) -> Dict[str, Any]: ...
     def __setstate__(self, state: Dict[str, Any]) -> None: ...
     def add_model(self, model:  Union[Union[Literal['self'], object], List[Union[Literal['self'], object]]],

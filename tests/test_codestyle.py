@@ -1,6 +1,8 @@
 import unittest
-import pycodestyle
+import subprocess
 from os.path import exists
+
+import pycodestyle
 
 try:
     import mypy
@@ -23,10 +25,18 @@ class TestCodeFormat(unittest.TestCase):
                          "Found code style errors (and warnings).")
 
     @unittest.skipIf(mypy is None, "mypy not found")
-    def test_mypy(self):
-        import subprocess
+    def test_mypy_package(self):
         call = ['mypy', '--config-file', 'mypy.ini', 'transitions']
 
+        # when run from root directory (e.g. tox) else when run from test directory (e.g. pycharm)
+        project_root = '.' if exists('transitions') else '..'
+        subprocess.check_call(call, cwd=project_root)
+
+    @unittest.skipIf(mypy is None, "mypy not found")
+    def test_mypy_tests(self):
+        call = ['mypy', 'tests',
+                '--disable-error-code', 'attr-defined',
+                '--disable-error-code', 'no-untyped-def']
         # when run from root directory (e.g. tox) else when run from test directory (e.g. pycharm)
         project_root = '.' if exists('transitions') else '..'
         subprocess.check_call(call, cwd=project_root)

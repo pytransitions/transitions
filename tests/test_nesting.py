@@ -11,10 +11,10 @@ import tempfile
 from os.path import getsize
 from os import unlink
 from functools import partial
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING
 
-from transitions.extensions.nesting import NestedState
-from transitions.extensions import MachineFactory
+from transitions.extensions.nesting import NestedState, HierarchicalMachine
+from transitions.extensions import HierarchicalGraphMachine
 
 from unittest import skipIf
 from .test_core import TestTransitions, TestCase
@@ -33,7 +33,7 @@ except ImportError:  # pragma: no cover
 
 
 if TYPE_CHECKING:
-    from typing import List, Dict, Union
+    from typing import List, Dict, Union, Type
 
 
 default_separator = NestedState.separator
@@ -51,7 +51,7 @@ class TestNestedTransitions(TestTransitions):
 
     def setUp(self):
         self.states = test_states
-        self.machine_cls = MachineFactory.get_predefined(nested=True)
+        self.machine_cls = HierarchicalMachine  # type: Type[HierarchicalMachine]
         self.state_cls = NestedState
         self.stuff = Stuff(self.states, self.machine_cls)
 
@@ -388,8 +388,8 @@ class TestNestedTransitions(TestTransitions):
         self.assertEqual(s2.state, 'A')
 
     def test_excessive_nesting(self):
-        states = [{'name': 'A', 'children': []}]
-        curr = states[0]
+        states = [{'name': 'A', 'children': []}]  # type: List[Dict[str, Union[str, List[Dict]]]]
+        curr = states[0]  # type: Dict
         for i in range(10):
             curr['children'].append({'name': str(i), 'children': []})
             curr = curr['children'][0]
@@ -518,7 +518,7 @@ class TestNestedTransitions(TestTransitions):
         exit_mock = MagicMock()
         enter_mock = MagicMock()
 
-        class CustomMachine(self.machine_cls):
+        class CustomMachine(self.machine_cls):  # type: ignore
             def on_enter_A(self):
                 raise AssertionError("on_enter_A must not be called!")
 
@@ -583,13 +583,13 @@ class TestNestedTransitions(TestTransitions):
     def test_correct_subclassing(self):
         from transitions.core import State
 
-        class WrongStateClass(self.machine_cls):
+        class WrongStateClass(self.machine_cls):  # type: ignore
             state_cls = State
 
         class MyNestedState(NestedState):
             pass
 
-        class CorrectStateClass(self.machine_cls):
+        class CorrectStateClass(self.machine_cls):  # type: ignore
             state_cls = MyNestedState
 
         with self.assertRaises(AssertionError):
@@ -683,7 +683,7 @@ class TestNestedTransitions(TestTransitions):
             m.next()
         assert m.is_B_D()
         assert m.to_B_C()
-        m.on_exception = process_error
+        m.on_exception = [process_error]
         m.next()
         assert mock.called
         assert m.is_B_D()
@@ -732,7 +732,7 @@ class TestSeparatorsBase(TestCase):
         class CustomNestedState(NestedState):
             separator = self.separator
 
-        class CustomHierarchicalMachine(MachineFactory.get_predefined(nested=True)):
+        class CustomHierarchicalMachine(HierarchicalMachine):
             state_cls = CustomNestedState
 
         self.states = test_states
@@ -812,16 +812,16 @@ class TestSeparatorsBase(TestCase):
         self.assertEqual(s.message, 'Hi')
         s.rise()
         self.assertEqual(s.state, 'C%s1' % State.separator)
-        self.assertTrue(s.message.startswith('Nice to'))
+        self.assertTrue(s.message is not None and s.message.startswith('Nice to'))
         s.reverse()
         self.assertEqual(s.state, 'A')
-        self.assertTrue(s.message.startswith('So long'))
+        self.assertTrue(s.message is not None and s.message.startswith('So long'))
         s.fast()
         self.assertEqual(s.state, 'C{0}3{0}a'.format(State.separator))
         self.assertEqual(s.message, 'Hi')
         s.to_A()
         self.assertEqual(s.state, 'A')
-        self.assertTrue(s.message.startswith('So long'))
+        self.assertTrue(s.message is not None and s.message.startswith('So long'))
 
     def test_nested_auto_transitions(self):
         State = self.state_cls
@@ -841,14 +841,11 @@ class TestSeparatorsBase(TestCase):
 
     @skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
     def test_ordered_with_graph(self):
-        GraphMachine = MachineFactory.get_predefined(graph=True, nested=True)
-
-        class CustomHierarchicalGraphMachine(GraphMachine):
+        class CustomHierarchicalGraphMachine(HierarchicalGraphMachine):
             state_cls = self.state_cls
 
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2',
                                                        {'name': '3', 'children': ['a', 'b', 'c']}]}, 'D', 'E', 'F']
-
         machine = CustomHierarchicalGraphMachine(states=states, initial='A', auto_transitions=False,
                                                  ignore_invalid_triggers=True, use_pygraphviz=False)
         machine.add_ordered_transitions(trigger='next_state')

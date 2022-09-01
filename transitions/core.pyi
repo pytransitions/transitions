@@ -1,6 +1,9 @@
 from logging import Logger
 from functools import partial
-from typing import Any, Optional, Callable, Sequence, Union, Iterable, List, Dict, DefaultDict, Type, Deque, OrderedDict, Tuple, Literal
+from typing import (
+    Any, Optional, Callable, Sequence, Union, Iterable, List, Dict, DefaultDict,
+    Type, Deque, OrderedDict, Tuple, Literal, Collection
+)
 
 # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
 from enum import Enum, EnumMeta
@@ -23,7 +26,7 @@ class State:
     ignore_invalid_triggers: bool
     on_enter: CallbackList
     on_exit: CallbackList
-    def __init__(self, name: str, on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
+    def __init__(self, name: Union[str, Enum], on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
                  ignore_invalid_triggers: bool = ...) -> None: ...
     @property
     def name(self) -> str: ...
@@ -35,7 +38,7 @@ class State:
     def __repr__(self) -> str: ...
 
 StateIdentifier = Union[str, Enum, State]
-StateConfig =  Union[StateIdentifier, Dict[str, Any]]
+StateConfig =  Union[StateIdentifier, Dict[str, Any], Collection[str]]
 
 class Condition:
     func: Callback
@@ -62,7 +65,7 @@ class Transition:
     def add_callback(self, trigger: str, func: Callback) -> None: ...
     def __repr__(self) -> str: ...
 
-TransitionConfig = Union[List[str], Dict[str, Any], Transition]
+TransitionConfig = Union[Sequence[Union[str, Any]], Dict[str, Any], Transition]
 
 class EventData:
     state: Optional[State]

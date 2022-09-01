@@ -36,7 +36,7 @@ class GraphMachine(MarkupMachine):
     def __getstate__(self) -> Dict[str, Any]: ...
     def __setstate__(self, state: Dict[str, Any]) -> None: ...
     def __init__(self, model: Optional[ModelParameter]=...,
-                 states: Optional[Union[List[StateConfig], Type[Enum]]] = ...,
+                 states: Optional[Union[Sequence[StateConfig], Type[Enum]]] = ...,
                  initial: Optional[StateIdentifier] = ...,
                  transitions: Optional[Union[TransitionConfig, List[TransitionConfig]]] = ..., send_event: bool = ...,
                  auto_transitions: bool = ..., ordered_transitions: bool = ...,

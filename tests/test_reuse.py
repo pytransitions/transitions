@@ -43,11 +43,9 @@ class TestReuseSeparatorBase(TestCase):
         self.stuff = Stuff(self.states, self.machine_cls)
 
     def test_wrong_nesting(self):
-        correct = ['A', {'name': 'B', 'children': self.stuff.machine}] \
-            # type: List[Union[str, Dict[str, Union[str, HierarchicalMachine]]]]
+        correct = ['A', {'name': 'B', 'children': self.stuff.machine}]
         wrong_type = ['A', {'name': 'B', 'children': self.stuff}]
-        siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}] \
-            # type: List[Union[str, Dict[str, Union[str, List[Union[str, HierarchicalMachine]]]]]]
+        siblings = ['A', {'name': 'B', 'children': ['1', self.stuff.machine]}]
         collision = ['A', {'name': 'B', 'children': ['A', self.stuff.machine]}]
 
         m = self.machine_cls(states=correct)
@@ -57,10 +55,10 @@ class TestReuseSeparatorBase(TestCase):
             m.to_B_C_3_a()
 
         with self.assertRaises(ValueError):
-            m = self.machine_cls(states=wrong_type)  # type: ignore
+            m = self.machine_cls(states=wrong_type)
 
         with self.assertRaises(ValueError):
-            m = self.machine_cls(states=collision)  # type:ignore
+            m = self.machine_cls(states=collision)
 
         m = self.machine_cls(states=siblings)
         if m.state_cls.separator != '_':
@@ -97,8 +95,7 @@ class TestReuse(TestCase):
         counter = self.machine_cls(states=states, transitions=transitions, before_state_change='check',
                                    after_state_change='clear', initial='1')
 
-        new_states = ['A', 'B', {'name': 'C', 'children': counter}] \
-            # type: List[Union[str, Dict[str, Union[str, HierarchicalMachine]]]]
+        new_states = ['A', 'B', {'name': 'C', 'children': counter}]
         new_transitions = [
             {'trigger': 'forward', 'source': 'A', 'dest': 'B'},
             {'trigger': 'forward', 'source': 'B', 'dest': 'C%s1' % State.separator},
@@ -202,7 +199,7 @@ class TestReuse(TestCase):
             ['decrease', '3', '2'],
             ['decrease', '2', '1'],
             {'trigger': 'done', 'source': '3', 'dest': 'done', 'conditions': 'this_passes'},
-        ]  # type: List[Union[List[str], Dict[str, str]]]
+        ]
 
         counter = self.machine_cls(states=count_states, transitions=count_trans, initial='1')
         counter.increase()  # love my counter

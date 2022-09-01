@@ -98,18 +98,26 @@ class LockedMachine(Machine):
 
     event_cls = LockedEvent
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, model=Machine.self_literal, states=None, initial='initial', transitions=None,
+                 send_event=False, auto_transitions=True,
+                 ordered_transitions=False, ignore_invalid_triggers=None,
+                 before_state_change=None, after_state_change=None, name=None,
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
+                 machine_context=None, **kwargs):
+
         self._ident = IdentManager()
-
-        try:
-            self.machine_context = listify(kwargs.pop('machine_context'))
-        except KeyError:
-            self.machine_context = [PicklableLock()]
-
+        self.machine_context = listify(machine_context) or [PicklableLock()]
         self.machine_context.append(self._ident)
         self.model_context_map = defaultdict(list)
 
-        super(LockedMachine, self).__init__(*args, **kwargs)
+        super(LockedMachine, self).__init__(
+            model=model, states=states, initial=initial, transitions=transitions,
+            send_event=send_event, auto_transitions=auto_transitions,
+            ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
+            before_state_change=before_state_change, after_state_change=after_state_change, name=name,
+            queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
+            model_attribute=model_attribute, on_exception=on_exception, **kwargs
+        )
 
     # When we attempt to pickle a locked machine, using IDs wont suffice to unpickle the contexts since
     # IDs have changed. We use a 'reference' store with objects as dictionary keys to resolve the newly created

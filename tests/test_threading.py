@@ -7,9 +7,9 @@ import time
 from threading import Thread
 import logging
 
-from transitions.extensions import MachineFactory
-from .test_nesting import TestNestedTransitions as TestsNested
-from .test_core import TestTransitions as TestCore
+from transitions.extensions import LockedHierarchicalMachine, LockedMachine
+from .test_nesting import TestNestedTransitions
+from .test_core import TestTransitions, TYPE_CHECKING
 from .utils import Stuff, DummyModel, SomeContext
 
 try:
@@ -17,6 +17,8 @@ try:
 except ImportError:
     from mock import MagicMock  # type: ignore
 
+if TYPE_CHECKING:
+    from typing import List, Type, Tuple, Any
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -31,10 +33,10 @@ def heavy_checking():
     return False
 
 
-class TestLockedTransitions(TestCore):
+class TestLockedTransitions(TestTransitions):
 
     def setUp(self):
-        self.machine_cls = MachineFactory.get_predefined(locked=True)
+        self.machine_cls = LockedMachine  # type: Type[LockedMachine]
         self.stuff = Stuff(machine_cls=self.machine_cls)
         self.stuff.heavy_processing = heavy_processing
         self.stuff.machine.add_transition('forward', 'A', 'B', before='heavy_processing')
@@ -133,7 +135,7 @@ class TestLockedTransitions(TestCore):
             def __exit__(self, *exc):
                 self.level -= 1
 
-        M = MachineFactory.get_predefined(locked=True)
+        M = LockedMachine
         c = CounterContext()
         m = M(states=['A', 'B', 'C', 'D'], transitions=[['reset', '*', 'A']], initial='A', machine_context=c)
         m.get_triggers('A')
@@ -163,10 +165,10 @@ class TestLockedTransitions(TestCore):
     #     self.assertAlmostEqual(t2/t1, 1, delta=0.5)
 
 
-class TestMultipleContexts(TestCore):
+class TestMultipleContexts(TestTransitions):
 
     def setUp(self):
-        self.event_list = []
+        self.event_list = []  # type: List[Tuple[Any, str]]
 
         self.s1 = DummyModel()
 
@@ -175,7 +177,7 @@ class TestMultipleContexts(TestCore):
         self.c3 = SomeContext(event_list=self.event_list)
         self.c4 = SomeContext(event_list=self.event_list)
 
-        self.machine_cls = MachineFactory.get_predefined(locked=True)
+        self.machine_cls = LockedMachine  # type: Type[LockedMachine]
         self.stuff = Stuff(machine_cls=self.machine_cls, extra_kwargs={
             'machine_context': [self.c1, self.c2]
         })
@@ -212,12 +214,12 @@ class TestMultipleContexts(TestCore):
 
 
 # Same as TestLockedTransition but with LockedHierarchicalMachine
-class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
+class TestLockedHierarchicalTransitions(TestNestedTransitions, TestLockedTransitions):
 
     def setUp(self):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
-        self.machine_cls = MachineFactory.get_predefined(locked=True, nested=True)
+        self.machine_cls = LockedHierarchicalMachine  # type: Type[LockedHierarchicalMachine]
         self.state_cls = self.machine_cls.state_cls
         self.state_cls.separator = '_'
         self.stuff = Stuff(states, machine_cls=self.machine_cls)
@@ -237,7 +239,7 @@ class TestLockedHierarchicalTransitions(TestsNested, TestLockedTransitions):
 
     def test_callbacks(self):
 
-        class MachineModel(self.stuff.machine_cls):
+        class MachineModel(self.stuff.machine_cls):  # type: ignore
             def __init__(self):
                 self.mock = MagicMock()
                 super(MachineModel, self).__init__(self, states=['A', 'B', 'C'])

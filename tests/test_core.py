@@ -608,7 +608,7 @@ class TestTransitions(TestCase):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B', 'before': change_state},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]  # type: List[Dict[str, Union[str, Callable]]]
+        ]
 
         m = Machine(states=states, transitions=transitions, initial='A')
         m.walk(machine=m)

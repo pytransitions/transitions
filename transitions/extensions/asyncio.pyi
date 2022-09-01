@@ -63,7 +63,7 @@ class AsyncMachine(Machine):
     current_context: ContextVar
     _transition_queue_dict: Dict[int, Deque[Callable]]
     def __init__(self, model: Optional[ModelParameter] = ...,
-                 states: Optional[Union[List[StateConfig], Type[Enum]]] = ...,
+                 states: Optional[Union[Sequence[StateConfig], Type[Enum]]] = ...,
                  initial: Optional[StateIdentifier] = ...,
                  transitions: Optional[Union[TransitionConfig, Sequence[TransitionConfig]]] = ...,
                  send_event: bool = ..., auto_transitions: bool = ..., ordered_transitions: bool = ...,
@@ -72,7 +72,7 @@ class AsyncMachine(Machine):
                  name: str = ..., queued: Union[bool, Literal["model"]] = ...,
                  prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
                  model_attribute: str = ..., on_exception: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
-    def add_model(self, model: Union[Union[Literal["self"], object], List[Union[Literal["self"], object]]],
+    def add_model(self, model: Union[Union[Literal["self"], object], Sequence[Union[Literal["self"], object]]],
                   initial: Optional[StateIdentifier] = ...) -> None: ...
     async def dispatch(self, trigger: str, *args: List, **kwargs: Dict[str, Any]) -> bool: ...  # type: ignore[override]
     async def callbacks(self, funcs: Iterable[Union[str, Callable]], event_data: AsyncEventData) -> None: ...  # type: ignore[override]

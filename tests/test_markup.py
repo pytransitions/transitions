@@ -22,7 +22,7 @@ except ImportError:
     enum = None  # type: ignore
 
 if TYPE_CHECKING:
-    from typing import List, Dict, Type, Union, Callable
+    from typing import List, Dict, Type, Union
 
 
 class SimpleModel(object):
@@ -95,7 +95,7 @@ class TestMarkupMachine(TestCase):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]  # type: List[Union[List[str], Dict[str, Union[str, enum.Enum]]]]
+        ]  # type: List[Union[str, Dict[str, Union[str, enum.Enum]]]]
         self.num_trans = len(self.transitions)
         self.num_auto = len(self.states) ** 2
 

@@ -4,9 +4,11 @@ except ImportError:
     pass
 
 from .utils import Stuff, DummyModel
-from .test_core import TestTransitions
+from .test_core import TestTransitions, TYPE_CHECKING
 
-from transitions.extensions import MachineFactory
+from transitions.extensions import (
+    LockedGraphMachine, GraphMachine, HierarchicalGraphMachine, LockedHierarchicalGraphMachine
+)
 from transitions.extensions.nesting import NestedState
 from transitions.extensions.states import add_state_features, Timeout, Tags
 from unittest import skipIf
@@ -21,10 +23,14 @@ except ImportError:  # pragma: no cover
     pgv = None
 
 
+if TYPE_CHECKING:
+    from typing import Type, List, Collection, Union
+
+
 @skipIf(pgv is None, 'Graph diagram test requires graphviz.')
 class TestDiagrams(TestTransitions):
 
-    machine_cls = MachineFactory.get_predefined(graph=True)
+    machine_cls = GraphMachine  # type: Type[GraphMachine]
     use_pygraphviz = False
 
     def parse_dot(self, graph):
@@ -51,7 +57,7 @@ class TestDiagrams(TestTransitions):
 
     def setUp(self):
         self.stuff = Stuff(machine_cls=self.machine_cls, extra_kwargs={'use_pygraphviz': self.use_pygraphviz})
-        self.states = ['A', 'B', 'C', 'D']
+        self.states = ['A', 'B', 'C', 'D']  # type: List[Union[str, Collection[str]]]
         self.transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
@@ -74,7 +80,8 @@ class TestDiagrams(TestTransitions):
 
         for e in edges:
             # label should be equivalent to the event name
-            self.assertIsNotNone(getattr(m, re.match(r'\[label=([^\]]+)\]', e).group(1)))
+            match = re.match(r'\[label=([^\]]+)\]', e)
+            self.assertIsNotNone(match and getattr(m, match.group(1)))
 
         # write diagram to temp file
         target = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
@@ -205,7 +212,7 @@ class TestDiagrams(TestTransitions):
     def test_state_tags(self):
 
         @add_state_features(Tags, Timeout)
-        class CustomMachine(self.machine_cls):
+        class CustomMachine(self.machine_cls):  # type: ignore
             pass
 
         self.states[0] = {'name': 'A', 'tags': ['new', 'polling'], 'timeout': 5, 'on_enter': 'say_hello',
@@ -216,12 +223,12 @@ class TestDiagrams(TestTransitions):
 
     def test_label_attribute(self):
 
-        class LabelState(self.machine_cls.state_cls):
+        class LabelState(self.machine_cls.state_cls):  # type: ignore
             def __init__(self, *args, **kwargs):
                 self.label = kwargs.pop('label')
                 super(LabelState, self).__init__(*args, **kwargs)
 
-        class CustomMachine(self.machine_cls):
+        class CustomMachine(self.machine_cls):  # type: ignore
             state_cls = LabelState
 
         m = CustomMachine(states=[{'name': 'A', 'label': 'LabelA'},
@@ -268,19 +275,20 @@ class TestDiagrams(TestTransitions):
 @skipIf(pgv is None, 'Graph diagram test requires graphviz')
 class TestDiagramsLocked(TestDiagrams):
 
-    machine_cls = MachineFactory.get_predefined(graph=True, locked=True)
+    machine_cls = LockedGraphMachine  # type: Type[LockedGraphMachine]
 
 
 @skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
 class TestDiagramsNested(TestDiagrams):
 
-    machine_cls = MachineFactory.get_predefined(graph=True, nested=True)
+    machine_cls = HierarchicalGraphMachine \
+        # type: Type[HierarchicalGraphMachine | LockedHierarchicalGraphMachine]
 
     def setUp(self):
         super(TestDiagramsNested, self).setUp()
         self.states = ['A', 'B',
                        {'name': 'C', 'children': [{'name': '1', 'children': ['a', 'b', 'c']},
-                                                  '2', '3']}, 'D']
+                                                  '2', '3']}, 'D']  # type: List[Union[str, Collection[str]]]
         self.transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},     # 1 edge
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},      # + 1 edge
@@ -389,7 +397,7 @@ class TestDiagramsNested(TestDiagrams):
         ]
 
         @add_state_features(Timeout, Tags)
-        class CustomStateMachine(self.machine_cls):
+        class CustomStateMachine(self.machine_cls):  # type: ignore
 
             def is_hot(self):
                 return True
@@ -426,4 +434,4 @@ class TestDiagramsLockedNested(TestDiagramsNested):
 
     def setUp(self):
         super(TestDiagramsLockedNested, self).setUp()
-        self.machine_cls = MachineFactory.get_predefined(graph=True, nested=True, locked=True)
+        self.machine_cls = LockedHierarchicalGraphMachine  # type: Type[LockedHierarchicalGraphMachine]

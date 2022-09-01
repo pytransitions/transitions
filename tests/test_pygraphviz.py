@@ -90,7 +90,7 @@ class PygraphvizTest(TestDiagrams):
     def test_state_tags(self):
 
         @add_state_features(Tags, Timeout)
-        class CustomMachine(self.machine_cls):
+        class CustomMachine(self.machine_cls):  # type: ignore
             pass
 
         self.states[0] = {'name': 'A', 'tags': ['new', 'polling'], 'timeout': 5, 'on_enter': 'say_hello',

@@ -1,4 +1,4 @@
-from transitions import Machine
+from transitions import Machine, MachineError
 from transitions.extensions.states import *
 from transitions.extensions import MachineFactory
 from time import sleep
@@ -196,7 +196,7 @@ class TestStatesDiagramsLockedNested(TestDiagramsLockedNested):
         machine_cls = MachineFactory.get_predefined(locked=True, nested=True, graph=True)
 
         @add_state_features(Error, Timeout, Volatile)
-        class CustomMachine(machine_cls):
+        class CustomMachine(machine_cls):  # type: ignore
             pass
 
         super(TestStatesDiagramsLockedNested, self).setUp()
