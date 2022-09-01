@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-v0.9.0-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://github.com/pytransitions/transitions/actions/workflows/pytest.yml/badge.svg)](https://github.com/pytransitions/transitions/actions?query=workflow%3Apytest)
-[![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
+[![Coverage Status](https://codecov.io/gh/pytransitions/transitions/branch/master/graphs/badge.svg)](https://app.codecov.io/gh/pytransitions/transitions/tree/master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
 [![Copr](https://img.shields.io/badge/dynamic/json?color=blue&label=copr&query=builds.latest.source_package.version&url=https%3A%2F%2Fcopr.fedorainfracloud.org%2Fapi_3%2Fpackage%3Fownername%3Daleneum%26projectname%3Dpython3-transitions%26packagename%3Dpython3-transitions%26with_latest_build%3DTrue)](https://copr.fedorainfracloud.org/coprs/aleneum/python3-transitions/package/python3-transitions)
 [![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.11.svg)](https://github.com/pytransitions/transitions/compare/0.8.11...master)

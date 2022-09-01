@@ -32,4 +32,12 @@ jobs:
     - name: Test with pytest
       run: |
         coverage run --source=transitions -m pytest --doctest-modules tests/
-
+        coverage xml --ignore-errors
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        env_vars: OS,PYTHON
+        fail_ci_if_error: true
+        files: ./coverage.xml
+        name: codecov-umbrella
+        verbose: true
