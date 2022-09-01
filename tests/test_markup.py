@@ -3,11 +3,12 @@ try:
 except ImportError:
     pass
 
-from typing import TYPE_CHECKING
-from transitions.extensions.markup import MarkupMachine, HierarchicalMarkupMachine, rep
-from .utils import Stuff
 from functools import partial
 
+from transitions.extensions.markup import MarkupMachine, HierarchicalMarkupMachine, rep
+
+from .test_core import TYPE_CHECKING
+from .utils import Stuff
 
 from unittest import TestCase, skipIf
 
@@ -18,8 +19,13 @@ except ImportError:
 
 try:
     import enum
+    from enum import Enum
 except ImportError:
     enum = None  # type: ignore
+
+    # placeholder for Python < 3.4 without enum
+    class Enum:  # type: ignore
+        pass
 
 if TYPE_CHECKING:
     from typing import List, Dict, Type, Union
@@ -90,12 +96,12 @@ class TestMarkupMachine(TestCase):
 
     def setUp(self):
         self.machine_cls = MarkupMachine
-        self.states = ['A', 'B', 'C', 'D']  # type: Union[List[Union[str, Dict]], Type[enum.Enum]]
+        self.states = ['A', 'B', 'C', 'D']  # type: Union[List[Union[str, Dict]], Type[Enum]]
         self.transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]  # type: List[Union[str, Dict[str, Union[str, enum.Enum]]]]
+        ]  # type: List[Union[str, Dict[str, Union[str, Enum]]]]
         self.num_trans = len(self.transitions)
         self.num_auto = len(self.states) ** 2
 
@@ -189,7 +195,7 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
 @skipIf(enum is None, "enum is not available")
 class TestMarkupMachineEnum(TestMarkupMachine):
 
-    class States(enum.Enum):
+    class States(Enum):
         A = 1
         B = 2
         C = 3

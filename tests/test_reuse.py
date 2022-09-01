@@ -3,12 +3,12 @@ try:
 except ImportError:
     pass
 
-from typing import TYPE_CHECKING
 from transitions import MachineError
 from transitions.extensions import MachineFactory
 from transitions.extensions.nesting import NestedState, HierarchicalMachine
 
 from .utils import Stuff
+from .test_core import TYPE_CHECKING
 
 from unittest import TestCase
 

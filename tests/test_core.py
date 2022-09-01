@@ -5,15 +5,16 @@ except ImportError:
 
 import sys
 from typing import TYPE_CHECKING
+from functools import partial
+from unittest import TestCase, skipIf
+import weakref
+
+from transitions import Machine, MachineError, State, EventData
+from transitions.core import listify, _prep_ordered_arg
 
 from .utils import InheritedStuff
 from .utils import Stuff, DummyModel
 
-from functools import partial
-from transitions import Machine, MachineError, State, EventData
-from transitions.core import listify, _prep_ordered_arg
-from unittest import TestCase, skipIf
-import weakref
 
 try:
     from unittest.mock import MagicMock

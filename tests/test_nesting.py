@@ -5,19 +5,17 @@ try:
 except ImportError:
     pass
 
-from re import I
 import sys
 import tempfile
 from os.path import getsize
 from os import unlink
 from functools import partial
-from typing import TYPE_CHECKING
 
 from transitions.extensions.nesting import NestedState, HierarchicalMachine
 from transitions.extensions import HierarchicalGraphMachine
 
 from unittest import skipIf
-from .test_core import TestTransitions, TestCase
+from .test_core import TestTransitions, TestCase, TYPE_CHECKING
 from .utils import Stuff, DummyModel
 
 try:
