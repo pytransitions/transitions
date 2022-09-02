@@ -12,7 +12,7 @@ Release 0.9.0 is a major release and contains improvements to ease development, 
 - Bug #569: Fix implicit fallback to `graphviz` when `pygraphviz` was not installed (thanks @FridjofAmundsen)
 - Bug #580: Fix `on_timeout` callback resolution when timeout had been initialized with `timeout=0` (thanks @Rysbai)
 - Bug #582: Last label in `GraphSupport` was not correctly aligned when `show_attributes=True` (thanks @spagh-eddie)
-- Feature: Add pyi stub files for better type hinting
+- Feature: Add pyi stub files for better type hinting. Since many functions and constructors allow rather arbitrary arguments time will tell whether typing should be strict (and cause more mypy issues) or more relaxed (and thus less precise).
 - Feature: Reviewed and improved method documentation
 - Feature #549: Add `may` transition check to transitions (thanks @artofhuman)
 - Feature #552: Refactored error handling to be able to handle `MachineError` in `on_exception` callbacks (thanks @kpihus)
@@ -20,7 +20,7 @@ Release 0.9.0 is a major release and contains improvements to ease development, 
 - PR #461: Add `Retry` state to supported state stereotypes (thanks @rgov)
 - Internal: `Machine._identify_callback` has been converted to instance method from class method
 - Internal: `LockedMachine._get_qualified_state_name` has been converted to instance method from static method
-- Internal: `_super` workaround related to dill (see https://github.com/pytransitions/transitions/issues/236)
+- Internal: Removed `_super` workaround related to dill (see https://github.com/pytransitions/transitions/issues/236)
 
 ## 0.8.11 (February 2022)
 
