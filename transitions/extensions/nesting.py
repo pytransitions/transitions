@@ -295,7 +295,6 @@ class NestedTransition(Transition):
                 # if one child is not considered final, processing can stop
                 if child_res == 0:
                     all_children_final = False
-                    break
                 # if one child has recently transitioned to a final state, we need to update all parents
                 elif child_res == 2:
                     needs_update = True
