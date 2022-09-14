@@ -250,22 +250,29 @@ class NestedTransition(Transition):
             tmp_tree = tmp_tree.get(dst_name_path[0], None) if len(dst_name_path) > 0 else None
 
         # when destination is empty this means we are already in the state we want to enter
-        # we deal with a reflexive transition here as internal transitions have been already dealt with
+        # we deal with a reflexive transition here or a sibling state that has already been entered
+        # as internal transitions have been already dealt with
         # the 'root' of src and dest will be set to the parent and dst (and src) substate will be set as destination
         if not dst_name_path:
             dst_name_path = [root.pop()]
 
         scoped_tree = reduce(dict.get, scope + root, state_tree)
 
+        # if our scope is a parallel state we need to narrow down the exit scope to the targeted sibling
+        if len(scoped_tree) > 1:
+            exit_scope = {dst_name_path[0]: scoped_tree.get(dst_name_path[0])}
+        else:
+            exit_scope = scoped_tree
+
         exit_partials = [partial(event_data.machine.get_state(root + state_name).scoped_exit,
                                  event_data, scope + root + state_name[:-1])
-                         for state_name in resolve_order(scoped_tree)]
-        if dst_name_path:
-            new_states, enter_partials = self._enter_nested(root, dst_name_path, scope + root, event_data)
-        else:
-            new_states, enter_partials = {}, []
+                         for state_name in resolve_order(exit_scope)]
 
-        scoped_tree.clear()
+        new_states, enter_partials = self._enter_nested(root, dst_name_path, scope + root, event_data)
+
+        # we reset/clear the whole branch if it is scoped, otherwise only reset the sibling
+        if exit_scope == scoped_tree:
+            scoped_tree.clear()
         for new_key, value in new_states.items():
             scoped_tree[new_key] = value
             break

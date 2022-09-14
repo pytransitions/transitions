@@ -140,13 +140,31 @@ class TestParallel(TestNested):
         self.assertEqual(m.state, m2.state)
 
     def test_deep_initial(self):
-        m = self.machine_cls(initial=['A', 'B{0}2{0}a'.format(State.separator)])
+        exit_mock = MagicMock()
+        m = self.machine_cls(initial=['B{0}1'.format(State.separator), 'B{0}2{0}a'.format(State.separator)])
+        m.on_exit('B', exit_mock)
+        m.on_exit('B{0}1'.format(State.separator), exit_mock)
+        m.on_exit('B{0}2'.format(State.separator), exit_mock)
+        m.on_exit('B{0}2{0}a'.format(State.separator), exit_mock)
         m.to_B()
         self.assertEqual('B', m.state)
+        self.assertEqual(4, exit_mock.call_count)
 
     def test_parallel_initial(self):
         m = self.machine_cls(states=['A', 'B', {'name': 'C', 'parallel': ['1', '2']}], initial='C')
         m = self.machine_cls(states=['A', 'B', {'name': 'C', 'parallel': ['1', '2']}], initial=['C_1', 'C_2'])
+
+    def test_parallel_reflexive(self):
+        exit_c_1_mock = MagicMock()
+        m = self.machine_cls(states=['A', 'B', {'name': 'C', 'parallel': [{'name': '1',
+                                                                           'on_exit': exit_c_1_mock}, '2']}],
+                             transitions=[['test',
+                                           'C{0}2'.format(State.separator),
+                                           'C{0}2'.format(State.separator)]], initial='C')
+        m.test()
+        self.assertEqual(["C{0}1".format(State.separator),
+                          "C{0}2".format(State.separator)], m.state)
+        self.assertFalse(exit_c_1_mock.called)
 
     def test_multiple_deeper(self):
         sep = self.state_cls.separator
