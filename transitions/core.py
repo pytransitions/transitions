@@ -887,6 +887,8 @@ class Machine(object):
                     _ = self.get_state(transition.dest)
                 except ValueError:
                     continue
+ 
+                evt.transition = transition
                 self.callbacks(self.prepare_event, evt)
                 self.callbacks(transition.prepare, evt)
                 if all(c.check(evt) for c in transition.conditions):
