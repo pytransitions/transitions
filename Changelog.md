@@ -3,6 +3,7 @@
 ## 0.9.1 ()
 
 - Bug #594: Fix may_<trigger> always returning false for internal transitions (thanks @a-schade)
+- PR #592: Pass investigated transition to `EventData` context in 'may' check (thanks @msclock)
 
 ## 0.9.0 (September 2022)
 
