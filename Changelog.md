@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1 ()
+
+- Bug #594: Fix may_<trigger> always returning false for internal transitions (thanks @a-schade)
+
 ## 0.9.0 (September 2022)
 
 Release 0.9.0 is a major release and contains improvements to ease development, adds some new features and removes the legacy hierarchical machine:
