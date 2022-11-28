@@ -485,6 +485,42 @@ class TestNestedTransitions(TestTransitions):
         self.assertTrue(mock.called)
         self.assertTrue(model2.is_B())
 
+    def test_nested_model(self):
+        """Transition into a nested state using a parent model also changes the state of the nested model"""
+        class NestedModel:
+            def __init__(self):
+                self.machine = HierarchicalMachine(
+                    states=['a', 'b'],
+                    transitions=[{'trigger': 'subgo', 'source': 'a', 'dest': 'b'}],
+                    model=self
+                )
+
+        class Model:
+            def __init__(self, child):
+                self.machine = HierarchicalMachine(
+                    states=[
+                        {'name': 'A'},
+                        {'name': 'B', 'children': child.machine}
+                    ],
+                    transitions=[
+                        {'trigger': 'go', 'source': 'A', 'dest': 'B_a'},
+                        {'trigger': 'go', 'source': 'B_b', 'dest': 'A'},
+                    ],
+                    model=self,
+                    initial='A')
+
+        child = NestedModel()
+        model = Model(child)
+        assert model.is_A()
+        model.go()
+        assert model.is_B_a()
+        assert child.is_a()
+        model.subgo()
+        assert model.is_B_b()
+        assert child.is_b()
+        model.go()
+        assert model.is_A()
+
     def test_trigger_parent(self):
         parent_mock = MagicMock()
         exit_mock = MagicMock()
