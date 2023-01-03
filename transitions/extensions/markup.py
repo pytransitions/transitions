@@ -111,6 +111,10 @@ class MarkupMachine(Machine):
                                                   before=before, after=after, prepare=prepare, **kwargs)
         self._needs_update = True
 
+    def remove_transition(self, trigger, source="*", dest="*"):
+        super(MarkupMachine, self).remove_transition(trigger, source, dest)
+        self._needs_update = True
+
     def add_states(self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs):
         super(MarkupMachine, self).add_states(states, on_enter=on_enter, on_exit=on_exit,
                                               ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
