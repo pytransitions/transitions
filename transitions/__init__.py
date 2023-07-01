@@ -2,7 +2,7 @@
 transitions
 -----------
 
-A lightweight, object-oriented state machine implementation in Python. Compatible with Python 2.7+ and 3.0+.
+A lightweight, object-oriented state machine implementation in Python. Compatible with Python 3.7+.
 """
 
 from __future__ import absolute_import

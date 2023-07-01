@@ -12,7 +12,7 @@
 <!-- [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions) -->
 <!--[![Name](Image)](Link)-->
 
-A lightweight, object-oriented state machine implementation in Python with many extensions. Compatible with Python 2.7+ and 3.0+.
+A lightweight, object-oriented state machine implementation in Python with many extensions. Compatible with Python 3.7+.
 
 ## Installation
 
@@ -377,7 +377,7 @@ So far we have seen how we can give state names and use these names to work with
 If you favour stricter typing and more IDE code completion (or you just can't type 'sesquipedalophobia' any longer because the word scares you) using [Enumerations](https://docs.python.org/3/library/enum.html) might be what you are looking for:
 
 ```python
-import enum  # Python 2.7 users need to have 'enum34' installed
+import enum
 from transitions import Machine
 
 class States(enum.Enum):
