@@ -6,24 +6,7 @@
     and transition concepts.
 """
 
-
-try:
-    from builtins import object
-except ImportError:
-    # python2
-    pass
-
-try:
-    # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
-    from enum import Enum, EnumMeta
-except ImportError:
-    # If enum is not available, create dummy classes for type checks
-    class Enum:  # type:ignore
-        """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
-
-    class EnumMeta:  # type:ignore
-        """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
-
+from enum import Enum, EnumMeta
 import inspect
 import itertools
 import logging
@@ -31,7 +14,6 @@ import warnings
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
-from six import string_types
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -77,7 +59,7 @@ def _prep_ordered_arg(desired_length, arguments=None):
     return arguments
 
 
-class State(object):
+class State:
     """A persistent representation of a state managed by a ``Machine``.
 
     Attributes:
@@ -149,7 +131,7 @@ class State(object):
         return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
 
 
-class Condition(object):
+class Condition:
     """ A helper class to call condition checks in the intended way.
 
     Attributes:
@@ -193,7 +175,7 @@ class Condition(object):
         return "<%s(%s)@%s>" % (type(self).__name__, self.func, id(self))
 
 
-class Transition(object):
+class Transition:
     """ Representation of a transition managed by a ``Machine`` instance.
 
     Attributes:
@@ -301,7 +283,7 @@ class Transition(object):
                                         self.source, self.dest, id(self))
 
 
-class EventData(object):
+class EventData:
     """ Collection of relevant data related to the ongoing transition attempt.
 
     Attributes:
@@ -355,7 +337,7 @@ class EventData(object):
                                       getattr(self, 'transition'), id(self))
 
 
-class Event(object):
+class Event:
     """ A collection of transitions assigned to the same trigger
 
     """
@@ -370,9 +352,9 @@ class Event(object):
         """
         self.name = name
         self.machine = machine
-        self.transitions = defaultdict(list)
+        self.transitions: dict[str, list] = defaultdict(list)
 
-    def add_transition(self, transition):
+    def add_transition(self, transition: Transition):
         """ Add a transition to the list of potential transitions.
         Args:
             transition (Transition): The Transition instance to add to the
@@ -466,7 +448,7 @@ class Event(object):
             trans.add_callback(trigger, func)
 
 
-class Machine(object):
+class Machine:
     """ Machine manages states, transitions and models. In case it is initialized without a specific model
     (or specifically no model), it will also act as a model itself. Machine takes also care of decorating
     models with conveniences functions related to added transitions and states during runtime.
@@ -820,7 +802,7 @@ class Machine(object):
         states = listify(states)
 
         for state in states:
-            if isinstance(state, (string_types, Enum)):
+            if isinstance(state, (str, Enum)):
                 state = self._create_state(
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore, **kwargs)
@@ -1178,7 +1160,7 @@ class Machine(object):
         Returns:
             callable function resolved from string or func
         """
-        if isinstance(func, string_types):
+        if isinstance(func, str):
             try:
                 func = getattr(event_data.model, func)
                 if not callable(func):  # if a property or some other not callable attribute was passed
