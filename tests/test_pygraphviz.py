@@ -1,8 +1,3 @@
-try:
-    from builtins import object
-except ImportError:
-    pass
-
 from .utils import Stuff
 from .test_graphviz import TestDiagrams, TestDiagramsNested
 from transitions.extensions.states import add_state_features, Timeout, Tags

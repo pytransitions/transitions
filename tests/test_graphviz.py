@@ -1,8 +1,3 @@
-try:
-    from builtins import object
-except ImportError:
-    pass
-
 from .utils import Stuff, DummyModel
 from .test_core import TestTransitions, TYPE_CHECKING
 
@@ -255,7 +250,7 @@ class TestDiagrams(TestTransitions):
 
     def test_graphviz_fallback(self):
         try:
-            from unittest import mock  # will raise an ImportError in Python 2.7
+            from unittest import mock
             from transitions.extensions.diagrams_graphviz import Graph
             from transitions.extensions import diagrams_pygraphviz
             from importlib import reload

@@ -1,10 +1,7 @@
 from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine
 from transitions.extensions.factory import AsyncGraphMachine, HierarchicalAsyncGraphMachine
 
-try:
-    import asyncio
-except (ImportError, SyntaxError):
-    asyncio = None  # type: ignore
+import asyncio
 
 
 from unittest.mock import MagicMock
@@ -16,11 +13,9 @@ from .utils import DummyModel
 from .test_graphviz import pgv as gv
 from .test_pygraphviz import pgv
 
-if TYPE_CHECKING:
-    from typing import Type
+from typing import Type
 
 
-@skipIf(asyncio is None, "AsyncMachine requires asyncio and contextvars suppport")
 class TestAsync(TestTransitions):
 
     @staticmethod
@@ -53,7 +48,7 @@ class TestAsync(TestTransitions):
 
     def setUp(self):
         super(TestAsync, self).setUp()
-        self.machine_cls = AsyncMachine  # type: Type[AsyncMachine]
+        self.machine_cls: Type[AsyncMachine] = AsyncMachine
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
     def test_new_state_in_enter_callback(self):
@@ -489,7 +484,7 @@ class TestAsyncGraphMachine(TestAsync):
 
     def setUp(self):
         super(TestAsync, self).setUp()
-        self.machine_cls = AsyncGraphMachine  # type: Type[AsyncGraphMachine]
+        self.machine_cls: Type[AsyncGraphMachine] = AsyncGraphMachine
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
 
@@ -497,7 +492,7 @@ class TestHierarchicalAsync(TestAsync):
 
     def setUp(self):
         super(TestAsync, self).setUp()
-        self.machine_cls = HierarchicalAsyncMachine  # type: Type[HierarchicalAsyncMachine]
+        self.machine_cls: Type[HierarchicalAsyncMachine] = HierarchicalAsyncMachine
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
 
     def test_nested_async(self):
@@ -536,5 +531,5 @@ class TestAsyncHierarchicalGraphMachine(TestHierarchicalAsync):
 
     def setUp(self):
         super(TestHierarchicalAsync, self).setUp()
-        self.machine_cls = HierarchicalAsyncGraphMachine  # type: Type[HierarchicalAsyncGraphMachine]
+        self.machine_cls: Type[HierarchicalAsyncGraphMachine] = HierarchicalAsyncGraphMachine
         self.machine = self.machine_cls(states=['A', 'B', 'C'], transitions=[['go', 'A', 'B']], initial='A')
