@@ -12,19 +12,7 @@ import importlib
 import itertools
 import numbers
 
-from six import string_types, iteritems
-
-try:
-    # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
-    from enum import Enum, EnumMeta
-except ImportError:
-    # If enum is not available, create dummy classes for type checks
-    # typing must be prevent redefinition issues with mypy
-    class Enum:  # type:ignore
-        """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
-
-    class EnumMeta:  # type:ignore
-        """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
+from enum import Enum
 
 from ..core import Machine
 from .nesting import HierarchicalMachine
@@ -133,10 +121,16 @@ class MarkupMachine(Machine):
         if isinstance(func, partial):
             return "%s(%s)" % (
                 func.func.__name__,
-                ", ".join(itertools.chain(
-                    (str(_) for _ in func.args),
-                    ("%s=%s" % (key, value)
-                     for key, value in iteritems(func.keywords if func.keywords else {})))))
+                ", ".join(
+                    itertools.chain(
+                        (str(_) for _ in func.args),
+                        (
+                            "%s=%s" % (key, value)
+                            for key, value in (func.keywords if func.keywords else {}).items()
+                        )
+                    )
+                )
+            )
         return str(func)
 
     def _convert_states_and_transitions(self, root):
@@ -229,7 +223,7 @@ class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine):
 
 def rep(func, format_references=None):
     """ Return a string representation for `func`. """
-    if isinstance(func, string_types):
+    if isinstance(func, str):
         return func
     if isinstance(func, numbers.Number):
         return str(func)
@@ -242,7 +236,7 @@ def _convert(obj, attributes, format_references):
         val = getattr(obj, key, False)
         if not val:
             continue
-        if isinstance(val, string_types):
+        if isinstance(val, str):
             definition[key] = val
         else:
             try:
