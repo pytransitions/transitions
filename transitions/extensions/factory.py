@@ -15,21 +15,9 @@ from .nesting import HierarchicalMachine, NestedEvent, NestedTransition
 from .locking import LockedMachine
 from .diagrams import GraphMachine, NestedGraphTransition, HierarchicalGraphMachine
 
-try:
-    from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
-    from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
-except (ImportError, SyntaxError):
-    class AsyncMachine(Machine):  # type: ignore
-        """ A mock of AsyncMachine for Python 3.6 and earlier. """
 
-    class AsyncTransition(Transition):  # type: ignore
-        """ A mock of AsyncTransition for Python 3.6 and earlier. """
-
-    class HierarchicalAsyncMachine(HierarchicalMachine):  # type: ignore
-        """ A mock of HierarchicalAsyncMachine for Python 3.6 and earlier. """
-
-    class NestedAsyncTransition(NestedTransition):  # type: ignore
-        """ A mock of NestedAsyncTransition for Python 3.6 and earlier. """
+from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
+from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
 
 
 class MachineFactory(object):
