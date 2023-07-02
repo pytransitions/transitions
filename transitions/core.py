@@ -11,6 +11,7 @@ import inspect
 import itertools
 import logging
 import warnings
+import typing
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
@@ -352,7 +353,7 @@ class Event:
         """
         self.name = name
         self.machine = machine
-        self.transitions: dict[str, list] = defaultdict(list)
+        self.transitions: typing.Dict[str, list] = defaultdict(list)
 
     def add_transition(self, transition: Transition):
         """ Add a transition to the list of potential transitions.
