@@ -738,6 +738,17 @@ class TestSeparatorsBase(TestCase):
         self.state_cls = CustomNestedState
         self.stuff = Stuff(self.states, self.machine_cls)
 
+    def test_add_nested_state(self):
+        m = self.machine_cls(states=['A'], initial='A')
+        m.add_state('B{0}1{0}a'.format(self.state_cls.separator))
+        m.add_state('B{0}2{0}b'.format(self.state_cls.separator))
+        self.assertIn('B', m.states)
+        self.assertIn('1', m.states['B'].states)
+        self.assertIn('a', m.states['B'].states['1'].states)
+
+        with self.assertRaises(ValueError):
+            m.add_state(m.states['A'])
+
     def test_enter_exit_nested(self):
         separator = self.state_cls.separator
         s = self.stuff

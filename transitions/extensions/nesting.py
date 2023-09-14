@@ -71,17 +71,13 @@ def resolve_order(state_tree):
 class FunctionWrapper(object):
     """ A wrapper to enable transitions' convenience function to_<state> for nested states.
         This allows to call model.to_A.s1.C() in case a custom separator has been chosen."""
-    def __init__(self, func, path):
+    def __init__(self, func):
         """
         Args:
             func: Function to be called at the end of the path.
             path: If path is an empty string, assign function
         """
-        if path:
-            self.add(func, path)
-            self._func = None
-        else:
-            self._func = func
+        self._func = func
 
     def add(self, func, path):
         """ Assigns a `FunctionWrapper` as an attribute named like the next segment of the substates
@@ -90,16 +86,14 @@ class FunctionWrapper(object):
             func (callable): Function to be called at the end of the path.
             path (list of strings): Remaining segment of the substate path.
         """
-        if path:
-            name = path[0]
-            if name[0].isdigit():
-                name = 's' + name
-            if hasattr(self, name):
-                getattr(self, name).add(func, path[1:])
-            else:
-                setattr(self, name, FunctionWrapper(func, path[1:]))
+        name = path[0]
+        if name[0].isdigit():
+            name = 's' + name
+        if hasattr(self, name):
+            getattr(self, name).add(func, path[1:])
         else:
-            self._func = func
+            assert not path[1:], "nested path should be empty"
+            setattr(self, name, FunctionWrapper(func))
 
     def __call__(self, *args, **kwargs):
         return self._func(*args, **kwargs)
@@ -854,7 +848,8 @@ class HierarchicalMachine(Machine):
             if hasattr(model, 'is_' + path[0]):
                 getattr(model, 'is_' + path[0]).add(trig_func, path[1:])
             else:
-                self._checked_assignment(model, 'is_' + path[0], FunctionWrapper(trig_func, path[1:]))
+                assert not path[1:], "nested path should be empty"
+                self._checked_assignment(model, 'is_' + path[0], FunctionWrapper(trig_func))
         with self(state.name):
             for event in self.events.values():
                 if not hasattr(model, event.name):
@@ -946,7 +941,7 @@ class HierarchicalMachine(Machine):
                 getattr(model, 'to_' + path[0]).add(trig_func, path[1:])
             else:
                 # create a new function wrapper
-                self._checked_assignment(model, 'to_' + path[0], FunctionWrapper(trig_func, path[1:]))
+                self._checked_assignment(model, 'to_' + path[0], FunctionWrapper(trig_func))
         else:
             self._checked_assignment(model, trigger, trig_func)
 
