@@ -18,7 +18,7 @@ from .diagrams import GraphMachine, NestedGraphTransition, HierarchicalGraphMach
 try:
     from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
     from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
-except (ImportError, SyntaxError):
+except (ImportError, SyntaxError):  # pragma: no cover
     class AsyncMachine(Machine):  # type: ignore
         """ A mock of AsyncMachine for Python 3.6 and earlier. """
 

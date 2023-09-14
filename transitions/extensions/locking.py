@@ -21,9 +21,9 @@ _LOGGER.addHandler(logging.NullHandler())
 
 try:
     from contextlib import nested  # Python 2
-    from thread import get_ident
+    from thread import get_ident  # pragma: no cover
     # with nested statements now raise a DeprecationWarning. Should be replaced with ExitStack-like approaches.
-    warnings.simplefilter('ignore', DeprecationWarning)
+    warnings.simplefilter('ignore', DeprecationWarning)  # pragma: no cover
 
 except ImportError:
     from contextlib import ExitStack, contextmanager

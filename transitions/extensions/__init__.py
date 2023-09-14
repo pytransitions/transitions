@@ -18,5 +18,5 @@ try:
     # only available for Python 3
     from .asyncio import AsyncMachine, HierarchicalAsyncMachine
     from .factory import AsyncGraphMachine, HierarchicalAsyncGraphMachine
-except (ImportError, SyntaxError):
+except (ImportError, SyntaxError):  # pragma: no cover
     pass

@@ -17,7 +17,7 @@ from six import string_types, iteritems
 try:
     # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
     from enum import Enum, EnumMeta
-except ImportError:
+except ImportError:  # pragma: no cover
     # If enum is not available, create dummy classes for type checks
     # typing must be prevent redefinition issues with mypy
     class Enum:  # type:ignore
