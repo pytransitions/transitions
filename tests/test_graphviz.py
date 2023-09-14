@@ -266,10 +266,16 @@ class TestDiagrams(TestTransitions):
                 m = self.machine_cls(states=['A', 'B', 'C'], initial='A', use_pygraphviz=True)
             # make sure to reload after test is done to avoid side effects with other tests
             reload(diagrams_pygraphviz)
-            print(m.graph_cls, pgv)
+            # print(m.graph_cls, pgv)
             self.assertTrue(issubclass(m.graph_cls, Graph))
         except ImportError:
             pass
+
+    def test_function_callbacks_annotation(self):
+        m = self.machine_cls(states=['A', 'B'], initial='A', use_pygraphviz=self.use_pygraphviz, show_conditions=True)
+        m.add_transition('advance', 'A', 'B', conditions=m.is_A, unless=m.is_B)
+        _, nodes, edges = self.parse_dot(m.get_graph())
+        self.assertIn("[is_state(A", edges[0])
 
 
 @skipIf(pgv is None, 'Graph diagram test requires graphviz')

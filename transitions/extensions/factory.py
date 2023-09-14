@@ -8,6 +8,8 @@
 """
 
 from functools import partial
+import itertools
+from six import iteritems
 
 from ..core import Machine, Transition
 
@@ -71,7 +73,12 @@ class LockedGraphMachine(GraphMachine, LockedMachine):
     @staticmethod
     def format_references(func):
         if isinstance(func, partial) and func.func.__name__.startswith('_locked_method'):
-            func = func.args[0]
+            return "%s(%s)" % (
+                func.args[0].__name__,
+                ", ".join(itertools.chain(
+                    (str(_) for _ in func.args[1:]),
+                    ("%s=%s" % (key, value)
+                     for key, value in iteritems(func.keywords if func.keywords else {})))))
         return GraphMachine.format_references(func)
 
 
@@ -85,9 +92,7 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):
 
     @staticmethod
     def format_references(func):
-        if isinstance(func, partial) and func.func.__name__.startswith('_locked_method'):
-            func = func.args[0]
-        return GraphMachine.format_references(func)
+        return LockedGraphMachine.format_references(func)
 
 
 class AsyncGraphMachine(GraphMachine, AsyncMachine):
