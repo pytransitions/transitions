@@ -9,7 +9,7 @@
 
 try:
     from builtins import object
-except ImportError:
+except ImportError:  # pragma: no cover
     # python2
     pass
 
