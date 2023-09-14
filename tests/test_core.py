@@ -930,13 +930,15 @@ class TestTransitions(TestCase):
         def check_prepare_repr(event_data):
             self.assertRegex(
                 str(event_data),
-                r"<EventData\('<State\('A'\)@\d+>', "
+                r"<EventData\(<Event\('do_strcheck'\)@\d+>, "
+                r"<State\('A'\)@\d+>, "
                 r"None\)@\d+>")
 
         def check_before_repr(event_data):
             self.assertRegex(
                 str(event_data),
-                r"<EventData\('<State\('A'\)@\d+>', "
+                r"<EventData\(<Event\('do_strcheck'\)@\d+>, "
+                r"<State\('A'\)@\d+>, "
                 r"<Transition\('A', 'B'\)@\d+>\)@\d+>")
             m.checked = True
 
