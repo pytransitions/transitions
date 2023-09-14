@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover
 try:
     # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
     from enum import Enum, EnumMeta
-except ImportError:
+except ImportError:  # pragma: no cover
     # If enum is not available, create dummy classes for type checks
     class Enum:  # type:ignore
         """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
