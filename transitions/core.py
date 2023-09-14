@@ -351,8 +351,8 @@ class EventData(object):
             self.state = self.machine.get_state(state)
 
     def __repr__(self):
-        return "<%s('%s', %s)@%s>" % (type(self).__name__, self.state,
-                                      getattr(self, 'transition'), id(self))
+        return "<%s(%s, %s, %s)@%s>" % (type(self).__name__, self.event, self.state,
+                                        getattr(self, 'transition'), id(self))
 
 
 class Event(object):
@@ -576,7 +576,7 @@ class Machine(object):
         self._initial = None
 
         self.states = OrderedDict()
-        self.events = {}
+        self.events = OrderedDict()
         self.send_event = send_event
         self.auto_transitions = auto_transitions
         self.ignore_invalid_triggers = ignore_invalid_triggers
