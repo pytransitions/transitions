@@ -489,6 +489,9 @@ m.get_triggers('solid', 'liquid', 'gas', 'plasma')
 >>> ['melt', 'evaporate', 'sublimate', 'ionize']
 ```
 
+If you have followed this documentation from the beginning, you will notice that `get_triggers` actually returns more triggers than the explicitly defined ones shown above, such as `to_liquid` and so on.
+These are called `auto-transitions` and will be introduced in the next section.
+
 #### <a name="automatic-transitions-for-all-states"></a>Automatic transitions for all states
 
 In addition to any transitions added explicitly, a `to_«state»()` method is created automatically whenever a state is added to a `Machine` instance. This method transitions to the target state no matter which state the machine is currently in:
