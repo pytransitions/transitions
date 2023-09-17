@@ -19,10 +19,10 @@ try:
 except ImportError:  # pragma: no cover
     # If enum is not available, create dummy classes for type checks
     class Enum:  # type: ignore
-        """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
+        """This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support."""
 
     class EnumMeta:  # type: ignore
-        """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
+        """This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support."""
 
 from six import string_types
 
@@ -45,7 +45,7 @@ def _build_state_list(state_tree, separator, prefix=None):
 
 
 def resolve_order(state_tree):
-    """ Converts a (model) state tree into a list of state paths. States are ordered in the way in which states
+    """Converts a (model) state tree into a list of state paths. States are ordered in the way in which states
     should be visited to process the event correctly (Breadth-first). This makes sure that ALL children are evaluated
     before parents in parallel states.
     Args:
@@ -69,7 +69,7 @@ def resolve_order(state_tree):
 
 
 class FunctionWrapper(object):
-    """ A wrapper to enable transitions' convenience function to_<state> for nested states.
+    """A wrapper to enable transitions' convenience function to_<state> for nested states.
         This allows to call model.to_A.s1.C() in case a custom separator has been chosen."""
     def __init__(self, func):
         """
@@ -80,7 +80,7 @@ class FunctionWrapper(object):
         self._func = func
 
     def add(self, func, path):
-        """ Assigns a `FunctionWrapper` as an attribute named like the next segment of the substates
+        """Assigns a `FunctionWrapper` as an attribute named like the next segment of the substates
             path.
         Args:
             func (callable): Function to be called at the end of the path.
@@ -100,7 +100,7 @@ class FunctionWrapper(object):
 
 
 class NestedEvent(Event):
-    """ An event type to work with nested states.
+    """An event type to work with nested states.
         This subclass is NOT compatible with simple Machine instances.
     """
 
@@ -108,7 +108,7 @@ class NestedEvent(Event):
         raise RuntimeError("NestedEvent.trigger must not be called directly. Call Machine.trigger_event instead.")
 
     def trigger_nested(self, event_data):
-        """ Executes all transitions that match the current state,
+        """Executes all transitions that match the current state,
         halting as soon as one successfully completes.
         It is up to the machine's configuration of the Event whether processing happens queued (sequentially) or
         whether further Events are processed as they occur. NOTE: This should only
@@ -151,7 +151,7 @@ class NestedEvent(Event):
 
 
 class NestedEventData(EventData):
-    """ Collection of relevant data related to the ongoing nested transition attempt. """
+    """Collection of relevant data related to the ongoing nested transition attempt."""
 
     def __init__(self, state, event, machine, model, args, kwargs):
         super(NestedEventData, self).__init__(state, event, machine, model, args, kwargs)
@@ -160,7 +160,7 @@ class NestedEventData(EventData):
 
 
 class NestedState(State):
-    """ A state which allows substates.
+    """A state which allows substates.
     Attributes:
         states (OrderedDict): A list of substates of the current state.
         events (dict): A list of events defined for the nested state.
@@ -183,14 +183,14 @@ class NestedState(State):
         self._scope = []
 
     def add_substate(self, state):
-        """ Adds a state as a substate.
+        """Adds a state as a substate.
         Args:
             state (NestedState): State to add to the current state.
         """
         self.add_substates(state)
 
     def add_substates(self, states):
-        """ Adds a list of states to the current state.
+        """Adds a list of states to the current state.
         Args:
             states (list): List of state to add to the current state.
         """
@@ -198,7 +198,7 @@ class NestedState(State):
             self.states[state.name] = state
 
     def scoped_enter(self, event_data, scope=None):
-        """ Enters a state with the provided scope.
+        """Enters a state with the provided scope.
         Args:
             event_data (NestedEventData): The currently processed event.
             scope (list(str)): Names of the state's parents starting with the top most parent.
@@ -210,7 +210,7 @@ class NestedState(State):
             self._scope = []
 
     def scoped_exit(self, event_data, scope=None):
-        """ Exits a state with the provided scope.
+        """Exits a state with the provided scope.
         Args:
             event_data (NestedEventData): The currently processed event.
             scope (list(str)): Names of the state's parents starting with the top most parent.
@@ -227,7 +227,7 @@ class NestedState(State):
 
 
 class NestedTransition(Transition):
-    """ A transition which handles entering and leaving nested states. """
+    """A transition which handles entering and leaving nested states."""
 
     def _resolve_transition(self, event_data):
         dst_name_path = self.dest.split(event_data.machine.state_cls.separator)
@@ -342,7 +342,7 @@ class NestedTransition(Transition):
 
 
 class HierarchicalMachine(Machine):
-    """ Extends transitions.core.Machine by capabilities to handle nested states.
+    """Extends transitions.core.Machine by capabilities to handle nested states.
         A hierarchical machine REQUIRES NestedStates, NestedEvent and NestedTransitions
         (or any subclass of it) to operate.
     """
@@ -399,7 +399,7 @@ class HierarchicalMachine(Machine):
         self.scoped, self.states, self.events, self.prefix_path = self._stack.pop()
 
     def add_model(self, model, initial=None):
-        """ Extends transitions.core.Machine.add_model by applying a custom 'to' function to
+        """Extends transitions.core.Machine.add_model by applying a custom 'to' function to
             the added model.
         """
         models = [self if mod is self.self_literal else mod for mod in listify(model)]
@@ -424,7 +424,7 @@ class HierarchicalMachine(Machine):
 
     @property
     def initial(self):
-        """ Return the initial state. """
+        """Return the initial state."""
         return self._initial
 
     @initial.setter
@@ -444,7 +444,7 @@ class HierarchicalMachine(Machine):
                                                                  prepare=prepare, **kwargs)
 
     def add_states(self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs):
-        """ Add new nested state(s).
+        """Add new nested state(s).
         Args:
             states (list, str, dict, Enum, NestedState or HierarchicalMachine): a list, a NestedState instance, the
                 name of a new state, an enumeration (member) or a dict with keywords to pass on to the
@@ -506,7 +506,7 @@ class HierarchicalMachine(Machine):
                                                         unless, before, after, prepare, **kwargs)
 
     def get_global_name(self, state=None, join=True):
-        """ Returns the name of the passed state in context of the current prefix/scope.
+        """Returns the name of the passed state in context of the current prefix/scope.
         Args:
             state (str, Enum or NestedState): The state to be analyzed.
             join (bool): Whether this method should join the path elements or not
@@ -523,7 +523,7 @@ class HierarchicalMachine(Machine):
         return self.state_cls.separator.join(domains) if join else domains
 
     def get_nested_state_names(self):
-        """ Returns a list of global names of all states of a machine.
+        """Returns a list of global names of all states of a machine.
         Returns:
             list(str) of global state names.
         """
@@ -535,7 +535,7 @@ class HierarchicalMachine(Machine):
         return ordered_states
 
     def get_nested_transitions(self, trigger="", src_path=None, dest_path=None):
-        """ Retrieves a list of all transitions matching the passed requirements.
+        """Retrieves a list of all transitions matching the passed requirements.
         Args:
             trigger (str): If set, return only transitions related to this trigger.
             src_path (list(str)): If set, return only transitions with this source state.
@@ -572,7 +572,7 @@ class HierarchicalMachine(Machine):
         return transitions
 
     def get_nested_triggers(self, src_path=None):
-        """ Retrieves a list of valid triggers.
+        """Retrieves a list of valid triggers.
         Args:
             src_path (list(str)): A list representation of the source state's name.
         Returns:
@@ -591,7 +591,7 @@ class HierarchicalMachine(Machine):
         return triggers
 
     def get_state(self, state, hint=None):
-        """ Return the State instance with the passed name.
+        """Return the State instance with the passed name.
         Args:
             state (str, Enum or list(str)): A state name, enum or state path
             hint (list(str)): A state path to check for the state in question
@@ -626,7 +626,7 @@ class HierarchicalMachine(Machine):
         return self.states[state[0]]
 
     def get_states(self, states):
-        """ Retrieves a list of NestedStates.
+        """Retrieves a list of NestedStates.
         Args:
             states (str, Enum or list of str or Enum): Names/values of the states to retrieve.
         Returns:
@@ -641,7 +641,7 @@ class HierarchicalMachine(Machine):
         return res
 
     def get_transitions(self, trigger="", source="*", dest="*", delegate=False):
-        """ Return the transitions from the Machine.
+        """Return the transitions from the Machine.
         Args:
             trigger (str): Trigger name of the transition.
             source (str, State or Enum): Limits list to transitions from a certain state.
@@ -700,7 +700,7 @@ class HierarchicalMachine(Machine):
         return False
 
     def get_triggers(self, *args):
-        """ Extends transitions.core.Machine.get_triggers to also include parent state triggers. """
+        """Extends transitions.core.Machine.get_triggers to also include parent state triggers."""
         triggers = []
         with self():
             for state in args:
@@ -716,7 +716,7 @@ class HierarchicalMachine(Machine):
         return triggers
 
     def has_trigger(self, trigger, state=None):
-        """ Check whether an event/trigger is known to the machine
+        """Check whether an event/trigger is known to the machine
         Args:
             trigger (str): Event/trigger name
             state (optional[NestedState]): Limits the recursive search to this state and its children
@@ -738,7 +738,7 @@ class HierarchicalMachine(Machine):
         return getattr(model, self.model_attribute) == state
 
     def on_enter(self, state_name, callback):
-        """ Helper function to add callbacks to states in case a custom state separator is used.
+        """Helper function to add callbacks to states in case a custom state separator is used.
         Args:
             state_name (str): Name of the state
             callback (str or callable): Function to be called. Strings will be resolved to model functions.
@@ -746,7 +746,7 @@ class HierarchicalMachine(Machine):
         self.get_state(state_name).add_callback('enter', callback)
 
     def on_exit(self, state_name, callback):
-        """ Helper function to add callbacks to states in case a custom state separator is used.
+        """Helper function to add callbacks to states in case a custom state separator is used.
         Args:
             state_name (str): Name of the state
             callback (str or callable): Function to be called. Strings will be resolved to model functions.
@@ -754,7 +754,7 @@ class HierarchicalMachine(Machine):
         self.get_state(state_name).add_callback('exit', callback)
 
     def set_state(self, state, model=None):
-        """ Set the current state.
+        """Set the current state.
         Args:
             state (list of str or Enum or State): value of state(s) to be set
             model (optional[object]): targeted model; if not set, all models will be set to 'state'
@@ -765,7 +765,7 @@ class HierarchicalMachine(Machine):
             setattr(mod, self.model_attribute, values if len(values) > 1 else values[0])
 
     def to_state(self, model, state_name, *args, **kwargs):
-        """ Helper function to add go to states in case a custom state separator is used.
+        """Helper function to add go to states in case a custom state separator is used.
         Args:
             model (class): The model that should be used.
             state_name (str): Name of the destination state.
@@ -786,7 +786,7 @@ class HierarchicalMachine(Machine):
         self._create_transition(event.source_name, state_name).execute(event)
 
     def trigger_event(self, model, trigger, *args, **kwargs):
-        """ Processes events recursively and forwards arguments if suitable events are found.
+        """Processes events recursively and forwards arguments if suitable events are found.
         This function is usually bound to models with model and trigger arguments already
         resolved as a partial. Execution will halt when a nested transition has been executed
         successfully.
@@ -946,7 +946,7 @@ class HierarchicalMachine(Machine):
             self._checked_assignment(model, trigger, trig_func)
 
     def build_state_tree(self, model_states, separator, tree=None):
-        """ Converts a list of current states into a hierarchical state tree.
+        """Converts a list of current states into a hierarchical state tree.
         Args:
             model_states (str or list(str)):
             separator (str): The character used to separate state names
@@ -1026,7 +1026,7 @@ class HierarchicalMachine(Machine):
         return self.trigger_event(model, trigger_name, *args, **kwargs)
 
     def _has_state(self, state, raise_error=False):
-        """ This function
+        """This function
         Args:
             state (NestedState): state to be tested
             raise_error (bool): whether ValueError should be raised when the state

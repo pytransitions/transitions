@@ -32,10 +32,10 @@ _LOGGER.addHandler(logging.NullHandler())
 
 
 class AsyncState(State):
-    """ A persistent representation of a state managed by a ``Machine``. Callback execution is done asynchronously. """
+    """A persistent representation of a state managed by a ``Machine``. Callback execution is done asynchronously."""
 
     async def enter(self, event_data):
-        """ Triggered when a state is entered.
+        """Triggered when a state is entered.
         Args:
             event_data: (AsyncEventData): The currently processed event.
         """
@@ -44,7 +44,7 @@ class AsyncState(State):
         _LOGGER.info("%sFinished processing state %s enter callbacks.", event_data.machine.name, self.name)
 
     async def exit(self, event_data):
-        """ Triggered when a state is exited.
+        """Triggered when a state is exited.
         Args:
             event_data: (AsyncEventData): The currently processed event.
         """
@@ -54,7 +54,7 @@ class AsyncState(State):
 
 
 class NestedAsyncState(NestedState, AsyncState):
-    """ A state that allows substates. Callback execution is done asynchronously. """
+    """A state that allows substates. Callback execution is done asynchronously."""
 
     async def scoped_enter(self, event_data, scope=None):
         self._scope = scope or []
@@ -68,10 +68,10 @@ class NestedAsyncState(NestedState, AsyncState):
 
 
 class AsyncCondition(Condition):
-    """ A helper class to await condition checks in the intended way. """
+    """A helper class to await condition checks in the intended way."""
 
     async def check(self, event_data):
-        """ Check whether the condition passes.
+        """Check whether the condition passes.
         Args:
             event_data (EventData): An EventData instance to pass to the
                 condition (if event sending is enabled) or to extract arguments
@@ -87,7 +87,7 @@ class AsyncCondition(Condition):
 
 
 class AsyncTransition(Transition):
-    """ Representation of an asynchronous transition managed by a ``AsyncMachine`` instance. """
+    """Representation of an asynchronous transition managed by a ``AsyncMachine`` instance."""
 
     condition_cls = AsyncCondition
 
@@ -99,7 +99,7 @@ class AsyncTransition(Transition):
         return True
 
     async def execute(self, event_data):
-        """ Executes the transition.
+        """Executes the transition.
         Args:
             event_data (EventData): An instance of class EventData.
         Returns: boolean indicating whether or not the transition was
@@ -142,7 +142,7 @@ class AsyncTransition(Transition):
 
 
 class NestedAsyncTransition(AsyncTransition, NestedTransition):
-    """ Representation of an asynchronous transition managed by a ``HierarchicalMachine`` instance. """
+    """Representation of an asynchronous transition managed by a ``HierarchicalMachine`` instance."""
     async def _change_state(self, event_data):
         if hasattr(event_data.machine, "model_graphs"):
             graph = event_data.machine.model_graphs[id(event_data.model)]
@@ -157,14 +157,14 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
 
 
 class AsyncEventData(EventData):
-    """ A redefinition of the base EventData intended to easy type checking. """
+    """A redefinition of the base EventData intended to easy type checking."""
 
 
 class AsyncEvent(Event):
-    """ A collection of transitions assigned to the same trigger """
+    """A collection of transitions assigned to the same trigger"""
 
     async def trigger(self, model, *args, **kwargs):
-        """ Serially execute all transitions that match the current state,
+        """Serially execute all transitions that match the current state,
         halting as soon as one successfully completes. Note that `AsyncEvent` triggers must be awaited.
         Args:
             args and kwargs: Optional positional or named arguments that will
@@ -204,12 +204,12 @@ class AsyncEvent(Event):
 
 
 class NestedAsyncEvent(NestedEvent):
-    """ A collection of transitions assigned to the same trigger.
+    """A collection of transitions assigned to the same trigger.
     This Event requires a (subclass of) `HierarchicalAsyncMachine`.
     """
 
     async def trigger_nested(self, event_data):
-        """ Serially execute all transitions that match the current state,
+        """Serially execute all transitions that match the current state,
         halting as soon as one successfully completes. NOTE: This should only
         be called by HierarchicalMachine instances.
         Args:
@@ -251,7 +251,7 @@ class NestedAsyncEvent(NestedEvent):
 
 
 class AsyncMachine(Machine):
-    """ Machine manages states, transitions and models. In case it is initialized without a specific model
+    """Machine manages states, transitions and models. In case it is initialized without a specific model
     (or specifically no model), it will also act as a model itself. Machine takes also care of decorating
     models with conveniences functions related to added transitions and states during runtime.
 
@@ -312,7 +312,7 @@ class AsyncMachine(Machine):
                 self._transition_queue_dict[id(self) if mod is self.self_literal else id(mod)] = deque()
 
     async def dispatch(self, trigger, *args, **kwargs):
-        """ Trigger an event on all models assigned to the machine.
+        """Trigger an event on all models assigned to the machine.
         Args:
             trigger (str): Event name
             *args (list): List of arguments passed to the event trigger
@@ -324,11 +324,11 @@ class AsyncMachine(Machine):
         return all(results)
 
     async def callbacks(self, funcs, event_data):
-        """ Triggers a list of callbacks """
+        """Triggers a list of callbacks"""
         await self.await_all([partial(event_data.machine.callback, func, event_data) for func in funcs])
 
     async def callback(self, func, event_data):
-        """ Trigger a callback function with passed event_data parameters. In case func is a string,
+        """Trigger a callback function with passed event_data parameters. In case func is a string,
             the callable will be resolved from the passed model in event_data. This function is not intended to
             be called directly but through state and transition callback definitions.
         Args:
@@ -401,7 +401,7 @@ class AsyncMachine(Machine):
         return res
 
     def remove_model(self, model):
-        """ Remove a model from the state machine. The model will still contain all previously added triggers
+        """Remove a model from the state machine. The model will still contain all previously added triggers
         and callbacks, but will not receive updates when states or transitions are added to the Machine.
         If an event queue is used, all queued events of that model will be removed."""
         models = listify(model)
@@ -467,7 +467,7 @@ class AsyncMachine(Machine):
 
 
 class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
-    """ Asynchronous variant of transitions.extensions.nesting.HierarchicalMachine.
+    """Asynchronous variant of transitions.extensions.nesting.HierarchicalMachine.
         An asynchronous hierarchical machine REQUIRES AsyncNestedStates, AsyncNestedEvent and AsyncNestedTransitions
         (or any subclass of it) to operate.
     """
@@ -477,7 +477,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
     event_cls = NestedAsyncEvent
 
     async def trigger_event(self, model, trigger, *args, **kwargs):
-        """ Processes events recursively and forwards arguments if suitable events are found.
+        """Processes events recursively and forwards arguments if suitable events are found.
         This function is usually bound to models with model and trigger arguments already
         resolved as a partial. Execution will halt when a nested transition has been executed
         successfully.
@@ -661,7 +661,7 @@ class AsyncTimeout(AsyncState):
 
     @on_timeout.setter
     def on_timeout(self, value):
-        """ Listifies passed values and assigns them to on_timeout."""
+        """Listifies passed values and assigns them to on_timeout."""
         self._on_timeout = listify(value)
 
 

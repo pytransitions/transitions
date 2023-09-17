@@ -21,7 +21,7 @@ _LOGGER.addHandler(logging.NullHandler())
 
 
 class Graph(BaseGraph):
-    """ Graph creation for transitions.core.Machine. """
+    """Graph creation for transitions.core.Machine."""
 
     def _add_nodes(self, states, container):
         for state in states:
@@ -116,7 +116,7 @@ class Graph(BaseGraph):
 
 
 class NestedGraph(Graph):
-    """ Graph creation support for transitions.extensions.nested.HierarchicalGraphMachine. """
+    """Graph creation support for transitions.extensions.nested.HierarchicalGraphMachine."""
 
     def __init__(self, *args, **kwargs):
         self.seen_transitions = []
@@ -220,7 +220,7 @@ class NestedGraph(Graph):
 
 
 def _get_subgraph(graph, name):
-    """ Searches for subgraphs in a graph.
+    """Searches for subgraphs in a graph.
     Args:
         g (AGraph): Container to be searched.
         name (str): Name of the cluster.

@@ -27,7 +27,7 @@ _LOGGER.addHandler(logging.NullHandler())
 
 
 class TransitionGraphSupport(Transition):
-    """ Transition used in conjunction with (Nested)Graphs to update graphs whenever a transition is
+    """Transition used in conjunction with (Nested)Graphs to update graphs whenever a transition is
         conducted.
     """
 
@@ -51,7 +51,7 @@ class TransitionGraphSupport(Transition):
 
 
 class GraphMachine(MarkupMachine):
-    """ Extends transitions.core.Machine with graph support.
+    """Extends transitions.core.Machine with graph support.
         Is also used as a mixin for HierarchicalMachine.
         Attributes:
             _pickle_blacklist (list): Objects that should not/do not need to be pickled.
@@ -152,7 +152,7 @@ class GraphMachine(MarkupMachine):
             setattr(self, "get_graph", self.get_combined_graph)
 
     def _init_graphviz_engine(self, use_pygraphviz):
-        """ Imports diagrams (py)graphviz backend based on machine configuration """
+        """Imports diagrams (py)graphviz backend based on machine configuration"""
         if use_pygraphviz:
             try:
                 # state class needs to have a separator and machine needs to be a context manager
@@ -182,7 +182,7 @@ class GraphMachine(MarkupMachine):
         return Graph
 
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
-        """ This method will be bound as a partial to models and return a graph object to be drawn or manipulated.
+        """This method will be bound as a partial to models and return a graph object to be drawn or manipulated.
         Args:
             model (object): The model that `_get_graph` was bound to. This parameter will be set by `GraphMachine`.
             title (str): The title of the created graph.
@@ -207,7 +207,7 @@ class GraphMachine(MarkupMachine):
         return graph.get_graph(title=title, roi_state=getattr(model, self.model_attribute) if show_roi else None)
 
     def get_combined_graph(self, title=None, force_new=False, show_roi=False):
-        """ This method is currently equivalent to 'get_graph' of the first machine's model.
+        """This method is currently equivalent to 'get_graph' of the first machine's model.
         In future releases of transitions, this function will return a combined graph with active states
         of all models.
         Args:
@@ -239,7 +239,7 @@ class GraphMachine(MarkupMachine):
     def add_states(
         self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs
     ):
-        """ Calls the base method and regenerates all models's graphs. """
+        """Calls the base method and regenerates all models's graphs."""
         super(GraphMachine, self).add_states(
             states,
             on_enter=on_enter,
@@ -252,7 +252,7 @@ class GraphMachine(MarkupMachine):
 
     def add_transition(self, trigger, source, dest, conditions=None, unless=None, before=None, after=None,
                        prepare=None, **kwargs):
-        """ Calls the base method and regenerates all models's graphs. """
+        """Calls the base method and regenerates all models's graphs."""
         super(GraphMachine, self).add_transition(trigger, source, dest, conditions=conditions, unless=unless,
                                                  before=before, after=after, prepare=prepare, **kwargs)
         for model in self.models:

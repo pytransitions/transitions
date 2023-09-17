@@ -23,7 +23,7 @@ _LOGGER.addHandler(logging.NullHandler())
 
 
 class Graph(BaseGraph):
-    """ Graph creation for transitions.core.Machine.
+    """Graph creation for transitions.core.Machine.
         Attributes:
             custom_styles (dict): A dictionary of styles for the current graph
     """
@@ -74,7 +74,7 @@ class Graph(BaseGraph):
                 )
 
     def generate(self):
-        """ Triggers the generation of a graph. With graphviz backend, this does nothing since graph trees need to be
+        """Triggers the generation of a graph. With graphviz backend, this does nothing since graph trees need to be
         build from scratch with the configured styles.
         """
         if not pgv:  # pragma: no cover
@@ -147,7 +147,7 @@ class Graph(BaseGraph):
 
 
 class NestedGraph(Graph):
-    """ Graph creation support for transitions.extensions.nested.HierarchicalGraphMachine. """
+    """Graph creation support for transitions.extensions.nested.HierarchicalGraphMachine."""
 
     def __init__(self, *args, **kwargs):
         self._cluster_states = []

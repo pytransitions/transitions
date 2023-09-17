@@ -17,7 +17,7 @@ _LOGGER.addHandler(logging.NullHandler())
 
 
 class Tags(State):
-    """ Allows states to be tagged.
+    """Allows states to be tagged.
         Attributes:
             tags (list): A list of tag strings. `State.is_<tag>` may be used
                 to check if <tag> is in the list.
@@ -37,7 +37,7 @@ class Tags(State):
 
 
 class Error(Tags):
-    """ This mix in builds upon tag and should be used INSTEAD of Tags if final states that have
+    """This mix in builds upon tag and should be used INSTEAD of Tags if final states that have
         not been tagged with 'accepted' should throw an `MachineError`.
     """
 
@@ -55,7 +55,7 @@ class Error(Tags):
         super(Error, self).__init__(*args, **kwargs)
 
     def enter(self, event_data):
-        """ Extends transitions.core.State.enter. Throws a `MachineError` if there is
+        """Extends transitions.core.State.enter. Throws a `MachineError` if there is
             no leaving transition from this state and 'accepted' is not in self.tags.
         """
         if not event_data.machine.get_triggers(self.name) and not self.is_accepted:
@@ -64,7 +64,7 @@ class Error(Tags):
 
 
 class Timeout(State):
-    """ Adds timeout functionality to a state. Timeouts are handled model-specific.
+    """Adds timeout functionality to a state. Timeouts are handled model-specific.
     Attributes:
         timeout (float): Seconds after which a timeout function should be called.
         on_timeout (list): Functions to call when a timeout is triggered.
@@ -92,7 +92,7 @@ class Timeout(State):
         super(Timeout, self).__init__(*args, **kwargs)
 
     def enter(self, event_data):
-        """ Extends `transitions.core.State.enter` by starting a timeout timer for the current model
+        """Extends `transitions.core.State.enter` by starting a timeout timer for the current model
             when the state is entered and self.timeout is larger than 0.
         """
         if self.timeout > 0:
@@ -103,7 +103,7 @@ class Timeout(State):
         return super(Timeout, self).enter(event_data)
 
     def exit(self, event_data):
-        """ Extends `transitions.core.State.exit` by canceling a timer for the current model. """
+        """Extends `transitions.core.State.exit` by canceling a timer for the current model."""
         timer = self.runner.get(id(event_data.model), None)
         if timer is not None and timer.is_alive():
             timer.cancel()
@@ -117,17 +117,17 @@ class Timeout(State):
 
     @property
     def on_timeout(self):
-        """ List of strings and callables to be called when the state timeouts. """
+        """List of strings and callables to be called when the state timeouts."""
         return self._on_timeout
 
     @on_timeout.setter
     def on_timeout(self, value):
-        """ Listifies passed values and assigns them to on_timeout."""
+        """Listifies passed values and assigns them to on_timeout."""
         self._on_timeout = listify(value)
 
 
 class Volatile(State):
-    """ Adds scopes/temporal variables to the otherwise persistent state objects.
+    """Adds scopes/temporal variables to the otherwise persistent state objects.
     Attributes:
         volatile_cls (cls): Class of the temporal object to be initiated.
         volatile_hook (str): Model attribute name which will contain the volatile instance.
@@ -148,13 +148,13 @@ class Volatile(State):
         self.initialized = True
 
     def enter(self, event_data):
-        """ Extends `transitions.core.State.enter` by creating a volatile object and assign it to
+        """Extends `transitions.core.State.enter` by creating a volatile object and assign it to
             the current model's hook. """
         setattr(event_data.model, self.volatile_hook, self.volatile_cls())
         super(Volatile, self).enter(event_data)
 
     def exit(self, event_data):
-        """ Extends `transitions.core.State.exit` by deleting the temporal object from the model. """
+        """Extends `transitions.core.State.exit` by deleting the temporal object from the model."""
         super(Volatile, self).exit(event_data)
         try:
             delattr(event_data.model, self.volatile_hook)
@@ -163,7 +163,7 @@ class Volatile(State):
 
 
 class Retry(State):
-    """ The Retry mix-in sets a limit on the number of times a state may be
+    """The Retry mix-in sets a limit on the number of times a state may be
         re-entered from itself.
 
         The first time a state is entered it does not count as a retry. Thus with
@@ -224,11 +224,11 @@ class Retry(State):
 
 
 def add_state_features(*args):
-    """ State feature decorator. Should be used in conjunction with a custom Machine class. """
+    """State feature decorator. Should be used in conjunction with a custom Machine class."""
     def _class_decorator(cls):
 
         class CustomState(type('CustomState', args, {}), cls.state_cls):
-            """ The decorated State. It is based on the State class used by the decorated Machine. """
+            """The decorated State. It is based on the State class used by the decorated Machine."""
 
         method_list = sum([c.dynamic_methods for c in inspect.getmro(CustomState) if hasattr(c, 'dynamic_methods')], [])
         CustomState.dynamic_methods = list(set(method_list))
@@ -238,4 +238,4 @@ def add_state_features(*args):
 
 
 class VolatileObject(object):
-    """ Empty Python object which can be used to assign attributes to."""
+    """Empty Python object which can be used to assign attributes to."""

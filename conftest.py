@@ -16,7 +16,7 @@ async_files = ['test_async.py', 'asyncio.py']
 
 
 def pytest_ignore_collect(path):
-    """ Text collection function executed by pytest"""
+    """Text collection function executed by pytest"""
     if not WITH_ASYNC and basename(str(path)) in async_files:
         return True
     return False
