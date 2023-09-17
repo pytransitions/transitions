@@ -17,7 +17,7 @@ _LOGGER.addHandler(logging.NullHandler())
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseGraph(object):
-    """ Provides the common foundation for graphs generated either with pygraphviz or graphviz. This abstract class
+    """Provides the common foundation for graphs generated either with pygraphviz or graphviz. This abstract class
     should not be instantiated directly. Use .(py)graphviz.(Nested)Graph instead.
     Attributes:
         machine (GraphMachine): The associated GraphMachine
@@ -31,11 +31,11 @@ class BaseGraph(object):
 
     @abc.abstractmethod
     def generate(self):
-        """ Triggers the generation of a graph. """
+        """Triggers the generation of a graph."""
 
     @abc.abstractmethod
     def set_previous_transition(self, src, dst):
-        """ Sets the styling of an edge to 'previous'
+        """Sets the styling of an edge to 'previous'
         Args:
             src (str): Name of the source state
             dst (str): Name of the destination
@@ -43,11 +43,11 @@ class BaseGraph(object):
 
     @abc.abstractmethod
     def reset_styling(self):
-        """ Resets the styling of the currently generated graph. """
+        """Resets the styling of the currently generated graph."""
 
     @abc.abstractmethod
     def set_node_style(self, state, style):
-        """ Sets the style of nodes associated with a model state
+        """Sets the style of nodes associated with a model state
         Args:
             state (str, Enum or list): Name of the state(s) or Enum(s)
             style (str): Name of the style
@@ -55,7 +55,7 @@ class BaseGraph(object):
 
     @abc.abstractmethod
     def get_graph(self, title=None, roi_state=None):
-        """ Returns a graph object.
+        """Returns a graph object.
         Args:
             title (str): Title of the generated graph
             roi_state (State): If not None, the returned graph will only contain edges and states connected to it.

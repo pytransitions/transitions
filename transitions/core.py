@@ -19,10 +19,10 @@ try:
 except ImportError:  # pragma: no cover
     # If enum is not available, create dummy classes for type checks
     class Enum:  # type:ignore
-        """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
+        """This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support."""
 
     class EnumMeta:  # type:ignore
-        """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
+        """This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support."""
 
 import inspect
 import itertools
@@ -113,30 +113,30 @@ class State(object):
 
     @property
     def name(self):
-        """ The name of the state. """
+        """The name of the state."""
         if isinstance(self._name, Enum):
             return self._name.name
         return self._name
 
     @property
     def value(self):
-        """ The state's value. For string states this will be equivalent to the name attribute. """
+        """The state's value. For string states this will be equivalent to the name attribute."""
         return self._name
 
     def enter(self, event_data):
-        """ Triggered when a state is entered. """
+        """Triggered when a state is entered."""
         _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
         event_data.machine.callbacks(self.on_enter, event_data)
         _LOGGER.info("%sFinished processing state %s enter callbacks.", event_data.machine.name, self.name)
 
     def exit(self, event_data):
-        """ Triggered when a state is exited. """
+        """Triggered when a state is exited."""
         _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
         event_data.machine.callbacks(self.on_exit, event_data)
         _LOGGER.info("%sFinished processing state %s exit callbacks.", event_data.machine.name, self.name)
 
     def add_callback(self, trigger, func):
-        """ Add a new enter or exit callback.
+        """Add a new enter or exit callback.
         Args:
             trigger (str): The type of triggering event. Must be one of
                 'enter' or 'exit'.
@@ -150,7 +150,7 @@ class State(object):
 
 
 class Condition(object):
-    """ A helper class to call condition checks in the intended way.
+    """A helper class to call condition checks in the intended way.
 
     Attributes:
         func (str or callable): The function to call for the condition check
@@ -176,7 +176,7 @@ class Condition(object):
         self.target = target
 
     def check(self, event_data):
-        """ Check whether the condition passes.
+        """Check whether the condition passes.
         Args:
             event_data (EventData): An EventData instance to pass to the
                 condition (if event sending is enabled) or to extract arguments
@@ -194,7 +194,7 @@ class Condition(object):
 
 
 class Transition(object):
-    """ Representation of a transition managed by a ``Machine`` instance.
+    """Representation of a transition managed by a ``Machine`` instance.
 
     Attributes:
         source (str): Source state of the transition.
@@ -255,7 +255,7 @@ class Transition(object):
         return True
 
     def execute(self, event_data):
-        """ Execute the transition.
+        """Execute the transition.
         Args:
             event_data: An instance of class EventData.
         Returns: boolean indicating whether the transition was
@@ -287,7 +287,7 @@ class Transition(object):
         event_data.machine.get_state(self.dest).enter(event_data)
 
     def add_callback(self, trigger, func):
-        """ Add a new before, after, or prepare callback.
+        """Add a new before, after, or prepare callback.
         Args:
             trigger (str): The type of triggering event. Must be one of
                 'before', 'after' or 'prepare'.
@@ -302,7 +302,7 @@ class Transition(object):
 
 
 class EventData(object):
-    """ Collection of relevant data related to the ongoing transition attempt.
+    """Collection of relevant data related to the ongoing transition attempt.
 
     Attributes:
         state (State): The State from which the Event was triggered.
@@ -341,7 +341,7 @@ class EventData(object):
         self.result = False
 
     def update(self, state):
-        """ Updates the EventData object with the passed state.
+        """Updates the EventData object with the passed state.
 
         Attributes:
             state (State, str or Enum): The state object, enum member or string to assign to EventData.
@@ -356,7 +356,7 @@ class EventData(object):
 
 
 class Event(object):
-    """ A collection of transitions assigned to the same trigger
+    """A collection of transitions assigned to the same trigger
 
     """
 
@@ -373,7 +373,7 @@ class Event(object):
         self.transitions = defaultdict(list)
 
     def add_transition(self, transition):
-        """ Add a transition to the list of potential transitions.
+        """Add a transition to the list of potential transitions.
         Args:
             transition (Transition): The Transition instance to add to the
                 list.
@@ -381,7 +381,7 @@ class Event(object):
         self.transitions[transition.source].append(transition)
 
     def trigger(self, model, *args, **kwargs):
-        """ Executes all transitions that match the current state,
+        """Executes all transitions that match the current state,
         halting as soon as one successfully completes. More precisely, it prepares a partial
         of the internal ``_trigger`` function, passes this to ``Machine._process``.
         It is up to the machine's configuration of the Event whether processing happens queued (sequentially) or
@@ -402,7 +402,7 @@ class Event(object):
         return self.machine._process(func)
 
     def _trigger(self, event_data):
-        """ Internal trigger function called by the ``Machine`` instance. This should not
+        """Internal trigger function called by the ``Machine`` instance. This should not
         be called directly but via the public method ``Machine.process``.
         Args:
             event_data (EventData): The currently processed event. State, result and (potentially) error might be
@@ -456,7 +456,7 @@ class Event(object):
         return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
 
     def add_callback(self, trigger, func):
-        """ Add a new before or after callback to all available transitions.
+        """Add a new before or after callback to all available transitions.
         Args:
             trigger (str): The type of triggering event. Must be one of
                 'before', 'after' or 'prepare'.
@@ -467,7 +467,7 @@ class Event(object):
 
 
 class Machine(object):
-    """ Machine manages states, transitions and models. In case it is initialized without a specific model
+    """Machine manages states, transitions and models. In case it is initialized without a specific model
     (or specifically no model), it will also act as a model itself. Machine takes also care of decorating
     models with conveniences functions related to added transitions and states during runtime.
 
@@ -606,7 +606,7 @@ class Machine(object):
             self.add_model(model)
 
     def add_model(self, model, initial=None):
-        """ Register a model with the state machine, initializing triggers and callbacks. """
+        """Register a model with the state machine, initializing triggers and callbacks."""
         models = listify(model)
 
         if initial is None:
@@ -629,7 +629,7 @@ class Machine(object):
                 self.models.append(mod)
 
     def remove_model(self, model):
-        """ Remove a model from the state machine. The model will still contain all previously added triggers
+        """Remove a model from the state machine. The model will still contain all previously added triggers
         and callbacks, but will not receive updates when states or transitions are added to the Machine.
         If an event queue is used, all queued events of that model will be removed."""
         models = listify(model)
@@ -655,7 +655,7 @@ class Machine(object):
 
     @property
     def initial(self):
-        """ Return the initial state. """
+        """Return the initial state."""
         return self._initial
 
     @initial.setter
@@ -674,12 +674,12 @@ class Machine(object):
 
     @property
     def has_queue(self):
-        """ Return boolean indicating if machine has queue or not """
+        """Return boolean indicating if machine has queue or not"""
         return self._queued
 
     @property
     def model(self):
-        """ List of models attached to the machine. For backwards compatibility, the property will
+        """List of models attached to the machine. For backwards compatibility, the property will
         return the model instance itself instead of the underlying list  if there is only one attached
         to the machine.
         """
@@ -741,7 +741,7 @@ class Machine(object):
         self._on_exception = listify(value)
 
     def get_state(self, state):
-        """ Return the State instance with the passed name. """
+        """Return the State instance with the passed name."""
         if isinstance(state, Enum):
             state = state.name
         if state not in self.states:
@@ -751,7 +751,7 @@ class Machine(object):
     # In theory this function could be static. This however causes some issues related to inheritance and
     # pickling down the chain.
     def is_state(self, state, model):
-        """ Check whether the current state matches the named state. This function is not called directly
+        """Check whether the current state matches the named state. This function is not called directly
             but assigned as partials to model instances (e.g. is_A -> partial(_is_state, 'A', model)).
         Args:
             state (str or Enum): name of the checked state or Enum
@@ -786,13 +786,13 @@ class Machine(object):
             setattr(mod, self.model_attribute, state.value)
 
     def add_state(self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs):
-        """ Alias for add_states. """
+        """Alias for add_states."""
         self.add_states(states=states, on_enter=on_enter, on_exit=on_exit,
                         ignore_invalid_triggers=ignore_invalid_triggers, **kwargs)
 
     def add_states(self, states, on_enter=None, on_exit=None,
                    ignore_invalid_triggers=None, **kwargs):
-        """ Add new state(s).
+        """Add new state(s).
         Args:
             states (list, str, dict, Enum or State): a list, a State instance, the
                 name of a new state, an enumeration (member) or a dict with keywords to pass on to the
@@ -924,7 +924,7 @@ class Machine(object):
         return event.trigger(model, *args, **kwargs)
 
     def get_triggers(self, *args):
-        """ Collects all triggers FROM certain states.
+        """Collects all triggers FROM certain states.
         Args:
             *args: Tuple of source states.
 
@@ -936,7 +936,7 @@ class Machine(object):
 
     def add_transition(self, trigger, source, dest, conditions=None,
                        unless=None, before=None, after=None, prepare=None, **kwargs):
-        """ Create a new Transition instance and add it to the internal list.
+        """Create a new Transition instance and add it to the internal list.
         Args:
             trigger (str): The name of the method that will trigger the
                 transition. This will be attached to the currently specified
@@ -993,7 +993,7 @@ class Machine(object):
             self.events[trigger].add_transition(_trans)
 
     def add_transitions(self, transitions):
-        """ Add several transitions.
+        """Add several transitions.
 
         Args:
             transitions (list): A list of transitions.
@@ -1009,7 +1009,7 @@ class Machine(object):
                                 loop=True, loop_includes_initial=True,
                                 conditions=None, unless=None, before=None,
                                 after=None, prepare=None, **kwargs):
-        """ Add a set of transitions that move linearly from state to state.
+        """Add a set of transitions that move linearly from state to state.
         Args:
             states (list): A list of state names defining the order of the
                 transitions. E.g., ['A', 'B', 'C'] will generate transitions
@@ -1080,7 +1080,7 @@ class Machine(object):
                                 **kwargs)
 
     def get_transitions(self, trigger="", source="*", dest="*"):
-        """ Return the transitions from the Machine.
+        """Return the transitions from the Machine.
         Args:
             trigger (str): Trigger name of the transition.
             source (str, Enum or State): Limits list to transitions from a certain state.
@@ -1105,7 +1105,7 @@ class Machine(object):
                                                             target_dest or transition.dest)]
 
     def remove_transition(self, trigger, source="*", dest="*"):
-        """ Removes a transition from the Machine and all models.
+        """Removes a transition from the Machine and all models.
         Args:
             trigger (str): Trigger name of the transition.
             source (str, Enum or State): Limits removal to transitions from a certain state.
@@ -1132,7 +1132,7 @@ class Machine(object):
             del self.events[trigger]
 
     def dispatch(self, trigger, *args, **kwargs):
-        """ Trigger an event on all models assigned to the machine.
+        """Trigger an event on all models assigned to the machine.
         Args:
             trigger (str): Event name
             *args (list): List of arguments passed to the event trigger
@@ -1143,13 +1143,13 @@ class Machine(object):
         return all(getattr(model, trigger)(*args, **kwargs) for model in self.models)
 
     def callbacks(self, funcs, event_data):
-        """ Triggers a list of callbacks """
+        """Triggers a list of callbacks"""
         for func in funcs:
             self.callback(func, event_data)
             _LOGGER.info("%sExecuted callback '%s'", self.name, func)
 
     def callback(self, func, event_data):
-        """ Trigger a callback function with passed event_data parameters. In case func is a string,
+        """Trigger a callback function with passed event_data parameters. In case func is a string,
             the callable will be resolved from the passed model in event_data. This function is not intended to
             be called directly but through state and transition callback definitions.
         Args:
@@ -1170,7 +1170,7 @@ class Machine(object):
 
     @staticmethod
     def resolve_callable(func, event_data):
-        """ Converts a model's property name, method name or a path to a callable into a callable.
+        """Converts a model's property name, method name or a path to a callable into a callable.
             If func is not a string it will be returned unaltered.
         Args:
             func (str or callable): Property name, method name or a path to a callable
@@ -1277,7 +1277,7 @@ class Machine(object):
 
 
 class MachineError(Exception):
-    """ MachineError is used for issues related to state transitions and current states.
+    """MachineError is used for issues related to state transitions and current states.
     For instance, it is raised for invalid transitions or machine configuration issues.
     """
 

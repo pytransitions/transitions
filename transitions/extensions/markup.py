@@ -21,17 +21,17 @@ except ImportError:  # pragma: no cover
     # If enum is not available, create dummy classes for type checks
     # typing must be prevent redefinition issues with mypy
     class Enum:  # type:ignore
-        """ This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support. """
+        """This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support."""
 
     class EnumMeta:  # type:ignore
-        """ This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support. """
+        """This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support."""
 
 from ..core import Machine
 from .nesting import HierarchicalMachine
 
 
 class MarkupMachine(Machine):
-    """ Extends transitions.core.Machine with the capability to generate a dictionary representation of itself,
+    """Extends transitions.core.Machine with the capability to generate a dictionary representation of itself,
     its events, states and models.
     """
 
@@ -75,18 +75,18 @@ class MarkupMachine(Machine):
 
     @property
     def auto_transitions_markup(self):
-        """ Whether auto transitions should be included in the markup. """
+        """Whether auto transitions should be included in the markup."""
         return self._auto_transitions_markup
 
     @auto_transitions_markup.setter
     def auto_transitions_markup(self, value):
-        """ Whether auto transitions should be included in the markup. """
+        """Whether auto transitions should be included in the markup."""
         self._auto_transitions_markup = value
         self._needs_update = True
 
     @property
     def markup(self):
-        """ Returns the machine's configuration as a markup dictionary.
+        """Returns the machine's configuration as a markup dictionary.
         Returns:
             dict of machine configuration parameters.
         """
@@ -96,7 +96,7 @@ class MarkupMachine(Machine):
     # the only reason why this not part of markup property is that pickle
     # has issues with properties during __setattr__ (self.markup is not set)
     def get_markup_config(self):
-        """ Generates and returns all machine markup parameters except models.
+        """Generates and returns all machine markup parameters except models.
         Returns:
             dict of machine configuration parameters.
         """
@@ -122,7 +122,7 @@ class MarkupMachine(Machine):
 
     @staticmethod
     def format_references(func):
-        """ Creates a string representation of referenced callbacks.
+        """Creates a string representation of referenced callbacks.
         Returns:
             str that represents a callback reference.
         """
@@ -224,11 +224,11 @@ class MarkupMachine(Machine):
 
 
 class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine):
-    """ Extends transitions.extensions.nesting.HierarchicalMachine with markup capabilities. """
+    """Extends transitions.extensions.nesting.HierarchicalMachine with markup capabilities."""
 
 
 def rep(func, format_references=None):
-    """ Return a string representation for `func`. """
+    """Return a string representation for `func`."""
     if isinstance(func, string_types):
         return func
     if isinstance(func, numbers.Number):

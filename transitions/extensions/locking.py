@@ -31,7 +31,7 @@ except ImportError:
 
     @contextmanager
     def nested(*contexts):
-        """ Reimplementation of nested in Python 3. """
+        """Reimplementation of nested in Python 3."""
         with ExitStack() as stack:
             for ctx in contexts:
                 stack.enter_context(ctx)
@@ -39,7 +39,7 @@ except ImportError:
 
 
 class PicklableLock:
-    """ A wrapper for threading.Lock which discards its state during pickling and
+    """A wrapper for threading.Lock which discards its state during pickling and
         is reinitialized unlocked when unpickled.
     """
 
@@ -60,7 +60,7 @@ class PicklableLock:
 
 
 class IdentManager:
-    """  Manages the identity of threads to detect whether the current thread already has a lock. """
+    """Manages the identity of threads to detect whether the current thread already has a lock."""
 
     def __init__(self):
         self.current = 0
@@ -73,10 +73,10 @@ class IdentManager:
 
 
 class LockedEvent(Event):
-    """ An event type which uses the parent's machine context map when triggered. """
+    """An event type which uses the parent's machine context map when triggered."""
 
     def trigger(self, model, *args, **kwargs):
-        """ Extends transitions.core.Event.trigger by using locks/machine contexts. """
+        """Extends transitions.core.Event.trigger by using locks/machine contexts."""
         # pylint: disable=protected-access
         # noinspection PyProtectedMember
         # LockedMachine._locked should not be called somewhere else. That's why it should not be exposed
@@ -89,7 +89,7 @@ class LockedEvent(Event):
 
 
 class LockedMachine(Machine):
-    """ Machine class which manages contexts. In it's default version the machine uses a `threading.Lock`
+    """Machine class which manages contexts. In it's default version the machine uses a `threading.Lock`
         context to lock access to its methods and event triggers bound to model objects.
     Attributes:
         machine_context (dict): A dict of context managers to be entered whenever a machine method is
@@ -137,7 +137,7 @@ class LockedMachine(Machine):
         del self._model_context_map_store
 
     def add_model(self, model, initial=None, model_context=None):
-        """ Extends `transitions.core.Machine.add_model` by `model_context` keyword.
+        """Extends `transitions.core.Machine.add_model` by `model_context` keyword.
         Args:
             model (list or object): A model (list) to be managed by the machine.
             initial (str, Enum or State): The initial state of the passed model[s].
@@ -154,7 +154,7 @@ class LockedMachine(Machine):
             self.model_context_map[id(mod)].extend(model_context)
 
     def remove_model(self, model):
-        """ Extends `transitions.core.Machine.remove_model` by removing model specific context maps
+        """Extends `transitions.core.Machine.remove_model` by removing model specific context maps
             from the machine when the model itself is removed. """
         models = listify(model)
 

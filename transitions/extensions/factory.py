@@ -22,25 +22,25 @@ try:
     from transitions.extensions.asyncio import HierarchicalAsyncMachine, NestedAsyncTransition
 except (ImportError, SyntaxError):  # pragma: no cover
     class AsyncMachine(Machine):  # type: ignore
-        """ A mock of AsyncMachine for Python 3.6 and earlier. """
+        """A mock of AsyncMachine for Python 3.6 and earlier."""
 
     class AsyncTransition(Transition):  # type: ignore
-        """ A mock of AsyncTransition for Python 3.6 and earlier. """
+        """A mock of AsyncTransition for Python 3.6 and earlier."""
 
     class HierarchicalAsyncMachine(HierarchicalMachine):  # type: ignore
-        """ A mock of HierarchicalAsyncMachine for Python 3.6 and earlier. """
+        """A mock of HierarchicalAsyncMachine for Python 3.6 and earlier."""
 
     class NestedAsyncTransition(NestedTransition):  # type: ignore
-        """ A mock of NestedAsyncTransition for Python 3.6 and earlier. """
+        """A mock of NestedAsyncTransition for Python 3.6 and earlier."""
 
 
 class MachineFactory(object):
-    """ Convenience factory for machine class retrieval. """
+    """Convenience factory for machine class retrieval."""
 
     # get one of the predefined classes which fulfill the criteria
     @staticmethod
     def get_predefined(graph=False, nested=False, locked=False, asyncio=False):
-        """ A function to retrieve machine classes by required functionality.
+        """A function to retrieve machine classes by required functionality.
         Args:
             graph (bool): Whether the returned class should contain graph support.
             nested: Whether the returned machine class should support nested states.
@@ -96,13 +96,13 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):
 
 
 class AsyncGraphMachine(GraphMachine, AsyncMachine):
-    """ A machine that supports asynchronous event/callback processing with Graphviz support. """
+    """A machine that supports asynchronous event/callback processing with Graphviz support."""
 
     transition_cls = AsyncTransition
 
 
 class HierarchicalAsyncGraphMachine(GraphMachine, HierarchicalAsyncMachine):
-    """ A hierarchical machine that supports asynchronous event/callback processing with Graphviz support. """
+    """A hierarchical machine that supports asynchronous event/callback processing with Graphviz support."""
 
     transition_cls = NestedAsyncTransition
 
