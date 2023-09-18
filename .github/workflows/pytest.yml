@@ -34,12 +34,12 @@ jobs:
         python -m pip install -r requirements.txt
         python -m pip install -U -r requirements_test.txt
     - name: Install dependencies for diagrams
-      if: ${{ matrix.enable_graphviz == '[diagrams]' }}
+      if: ${{ matrix.extras == '[diagrams]' }}
       run: |
         sudo apt-get install libgraphviz-dev graphviz
         python -m pip install -r requirements.txt -r requirements_diagrams.txt 
     - name: Install dependencies for mypy
-      if: ${{ matrix.enable_graphviz == '[mypy]' }}
+      if: ${{ matrix.extras == '[mypy]' }}
       run: |
           python -c "print 'hello'" > /dev/null 2>&1 || pip install -r requirements_mypy.txt
     - name: Test with pytest
