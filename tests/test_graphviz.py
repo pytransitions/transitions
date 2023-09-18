@@ -23,9 +23,11 @@ try:
 except ImportError:  # pragma: no cover
     pgv = None
 
-
 if TYPE_CHECKING:
     from typing import Type, List, Collection, Union
+
+edge_re = re.compile(r"^\s+(?P<src>\w+)\s*->\s*(?P<dst>\w+)\s*(?P<attr>\[.*\]?)\s*$")
+node_re = re.compile(r"^\s+(?P<node>\w+)\s+(?P<attr>\[.*\]?)\s*$")
 
 
 @skipIf(pgv is None, 'Graph diagram test requires graphviz.')
@@ -39,16 +41,19 @@ class TestDiagrams(TestTransitions):
             dot = graph.string()
         else:
             dot = graph.source
-        nodes = []
+        nodes = set()
         edges = []
         for line in dot.split('\n'):
-            if '->' in line:
-                src, rest = line.split('->')
-                dst, attr = rest.split(None, 1)
-                nodes.append(src.strip().replace('"', ''))
-                nodes.append(dst)
-                edges.append(attr)
-        return dot, set(nodes), edges
+            match = edge_re.search(line)
+            if match:
+                nodes.add(match.group("src"))
+                nodes.add(match.group("dst"))
+                edges.append(match.group("attr"))
+            else:
+                match = node_re.search(line)
+                if match and match.group("node") not in ["node", "graph", "edge"]:
+                    nodes.add(match.group("node"))
+        return dot, nodes, edges
 
     def tearDown(self):
         pass
@@ -319,7 +324,7 @@ class TestDiagramsNested(TestDiagrams):
 
         self.assertEqual(len(edges), 8)
         # Test that graph properties match the Machine
-        self.assertEqual(set(m.states.keys()), set(nodes))
+        self.assertEqual(set(m.get_nested_state_names()), nodes)
         m.walk()
         m.run()
 
@@ -354,6 +359,30 @@ class TestDiagramsNested(TestDiagrams):
         self.assertEqual(len(edges), 2)
         self.assertEqual(len(nodes), 3)
 
+    def test_roi_parallel(self):
+        class Model:
+            @staticmethod
+            def is_fast(*args, **kwargs):
+                return True
+
+        self.states[0] = {"name": "A", "parallel": ["1", "2"]}
+
+        model = Model()
+        m = self.machine_cls(model, states=self.states, transitions=self.transitions, initial='A', title='A test',
+                             use_pygraphviz=self.use_pygraphviz, show_conditions=True)
+        g1 = model.get_graph(show_roi=True)
+        _, nodes, edges = self.parse_dot(g1)
+        self.assertEqual(len(edges), 2)  # reset and walk
+        print(nodes)
+        self.assertEqual(len(nodes), 4)
+        model.walk()
+        model.run()
+        model.sprint()
+        g2 = model.get_graph(show_roi=True)
+        dot, nodes, edges = self.parse_dot(g2)
+        self.assertEqual(len(edges), 2)
+        self.assertEqual(len(nodes), 3)
+
     def test_internal(self):
         states = ['A', 'B']
         transitions = [['go', 'A', 'B'],
@@ -363,6 +392,7 @@ class TestDiagramsNested(TestDiagrams):
                              use_pygraphviz=self.use_pygraphviz)
 
         _, nodes, edges = self.parse_dot(m.get_graph())
+        print(nodes)
         self.assertEqual(len(nodes), 2)
         self.assertEqual(len([e for e in edges if '[internal]' in e]), 1)
 
