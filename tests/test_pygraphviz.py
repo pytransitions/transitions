@@ -1,10 +1,5 @@
-try:
-    from builtins import object
-except ImportError:
-    pass
-
 from .utils import Stuff
-from .test_graphviz import TestDiagrams, TestDiagramsNested
+from .test_graphviz import TestDiagrams, TestDiagramsNested, TestDiagramsImport
 from transitions.extensions.states import add_state_features, Timeout, Tags
 from unittest import skipIf
 
@@ -13,6 +8,12 @@ try:
     import pygraphviz as pgv  # @UnresolvedImport
 except ImportError:  # pragma: no cover
     pgv = None
+
+
+class TestPygraphvizImport(TestDiagramsImport):
+
+    use_pygraphviz = True
+    pgv = pgv
 
 
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
