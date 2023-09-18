@@ -5,7 +5,7 @@
     Graphviz support for (nested) machines. This also includes partial views
     of currently valid transitions.
 """
-
+import copy
 import logging
 from functools import partial
 from collections import defaultdict
@@ -16,6 +16,7 @@ try:
 except ImportError:
     pgv = None
 
+from ..core import listify
 from .diagrams_base import BaseGraph
 
 _LOGGER = logging.getLogger(__name__)
@@ -95,18 +96,27 @@ class Graph(BaseGraph):
         # For each state, draw a circle
         states, transitions = self._get_elements()
         if roi_state:
+            active_states = set()
+            sep = getattr(self.machine.state_cls, "separator", None)
+            for state in listify(roi_state.name if hasattr(roi_state, 'name') else roi_state):
+                active_states.add(state)
+                if sep:
+                    state = sep.join(state.split(sep)[:-1])
+                    while state:
+                        active_states.add(state)
+                        state = sep.join(state.split(sep)[:-1])
             transitions = [
                 t
                 for t in transitions
-                if t["source"] == roi_state or self.custom_styles["edge"][t["source"]][t["dest"]]
+                if t["source"] in active_states or self.custom_styles["edge"][t["source"]][t["dest"]]
             ]
-            state_names = [
+            active_states.union({
                 t
                 for trans in transitions
                 for t in [trans["source"], trans.get("dest", trans["source"])]
-            ]
-            state_names += [k for k, style in self.custom_styles["node"].items() if style]
-            states = _filter_states(states, state_names, self.machine.state_cls)
+            })
+            active_states.union({k for k, style in self.custom_styles["node"].items() if style})
+            states = _filter_states(copy.deepcopy(states), active_states, self.machine.state_cls)
         self._add_nodes(states, fsm_graph)
         self._add_edges(transitions, fsm_graph)
         setattr(fsm_graph, "draw", partial(self.draw, fsm_graph))
@@ -169,7 +179,7 @@ class NestedGraph(Graph):
         for state in states:
             name = prefix + state["name"]
             label = self._convert_state_attributes(state)
-            if state.get("children", []):
+            if state.get("children", None) is not None:
                 cluster_name = "cluster_" + name
                 attr = {"label": label, "rank": "source"}
                 attr.update(
@@ -185,7 +195,7 @@ class NestedGraph(Graph):
                         graph_attr={"label": "", "color": "None", "rank": "min"},
                     ) as root:
                         root.node(
-                            name + "_anchor",
+                            name,
                             shape="point",
                             fillcolor="black",
                             width="0.0" if is_parallel else "0.1",
@@ -244,18 +254,14 @@ class NestedGraph(Graph):
         attr = {}
         if src in self._cluster_states:
             attr["ltail"] = "cluster_" + src
-            src_name = src + "_anchor"
             label_pos = "headlabel"
-        else:
-            src_name = src
+        src_name = src
 
         if dst in self._cluster_states:
             if not src.startswith(dst):
                 attr["lhead"] = "cluster_" + dst
                 label_pos = "taillabel" if label_pos.startswith("l") else "label"
-            dst_name = dst + "_anchor"
-        else:
-            dst_name = dst
+        dst_name = dst
 
         # remove ltail when dst (ltail always starts with 'cluster_') is a child of src
         if "ltail" in attr and dst_name.startswith(attr["ltail"][8:]):
@@ -273,11 +279,13 @@ def _filter_states(states, state_names, state_cls, prefix=None):
     result = []
     for state in states:
         pref = prefix + [state["name"]]
+        included = getattr(state_cls, "separator", "_").join(pref) in state_names
         if "children" in state:
             state["children"] = _filter_states(
                 state["children"], state_names, state_cls, prefix=pref
             )
-            result.append(state)
-        elif getattr(state_cls, "separator", "_").join(pref) in state_names:
+            if state["children"] or included:
+                result.append(state)
+        elif included:
             result.append(state)
     return result

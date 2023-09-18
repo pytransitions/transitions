@@ -314,8 +314,7 @@ class TestDiagramsNested(TestDiagrams):
 
         self.assertEqual(len(edges), 8)
         # Test that graph properties match the Machine
-        self.assertEqual(set(m.states.keys()) - set(['C', 'C%s1' % NestedState.separator]),
-                         set(nodes) - set(['C_anchor', 'C%s1_anchor' % NestedState.separator]))
+        self.assertEqual(set(m.states.keys()), set(nodes))
         m.walk()
         m.run()
 
