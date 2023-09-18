@@ -15,6 +15,7 @@ from unittest import skipIf
 import tempfile
 import os
 import re
+import sys
 
 try:
     # Just to skip tests if graphviz not installed
@@ -283,6 +284,10 @@ class TestDiagramsLocked(TestDiagrams):
 
     machine_cls = LockedGraphMachine  # type: Type[LockedGraphMachine]
 
+    @skipIf(sys.version_info < (3, ), "Python 2.7 cannot retrieve __name__ from partials")
+    def test_function_callbacks_annotation(self):
+        super(TestDiagramsLocked, self).test_function_callbacks_annotation()
+
 
 @skipIf(pgv is None, 'NestedGraph diagram test requires graphviz')
 class TestDiagramsNested(TestDiagrams):
@@ -440,3 +445,7 @@ class TestDiagramsLockedNested(TestDiagramsNested):
     def setUp(self):
         super(TestDiagramsLockedNested, self).setUp()
         self.machine_cls = LockedHierarchicalGraphMachine  # type: Type[LockedHierarchicalGraphMachine]
+
+    @skipIf(sys.version_info < (3, ), "Python 2.7 cannot retrieve __name__ from partials")
+    def test_function_callbacks_annotation(self):
+        super(TestDiagramsLockedNested, self).test_function_callbacks_annotation()

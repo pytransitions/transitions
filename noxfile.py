@@ -1,7 +1,7 @@
 import nox
 
-python = ["3.7", "3.8", "3.9", "3.10", "3.11"]
-# nox.options.stop_on_first_error = True
+python = ["2.7", "3.7", "3.8", "3.9", "3.10", "3.11"]
+nox.options.stop_on_first_error = True
 
 @nox.session(
     python=python[-1]
