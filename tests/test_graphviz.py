@@ -1,21 +1,16 @@
-try:
-    from builtins import object
-except ImportError:
-    pass
-
 from .utils import Stuff, DummyModel
 from .test_core import TestTransitions, TYPE_CHECKING
 
 from transitions.extensions import (
     LockedGraphMachine, GraphMachine, HierarchicalGraphMachine, LockedHierarchicalGraphMachine
 )
-from transitions.extensions.nesting import NestedState
 from transitions.extensions.states import add_state_features, Timeout, Tags
 from unittest import skipIf
 import tempfile
 import os
 import re
 import sys
+from unittest import TestCase
 
 try:
     # Just to skip tests if graphviz not installed
@@ -28,6 +23,17 @@ if TYPE_CHECKING:
 
 edge_re = re.compile(r"^\s+(?P<src>\w+)\s*->\s*(?P<dst>\w+)\s*(?P<attr>\[.*\]?)\s*$")
 node_re = re.compile(r"^\s+(?P<node>\w+)\s+(?P<attr>\[.*\]?)\s*$")
+
+
+class TestDiagramsImport(TestCase):
+
+    use_pygraphviz = False
+    pgv = pgv
+
+    def test_import(self):
+        machine = GraphMachine(None, use_pygraphviz=self.use_pygraphviz)
+        if machine.graph_cls is None:
+            self.assertIsNone(pgv)
 
 
 @skipIf(pgv is None, 'Graph diagram test requires graphviz.')
