@@ -15,6 +15,10 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+        enable_graphviz: ["1"]
+        include:
+          - python-version: "3.11"
+            enable_graphviz: "0"
 
     steps:
     - uses: actions/checkout@v3
@@ -24,11 +28,15 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get install libgraphviz-dev graphviz
         python -m pip install --upgrade pip
-        python -m pip install -r requirements.txt -r requirements_diagrams.txt 
+        python -m pip install -r requirements.txt
         python -m pip install -U -r requirements_test.txt
         python -c "print 'hello'" > /dev/null 2>&1 || pip install -r requirements_mypy.txt
+    - name: Install dependencies for diagrams
+      if: ${{ matrix.enable_graphviz == '1' }}
+      run: |
+        sudo apt-get install libgraphviz-dev graphviz
+        python -m pip install -r requirements.txt -r requirements_diagrams.txt 
     - name: Test with pytest
       run: |
         coverage run --source=transitions -m pytest --doctest-modules tests/
