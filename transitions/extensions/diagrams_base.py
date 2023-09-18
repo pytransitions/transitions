@@ -139,7 +139,7 @@ class BaseGraph(object):
                         ini = ini.name if hasattr(ini, "name") else ini
                         tran = dict(
                             trigger="",
-                            source=self.machine.state_cls.separator.join(prefix + [state["name"]]) + "_anchor",
+                            source=self.machine.state_cls.separator.join(prefix + [state["name"]]),
                             dest=self.machine.state_cls.separator.join(
                                 prefix + [state["name"], ini]
                             ),

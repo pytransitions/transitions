@@ -13,6 +13,7 @@ try:
 except ImportError:
     pgv = None
 
+from ..core import listify
 from .nesting import NestedState
 from .diagrams_base import BaseGraph
 
@@ -58,30 +59,34 @@ class Graph(BaseGraph):
         if roi_state:
             filtered = _copy_agraph(self.fsm_graph)
             kept_nodes = set()
-            active_state = roi_state.name if hasattr(roi_state, 'name') else roi_state
-            if not filtered.has_node(roi_state):
-                active_state += '_anchor'
-            kept_nodes.add(active_state)
+            kept_edges = set()
+            sep = getattr(self.machine.state_cls, "separator", None)
+            for state in listify(roi_state.name if hasattr(roi_state, 'name') else roi_state):
+                kept_nodes.add(state)
+                if sep:
+                    state = sep.join(state.split(sep)[:-1])
+                    while state:
+                        kept_nodes.add(state)
+                        state = sep.join(state.split(sep)[:-1])
 
             # remove all edges that have no connection to the currently active state
-            for edge in filtered.edges():
-                if active_state not in edge:
-                    filtered.delete_edge(edge)
+            for state in list(kept_nodes):
+                for edge in filtered.out_edges_iter(state):
+                    kept_nodes.add(edge[1])
+                    kept_edges.add(edge)
 
-            # find the ingoing edge by color; remove the rest
-            for edge in filtered.in_edges(active_state):
-                if edge.attr['color'] == self.fsm_graph.style_attributes['edge']['previous']['color']:
-                    kept_nodes.add(edge[0])
-                else:
-                    filtered.delete_edge(edge)
-
-            # remove outgoing edges from children
-            for edge in filtered.out_edges_iter(active_state):
-                kept_nodes.add(edge[1])
+                for edge in filtered.in_edges(state):
+                    if edge.attr['color'] == self.fsm_graph.style_attributes['edge']['previous']['color']:
+                        kept_nodes.add(edge[0])
+                        kept_edges.add(edge)
 
             for node in filtered.nodes():
                 if node not in kept_nodes:
                     filtered.delete_node(node)
+
+            for edge in filtered.edges():
+                if edge not in kept_edges:
+                    filtered.delete_edge(edge)
 
             return filtered
         return self.fsm_graph
@@ -134,7 +139,7 @@ class NestedGraph(Graph):
                                              **self.machine.style_attributes['graph'][default_style])
                 root_container = sub.add_subgraph(name=cluster_name + '_root', label='', color=None, rank='min')
                 width = '0' if is_parallel else '0.1'
-                root_container.add_node(name + "_anchor", shape='point', fillcolor='black', width=width)
+                root_container.add_node(name, shape='point', fillcolor='black', width=width)
                 self._add_nodes(state['children'], sub, prefix=prefix + state['name'] + NestedState.separator,
                                 default_style='parallel' if is_parallel else 'default')
             else:
@@ -154,19 +159,15 @@ class NestedGraph(Graph):
             if _get_subgraph(container, 'cluster_' + src) is not None:
                 edge_attr['ltail'] = 'cluster_' + src
                 # edge_attr['minlen'] = "3"
-                src_name = src + "_anchor"
                 label_pos = 'headlabel'
-            else:
-                src_name = src
+            src_name = src
 
             dst_graph = _get_subgraph(container, 'cluster_' + dst)
             if dst_graph is not None:
                 if not src.startswith(dst):
                     edge_attr['lhead'] = "cluster_" + dst
                     label_pos = 'taillabel' if label_pos.startswith('l') else 'label'
-                dst_name = dst + '_anchor'
-            else:
-                dst_name = dst
+            dst_name = dst
 
             # remove ltail when dst is a child of src
             if 'ltail' in edge_attr:
@@ -205,10 +206,8 @@ class NestedGraph(Graph):
             _dst = dst
             if _get_subgraph(self.fsm_graph, 'cluster_' + src):
                 edge_attr['ltail'] = 'cluster_' + src
-                _src += '_anchor'
             if _get_subgraph(self.fsm_graph, 'cluster_' + dst):
                 edge_attr['lhead'] = "cluster_" + dst
-                _dst += '_anchor'
             try:
                 edge = self.fsm_graph.get_edge(_src, _dst)
             except KeyError:
