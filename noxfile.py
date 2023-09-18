@@ -33,14 +33,5 @@ def test(session):
 )
 def test_no_gv(session):
     session.install(".")
-    session.install("pytest-cov", "pytest-xdist", "mock", "dill", "pycodestyle")
+    session.install("-rrequirements_test.txt")
     session.run("pytest", "-nauto", "tests/")
-
-
-
-
-
-
-
-
-
