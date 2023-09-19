@@ -218,8 +218,8 @@ class TestDiagrams(TestTransitions):
         m.to_B()
         g3 = m.get_graph(show_roi=True)
         _, nodes, edges = self.parse_dot(g3)
-        self.assertEqual(len(edges), 3)
-        self.assertEqual(len(nodes), 4)
+        self.assertEqual(len(edges), 3)  # to_state_{A,C,F}
+        self.assertEqual(len(nodes), 5)  # B + A,C,F (edges) + E (previous)
 
     def test_state_tags(self):
 

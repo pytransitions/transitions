@@ -191,7 +191,7 @@ class NestedGraph(Graph):
             style_attr = self.fsm_graph.style_attributes.get('node', {}).get(style)
             node.attr.update(style_attr)
         except KeyError:
-            subgraph = _get_subgraph(self.fsm_graph, 'cluster_' + state)
+            subgraph = _get_subgraph(self.fsm_graph, state)
             style_attr = self.fsm_graph.style_attributes.get('graph', {}).get(style)
             subgraph.graph_attr.update(style_attr)
 
@@ -215,7 +215,7 @@ class NestedGraph(Graph):
                 edge = self.fsm_graph.get_edge(_src, _dst)
 
         edge.attr.update(edge_attr)
-        self.set_node_style(src, 'previous')
+        self.set_node_style(edge.attr.get("ltail") or src, 'previous')
 
 
 def _get_subgraph(graph, name):
