@@ -110,12 +110,12 @@ class Graph(BaseGraph):
                 for t in transitions
                 if t["source"] in active_states or self.custom_styles["edge"][t["source"]][t["dest"]]
             ]
-            active_states.union({
+            active_states = active_states.union({
                 t
                 for trans in transitions
                 for t in [trans["source"], trans.get("dest", trans["source"])]
             })
-            active_states.union({k for k, style in self.custom_styles["node"].items() if style})
+            active_states = active_states.union({k for k, style in self.custom_styles["node"].items() if style})
             states = _filter_states(copy.deepcopy(states), active_states, self.machine.state_cls)
         self._add_nodes(states, fsm_graph)
         self._add_edges(transitions, fsm_graph)
