@@ -13,7 +13,6 @@ try:
 except ImportError:
     pgv = None
 
-from ..core import listify
 from .nesting import NestedState
 from .diagrams_base import BaseGraph
 
@@ -61,7 +60,7 @@ class Graph(BaseGraph):
             kept_nodes = set()
             kept_edges = set()
             sep = getattr(self.machine.state_cls, "separator", None)
-            for state in listify(roi_state.name if hasattr(roi_state, 'name') else roi_state):
+            for state in self._flatten(roi_state):
                 kept_nodes.add(state)
                 if sep:
                     state = sep.join(state.split(sep)[:-1])

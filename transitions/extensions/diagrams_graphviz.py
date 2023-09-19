@@ -98,7 +98,7 @@ class Graph(BaseGraph):
         if roi_state:
             active_states = set()
             sep = getattr(self.machine.state_cls, "separator", None)
-            for state in listify(roi_state.name if hasattr(roi_state, 'name') else roi_state):
+            for state in self._flatten(roi_state):
                 active_states.add(state)
                 if sep:
                     state = sep.join(state.split(sep)[:-1])

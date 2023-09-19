@@ -389,6 +389,26 @@ class TestDiagramsNested(TestDiagrams):
         self.assertEqual(len(edges), 2)
         self.assertEqual(len(nodes), 3)
 
+    def test_roi_parallel_deeper(self):
+        states = ['A', 'B', 'C', 'D',
+                  {'name': 'P',
+                   'parallel': [
+                       '1',
+                       {'name': '2', 'parallel': [
+                           {'name': 'a'},
+                           {'name': 'b', 'parallel': [
+                               {'name': 'x', 'parallel': ['1', '2']}, 'y'
+                           ]}
+                       ]},
+                   ]}]
+        transitions = [["go", "A", "P"], ["reset", "*", "A"]]
+        m = self.machine_cls(states=states, transitions=transitions, initial='A', title='A test',
+                             use_pygraphviz=self.use_pygraphviz, show_conditions=True)
+        m.go()
+        _, nodes, edges = self.parse_dot(m.get_graph(show_roi=True))
+        self.assertEqual(len(edges), 2)
+        self.assertEqual(len(nodes), 10)
+
     def test_internal(self):
         states = ['A', 'B']
         transitions = [['go', 'A', 'B'],
