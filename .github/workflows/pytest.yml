@@ -20,7 +20,7 @@ jobs:
           - python-version: "3.11"
             extras: "[]"
           - python-version: "3.11"
-            extras: "[mypy]"
+            extras: "[diagrams,mypy]"
 
     steps:
     - uses: actions/checkout@v3
@@ -34,12 +34,12 @@ jobs:
         python -m pip install -r requirements.txt
         python -m pip install -U -r requirements_test.txt
     - name: Install dependencies for diagrams
-      if: ${{ matrix.extras == '[diagrams]' }}
+      if: contains(matrix.extras, 'diagrams')
       run: |
         sudo apt-get install libgraphviz-dev graphviz
         python -m pip install -r requirements.txt -r requirements_diagrams.txt 
     - name: Install dependencies for mypy
-      if: ${{ matrix.extras == '[mypy]' }}
+      if: contains(matrix.extras, 'mypy')
       run: |
           python -c "print 'hello'" > /dev/null 2>&1 || pip install -r requirements_mypy.txt
     - name: Test with pytest
