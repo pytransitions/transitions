@@ -8,7 +8,6 @@
 import copy
 import abc
 import logging
-
 import six
 
 _LOGGER = logging.getLogger(__name__)
@@ -106,6 +105,12 @@ class BaseGraph(object):
                 return self._get_global_name(path)
         else:
             return self.machine.get_global_name()
+
+    def _flatten(self, *lists):
+        return (e for a in lists for e in
+                (self._flatten(*a)
+                 if isinstance(a, (tuple, list))
+                 else (a.name if hasattr(a, 'name') else a,)))
 
     def _get_elements(self):
         states = []
