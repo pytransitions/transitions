@@ -4,6 +4,10 @@
 
 - Bug #594: Fix may_<trigger> always returning false for internal transitions (thanks @a-schade)
 - PR #592: Pass investigated transition to `EventData` context in 'may' check (thanks @msclock)
+- PR #634: Improve the handling of diagrams when working with parallel states, especially when using the show_roi option (thanks @seanxlliu)
+- '_anchor' suffix has been removed for (py)graphviz cluster node anchors
+- local testing switched from [tox](https://github.com/tox-dev/tox) to [nox](https://github.com/wntrblm/nox)
+- PR #633: Remove surrounding whitespace from docstrings (thanks @artofhuman)
 
 ## 0.9.0 (September 2022)
 
