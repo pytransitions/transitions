@@ -812,7 +812,7 @@ class HierarchicalMachine(Machine):
             with self():
                 res = self._trigger_event_nested(event_data, trigger, None)
             event_data.result = self._check_event_result(res, event_data.model, trigger)
-        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+        except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.on_exception:
                 self.callbacks(self.on_exception, event_data)
@@ -822,7 +822,7 @@ class HierarchicalMachine(Machine):
             try:
                 self.callbacks(self.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.name)
-            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+            except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.name,
                               type(err).__name__,
