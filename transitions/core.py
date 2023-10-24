@@ -414,7 +414,7 @@ class Event(object):
         try:
             if self._is_valid_source(event_data.state):
                 self._process(event_data)
-        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+        except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.machine.on_exception:
                 self.machine.callbacks(self.machine.on_exception, event_data)
@@ -424,7 +424,7 @@ class Event(object):
             try:
                 self.machine.callbacks(self.machine.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
-            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+            except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.machine.name,
                               type(err).__name__,
@@ -1224,7 +1224,7 @@ class Machine(object):
             try:
                 self._transition_queue[0]()
                 self._transition_queue.popleft()
-            except Exception:
+            except BaseException:
                 # if a transition raises an exception, clear queue and delegate exception handling
                 self._transition_queue.clear()
                 raise

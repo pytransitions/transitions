@@ -181,7 +181,7 @@ class AsyncEvent(Event):
         try:
             if self._is_valid_source(event_data.state):
                 await self._process(event_data)
-        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+        except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             _LOGGER.error("%sException was raised while processing the trigger: %s", self.machine.name, err)
             event_data.error = err
             if self.machine.on_exception:
@@ -455,7 +455,7 @@ class AsyncMachine(Machine):
         while self._transition_queue_dict[id(model)]:
             try:
                 await self._transition_queue_dict[id(model)][0]()
-            except Exception:
+            except BaseException:
                 # if a transition raises an exception, clear queue and delegate exception handling
                 self._transition_queue_dict[id(model)].clear()
                 raise
@@ -503,7 +503,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
             with self():
                 res = await self._trigger_event_nested(event_data, trigger, None)
             event_data.result = self._check_event_result(res, event_data.model, trigger)
-        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+        except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.on_exception:
                 await self.callbacks(self.on_exception, event_data)
@@ -513,7 +513,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
             try:
                 await self.callbacks(self.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.name)
-            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+            except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.name,
                               type(err).__name__,
