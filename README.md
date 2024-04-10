@@ -26,12 +26,14 @@ A lightweight, object-oriented state machine implementation in Python with many 
 
 - [Quickstart](#quickstart)
 - [Non-Quickstart](#the-non-quickstart)
+  - [Some key concepts](#key-concepts)
   - [Basic initialization](#basic-initialization)
   - [States](#states)
     - [Callbacks](#state-callbacks)
     - [Checking state](#checking-state)
     - [Enumerations](#enum-state)
   - [Transitions](#transitions)
+    - [Triggering a transition](#triggers)
     - [Automatic transitions](#automatic-transitions-for-all-states)
     - [Transitioning from multiple states](#transitioning-from-multiple-states)
     - [Reflexive transitions from multiple states](#reflexive-from-multiple-states)
@@ -184,6 +186,22 @@ Have a look at the [Diagrams](#diagrams) extensions if you want to know how.
 
 ## The non-quickstart
 
+A state machine is a _model_ of behavior composed of a finite number of _states_ and _transitions_ between those states. Within each state and transition some _action_ can be performed. A state machine needs to start at some _initial state_.
+
+### Some key concepts
+
+- **State**. A state represents a particular condition or stage in the state machine. It's a distinct mode of behavior or phase in a process.
+
+- **Transition**. This is the process or event that causes the state machine to change from one state to another.
+
+- **Model**. Blueprint or structure that holds the state machine. It's the entity that gets updated as new states and transitions are added.
+
+- **Machine**. This is the entity that manages and controls the model, states, transitions, and actions. It's the conductor that orchestrates the entire process of the state machine.
+
+- **Trigger**. This is the event that initiates a transition, the method that sends the signal to start a transition.
+
+- **Action**. Specific operation or task that is performed when a certain state is entered, exited, or during a transition. The action is implemented through _callbacks_, which are functions that get executed when some event happens.
+
 ### Basic initialization
 
 Getting a state machine up and running is pretty simple. Let's say you have the object `lump` (an instance of class `Matter`), and you want to manage its states:
@@ -195,18 +213,31 @@ class Matter(object):
 lump = Matter()
 ```
 
-You can initialize a (_minimal_) working state machine bound to `lump` like this:
+You can initialize a (_minimal_) working state machine bound to the model `lump` like this:
 
 ```python
 from transitions import Machine
 machine = Machine(model=lump, states=['solid', 'liquid', 'gas', 'plasma'], initial='solid')
 
-# Lump now has state!
+# Lump now has a new state attribute!
 lump.state
 >>> 'solid'
 ```
 
-I say "minimal", because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined... yet!
+An alternative is to not explicitly pass a model to the `Machine` initializer:
+
+```python
+
+machine = Machine(states=['solid', 'liquid', 'gas', 'plasma'], initial='solid')
+
+# The machine instance itself now acts as a model
+machine.state
+>>> 'solid'
+```
+
+Note that this time I did not pass the `lump` model as an argument. The first argument passed to `Machine` acts as a model. So when I pass something there, all the convenience functions will be added to the object. If no model is provided then the `machine` instance itself acts as a model.
+
+When at the beginning I said "minimal", it was because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined... yet!
 
 Let's try again.
 
@@ -231,19 +262,19 @@ lump.state
 >>> 'liquid'
 
 # And that state can change...
+# Either calling the shiny new trigger methods
 lump.evaporate()
 lump.state
 >>> 'gas'
+
+# Or by calling the trigger method directly
 lump.trigger('ionize')
 lump.state
 >>> 'plasma'
 ```
 
-Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. You don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`).
-To be more precise, your model **should not** already contain methods with the same name as event triggers since `transitions` will only attach convenience methods to your model if the spot is not already taken.
-If you want to modify that behaviour, have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb).
-Furthermore, there is a method called `trigger` now attached to your model (if it hasn't been there before).
-This method lets you execute transitions by name in case dynamic triggering is required.
+Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. Transitions can also be triggered _dynamically_ by calling the `trigger()` method provided with the name of the transition, as shown above. More on this in the [Triggering a transition](#triggers) section.
+
 
 ### <a name="states"></a>States
 
@@ -284,6 +315,8 @@ machine.add_states([solid, liquid, gas])
 States are initialized _once_ when added to the machine and will persist until they are removed from it. In other words: if you alter the attributes of a state object, this change will NOT be reset the next time you enter that state. Have a look at how to [extend state features](#state-features) in case you require some other behaviour.
 
 #### <a name="state-callbacks"></a>Callbacks
+
+But just having states and being able to move around between them (transitions) isn't very useful by itself. What if you want to do something, perform some _action_ when you enter or exit a state? This is where _callbacks_ come in.
 
 A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization by passing them to a `State` object constructor, in a state property dictionary, or add them later.
 
@@ -441,15 +474,34 @@ machine = Machine(model=lump, states=states, initial='solid')
 machine.add_transition('melt', source='solid', dest='liquid')
 ```
 
-The `trigger` argument defines the name of the new triggering method that gets attached to the base model. When this method is called, it will try to execute the transition:
+#### <a name="triggers"></a>Triggering a transition
 
-```python
->>> lump.melt()
->>> lump.state
-'liquid'
-```
+For a transition to be executed, some event needs to _trigger_ it. There are two ways to do this:
 
-By default, calling an invalid trigger will raise an exception:
+1. Using the automatically attached method in the base model:
+    ```python
+    >>> lump.melt()
+    >>> lump.state
+    'liquid'
+    >>> lump.evaporate()
+    >>> lump.state
+    'gas'
+    ```
+    
+    Note how you don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`). This also means that your model **should not** already contain methods with the same name as event triggers since `transitions` will only attach convenience methods to your model if the spot is not already taken. If you want to modify that behaviour, have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb).
+2. Using the `trigger` method, now attached to your model (if it hasn't been there before). This method lets you execute transitions by name in case dynamic triggering is required:
+    ```python
+    >>> lump.trigger('melt')
+    >>> lump.state
+    'liquid'
+    >>> lump.trigger('evaporate')
+    >>> lump.state
+    'gas'
+    ```
+
+#### Triggering invalid transitions
+
+By default, triggering an invalid transition will raise an exception:
 
 ```python
 >>> lump.to_gas()
