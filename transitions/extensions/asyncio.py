@@ -189,8 +189,14 @@ class AsyncEvent(Event):
             else:
                 raise
         finally:
-            await self.machine.callbacks(self.machine.finalize_event, event_data)
-            _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
+            try:
+                await self.machine.callbacks(self.machine.finalize_event, event_data)
+                _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
+            except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
+                              self.machine.name,
+                              type(err).__name__,
+                              str(err))
         return event_data.result
 
     async def _process(self, event_data):
