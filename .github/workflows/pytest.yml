@@ -44,13 +44,18 @@ jobs:
           python -c "print 'hello'" > /dev/null 2>&1 || pip install -r requirements_mypy.txt
       - name: Test with pytest
         run: |
-          coverage run --source=transitions -m pytest --doctest-modules tests/
-          coverage xml --ignore-errors
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+          coverage run -m pytest --doctest-modules tests/
+          coverage lcov --ignore-errors
+      - name: Coveralls Parallel
+        uses: coverallsapp/github-action@v2
         with:
-          env_vars: OS,PYTHON
-          fail_ci_if_error: true
-          files: ./coverage.xml
-          name: codecov-umbrella
-          verbose: true
+          flag-name: run-${{ join(matrix.*, '-') }}
+          parallel: true
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel-finished: true
