@@ -17,9 +17,9 @@ jobs:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
         extras: ["[diagrams]"]
         include:
-          - python-version: "3.11"
+          - python-version: "3.12"
             extras: "[]"
-          - python-version: "3.11"
+          - python-version: "3.12"
             extras: "[diagrams,mypy]"
 
     steps:
