@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-v0.9.1-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://github.com/pytransitions/transitions/actions/workflows/pytest.yml/badge.svg)](https://github.com/pytransitions/transitions/actions?query=workflow%3Apytest)
-[![Coverage Status](https://codecov.io/gh/pytransitions/transitions/branch/master/graphs/badge.svg)](https://app.codecov.io/gh/pytransitions/transitions/tree/master)
+[![Coverage Status](https://coveralls.io/repos/github/pytransitions/transitions/badge.svg?branch=master)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
 [![Copr](https://img.shields.io/badge/dynamic/json?color=blue&label=copr&query=builds.latest.source_package.version&url=https%3A%2F%2Fcopr.fedorainfracloud.org%2Fapi_3%2Fpackage%3Fownername%3Daleneum%26projectname%3Dpython3-transitions%26packagename%3Dpython3-transitions%26with_latest_build%3DTrue)](https://copr.fedorainfracloud.org/coprs/aleneum/python3-transitions/package/python3-transitions)
 [![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.9.0.svg)](https://github.com/pytransitions/transitions/compare/0.9.0...master)
@@ -26,7 +26,7 @@ A lightweight, object-oriented state machine implementation in Python with many 
 
 - [Quickstart](#quickstart)
 - [Non-Quickstart](#the-non-quickstart)
-  - [Some key concepts](#key-concepts)
+  - [Some key concepts](#some-key-concepts)
   - [Basic initialization](#basic-initialization)
   - [States](#states)
     - [Callbacks](#state-callbacks)
@@ -186,7 +186,7 @@ Have a look at the [Diagrams](#diagrams) extensions if you want to know how.
 
 ## The non-quickstart
 
-A state machine is a _model_ of behavior composed of a finite number of _states_ and _transitions_ between those states. Within each state and transition some _action_ can be performed. A state machine needs to start at some _initial state_.
+A state machine is a _model_ of behavior composed of a finite number of _states_ and _transitions_ between those states. Within each state and transition some _action_ can be performed. A state machine needs to start at some _initial state_. When using `transitions`, a state machine may consist of multiple objects where some (_machines_) contain definitions for the manipulation of other (_models_). Below, we will look at some core concepts and how to work with them.
 
 ### Some key concepts
 
@@ -194,7 +194,7 @@ A state machine is a _model_ of behavior composed of a finite number of _states_
 
 - **Transition**. This is the process or event that causes the state machine to change from one state to another.
 
-- **Model**. Blueprint or structure that holds the state machine. It's the entity that gets updated as new states and transitions are added.
+- **Model**. The actual stateful structure. It's the entity that gets updated during transitions. It may also define _actions_ that will be executed during transitions. For instance, right before a transition or when a state is entered or exited.
 
 - **Machine**. This is the entity that manages and controls the model, states, transitions, and actions. It's the conductor that orchestrates the entire process of the state machine.
 
