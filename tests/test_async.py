@@ -435,6 +435,21 @@ class TestAsync(TestTransitions):
 
         asyncio.run(run())
 
+    def test_on_exception_finalize(self):
+        mock = MagicMock()
+
+        def finalize():
+            mock()
+            raise RuntimeError("Could not finalize")
+
+        m = self.machine_cls(states=['A', 'B'], initial='A', finalize_event=finalize)
+
+        async def run():
+            self.assertTrue(await m.to_B())
+            self.assertTrue(mock.called)
+
+        asyncio.run(run())
+
     def test_weakproxy_model(self):
         d = DummyModel()
         pr = weakref.proxy(d)
