@@ -211,7 +211,7 @@ class TestParallel(TestNested):
                       ))]
                  ))]
             ))]
-        )
+        )  # type: ignore
         m = self.machine_cls()
         self.assertEqual(tree, m.build_state_tree(states, sep))
         self.assertEqual(states, _build_state_list(tree, sep))
