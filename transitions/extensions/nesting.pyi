@@ -23,7 +23,7 @@ class NestedEvent(Event):
 class NestedEventData(EventData):
     state: Optional[NestedState]
     event: Optional[NestedEvent]
-    machine: Optional[HierarchicalMachine]
+    machine: HierarchicalMachine
     transition: Optional[NestedTransition]
     source_name: Optional[str]
     source_path: Optional[List[str]]
