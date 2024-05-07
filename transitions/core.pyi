@@ -51,7 +51,7 @@ class Transition:
     dynamic_methods: List[str]
     condition_cls: Type[Condition]
     source: str
-    dest: str
+    dest: Optional[str]
     prepare: CallbackList
     before: CallbackList
     after: CallbackList
@@ -70,7 +70,7 @@ TransitionConfig = Union[Sequence[Union[str, Any]], Dict[str, Any], Transition]
 class EventData:
     state: Optional[State]
     event: Optional[Event]
-    machine: Optional[Machine]
+    machine: Machine
     model: object
     args: Iterable[Any]
     kwargs: Dict[str, Any]
