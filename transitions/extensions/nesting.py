@@ -686,7 +686,7 @@ class HierarchicalMachine(Machine):
                 state_name = self.state_cls.separator.join(source_path)
                 for transition in self.events[trigger].transitions.get(state_name, []):
                     try:
-                        _ = self.get_state(transition.dest)
+                        _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                     except ValueError:
                         continue
                     self.callbacks(self.prepare_event, evt)

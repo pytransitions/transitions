@@ -910,6 +910,7 @@ class TestSeparatorsBase(TestCase):
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'wait', 'source': 'B', 'dest': None},
             {'trigger': 'run_fast', 'source': 'C', 'dest': 'C{0}1'.format(self.separator)},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
@@ -920,11 +921,13 @@ class TestSeparatorsBase(TestCase):
         assert not m.may_run()
         assert not m.may_run_fast()
         assert not m.may_sprint()
+        assert not m.may_wait()
 
         m.walk()
         assert not m.may_walk()
         assert m.may_run()
         assert not m.may_run_fast()
+        assert m.may_wait()
 
         m.run()
         assert m.may_run_fast()
