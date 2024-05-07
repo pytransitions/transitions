@@ -498,6 +498,21 @@ class TestAsync(TestTransitions):
 
         asyncio.run(run())
 
+    def test_may_transition_internal(self):
+        states = ['A', 'B', 'C']
+        d = DummyModel()
+        _ = self.machine_cls(model=d, states=states, transitions=[["go", "A", "B"], ["wait", "B", None]],
+                             initial='A', auto_transitions=False)
+
+        async def run():
+            assert await d.may_go()
+            assert not await d.may_wait()
+            await d.go()
+            assert not await d.may_go()
+            assert await d.may_wait()
+
+        asyncio.run(run())
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class TestAsyncGraphMachine(TestAsync):

@@ -884,7 +884,7 @@ class Machine(object):
                 continue
             for transition in self.events[trigger_name].transitions[state]:
                 try:
-                    _ = transition.source if transition.dest is None else self.get_state(transition.dest)
+                    _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                 except ValueError:
                     continue
 

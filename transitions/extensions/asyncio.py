@@ -433,7 +433,7 @@ class AsyncMachine(Machine):
                 continue
             for transition in self.events[trigger_name].transitions[state]:
                 try:
-                    _ = self.get_state(transition.dest)
+                    _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                 except ValueError:
                     continue
                 await self.callbacks(self.prepare_event, evt)
@@ -559,7 +559,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                 state_name = self.state_cls.separator.join(source_path)
                 for transition in self.events[trigger].transitions.get(state_name, []):
                     try:
-                        _ = self.get_state(transition.dest)
+                        _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                     except ValueError:
                         continue
                     await self.callbacks(self.prepare_event, evt)
