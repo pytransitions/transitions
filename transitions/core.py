@@ -876,23 +876,30 @@ class Machine(object):
             setattr(model, name, func)
 
     def _can_trigger(self, model, trigger, *args, **kwargs):
-        evt = EventData(None, None, self, model, args, kwargs)
-        state = self.get_model_state(model).name
+        state = self.get_model_state(model)
+        event_data = EventData(state, Event(name=trigger, machine=self), self, model, args, kwargs)
 
         for trigger_name in self.get_triggers(state):
             if trigger_name != trigger:
                 continue
-            for transition in self.events[trigger_name].transitions[state]:
+            for transition in self.events[trigger_name].transitions[state.name]:
                 try:
                     _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                 except ValueError:
                     continue
 
-                evt.transition = transition
-                self.callbacks(self.prepare_event, evt)
-                self.callbacks(transition.prepare, evt)
-                if all(c.check(evt) for c in transition.conditions):
-                    return True
+                event_data.transition = transition
+                try:
+                    self.callbacks(self.prepare_event, event_data)
+                    self.callbacks(transition.prepare, event_data)
+                    if all(c.check(event_data) for c in transition.conditions):
+                        return True
+                except BaseException as err:
+                    event_data.error = err
+                    if self.on_exception:
+                        self.callbacks(self.on_exception, event_data)
+                    else:
+                        raise
         return False
 
     def _add_may_transition_func_for_trigger(self, trigger, model):
