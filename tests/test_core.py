@@ -1294,3 +1294,28 @@ class TestTransitions(TestCase):
         m = self.machine_cls(model=d, states=states, initial='A', auto_transitions=False)
         m.add_transition('walk', 'A', 'UNKNOWN')
         assert not d.may_walk()
+
+    def test_may_transition_with_exception(self):
+        stuff = Stuff(machine_cls=self.machine_cls, extra_kwargs={"send_event": True})
+        stuff.machine.add_transition(trigger="raises", source="A", dest="B", prepare=partial(stuff.this_raises, RuntimeError("Prepare Exception")))
+        stuff.machine.add_transition(trigger="raises", source="B", dest="C", conditions=partial(stuff.this_raises, ValueError("Condition Exception")))
+        stuff.machine.add_transition(trigger="works", source="A", dest="B")
+
+        def process_exception(event_data):
+            assert event_data.error is not None
+            assert event_data.transition is not None
+            assert event_data.event.name == "raises"
+            assert event_data.machine == stuff.machine
+
+        with self.assertRaises(RuntimeError):
+            stuff.may_raises()
+        assert stuff.is_A()
+        assert stuff.may_works()
+        assert stuff.works()
+        with self.assertRaises(ValueError):
+            stuff.may_raises()
+        assert stuff.is_B()
+        stuff.machine.on_exception.append(process_exception)
+        assert not stuff.may_raises()
+        assert stuff.to_A()
+        assert not stuff.may_raises()
