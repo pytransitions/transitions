@@ -68,8 +68,8 @@ class Transition:
 TransitionConfig = Union[Sequence[Union[str, Any]], Dict[str, Any], Transition]
 
 class EventData:
-    state: Optional[State]
-    event: Optional[Event]
+    state: State
+    event: Event
     machine: Machine
     model: object
     args: Iterable[Any]
