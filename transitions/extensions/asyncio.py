@@ -425,21 +425,29 @@ class AsyncMachine(Machine):
             self._transition_queue.extend(new_queue)
 
     async def _can_trigger(self, model, trigger, *args, **kwargs):
-        evt = AsyncEventData(None, None, self, model, args, kwargs)
-        state = self.get_model_state(model).name
+        state = self.get_model_state(model)
+        event_data = AsyncEventData(state, AsyncEvent(name=trigger, machine=self), self, model, args, kwargs)
 
         for trigger_name in self.get_triggers(state):
             if trigger_name != trigger:
                 continue
-            for transition in self.events[trigger_name].transitions[state]:
+            for transition in self.events[trigger_name].transitions[state.name]:
                 try:
                     _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                 except ValueError:
                     continue
-                await self.callbacks(self.prepare_event, evt)
-                await self.callbacks(transition.prepare, evt)
-                if all(await self.await_all([partial(c.check, evt) for c in transition.conditions])):
-                    return True
+                event_data.transition = transition
+                try:
+                    await self.callbacks(self.prepare_event, event_data)
+                    await self.callbacks(transition.prepare, event_data)
+                    if all(await self.await_all([partial(c.check, event_data) for c in transition.conditions])):
+                        return True
+                except BaseException as err:
+                    event_data.error = err
+                    if self.on_exception:
+                        await self.callbacks(self.on_exception, event_data)
+                    else:
+                        raise
         return False
 
     def _process(self, trigger):
@@ -552,20 +560,29 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                 return await self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
 
     async def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
-        evt = AsyncEventData(None, None, self, model, args, kwargs)
         if trigger in self.events:
             source_path = copy.copy(path)
             while source_path:
+                event_data = AsyncEventData(self.get_state(source_path), AsyncEvent(name=trigger, machine=self), self,
+                                            model, args, kwargs)
                 state_name = self.state_cls.separator.join(source_path)
                 for transition in self.events[trigger].transitions.get(state_name, []):
                     try:
                         _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                     except ValueError:
                         continue
-                    await self.callbacks(self.prepare_event, evt)
-                    await self.callbacks(transition.prepare, evt)
-                    if all(await self.await_all([partial(c.check, evt) for c in transition.conditions])):
-                        return True
+                    event_data.transition = transition
+                    try:
+                        await self.callbacks(self.prepare_event, event_data)
+                        await self.callbacks(transition.prepare, event_data)
+                        if all(await self.await_all([partial(c.check, event_data) for c in transition.conditions])):
+                            return True
+                    except BaseException as err:
+                        event_data.error = err
+                        if self.on_exception:
+                            await self.callbacks(self.on_exception, event_data)
+                        else:
+                            raise
                 source_path.pop(-1)
         if path:
             with self(path.pop(0)):

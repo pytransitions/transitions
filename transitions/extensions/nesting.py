@@ -679,20 +679,29 @@ class HierarchicalMachine(Machine):
                 return self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
 
     def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
-        evt = NestedEventData(None, None, self, model, args, kwargs)
         if trigger in self.events:
             source_path = copy.copy(path)
             while source_path:
+                event_data = EventData(self.get_state(source_path), Event(name=trigger, machine=self), self, model,
+                                       args, kwargs)
                 state_name = self.state_cls.separator.join(source_path)
                 for transition in self.events[trigger].transitions.get(state_name, []):
                     try:
                         _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                     except ValueError:
                         continue
-                    self.callbacks(self.prepare_event, evt)
-                    self.callbacks(transition.prepare, evt)
-                    if all(c.check(evt) for c in transition.conditions):
-                        return True
+                    event_data.transition = transition
+                    try:
+                        self.callbacks(self.prepare_event, event_data)
+                        self.callbacks(transition.prepare, event_data)
+                        if all(c.check(event_data) for c in transition.conditions):
+                            return True
+                    except BaseException as err:
+                        event_data.error = err
+                        if self.on_exception:
+                            self.callbacks(self.on_exception, event_data)
+                        else:
+                            raise
                 source_path.pop(-1)
         if path:
             with self(path.pop(0)):
