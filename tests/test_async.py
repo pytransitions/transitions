@@ -12,7 +12,7 @@ from unittest import skipIf
 from functools import partial
 import weakref
 from .test_core import TestTransitions, MachineError, TYPE_CHECKING
-from .utils import DummyModel
+from .utils import DummyModel, Stuff
 from .test_graphviz import pgv as gv
 from .test_pygraphviz import pgv
 
@@ -510,6 +510,35 @@ class TestAsync(TestTransitions):
             await d.go()
             assert not await d.may_go()
             assert await d.may_wait()
+
+        asyncio.run(run())
+
+    def test_may_transition_with_exception(self):
+
+        stuff = Stuff(machine_cls=self.machine_cls, extra_kwargs={"send_event": True})
+        stuff.machine.add_transition(trigger="raises", source="A", dest="B", prepare=partial(stuff.this_raises, RuntimeError("Prepare Exception")))
+        stuff.machine.add_transition(trigger="raises", source="B", dest="C", conditions=partial(stuff.this_raises, ValueError("Condition Exception")))
+        stuff.machine.add_transition(trigger="works", source="A", dest="B")
+
+        def process_exception(event_data):
+            assert event_data.error is not None
+            assert event_data.transition is not None
+            assert event_data.event.name == "raises"
+            assert event_data.machine == stuff.machine
+
+        async def run():
+            with self.assertRaises(RuntimeError):
+                await stuff.may_raises()
+            assert stuff.is_A()
+            assert await stuff.may_works()
+            assert await stuff.works()
+            with self.assertRaises(ValueError):
+                await stuff.may_raises()
+            assert stuff.is_B()
+            stuff.machine.on_exception.append(process_exception)
+            assert not await stuff.may_raises()
+            assert await stuff.to_A()
+            assert not await stuff.may_raises()
 
         asyncio.run(run())
 
