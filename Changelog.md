@@ -9,8 +9,9 @@
 - '_anchor' suffix has been removed for (py)graphviz cluster node anchors
 - local testing switched from [tox](https://github.com/tox-dev/tox) to [nox](https://github.com/wntrblm/nox)
 - PR #633: Remove surrounding whitespace from docstrings (thanks @artofhuman)
+- Bug #626: Process exceptions with `Machine.on_exception` in may_<trigger> as well (thanks @match1)
 - Typing:
-  + Made machine property mandatory in (Nested)EventData
+  + Made state, event and machine property mandatory in (Nested)EventData
   + Transition.dest may be None
 
 ## 0.9.0 (September 2022)
