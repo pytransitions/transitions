@@ -92,7 +92,7 @@ class State(object):
     dynamic_methods = ['on_enter', 'on_exit']
 
     def __init__(self, name, on_enter=None, on_exit=None,
-                 ignore_invalid_triggers=None):
+                 ignore_invalid_triggers=None, final=False):
         """
         Args:
             name (str or Enum): The name of the state
@@ -107,6 +107,7 @@ class State(object):
 
         """
         self._name = name
+        self.final = final
         self.ignore_invalid_triggers = ignore_invalid_triggers
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
@@ -284,9 +285,9 @@ class Transition(object):
         event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
         event_data.update(getattr(event_data.model, event_data.machine.model_attribute))
-        dest_state = event_data.machine.get_state(self.dest)
-        dest_state.enter(event_data)
-        if getattr(dest_state, 'is_final', False):
+        dest = event_data.machine.get_state(self.dest)
+        dest.enter(event_data)
+        if dest.final:
             event_data.machine.callbacks(event_data.machine.on_final, event_data)
 
     def add_callback(self, trigger, func):
