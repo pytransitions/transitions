@@ -1,5 +1,6 @@
-from ..core import State, EventData, Callback
+from ..core import State, EventData, Callback, CallbacksArg
 
+from enum import Enum
 from logging import Logger
 from threading import Timer
 from typing import List, Union, Any, Dict, Optional, Type
@@ -8,12 +9,10 @@ _LOGGER: Logger
 
 class Tags(State):
     tags: Logger
-    def __init__(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
-    def __getattr__(self, item: str) -> Any: ...
-
+    def __init__(self, name: Union[str, Enum], on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
+                 ignore_invalid_triggers: bool = ..., final: bool = ..., tags: Union[List[str], str, None] = ...) -> None : ...
 class Error(Tags):
-    def __init__(self, *args: List, **kwargs: Dict[str, Any]) -> None: ...
-    def enter(self, event_data: EventData) -> None: ...
+    pass
 
 class Timeout(State):
     dynamic_methods: List[str]
