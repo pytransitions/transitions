@@ -174,16 +174,17 @@ class NestedState(State):
         such as '↦' (limited to Python 3 though).
     """
 
-    dynamic_methods = State.dynamic_methods + ['on_final']
+    dynamic_methods = State.dynamic_methods + ["on_final"]
 
-    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, initial=None, on_final=None):
+    def __init__(self, name, on_enter=None, on_exit=None, ignore_invalid_triggers=None, final=False, initial=None,
+                 on_final=None):
         super(NestedState, self).__init__(name=name, on_enter=on_enter, on_exit=on_exit,
-                                          ignore_invalid_triggers=ignore_invalid_triggers)
+                                          ignore_invalid_triggers=ignore_invalid_triggers, final=final)
         self.initial = initial
         self.events = {}
         self.states = OrderedDict()
+        self.on_final = listify(on_final)
         self._scope = []
-        self.on_final = listify(on_final) if on_final else []
 
     def add_substate(self, state):
         """Adds a state as a substate.
@@ -284,38 +285,37 @@ class NestedTransition(Transition):
         for func in enter_partials:
             func()
         with event_data.machine():
-            self._final_check(event_data, state_tree, enter_partials)
+            on_final_cbs, _ = self._final_check(event_data, state_tree, enter_partials)
+            for on_final_cb in on_final_cbs:
+                on_final_cb()
 
     def _final_check(self, event_data, state_tree, enter_partials):
+        on_final_cbs = []
+        is_final = False
         # processes states with children
         if state_tree:
             all_children_final = True
-            needs_update = False
-            for child_res in (self._final_check_nested(state, event_data, state_tree, enter_partials) for state in state_tree):
+            for child_cbs, is_final in (self._final_check_nested(state, event_data, state_tree, enter_partials) for state in state_tree):
                 # if one child is not considered final, processing can stop
-                if child_res == 0:
+                if not is_final:
                     all_children_final = False
-                # if one child has recently transitioned to a final state, we need to update all parents
-                elif child_res == 2:
-                    needs_update = True
+                    # if one child has recently transitioned to a final state, we need to update all parents
+                on_final_cbs.extend(child_cbs)
             # if and only if all other children are also in a final state and a child has recently reached a final
             # state OR the scoped state has just been entered, trigger callbacks
             if all_children_final:
-                if needs_update or any(event_data.machine.scoped.scoped_enter == part.func for part in enter_partials):
-                    event_data.machine.callbacks(event_data.machine.scoped.on_final, event_data)
-                    # inform parent that an update occurred
-                    return 2
-                # this state and all its children are in a final state but haven't been altered in this transition
-                return 1
+                if on_final_cbs or any(event_data.machine.scoped.scoped_enter == part.func for part in enter_partials):
+                    on_final_cbs.append(
+                        partial(event_data.machine.callbacks, event_data.machine.scoped.on_final, event_data))
+                is_final = True
         # if a state is a leaf state OR has children not in a final state
-        if getattr(event_data.machine.scoped, 'is_final', False):
+        elif getattr(event_data.machine.scoped, 'final', False):
             # if the state itself is considered final and has recently been entered trigger callbacks
             # thus, a state with non-final children may still trigger callbacks if itself is considered final
             if any(event_data.machine.scoped.scoped_enter == part.func for part in enter_partials):
-                event_data.machine.callbacks(event_data.machine.scoped.on_final, event_data)
-                return 2
-            return 1
-        return 0
+                on_final_cbs.append(partial(event_data.machine.callbacks, event_data.machine.scoped.on_final, event_data))
+            is_final = True
+        return on_final_cbs, is_final
 
     def _final_check_nested(self, state, event_data, state_tree, enter_partials):
         with event_data.machine(state):
