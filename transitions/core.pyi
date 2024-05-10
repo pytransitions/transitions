@@ -23,11 +23,12 @@ def _prep_ordered_arg(desired_length: int, arguments: CallbacksArg) -> CallbackL
 class State:
     dynamic_methods: List[str]
     _name: Union[str, Enum]
+    final: bool
     ignore_invalid_triggers: bool
     on_enter: CallbackList
     on_exit: CallbackList
     def __init__(self, name: Union[str, Enum], on_enter: CallbacksArg = ..., on_exit: CallbacksArg = ...,
-                 ignore_invalid_triggers: bool = ...) -> None: ...
+                 ignore_invalid_triggers: bool = ..., final: bool = ...) -> None: ...
     @property
     def name(self) -> str: ...
     @property
