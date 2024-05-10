@@ -720,6 +720,45 @@ class TestNestedTransitions(TestTransitions):
         machine.reflexive()
         self.assertEqual(state_name, machine.state)
 
+    def test_final_state_nested(self):
+        final_mock_B = MagicMock()
+        final_mock_Y = MagicMock()
+        final_mock_Z = MagicMock()
+        final_mock_machine = MagicMock()
+
+        mocks = [final_mock_B, final_mock_Y, final_mock_Z, final_mock_machine]
+
+        states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'final': True},
+                                                  {'name': 'Y', 'transitions': [['final_Y', 'yI', 'yII']],
+                                                   'initial': 'yI',
+                                                   'on_final': final_mock_Y,
+                                                   'states':
+                                                       ['yI', {'name': 'yII', 'final': True}]
+                                                   },
+                                                  {'name': 'Z', 'transitions': [['final_Z', 'zI', 'zII']],
+                                                   'initial': 'zI',
+                                                   'on_final': final_mock_Z,
+                                                   'states':
+                                                       ['zI', {'name': 'zII', 'final': True}]
+                                                   },
+                                                  ],
+                        "on_final": final_mock_B}]
+
+        machine = self.machine_cls(states=states, on_final=final_mock_machine, initial='A')
+        self.assertFalse(any(mock.called for mock in mocks))
+        machine.to_B()
+        self.assertFalse(any(mock.called for mock in mocks))
+        machine.final_Y()
+        self.assertTrue(final_mock_Y.called)
+        self.assertFalse(final_mock_Z.called)
+        self.assertFalse(final_mock_B.called)
+        self.assertFalse(final_mock_machine.called)
+        machine.final_Z()
+        self.assertEqual(1, final_mock_Y.call_count)
+        self.assertEqual(1, final_mock_Z.call_count)
+        self.assertEqual(1, final_mock_B.call_count)
+        self.assertEqual(1, final_mock_machine.call_count)
+
 
 class TestSeparatorsBase(TestCase):
 

@@ -1319,3 +1319,14 @@ class TestTransitions(TestCase):
         assert not stuff.may_raises()
         assert stuff.to_A()
         assert not stuff.may_raises()
+
+    def test_on_final(self):
+        final_mock = MagicMock()
+        machine = self.machine_cls(states=['A', {'name': 'B', 'final': True}], on_final=final_mock, initial='A')
+        self.assertFalse(final_mock.called)
+        machine.to_B()
+        self.assertTrue(final_mock.called)
+        machine.to_A()
+        self.assertEqual(1, final_mock.call_count)
+        machine.to_B()
+        self.assertEqual(2, final_mock.call_count)
