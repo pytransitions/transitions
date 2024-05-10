@@ -289,6 +289,16 @@ class TestDiagrams(TestTransitions):
         _, nodes, edges = self.parse_dot(m.get_graph())
         self.assertIn("[is_state(A", edges[0])
 
+    def test_update_on_remove_transition(self):
+        m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A',
+                             use_pygraphviz=self.use_pygraphviz, show_state_attributes=True)
+        _, _, edges = self.parse_dot(m.get_graph())
+        assert "[label=walk]" in edges
+        m.remove_transition(trigger="walk", source="A", dest="B")
+        _, _, edges = self.parse_dot(m.get_graph())
+        assert not any("walk" == t["trigger"] for t in m.markup["transitions"])
+        assert "[label=walk]" not in edges
+
 
 @skipIf(pgv is None, 'Graph diagram test requires graphviz')
 class TestDiagramsLocked(TestDiagrams):
