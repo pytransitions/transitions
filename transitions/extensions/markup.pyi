@@ -8,7 +8,7 @@ from enum import Enum
 
 # mypy does not support recursive definitions (yet), we need to use Any instead of 'MarkupConfig'
 class MarkupConfig(TypedDict):
-    transitions: List[TransitionConfig]
+    transitions: List[Dict[str, Any]]
 
 class MarkupMachine(Machine):
     state_attributes: List[str]
