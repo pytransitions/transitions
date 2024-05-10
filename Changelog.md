@@ -9,6 +9,7 @@
 - '_anchor' suffix has been removed for (py)graphviz cluster node anchors
 - local testing switched from [tox](https://github.com/tox-dev/tox) to [nox](https://github.com/wntrblm/nox)
 - PR #633: Remove surrounding whitespace from docstrings (thanks @artofhuman)
+- PR #665: Add `on_final` to `Machine` and `NestedState` constructor and `final` to `State`. Callbacks passed to `on_final` will be executed when a State with `final=True` is entered or all children of a parallel state are final.
 - Bug #626: Process exceptions with `Machine.on_exception` in may_<trigger> as well (thanks @match1)
 - Typing:
   + Made state, event and machine property mandatory in (Nested)EventData
