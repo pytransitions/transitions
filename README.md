@@ -370,24 +370,21 @@ machine = Machine(lump, states=['A', 'B', 'C'])
 
 Now, any time `lump` transitions to state `A`, the `on_enter_A()` method defined in the `Matter` class will fire.
 
-_Experimental in 0.9.0:_
-When you use the [Tag feature](#state-features) (described in more detail below) you can make use of `on_final` callbacks.
-
+You can make use of `on_final` callbacks which will be triggered when a state with `final=True` is entered.
 ```python
-from transitions import Machine
-from transitions.extensions.states import Tags as State
+from transitions import Machine, State
 
 states = [State(name='idling'),
           State(name='rescuing_kitten'),
-          State(name='offender_escaped', tags='final'),
-          State(name='offender_caught', tags='final')]
+          State(name='offender_gone', final=True),
+          State(name='offender_caught', final=True)]
 
 transitions = [["called", "idling", "rescuing_kitten"],  # we will come when  called
                {"trigger": "intervene",
                 "source": "rescuing_kitten",
-                "dest": "offender_caught",  # we will catch the offender
-                "unless": "offender_is_faster"},  # unless they are faster
-               ["intervene", "rescuing_kitten", "offender_gone"]]
+                "dest": "offender_gone",  # we
+                "conditions": "offender_is_faster"},  # unless they are faster
+               ["intervene", "rescuing_kitten", "offender_caught"]]
 
 
 class FinalSuperhero(object):
@@ -396,20 +393,20 @@ class FinalSuperhero(object):
         self.machine = Machine(self, states=states, transitions=transitions, initial="idling", on_final="claim_success")
         self.speed = speed
 
-    def offender_is_faster(self):
-        self.speed < 15
+    def offender_is_faster(self, offender_speed):
+        return self.speed < offender_speed
 
-    def claim_success(self):
+    def claim_success(self, **kwargs):
         print("The kitten is safe.")
 
 
 hero = FinalSuperhero(speed=10)  # we are not in shape today
 hero.called()
 assert hero.is_rescuing_kitten()
-hero.intervene()
+hero.intervene(offender_speed=15)
 # >>> 'The kitten is safe'
-assert hero.machine.get_state(hero.state).is_final  # it's over
-assert hero.is_offender_gone()  # maybe next time
+assert hero.machine.get_state(hero.state).final  # it's over
+assert hero.is_offender_gone()  # maybe next time ...
 ```
 
 #### <a name="checking-state"></a>Checking state
@@ -994,7 +991,7 @@ execute triggers by name such as `lump.trigger("melt")` or dispatch events on mu
 Callbacks on transitions are then executed in the following order:
 
 | Callback                        |    Current State     | Comments                                                                                    |
-| ------------------------------- | :------------------: | ------------------------------------------------------------------------------------------- |
+|---------------------------------| :------------------: |---------------------------------------------------------------------------------------------|
 | `'machine.prepare_event'`       |       `source`       | executed _once_ before individual transitions are processed                                 |
 | `'transition.prepare'`          |       `source`       | executed as soon as the transition starts                                                   |
 | `'transition.conditions'`       |       `source`       | conditions _may_ fail and halt the transition                                               |
@@ -1005,7 +1002,8 @@ Callbacks on transitions are then executed in the following order:
 | `<STATE CHANGE>`                |                      |                                                                                             |
 | `'state.on_enter'`              |    `destination`     | callbacks declared on the destination state                                                 |
 | `'transition.after'`            |    `destination`     |                                                                                             |
-| `'machine.after_state_change'`  |    `destination`     | default callbacks declared on model                                                         |
+| `'machine.on_final'`            |    `destination`     | callbacks on children will be called first                                                  |
+| `'machine.after_state_change'`  |    `destination`     | default callbacks declared on model; will also be called after internal transitions         |
 | `'machine.on_exception'`        | `source/destination` | callbacks will be executed when an exception has been raised                                |
 | `'machine.finalize_event'`      | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
@@ -1579,24 +1577,13 @@ m.to_B_1()
 assert m.is_B(allow_substates=True)
 ```
 
-_Experimental in 0.9.0:_
-When you extend your states with a `is_final` property (for instance by using the [Tag feature](#state-features) described below) you can make use of `on_final` callbacks either in states or on the HSM itself. Callbacks will be triggered if a) the state itself is tagged with `final` and has just been entered or b) all substates are considered final and at least one substate just entered a final state. In case of b) all parents will be considered final as well if condition b) holds true for them. This might be useful in cases where processing happens in parallel and your HSM or any parent state should be notified when all substates have reached a final state:
+_Experimental in 0.9.1:_
+You can make use of `on_final` callbacks either in states or on the HSM itself. Callbacks will be triggered if a) the state itself is tagged with `final` and has just been entered or b) all substates are considered final and at least one substate just entered a final state. In case of b) all parents will be considered final as well if condition b) holds true for them. This might be useful in cases where processing happens in parallel and your HSM or any parent state should be notified when all substates have reached a final state:
 
 
 ```python
 from transitions.extensions import HierarchicalMachine
-from transitions.extensions.states import add_state_features, Tags
-
-
-@add_state_features(Tags)
-class FinalHSM(HierarchicalMachine):
-
-    def final_event_raised(self, event_data):
-        # one way to get the currently finalized state is via the scoped attribute of the machine passed
-        # with 'event_data'. However, this is done here to keep the example short. In most cases dedicated
-        # final callbacks will probably result in cleaner and more comprehensible code.
-        print("{} is final!".format(event_data.machine.scoped.name or "Machine"))
-
+from functools import partial
 
 # We initialize this parallel HSM in state A:
 #        / X
@@ -1605,23 +1592,27 @@ class FinalHSM(HierarchicalMachine):
 #        \ Z - zI
 #            \ zII [final]
 
-states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'tags': ['final'], 'on_final': 'final_event_raised'},
+def final_event_raised(name):
+    print("{} is final!".format(name))
+
+
+states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'final': True, 'on_final': partial(final_event_raised, 'X')},
                                           {'name': 'Y', 'transitions': [['final_Y', 'yI', 'yII']],
                                            'initial': 'yI',
-                                           'on_final': 'final_event_raised',
+                                           'on_final': partial(final_event_raised, 'Y'),
                                            'states':
-                                               ['yI', {'name': 'yII', 'tags': ['final']}]
+                                               ['yI', {'name': 'yII', 'final': True}]
                                            },
                                           {'name': 'Z', 'transitions': [['final_Z', 'zI', 'zII']],
                                            'initial': 'zI',
-                                           'on_final': 'final_event_raised',
+                                           'on_final': partial(final_event_raised, 'Z'),
                                            'states':
-                                               ['zI', {'name': 'zII', 'tags': ['final']}]
+                                               ['zI', {'name': 'zII', 'final': True}]
                                            },
                                           ],
-                "on_final": 'final_event_raised'}]
+                "on_final": partial(final_event_raised, 'B')}]
 
-machine = FinalHSM(states=states, on_final='final_event_raised', initial='A', send_event=True)
+machine = HierarchicalMachine(states=states, on_final=partial(final_event_raised, 'Machine'), initial='A')
 # X will emit a final event right away
 machine.to_B()
 # >>> X is final!
