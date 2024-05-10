@@ -542,6 +542,21 @@ class TestAsync(TestTransitions):
 
         asyncio.run(run())
 
+    def test_on_final(self):
+        final_mock = MagicMock()
+        machine = self.machine_cls(states=['A', {'name': 'B', 'final': True}], on_final=final_mock, initial='A')
+
+        async def run():
+            self.assertFalse(final_mock.called)
+            await machine.to_B()
+            self.assertTrue(final_mock.called)
+            await machine.to_A()
+            self.assertEqual(1, final_mock.call_count)
+            await machine.to_B()
+            self.assertEqual(2, final_mock.call_count)
+
+        asyncio.run(run())
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class TestAsyncGraphMachine(TestAsync):
@@ -588,6 +603,49 @@ class TestHierarchicalAsync(TestAsync):
                           'P{0}3{0}y'.format(machine.state_cls.separator)], machine.state)
         asyncio.run(machine.to_B())
         self.assertTrue(machine.is_B())
+
+    def test_final_state_nested(self):
+        final_mock_B = MagicMock()
+        final_mock_Y = MagicMock()
+        final_mock_Z = MagicMock()
+        final_mock_machine = MagicMock()
+
+        mocks = [final_mock_B, final_mock_Y, final_mock_Z, final_mock_machine]
+
+        states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'final': True},
+                                                  {'name': 'Y', 'transitions': [['final_Y', 'yI', 'yII']],
+                                                   'initial': 'yI',
+                                                   'on_final': final_mock_Y,
+                                                   'states':
+                                                       ['yI', {'name': 'yII', 'final': True}]
+                                                   },
+                                                  {'name': 'Z', 'transitions': [['final_Z', 'zI', 'zII']],
+                                                   'initial': 'zI',
+                                                   'on_final': final_mock_Z,
+                                                   'states':
+                                                       ['zI', {'name': 'zII', 'final': True}]
+                                                   },
+                                                  ],
+                        "on_final": final_mock_B}]
+
+        machine = self.machine_cls(states=states, on_final=final_mock_machine, initial='A')
+
+        async def run():
+            self.assertFalse(any(mock.called for mock in mocks))
+            await machine.to_B()
+            self.assertFalse(any(mock.called for mock in mocks))
+            await machine.final_Y()
+            self.assertTrue(final_mock_Y.called)
+            self.assertFalse(final_mock_Z.called)
+            self.assertFalse(final_mock_B.called)
+            self.assertFalse(final_mock_machine.called)
+            await machine.final_Z()
+            self.assertEqual(1, final_mock_Y.call_count)
+            self.assertEqual(1, final_mock_Z.call_count)
+            self.assertEqual(1, final_mock_B.call_count)
+            self.assertEqual(1, final_mock_machine.call_count)
+
+        asyncio.run(run())
 
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
