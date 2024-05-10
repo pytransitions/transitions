@@ -138,7 +138,10 @@ class AsyncTransition(Transition):
         await event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
         event_data.update(getattr(event_data.model, event_data.machine.model_attribute))
-        await event_data.machine.get_state(self.dest).enter(event_data)
+        dest = event_data.machine.get_state(self.dest)
+        await dest.enter(event_data)
+        if dest.final:
+            await event_data.machine.callbacks(event_data.machine.on_final, event_data)
 
 
 class NestedAsyncTransition(AsyncTransition, NestedTransition):
@@ -154,6 +157,10 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
         self._update_model(event_data, state_tree)
         for func in enter_partials:
             await func()
+        with event_data.machine():
+            on_final_cbs, _ = self._final_check(event_data, state_tree, enter_partials)
+            for on_final_cb in on_final_cbs:
+                await on_final_cb()
 
 
 class AsyncEventData(EventData):
