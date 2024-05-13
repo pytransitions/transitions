@@ -260,8 +260,9 @@ class GraphMachine(MarkupMachine):
 
     def remove_transition(self, trigger, source="*", dest="*"):
         super(GraphMachine, self).remove_transition(trigger, source, dest)
+        # update all model graphs since some transitions might be gone
         for model in self.models:
-            model.get_graph(force_new=True)
+            _ = model.get_graph(force_new=True)
 
 
 class NestedGraphTransition(TransitionGraphSupport, NestedTransition):
