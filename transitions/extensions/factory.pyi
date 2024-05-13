@@ -1,8 +1,8 @@
-from ..core import Machine, State
+from ..core import CallbackFunc, Machine, State
 from .diagrams import GraphMachine, NestedGraphTransition, HierarchicalGraphMachine
 from .locking import LockedMachine
 from .nesting import HierarchicalMachine, NestedEvent
-from typing import Type, Dict, Tuple, Callable, Union
+from typing import Any, Type, Dict, Tuple, Callable, Union
 
 try:
     from transitions.extensions.asyncio import AsyncMachine, AsyncTransition
@@ -39,13 +39,13 @@ class LockedHierarchicalMachine(LockedMachine, HierarchicalMachine):  # type: ig
 
 class LockedGraphMachine(GraphMachine, LockedMachine):  # type: ignore
     @staticmethod
-    def format_references(func: Callable) -> str: ...
+    def format_references(func: CallbackFunc) -> str: ...
 
 class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):  # type: ignore
     transition_cls: Type[NestedGraphTransition]
     event_cls: Type[NestedEvent]
     @staticmethod
-    def format_references(func: Callable) -> str: ...
+    def format_references(func: CallbackFunc) -> str: ...
 
 class AsyncGraphMachine(GraphMachine, AsyncMachine):
     # AsyncTransition already considers graph models when necessary

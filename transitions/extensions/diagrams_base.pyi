@@ -1,5 +1,5 @@
 import abc
-from typing import Protocol, Optional, Union, List, Dict, IO, Tuple, Generator
+from typing import BinaryIO, Protocol, Optional, Union, List, Dict, Tuple, Generator
 
 from .diagrams import GraphMachine, HierarchicalGraphMachine
 from ..core import ModelState
@@ -7,7 +7,7 @@ from ..core import ModelState
 
 class GraphProtocol(Protocol):
 
-    def draw(self, filename: Optional[Union[str, IO]], format:Optional[str] = ...,
+    def draw(self, filename: Optional[Union[str, BinaryIO]], format:Optional[str] = ...,
              prog: Optional[str] = ..., args:str = ...) -> Optional[str]: ...
 
 class GraphModelProtocol(Protocol):
