@@ -53,7 +53,7 @@ class Graph(BaseGraph):
             container.node(
                 state["name"],
                 label=self._convert_state_attributes(state),
-                **self.machine.style_attributes["node"][style]
+                **self.machine.style_attributes.get("node", {}).get(style, {})
             )
 
     def _add_edges(self, transitions, container):
@@ -71,7 +71,7 @@ class Graph(BaseGraph):
                     src,
                     dst,
                     label=" | ".join(labels),
-                    **self.machine.style_attributes["edge"][style]
+                    **self.machine.style_attributes.get("edge", {}).get(style, {})
                 )
 
     def generate(self):
@@ -87,9 +87,9 @@ class Graph(BaseGraph):
 
         fsm_graph = pgv.Digraph(
             name=title,
-            node_attr=self.machine.style_attributes["node"]["default"],
-            edge_attr=self.machine.style_attributes["edge"]["default"],
-            graph_attr=self.machine.style_attributes["graph"]["default"],
+            node_attr=self.machine.style_attributes.get("node", {}).get("default", {}),
+            edge_attr=self.machine.style_attributes.get("edge", {}).get("default", {}),
+            graph_attr=self.machine.style_attributes.get("graph", {}).get("default", {}),
         )
         fsm_graph.graph_attr.update(**self.machine.machine_attributes)
         fsm_graph.graph_attr["label"] = title
@@ -183,9 +183,9 @@ class NestedGraph(Graph):
                 cluster_name = "cluster_" + name
                 attr = {"label": label, "rank": "source"}
                 attr.update(
-                    **self.machine.style_attributes["graph"][
-                        self.custom_styles["node"][name] or default_style
-                    ]
+                    **self.machine.style_attributes.get("graph", {}).get(
+                        self.custom_styles["node"][name] or default_style, {}
+                    )
                 )
                 with container.subgraph(name=cluster_name, graph_attr=attr) as sub:
                     self._cluster_states.append(name)
@@ -207,11 +207,11 @@ class NestedGraph(Graph):
                         prefix=prefix + state["name"] + self.machine.state_cls.separator,
                     )
             else:
-                style = self.machine.style_attributes["node"][default_style].copy()
+                style = self.machine.style_attributes.get("node", {}).get(default_style, {}).copy()
                 style.update(
-                    self.machine.style_attributes["node"][
-                        self.custom_styles["node"][name] or default_style
-                    ]
+                    self.machine.style_attributes.get("node", {}).get(
+                        self.custom_styles["node"][name] or default_style, {}
+                    )
                 )
                 container.node(name, label=label, **style)
 
@@ -246,7 +246,7 @@ class NestedGraph(Graph):
             for dst, attr in dests.items():
                 del attr["label_pos"]
                 style = self.custom_styles["edge"][src][dst]
-                attr.update(**self.machine.style_attributes["edge"][style])
+                attr.update(**self.machine.style_attributes.get("edge", {}).get(style, {}))
                 container.edge(attr.pop("source"), attr.pop("dest"), **attr)
 
     def _create_edge_attr(self, src, dst, transition):
