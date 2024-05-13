@@ -12,6 +12,7 @@
 - PR #665: Add `on_final` to `Machine` and `NestedState` constructor and `final` to `State`. Callbacks passed to `on_final` will be executed when a State with `final=True` is entered or all children of a parallel state are final.
 - Bug #626: Process exceptions with `Machine.on_exception` in may_<trigger> as well (thanks @match1)
 - PR #666: Improved handling of removing transitions for `GraphMachine` and `HiearachicalMachine` (thanks @drpjm)
+- PR #667: Better handling of unset styling in `GraphMachine`
 - Typing:
   + Added `--strict` mypy flag for `transitions` type checks (not `tests` though)
   + Made state, event and machine property mandatory in (Nested)EventData
