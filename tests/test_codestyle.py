@@ -26,7 +26,7 @@ class TestCodeFormat(unittest.TestCase):
 
     @unittest.skipIf(mypy is None, "mypy not found")
     def test_mypy_package(self):
-        call = ['mypy', '--config-file', 'mypy.ini', 'transitions']
+        call = ['mypy', '--config-file', 'mypy.ini', '--strict', 'transitions', 'tests/test_imports.py']
 
         # when run from root directory (e.g. tox) else when run from test directory (e.g. pycharm)
         project_root = '.' if exists('transitions') else '..'
