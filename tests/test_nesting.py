@@ -973,6 +973,25 @@ class TestSeparatorsBase(TestCase):
         assert m.may_sprint()
         m.run_fast()
 
+    def test_remove_nested_transition(self):
+        separator = self.state_cls.separator
+        state = {
+            'name': 'B',
+            'children': ['1', '2'],
+            'transitions': [['jo', '1', '2']],
+            'initial': '2'
+        }
+        m = self.stuff.machine_cls(initial='A', states=['A', state],
+                                   transitions=[['go', 'A', 'B'], ['go', 'B{0}2'.format(separator),
+                                                                   'B{0}1'.format(separator)]])
+        m.remove_transition("go", "A", "B")
+        assert m.get_transitions("go")
+        m.remove_transition("go")
+        assert not m.get_transitions("go")
+        assert m.get_transitions("jo")
+        m.remove_transition("jo")
+        assert not m.get_transitions("jo")
+
 
 class TestSeparatorsSlash(TestSeparatorsBase):
     separator = '/'
