@@ -13,8 +13,11 @@
 - Bug #626: Process exceptions with `Machine.on_exception` in may_<trigger> as well (thanks @match1)
 - PR #666: Improved handling of removing transitions for `GraphMachine` and `HiearachicalMachine` (thanks @drpjm)
 - Typing:
+  + Added `--strict` mypy flag for `transitions` type checks (not `tests` though)
   + Made state, event and machine property mandatory in (Nested)EventData
   + Transition.dest may be None
+  + Introduced (Async)CallbackFunc to declutter callback-related signatures
+  + Add stub file for extension package for explicite reexport (thanks @DrewDevereux)
 
 ## 0.9.0 (September 2022)
 
