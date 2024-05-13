@@ -705,11 +705,56 @@ class HierarchicalMachine(Machine):
                 return matches
             source_path.pop()
             while source_path:
-                matches.extend(self.get_transitions(trigger,
-                                                    source=self.state_cls.separator.join(source_path),
-                                                    dest=dest))
+                matches.extend(self.get_nested_transitions(trigger,
+                                                           src_path=source_path,
+                                                           dest_path=dest_path))
                 source_path.pop()
             return matches
+
+    def _remove_nested_transitions(self, trigger, src_path, dest_path):
+        """Remove transitions from nested states.
+        Args:
+            trigger (str): Trigger name of the transition to be removed.
+            src_path (list(str)): If empty, all transitions that match dest_path and trigger will be removed.
+            dest_path (list(str)): If empty, all transitions that match src_path and trigger will be removed.
+        """
+        cur_src = self.state_cls.separator.join(src_path)
+        cur_dst = self.state_cls.separator.join(dest_path)
+        if trigger in self.scoped.events:
+            evt = self.scoped.events[trigger]
+            for src, transitions in evt.transitions.items():
+                evt.transitions[src] = [trans for trans in transitions
+                                        if (src_path and trans.source != cur_src) or (cur_dst and trans.dest != cur_dst)]
+        for state_name in self.scoped.states:
+            with self(state_name):
+                if state_name in [cur_src, cur_dst]:
+                    continue
+                self._remove_nested_transitions(trigger,
+                                                src_path if not src_path or state_name != src_path[0] else src_path[1:],
+                                                dest_path if not dest_path or state_name != dest_path[0] else dest_path[1:])
+
+    def remove_transition(self, trigger, source="*", dest="*"):
+        """Removes transitions matching the passed criteria.
+        Args:
+            trigger (str): Trigger name of the transition.
+            source (str, State or Enum): Limits list to transitions from a certain state.
+            dest (str, State or Enum): Limits list to transitions to a certain state.
+        """
+        with self():
+            source_path = [] if source == "*" \
+                else source.split(self.state_cls.separator) if isinstance(source, string_types) \
+                else self._get_enum_path(source) if isinstance(source, Enum) \
+                else self._get_state_path(source)
+            dest_path = [] if dest == "*" \
+                else dest.split(self.state_cls.separator) if isinstance(dest, string_types) \
+                else self._get_enum_path(dest) if isinstance(dest, Enum) \
+                else self._get_state_path(dest)
+            self._remove_nested_transitions(trigger, source_path, dest_path)
+
+        # remove trigger from models if no transition is left for trigger
+        if not self.get_transitions(trigger):
+            for model in self.models:
+                delattr(model, trigger)
 
     def _can_trigger(self, model, trigger, *args, **kwargs):
         state_tree = self.build_state_tree(getattr(model, self.model_attribute), self.state_cls.separator)
