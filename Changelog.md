@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.9.1 ()
+## 0.9.1 (May 2024)
+
+Release 0.9.1 is a minor release and contains several bugfixes and some (typing) improvements. This release also introduces `on_final` callbacks on machines (as well as `NestedState`) and `final` flags for states.
 
 - Bug #594: Fix may_<trigger> always returning false for internal transitions (thanks @a-schade)
 - PR #592: Pass investigated transition to `EventData` context in 'may' check (thanks @msclock)
