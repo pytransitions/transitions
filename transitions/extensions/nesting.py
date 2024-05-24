@@ -996,10 +996,16 @@ class HierarchicalMachine(Machine):
         self._init_state(new_state)
 
     def _add_machine_states(self, state, remap):
-        new_states = [s for s in state.states.values() if remap is None or s not in remap]
+        new_states = [s for s in state.states.values() if remap is None or (s.name if hasattr(s, "name") else s) not in remap]
         self.add_states(new_states)
         for evt in state.events.values():
-            self.events[evt.name] = evt
+            # skip auto transitions
+            if state.auto_transitions and evt.name.startswith('to_') and evt.name[3:] in state.states:
+                continue
+            if evt.transitions and evt.name not in self.events:
+                self.events[evt.name] = evt
+                for model in self.models:
+                    self._add_trigger_to_model(evt.name, model)
         if self.scoped.initial is None:
             self.scoped.initial = state.initial
 
