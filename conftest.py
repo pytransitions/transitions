@@ -19,4 +19,4 @@ def pytest_ignore_collect(collection_path):
     """Text collection function executed by pytest"""
     if not WITH_ASYNC and basename(str(collection_path)) in async_files:
         return True
-    return False
+    return None
