@@ -759,9 +759,11 @@ class HierarchicalMachine(Machine):
     def _can_trigger(self, model, trigger, *args, **kwargs):
         state_tree = self.build_state_tree(getattr(model, self.model_attribute), self.state_cls.separator)
         ordered_states = resolve_order(state_tree)
-        for state_path in ordered_states:
-            with self():
-                return self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
+        with self():
+            return any(
+                self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
+                for state_path in ordered_states
+            )
 
     def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
         if trigger in self.events:
@@ -822,14 +824,15 @@ class HierarchicalMachine(Machine):
         return trigger in state.events or any(self.has_trigger(trigger, sta) for sta in state.states.values())
 
     def is_state(self, state, model, allow_substates=False):
-        if allow_substates:
-            current = getattr(model, self.model_attribute)
-            current_name = self.state_cls.separator.join(self._get_enum_path(current))\
-                if isinstance(current, Enum) else current
-            state_name = self.state_cls.separator.join(self._get_enum_path(state))\
-                if isinstance(state, Enum) else state
-            return current_name.startswith(state_name)
-        return getattr(model, self.model_attribute) == state
+        tree = self.build_state_tree(listify(getattr(model, self.model_attribute)),
+                                     self.state_cls.separator)
+
+        path = self._get_enum_path(state) if isinstance(state, Enum) else state.split(self.state_cls.separator)
+        for elem in path:
+            if elem not in tree:
+                return False
+            tree = tree[elem]
+        return len(tree) == 0 or allow_substates
 
     def on_enter(self, state_name, callback):
         """Helper function to add callbacks to states in case a custom state separator is used.
