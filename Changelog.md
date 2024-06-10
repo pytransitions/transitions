@@ -3,6 +3,8 @@
 ## 0.9.2 ()
 
 - Bug #610: Decorate models appropriately when `HierarchicalMachine` is passed to `add_state` (thanks @e0lithic)
+- Bug #647: Let `may_<trigger>` check all parallel states in processing order (thanks @spearsear)
+- Bug: `HSM.is_state` works with parallel states now 
 
 ## 0.9.1 (May 2024)
 
