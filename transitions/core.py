@@ -886,10 +886,11 @@ class Machine(object):
                 state.add_callback(callback[3:], method)
 
     def _checked_assignment(self, model, name, func):
-        if hasattr(model, name):
-            _LOGGER.warning("%sModel already contains an attribute '%s'. Skip binding.", self.name, name)
-        else:
+        bound_func = getattr(model, name, None)
+        if bound_func is None or getattr(bound_func, "expect_override", False):
             setattr(model, name, func)
+        else:
+            _LOGGER.warning("%sModel already contains an attribute '%s'. Skip binding.", self.name, name)
 
     def _can_trigger(self, model, trigger, *args, **kwargs):
         state = self.get_model_state(model)
