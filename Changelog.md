@@ -4,7 +4,8 @@
 
 - Bug #610: Decorate models appropriately when `HierarchicalMachine` is passed to `add_state` (thanks @e0lithic)
 - Bug #647: Let `may_<trigger>` check all parallel states in processing order (thanks @spearsear)
-- Bug: `HSM.is_state` works with parallel states now 
+- Bug: `HSM.is_state` works with parallel states now
+- Experimental feature: Use the `transitions.experimental.typing.expect_override` decorator to mark methods as safe for overriding `Machine._checked_assignment` will now override _existing_ model methods (e.g. existing trigger like `melt` or convenience functions like `is_<state>`) if they have a `expect_override` attribute set to `True`. 
 
 ## 0.9.1 (May 2024)
 
