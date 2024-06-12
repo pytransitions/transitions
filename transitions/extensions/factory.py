@@ -34,7 +34,7 @@ except (ImportError, SyntaxError):  # pragma: no cover
         """A mock of NestedAsyncTransition for Python 3.6 and earlier."""
 
 
-class MachineFactory(object):
+class MachineFactory:
     """Convenience factory for machine class retrieval."""
 
     # get one of the predefined classes which fulfill the criteria
