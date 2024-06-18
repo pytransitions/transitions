@@ -1415,7 +1415,80 @@ Additional Keywords:
 - `show_auto_transitions` (default False): Shows auto transitions in graph
 - `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
 
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed:  
+Transitions can generate basic state diagrams displaying all valid transitions between states.
+The basic diagram support generates a [mermaid](https://mermaid.js.org) state machine definition which can be used with mermaid's [live editor](https://mermaid.live), in markdown files in GitLab or GitHub and other web services.
+For instance, this code:
+```python
+from transitions.extensions.diagrams import HierarchicalGraphMachine
+import pyperclip
+
+states = ['A', 'B', {'name': 'C',
+                     'final': True,
+                     'parallel': [{'name': '1', 'children': ['a', {"name": "b", "final": True}],
+                                   'initial': 'a',
+                                   'transitions': [['go', 'a', 'b']]},
+                                  {'name': '2', 'children': ['a', {"name": "b", "final": True}],
+                                   'initial': 'a',
+                                   'transitions': [['go', 'a', 'b']]}]}]
+transitions = [['reset', 'C', 'A'], ["init", "A", "B"], ["do", "B", "C"]]
+
+
+m = HierarchicalGraphMachine(states=states, transitions=transitions, initial="A", show_conditions=True,
+                             title="Mermaid", graph_engine="mermaid", auto_transitions=False)
+m.init()
+
+pyperclip.copy(m.get_graph().draw(None))  # using pyperclip for convenience
+print("Graph copied to clipboard!")
+```
+
+Produces this diagram (check the document source to see the markdown notation):
+
+```mermaid
+---
+Mermaid Graph
+---
+stateDiagram-v2
+  direction LR
+  classDef s_default fill:white,color:black
+  classDef s_inactive fill:white,color:black
+  classDef s_parallel color:black,fill:white
+  classDef s_active color:red,fill:darksalmon
+  classDef s_previous color:blue,fill:azure
+  
+  state "A" as A
+  Class A s_previous
+  state "B" as B
+  Class B s_active
+  state "C" as C
+  C --> [*]
+  Class C s_default
+  state C {
+    state "1" as C_1
+    state C_1 {
+      [*] --> C_1_a
+      state "a" as C_1_a
+      state "b" as C_1_b
+      C_1_b --> [*]
+    }
+    --
+    state "2" as C_2
+    state C_2 {
+      [*] --> C_2_a
+      state "a" as C_2_a
+      state "b" as C_2_b
+      C_2_b --> [*]
+    }
+  }
+  
+  C --> A: reset
+  A --> B: init
+  B --> C: do
+  C_1_a --> C_1_b: go
+  C_2_a --> C_2_b: go
+  [*] --> A
+```
+
+To use more sophisticated graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed.
 To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
 
     sudo apt-get install graphviz graphviz-dev  # Ubuntu and Debian
@@ -1424,12 +1497,14 @@ To generate graphs with the package `graphviz`, you need to install [Graphviz](h
 
 Now you can install the actual Python packages
 
-    pip install graphviz pygraphviz # install graphviz and/or pygraphviz manually...
+    pip install graphviz pygraphviz  # install graphviz and/or pygraphviz manually...
     pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras which currently depends on pygraphviz
 
 Currently, `GraphMachine` will use `pygraphviz` when available and fall back to `graphviz` when `pygraphviz` cannot be
-found. This can be overridden by passing `use_pygraphviz=False` to the constructor. Note that this default might change
-in the future and `pygraphviz` support may be dropped.
+found.
+If `graphviz` is not available either, `mermaid` will be used.
+This can be overridden by passing `graph_engine="graphviz"` (or `"mermaid"`) to the constructor.
+Note that this default might change in the future and `pygraphviz` support may be dropped.
 With `Model.get_graph()` you can get the current graph or the region of interest (roi) and draw it like this:
 
 ```python
@@ -1440,7 +1515,7 @@ m = Model()
 # without further arguments pygraphviz will be used
 machine = GraphMachine(model=m, ...)
 # when you want to use graphviz explicitly
-machine = GraphMachine(model=m, use_pygraphviz=False, ...)
+machine = GraphMachine(model=m, graph_engine="graphviz", ...)
 # in cases where auto transitions should be visible
 machine = GraphMachine(model=m, show_auto_transitions=True, ...)
 
