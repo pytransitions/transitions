@@ -625,6 +625,7 @@ class Machine(object):
             mod = self if mod is self.self_literal else mod
             if mod not in self.models:
                 self._checked_assignment(mod, 'trigger', partial(self._get_trigger, mod))
+                self._checked_assignment(mod, 'may_trigger', partial(self._can_trigger, mod))
 
                 for trigger in self.events:
                     self._add_trigger_to_model(trigger, mod)

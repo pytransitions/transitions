@@ -464,8 +464,11 @@ class TestAsync(TestTransitions):
 
         async def run():
             assert await d.may_to_A()
+            assert await d.may_trigger("to_A")
             assert await d.may_to_B()
+            assert await d.may_trigger("to_B")
             assert await d.may_to_C()
+            assert await d.may_trigger("to_C")
 
         asyncio.run(run())
 
@@ -478,12 +481,18 @@ class TestAsync(TestTransitions):
 
         async def run():
             assert not await m.may_walk()
+            assert not await m.may_trigger("walk")
             assert not await m.may_stop()
+            assert not await m.may_trigger("stop")
             assert await m.may_run()
+            assert await m.may_trigger("run")
             await m.run()
             assert not await m.may_run()
+            assert not await m.may_trigger("run")
             assert not await m.may_stop()
+            assert not await m.may_trigger("stop")
             assert not await m.may_walk()
+            assert not await m.may_trigger("walk")
 
         asyncio.run(run())
 
@@ -495,6 +504,7 @@ class TestAsync(TestTransitions):
 
         async def run():
             assert not await d.may_walk()
+            assert not await d.may_trigger("walk")
 
         asyncio.run(run())
 
@@ -506,10 +516,14 @@ class TestAsync(TestTransitions):
 
         async def run():
             assert await d.may_go()
+            assert await d.may_trigger("go")
             assert not await d.may_wait()
+            assert not await d.may_trigger("wait")
             await d.go()
             assert not await d.may_go()
+            assert not await d.may_trigger("go")
             assert await d.may_wait()
+            assert await d.may_trigger("wait")
 
         asyncio.run(run())
 
@@ -529,16 +543,23 @@ class TestAsync(TestTransitions):
         async def run():
             with self.assertRaises(RuntimeError):
                 await stuff.may_raises()
+            with self.assertRaises(RuntimeError):
+                await stuff.may_trigger("raises")
             assert stuff.is_A()
             assert await stuff.may_works()
+            assert await stuff.may_trigger("works")
             assert await stuff.works()
             with self.assertRaises(ValueError):
                 await stuff.may_raises()
+            with self.assertRaises(ValueError):
+                await stuff.may_trigger("raises")
             assert stuff.is_B()
             stuff.machine.on_exception.append(process_exception)
             assert not await stuff.may_raises()
+            assert not await stuff.may_trigger("raises")
             assert await stuff.to_A()
             assert not await stuff.may_raises()
+            assert not await stuff.may_trigger("raises")
 
         asyncio.run(run())
 
