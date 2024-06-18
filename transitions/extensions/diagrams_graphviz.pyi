@@ -2,7 +2,7 @@ from ..core import State, ModelState
 from .diagrams import GraphMachine
 from .diagrams_base import BaseGraph
 from logging import Logger
-from typing import BinaryIO, Type, Optional, Dict, List, Union, DefaultDict, Any
+from typing import BinaryIO, Type, Optional, Dict, List, Union, DefaultDict, Any, Iterable
 try:
     from graphviz import Digraph
     from graphviz.dot import SubgraphContext
@@ -45,5 +45,5 @@ class NestedGraph(Graph):
                    container: Union[Digraph, SubgraphContext]) -> None: ...
     def _create_edge_attr(self, src: str, dst: str, transition: Dict[str, str]) -> Dict[str, Any]: ...
 
-def _filter_states(states: List[Dict[str, str]], state_names: List[str], state_cls: Type[State],
-                   prefix: Optional[List[str]] = ...) -> List[Dict[str, str]]: ...
+def filter_states(states: List[Dict[str, str]], state_names: Iterable[str], state_cls: Type[State],
+                  prefix: Optional[List[str]] = ...) -> List[Dict[str, str]]: ...

@@ -19,19 +19,16 @@ except ImportError:  # pragma: no cover
     pgv = None
 
 if TYPE_CHECKING:
-    from typing import Type, List, Collection, Union
-
-edge_re = re.compile(r"^\s+(?P<src>\w+)\s*->\s*(?P<dst>\w+)\s*(?P<attr>\[.*\]?)\s*$")
-node_re = re.compile(r"^\s+(?P<node>\w+)\s+(?P<attr>\[.*\]?)\s*$")
+    from typing import Type, List, Collection, Union, Literal
 
 
 class TestDiagramsImport(TestCase):
 
-    use_pygraphviz = False
+    graph_engine = "graphviz"  # type: Union[Literal["pygraphviz"], Literal["graphviz"], Literal["mermaid"]]
     pgv = pgv
 
     def test_import(self):
-        machine = GraphMachine(None, use_pygraphviz=self.use_pygraphviz)
+        machine = GraphMachine(None, graph_engine=self.graph_engine)
         if machine.graph_cls is None:
             self.assertIsNone(pgv)
 
@@ -40,23 +37,25 @@ class TestDiagramsImport(TestCase):
 class TestDiagrams(TestTransitions):
 
     machine_cls = GraphMachine  # type: Type[GraphMachine]
-    use_pygraphviz = False
+    graph_engine = "graphviz"  # type: Union[Literal["pygraphviz"], Literal["graphviz"], Literal["mermaid"]]
+    edge_re = re.compile(r"^\s+(?P<src>\w+)\s*->\s*(?P<dst>\w+)\s*(?P<attr>\[.*\]?)\s*$")
+    node_re = re.compile(r"^\s+(?P<node>\w+)\s+(?P<attr>\[.*\]?)\s*$")
 
     def parse_dot(self, graph):
-        if self.use_pygraphviz:
+        if self.graph_engine == "pygraphviz":
             dot = graph.string()
         else:
             dot = graph.source
         nodes = set()
         edges = []
         for line in dot.split('\n'):
-            match = edge_re.search(line)
+            match = self.edge_re.search(line)
             if match:
                 nodes.add(match.group("src"))
                 nodes.add(match.group("dst"))
                 edges.append(match.group("attr"))
             else:
-                match = node_re.search(line)
+                match = self.node_re.search(line)
                 if match and match.group("node") not in ["node", "graph", "edge"]:
                     nodes.add(match.group("node"))
         return dot, nodes, edges
@@ -68,7 +67,7 @@ class TestDiagrams(TestTransitions):
         #         del sys.modules['transitions.extensions.diagrams_' + m]
 
     def setUp(self):
-        self.stuff = Stuff(machine_cls=self.machine_cls, extra_kwargs={'use_pygraphviz': self.use_pygraphviz})
+        self.stuff = Stuff(machine_cls=self.machine_cls, extra_kwargs={'graph_engine': self.graph_engine})
         self.states = ['A', 'B', 'C', 'D']  # type: List[Union[str, Collection[str]]]
         self.transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
@@ -79,7 +78,7 @@ class TestDiagrams(TestTransitions):
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
-                             title='a test', use_pygraphviz=self.use_pygraphviz)
+                             title='a test', graph_engine=self.graph_engine)
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue(graph.directed)
@@ -109,14 +108,14 @@ class TestDiagrams(TestTransitions):
 
     def test_transition_custom_model(self):
         m = self.machine_cls(model=None, states=self.states, transitions=self.transitions, initial='A',
-                             auto_transitions=False, title='a test', use_pygraphviz=self.use_pygraphviz)
+                             auto_transitions=False, title='a test', graph_engine=self.graph_engine)
         model = DummyModel()
         m.add_model(model)
         model.walk()
 
     def test_add_custom_state(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
-                             title='a test', use_pygraphviz=self.use_pygraphviz)
+                             title='a test', graph_engine=self.graph_engine)
         m.add_state('X')
         m.add_transition('foo', '*', 'X')
         m.foo()
@@ -134,22 +133,22 @@ class TestDiagrams(TestTransitions):
             transitions=transitions,
             initial='a',
             auto_transitions=False,
-            use_pygraphviz=self.use_pygraphviz
+            graph_engine=self.graph_engine
         )
 
         graph = m.get_graph()
         self.assertIsNotNone(graph)
-        self.assertTrue("digraph" in str(graph))
 
         triggers = [transition[0] for transition in transitions]
+        dot, _, _ = self.parse_dot(graph)
         for trigger in triggers:
-            self.assertTrue(trigger in str(graph))
+            self.assertTrue(trigger in dot)
 
     def test_multi_model_state(self):
-        m1 = Stuff(machine_cls=None, extra_kwargs={'use_pygraphviz': self.use_pygraphviz})
-        m2 = Stuff(machine_cls=None, extra_kwargs={'use_pygraphviz': self.use_pygraphviz})
+        m1 = Stuff(machine_cls=None, extra_kwargs={'graph_engine': self.graph_engine})
+        m2 = Stuff(machine_cls=None, extra_kwargs={'graph_engine': self.graph_engine})
         m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A',
-                             use_pygraphviz=self.use_pygraphviz)
+                             graph_engine=self.graph_engine)
         m1.walk()
         self.assertEqual(m.model_graphs[id(m1)].custom_styles['node'][m1.state], 'active')
         self.assertEqual(m.model_graphs[id(m2)].custom_styles['node'][m1.state], '')
@@ -169,36 +168,35 @@ class TestDiagrams(TestTransitions):
         self.assertEqual(model.get_graph(), "This method already exists")
 
     def test_to_method_filtering(self):
-        m = self.machine_cls(states=['A', 'B', 'C'], initial='A', use_pygraphviz=self.use_pygraphviz)
+        m = self.machine_cls(states=['A', 'B', 'C'], initial='A', graph_engine=self.graph_engine)
         m.add_transition('to_state_A', 'B', 'A')
         m.add_transition('to_end', '*', 'C')
         _, _, edges = self.parse_dot(m.get_graph())
         self.assertEqual(len([e for e in edges if e == '[label=to_state_A]']), 1)
         self.assertEqual(len([e for e in edges if e == '[label=to_end]']), 3)
         m2 = self.machine_cls(states=['A', 'B', 'C'], initial='A', show_auto_transitions=True,
-                              use_pygraphviz=self.use_pygraphviz)
+                              graph_engine=self.graph_engine)
         _, _, edges = self.parse_dot(m2.get_graph())
         self.assertEqual(len(edges), 9)
         self.assertEqual(len([e for e in edges if e == '[label=to_A]']), 3)
         self.assertEqual(len([e for e in edges if e == '[label=to_C]']), 3)
 
     def test_loops(self):
-        m = self.machine_cls(states=['A'], initial='A', use_pygraphviz=self.use_pygraphviz)
+        m = self.machine_cls(states=['A'], initial='A', graph_engine=self.graph_engine)
         m.add_transition('reflexive', 'A', '=')
         m.add_transition('fixed', 'A', None)
         g1 = m.get_graph()
-        if self.use_pygraphviz:
+        if self.graph_engine == "pygraphviz":
             dot_string = g1.string()
         else:
             dot_string = g1.source
         try:
             self.assertRegex(dot_string, r'A\s+->\s*A\s+\[label="(fixed|reflexive)')
         except AttributeError:  # Python 2 backwards compatibility
-
             self.assertRegexpMatches(dot_string, r'A\s+->\s*A\s+\[label="(fixed|reflexive)')
 
     def test_roi(self):
-        m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A', use_pygraphviz=self.use_pygraphviz)
+        m = self.machine_cls(states=['A', 'B', 'C', 'D', 'E', 'F'], initial='A', graph_engine=self.graph_engine)
         m.add_transition('to_state_A', 'B', 'A')
         m.add_transition('to_state_C', 'B', 'C')
         m.add_transition('to_state_F', 'B', 'F')
@@ -230,7 +228,7 @@ class TestDiagrams(TestTransitions):
         self.states[0] = {'name': 'A', 'tags': ['new', 'polling'], 'timeout': 5, 'on_enter': 'say_hello',
                           'on_exit': 'say_goodbye', 'on_timeout': 'do_something'}
         m = CustomMachine(states=self.states, transitions=self.transitions, initial='A', show_state_attributes=True,
-                          use_pygraphviz=self.use_pygraphviz)
+                          graph_engine=self.graph_engine)
         g = m.get_graph(show_roi=True)
 
     def test_label_attribute(self):
@@ -246,7 +244,7 @@ class TestDiagrams(TestTransitions):
         m = CustomMachine(states=[{'name': 'A', 'label': 'LabelA'},
                                   {'name': 'B', 'label': 'NotLabelA'}],
                           transitions=[{'trigger': 'event', 'source': 'A', 'dest': 'B', 'label': 'LabelEvent'}],
-                          initial='A', use_pygraphviz=self.use_pygraphviz)
+                          initial='A', graph_engine=self.graph_engine)
         dot, _, _ = self.parse_dot(m.get_graph())
         self.assertIn(r'label="LabelA\l"', dot)
         self.assertIn(r'label="NotLabelA\l"', dot)
@@ -257,7 +255,7 @@ class TestDiagrams(TestTransitions):
     def test_binary_stream(self):
         from io import BytesIO
         m = self.machine_cls(states=['A', 'B', 'C'], initial='A', auto_transitions=True,
-                             title='A test', show_conditions=True, use_pygraphviz=self.use_pygraphviz)
+                             title='A test', show_conditions=True, graph_engine=self.graph_engine)
         b1 = BytesIO()
         g = m.get_graph()
         g.draw(b1, format='png', prog='dot')
@@ -275,7 +273,7 @@ class TestDiagrams(TestTransitions):
                 # load and reload diagrams_pygraphviz to make sure
                 # an ImportError is raised for pygraphviz
                 reload(diagrams_pygraphviz)
-                m = self.machine_cls(states=['A', 'B', 'C'], initial='A', use_pygraphviz=True)
+                m = self.machine_cls(states=['A', 'B', 'C'], initial='A', graph_engine="pygraphviz")
             # make sure to reload after test is done to avoid side effects with other tests
             reload(diagrams_pygraphviz)
             # print(m.graph_cls, pgv)
@@ -284,14 +282,14 @@ class TestDiagrams(TestTransitions):
             pass
 
     def test_function_callbacks_annotation(self):
-        m = self.machine_cls(states=['A', 'B'], initial='A', use_pygraphviz=self.use_pygraphviz, show_conditions=True)
+        m = self.machine_cls(states=['A', 'B'], initial='A', graph_engine=self.graph_engine, show_conditions=True)
         m.add_transition('advance', 'A', 'B', conditions=m.is_A, unless=m.is_B)
         _, nodes, edges = self.parse_dot(m.get_graph())
         self.assertIn("[is_state(A", edges[0])
 
     def test_update_on_remove_transition(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A',
-                             use_pygraphviz=self.use_pygraphviz, show_state_attributes=True)
+                             graph_engine=self.graph_engine, show_state_attributes=True)
         _, _, edges = self.parse_dot(m.get_graph())
         assert "[label=walk]" in edges
         m.remove_transition(trigger="walk", source="A", dest="B")
@@ -314,7 +312,7 @@ class TestDiagramsLocked(TestDiagrams):
 class TestDiagramsNested(TestDiagrams):
 
     machine_cls = HierarchicalGraphMachine \
-        # type: Type[HierarchicalGraphMachine | LockedHierarchicalGraphMachine]
+        # type: Type[Union[HierarchicalGraphMachine, LockedHierarchicalGraphMachine]]
 
     def setUp(self):
         super(TestDiagramsNested, self).setUp()
@@ -331,7 +329,7 @@ class TestDiagramsNested(TestDiagrams):
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
-                             title='A test', show_conditions=True, use_pygraphviz=self.use_pygraphviz)
+                             title='A test', show_conditions=True, graph_engine=self.graph_engine)
         graph = m.get_graph()
         self.assertIsNotNone(graph)
         self.assertTrue("digraph" in str(graph))
@@ -362,7 +360,7 @@ class TestDiagramsNested(TestDiagrams):
                 return True
         model = Model()
         m = self.machine_cls(model, states=self.states, transitions=self.transitions, initial='A', title='A test',
-                             use_pygraphviz=self.use_pygraphviz, show_conditions=True)
+                             graph_engine=self.graph_engine, show_conditions=True)
         model.walk()
         model.run()
         g1 = model.get_graph(show_roi=True)
@@ -385,7 +383,7 @@ class TestDiagramsNested(TestDiagrams):
 
         model = Model()
         m = self.machine_cls(model, states=self.states, transitions=self.transitions, initial='A', title='A test',
-                             use_pygraphviz=self.use_pygraphviz, show_conditions=True)
+                             graph_engine=self.graph_engine, show_conditions=True)
         g1 = model.get_graph(show_roi=True)
         _, nodes, edges = self.parse_dot(g1)
         self.assertEqual(len(edges), 2)  # reset and walk
@@ -413,7 +411,7 @@ class TestDiagramsNested(TestDiagrams):
                    ]}]
         transitions = [["go", "A", "P"], ["reset", "*", "A"]]
         m = self.machine_cls(states=states, transitions=transitions, initial='A', title='A test',
-                             use_pygraphviz=self.use_pygraphviz, show_conditions=True)
+                             graph_engine=self.graph_engine, show_conditions=True)
         m.go()
         _, nodes, edges = self.parse_dot(m.get_graph(show_roi=True))
         self.assertEqual(len(edges), 2)
@@ -425,7 +423,7 @@ class TestDiagramsNested(TestDiagrams):
                        dict(trigger='fail', source='A', dest=None, conditions=['failed']),
                        dict(trigger='fail', source='A', dest='B', unless=['failed'])]
         m = self.machine_cls(states=states, transitions=transitions, initial='A', show_conditions=True,
-                             use_pygraphviz=self.use_pygraphviz)
+                             graph_engine=self.graph_engine)
 
         _, nodes, edges = self.parse_dot(m.get_graph())
         print(nodes)
@@ -446,7 +444,7 @@ class TestDiagramsNested(TestDiagrams):
             ["polled", "*", None]
         ]
         m = self.machine_cls(states=states, transitions=transitions, show_conditions=True,
-                             use_pygraphviz=self.use_pygraphviz, initial='initial')
+                             graph_engine=self.graph_engine, initial='initial')
         _, nodes, edges = self.parse_dot(m.get_graph())
         self.assertEqual(len(nodes), 3)
         self.assertEqual(len([e for e in edges if re.match(internal_only_once, e)]), 3)
@@ -488,11 +486,11 @@ class TestDiagramsNested(TestDiagrams):
                 pass
 
         extra_args = dict(auto_transitions=False, initial='standing', title='Mood Matrix',
-                          show_conditions=True, show_state_attributes=True, use_pygraphviz=self.use_pygraphviz)
+                          show_conditions=True, show_state_attributes=True, graph_engine=self.graph_engine)
         machine = CustomStateMachine(states=states, transitions=transitions, **extra_args)
         g1 = machine.get_graph()
         # dithering should have 4 'drink' edges, a) from walking, b) from initial, c) from running and d) from itself
-        if self.use_pygraphviz:
+        if self.graph_engine == "pygraphviz":
             dot_string = g1.string()
         else:
             dot_string = g1.source
