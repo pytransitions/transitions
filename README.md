@@ -274,7 +274,10 @@ lump.state
 >>> 'plasma'
 ```
 
-Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. Transitions can also be triggered _dynamically_ by calling the `trigger()` method provided with the name of the transition, as shown above. More on this in the [Triggering a transition](#triggers) section.
+Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.).
+Each method triggers the corresponding transition.
+Transitions can also be triggered _dynamically_ by calling the `trigger()` method provided with the name of the transition, as shown above.
+More on this in the [Triggering a transition](#triggers) section.
 
 
 ### <a name="states"></a>States
@@ -792,11 +795,13 @@ lump.heat(temp=74)
 
 #### <a name="check-transitions"></a>Check transitions
 
-If you want to check whether a transition is possible before you execute it ('look before you leap'), you can use `may_<trigger_name>` convenience functions that have been attached to your model:
+If you want to make sure a transition is possible before you go ahead with it, you can use the `may_<trigger_name>` functions that have been added to your model.
+Your model also contains the `may_trigger` function to check a trigger by name:
 
 ```python
 # check if the current temperature is hot enough to trigger a transition
 if lump.may_heat():
+# if lump.may_trigger("heat"):
     lump.heat()
 ```
 
@@ -806,6 +811,7 @@ Transition checks can also be used when a transition's destination is not availa
 ```python
 machine.add_transition('elevate', 'solid', 'spiritual')
 assert not lump.may_elevate()  # not ready yet :(
+assert not lump.may_trigger("elevate")  # same result for checks via trigger name
 ```
 
 #### <a name="transition-callbacks"></a>Callbacks
