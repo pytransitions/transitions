@@ -271,7 +271,7 @@ class TestParallelWithPyGraphviz(TestParallel):
         class PGVMachine(HierarchicalGraphMachine):
 
             def __init__(self, *args, **kwargs):
-                kwargs['use_pygraphviz'] = True
+                kwargs['graph_engine'] = "pygraphviz"
                 super(PGVMachine, self).__init__(*args, **kwargs)
 
         super(TestParallelWithPyGraphviz, self).setUp()
@@ -285,7 +285,7 @@ class TestParallelWithGraphviz(TestParallel):
         class GVMachine(HierarchicalGraphMachine):
 
             def __init__(self, *args, **kwargs):
-                kwargs['use_pygraphviz'] = False
+                kwargs['graph_engine'] = "graphviz"
                 super(GVMachine, self).__init__(*args, **kwargs)
 
         super(TestParallelWithGraphviz, self).setUp()

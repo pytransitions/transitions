@@ -12,14 +12,14 @@ except ImportError:  # pragma: no cover
 
 class TestPygraphvizImport(TestDiagramsImport):
 
-    use_pygraphviz = True
+    graph_engine = "pygraphviz"
     pgv = pgv
 
 
 @skipIf(pgv is None, 'Graph diagram requires pygraphviz')
 class PygraphvizTest(TestDiagrams):
 
-    use_pygraphviz = True
+    graph_engine = "pygraphviz"
 
     def setUp(self):
         super(PygraphvizTest, self).setUp()
@@ -37,7 +37,7 @@ class PygraphvizTest(TestDiagrams):
             transitions=transitions,
             initial='a',
             auto_transitions=False,
-            use_pygraphviz=self.use_pygraphviz
+            graph_engine=self.graph_engine
         )
 
         graph = m.get_graph()
@@ -52,7 +52,7 @@ class PygraphvizTest(TestDiagrams):
         m1 = Stuff(machine_cls=None)
         m2 = Stuff(machine_cls=None)
         m = self.machine_cls(model=[m1, m2], states=self.states, transitions=self.transitions, initial='A',
-                             use_pygraphviz=self.use_pygraphviz)
+                             graph_engine=self.graph_engine)
         m1.walk()
         self.assertEqual(m1.get_graph().get_node(m1.state).attr['color'],
                          m1.get_graph().style_attributes['node']['active']['color'])
@@ -116,4 +116,4 @@ class PygraphvizTest(TestDiagrams):
 @skipIf(pgv is None, 'NestedGraph diagram requires pygraphviz')
 class TestPygraphvizNested(TestDiagramsNested, PygraphvizTest):
 
-    use_pygraphviz = True
+    graph_engine = "pygraphviz"

@@ -16,7 +16,6 @@ try:
 except ImportError:
     pgv = None
 
-from ..core import listify
 from .diagrams_base import BaseGraph
 
 _LOGGER = logging.getLogger(__name__)
@@ -116,7 +115,7 @@ class Graph(BaseGraph):
                 for t in [trans["source"], trans.get("dest", trans["source"])]
             })
             active_states = active_states.union({k for k, style in self.custom_styles["node"].items() if style})
-            states = _filter_states(copy.deepcopy(states), active_states, self.machine.state_cls)
+            states = filter_states(copy.deepcopy(states), active_states, self.machine.state_cls)
         self._add_nodes(states, fsm_graph)
         self._add_edges(transitions, fsm_graph)
         setattr(fsm_graph, "draw", partial(self.draw, fsm_graph))
@@ -274,14 +273,14 @@ class NestedGraph(Graph):
         return attr
 
 
-def _filter_states(states, state_names, state_cls, prefix=None):
+def filter_states(states, state_names, state_cls, prefix=None):
     prefix = prefix or []
     result = []
     for state in states:
         pref = prefix + [state["name"]]
         included = getattr(state_cls, "separator", "_").join(pref) in state_names
         if "children" in state:
-            state["children"] = _filter_states(
+            state["children"] = filter_states(
                 state["children"], state_names, state_cls, prefix=pref
             )
             if state["children"] or included:

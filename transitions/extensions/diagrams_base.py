@@ -136,8 +136,7 @@ class BaseGraph(object):
                     transitions.append(tran)
                 for state in scope.get("children", []) + scope.get("states", []):
                     if not prefix:
-                        sta = state
-                        states.append(sta)
+                        states.append(state)
 
                     ini = state.get("initial", [])
                     if not isinstance(ini, list):
