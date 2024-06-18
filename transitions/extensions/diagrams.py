@@ -68,13 +68,6 @@ class GraphMachine(MarkupMachine):
         "rankdir": "LR",
     }
 
-    hierarchical_machine_attributes = {
-        "rankdir": "TB",
-        "rank": "source",
-        "nodesep": "1.5",
-        "compound": "true",
-    }
-
     style_attributes = {
         "node": {
             "default": {
