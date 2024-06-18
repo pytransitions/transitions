@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 from transitions import Machine
 from transitions.experimental.utils import generate_base_model
+from transitions.experimental.utils import add_transitions, transition, event, with_model_definitions
 from transitions.extensions import HierarchicalMachine
 
 from .utils import Stuff
@@ -24,6 +25,14 @@ class TestExperimental(TestCase):
 
     def setUp(self) -> None:
         self.machine_cls = Machine  # type: Type[Machine]
+        self.create_trigger_class()
+
+    def create_trigger_class(self):
+        @with_model_definitions
+        class TriggerMachine(self.machine_cls):  # type: ignore
+            pass
+
+        self.trigger_machine = TriggerMachine
 
     def test_model_override(self):
 
@@ -118,6 +127,113 @@ class TestExperimental(TestCase):
         self.assertTrue(model.go())
         with self.assertRaises(AttributeError):
             model.to_B()
+
+    def test_decorator(self):
+
+        class Model:
+
+            state: str = ""
+
+            def is_B(self) -> bool:
+                return False
+
+            @add_transitions(transition(source="A", dest="B"))
+            @add_transitions([["A", "B"], "C"])
+            def go(self) -> bool:
+                raise RuntimeError("Should be overridden!")
+
+        model = Model()
+        machine = self.trigger_machine(model, states=["A", "B", "C"], initial="A")
+        self.assertEqual("A", model.state)
+        self.assertTrue(machine.is_state("A", model))
+        self.assertTrue(model.go())
+        with self.assertRaises(AttributeError):
+            model.is_A()  # type: ignore
+        self.assertEqual("B", model.state)
+        self.assertTrue(model.is_B())
+        self.assertTrue(model.go())
+        self.assertFalse(model.is_B())
+        self.assertEqual("C", model.state)
+
+    def test_decorator_complex(self):
+
+        class Model:
+
+            state: str = ""
+
+            def check_param(self, param: bool) -> bool:
+                return param
+
+            @add_transitions(transition(source="A", dest="B"),
+                             transition(source="B", dest="C", unless=Stuff.this_passes),
+                             transition(source="B", dest="A", conditions=Stuff.this_passes, unless=Stuff.this_fails))
+            def go(self) -> bool:
+                raise RuntimeError("Should be overridden")
+
+            @add_transitions({"source": "A", "dest": "B", "conditions": "check_param"})
+            def event(self, param) -> bool:
+                raise RuntimeError("Should be overridden")
+
+        model = Model()
+        machine = self.trigger_machine(model, states=["A", "B"], initial="A")
+        self.assertTrue(model.go())
+        self.assertTrue(model.state == "B")
+        self.assertTrue(model.go())
+        self.assertTrue(model.state == "A")
+        self.assertFalse(model.event(param=False))
+        self.assertTrue(model.state == "A")
+        self.assertTrue(model.event(param=True))
+        self.assertTrue(model.state == "B")
+
+    def test_event_definition(self):
+
+        class Model:
+
+            state: str = ""
+
+            def is_B(self) -> bool:
+                return False
+
+            go = event(transition(source="A", dest="B"), [["A", "B"], "C"])
+
+        model = Model()
+        machine = self.trigger_machine(model, states=["A", "B", "C"], initial="A")
+        self.assertEqual("A", model.state)
+        self.assertTrue(machine.is_state("A", model))
+        self.assertTrue(model.go())
+        with self.assertRaises(AttributeError):
+            model.is_A()  # type: ignore
+        self.assertEqual("B", model.state)
+        self.assertTrue(model.is_B())
+        self.assertTrue(model.go())
+        self.assertFalse(model.is_B())
+        self.assertEqual("C", model.state)
+
+    def test_event_definition_complex(self):
+
+        class Model:
+
+            state: str = ""
+
+            go = event(transition(source="A", dest="B"),
+                       transition(source="B", dest="C", unless=Stuff.this_passes),
+                       transition(source="B", dest="A", conditions=Stuff.this_passes, unless=Stuff.this_fails))
+
+            event = event({"source": "A", "dest": "B", "conditions": "check_param"})
+
+            def check_param(self, param: bool) -> bool:
+                return param
+
+        model = Model()
+        machine = self.trigger_machine(model, states=["A", "B"], initial="A")
+        self.assertTrue(model.go())
+        self.assertTrue(model.state == "B")
+        self.assertTrue(model.go())
+        self.assertTrue(model.state == "A")
+        self.assertFalse(model.event(param=False))
+        self.assertTrue(model.state == "A")
+        self.assertTrue(model.event(param=True))
+        self.assertTrue(model.state == "B")
 
 
 class TestHSMExperimental(TestExperimental):

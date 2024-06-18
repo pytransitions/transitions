@@ -1,8 +1,7 @@
 from logging import Logger
-from functools import partial
 from typing import (
     Any, Optional, Callable, Sequence, Union, Iterable, List, Dict, DefaultDict,
-    Type, Deque, OrderedDict, Tuple, Literal, Collection
+    Type, Deque, OrderedDict, Tuple, Literal, Collection, TypedDict
 )
 
 # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
@@ -16,6 +15,27 @@ CallbackList = List[Callback]
 CallbacksArg = Optional[Union[Callback, CallbackList]]
 ModelState = Union[str, Enum, List["ModelState"]]
 ModelParameter = Union[Union[Literal['self'], Any], List[Union[Literal['self'], Any]]]
+
+
+class MachineConfig(TypedDict, total=False):
+    states: List[StateIdentifier]
+    transitions: List[TransitionConfig]
+    initial: str
+    auto_transitions: bool
+    ordered_transitions: bool
+    send_event: bool
+    ignore_invalid_triggers: bool
+    before_state_change: CallbacksArg
+    after_state_change: CallbacksArg
+    name: str
+    queued: bool
+    prepare_event: CallbacksArg
+    finalize_event: CallbacksArg
+    model_override: bool
+    model_attribute: str
+    on_exception: CallbacksArg
+    on_final: CallbacksArg
+
 
 def listify(obj: Union[None, List[Any], Tuple[Any], EnumMeta, Any]) -> Union[List[Any], Tuple[Any], EnumMeta]: ...
 
