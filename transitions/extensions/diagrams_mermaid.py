@@ -68,10 +68,12 @@ class Graph(BaseGraph):
         title = title if title else self.machine.title
 
         fsm_graph = ['---', title, '---', 'stateDiagram-v2']
+        fsm_graph.extend(_to_mermaid(self.machine.machine_attributes, " "))
+
         for style_name, style_attrs in self.machine.style_attributes["node"].items():
             if style_name:
                 fsm_graph.append("classDef s_{} {}".format(
-                    style_name, _to_css(style_attrs)))
+                    style_name, ','.join(_to_mermaid(style_attrs, ":"))))
         fsm_graph.append("")
         states, transitions = self._get_elements()
         if roi_state:
@@ -250,16 +252,16 @@ class DigraphMock:
         return None
 
 
-invalid = {"style", "shape", "peripheries"}
-convertible = {"fillcolor": "fill"}
+invalid = {"style", "shape", "peripheries", "strict", "directed"}
+convertible = {"fillcolor": "fill", "rankdir": "direction"}
 
 
-def _to_css(style_attrs):
+def _to_mermaid(style_attrs, sep):
     params = []
     for k, v in style_attrs.items():
         if k in invalid:
             continue
         if k in convertible:
             k = convertible[k]
-        params.append("{}:{}".format(k, v))
-    return ','.join(params)
+        params.append("{}{}{}".format(k, sep, v))
+    return params
