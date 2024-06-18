@@ -1,5 +1,5 @@
 from ..core import Callback, Condition, Event, EventData, Machine, State, Transition, StateConfig, ModelParameter, TransitionConfig
-from .nesting import HierarchicalMachine, NestedEvent, NestedState, NestedTransition
+from .nesting import HierarchicalMachine, NestedEvent, NestedState, NestedTransition, NestedEventData
 from typing import Any, Awaitable, Optional, List, Type, Dict, Deque, Callable, Union, Iterable, DefaultDict, Literal, Sequence
 from asyncio import Task
 from functools import partial
@@ -36,10 +36,14 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
     async def _change_state(self, event_data: AsyncEventData) -> None: ...  # type: ignore[override]
 
 class AsyncEventData(EventData):
-    machine: Union[AsyncMachine, HierarchicalAsyncMachine]
+    machine: AsyncMachine
     transition: AsyncTransition
     source_name: Optional[str]
     source_path: Optional[List[str]]
+
+class NestedAsyncEventData(NestedEventData, AsyncEventData):
+    machine: HierarchicalAsyncMachine
+    transition: NestedAsyncTransition
 
 class AsyncEvent(Event):
     machine: AsyncMachine
@@ -65,6 +69,7 @@ class AsyncMachine(Machine):
     protected_tasks: List[Task[Any]]
     current_context: ContextVar[Optional[Task[Any]]]
     _transition_queue_dict: Dict[int, Deque[AsyncCallbackFunc]]
+    _queued = Union[bool, str]
     def __init__(self, model: Optional[ModelParameter] = ...,
                  states: Optional[Union[Sequence[StateConfig], Type[Enum]]] = ...,
                  initial: Optional[StateIdentifier] = ...,
@@ -82,7 +87,7 @@ class AsyncMachine(Machine):
     async def callbacks(self, funcs: Iterable[Callback], event_data: AsyncEventData) -> None: ...  # type: ignore[override]
     async def callback(self, func: AsyncCallback, event_data: AsyncEventData) -> None: ...  # type: ignore[override]
     @staticmethod
-    async def await_all(callables: List[AsyncCallbackFunc]) -> Awaitable[List[Any]]: ...
+    async def await_all(callables: List[AsyncCallbackFunc]) -> List[Any]: ...
     async def switch_model_context(self, model: object) -> None: ...
     def get_state(self, state: Union[str, Enum]) -> AsyncState: ...
     async def process_context(self, func: Callable[[], Awaitable[None]], model: object) -> bool: ...
@@ -96,7 +101,9 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):  # type: igno
     event_cls: Type[NestedAsyncEvent]  # type: ignore
     async def trigger_event(self, model: object, trigger: str, # type: ignore[override]
                             *args: List[Any], **kwargs: Dict[str, Any]) -> bool: ...
-    async def _trigger_event(self, event_data: AsyncEventData, trigger: str) -> bool: ...  # type: ignore[override]
+    async def _trigger_event(self, event_data: NestedAsyncEventData, trigger: str) -> bool: ...  # type: ignore[override]
+
+    def get_state(self, state: Union[str, Enum, List[str]], hint: Optional[List[str]] = ...) -> NestedAsyncState: ...
 
 
 class AsyncTimeout(AsyncState):
