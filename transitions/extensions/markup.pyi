@@ -9,6 +9,20 @@ from enum import Enum
 # mypy does not support recursive definitions (yet), we need to use Any instead of 'MarkupConfig'
 class MarkupConfig(TypedDict):
     transitions: List[Dict[str, Any]]
+    states: List[Dict[str, Any]]
+    before_state_change: List[Union[str, Callable[..., None]]]
+    after_state_change: List[Union[str, Callable[..., None]]]
+    prepare_event: List[Union[str, Callable[..., None]]]
+    finalize_event: List[Union[str, Callable[..., None]]]
+    on_exception: List[Union[str, Callable[..., None]]]
+    on_final: List[Union[str, Callable[..., None]]]
+    model_attribute: str
+    model_override: bool
+    send_event: bool
+    auto_transitions: bool
+    ignore_invalid_triggers: bool
+    queued: Union[bool, str]
+
 
 class MarkupMachine(Machine):
     state_attributes: List[str]

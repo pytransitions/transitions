@@ -19,7 +19,7 @@ try:
     from enum import Enum, EnumMeta
 except ImportError:  # pragma: no cover
     # If enum is not available, create dummy classes for type checks
-    # typing must be prevent redefinition issues with mypy
+    # typing must be prevented redefinition issues with mypy
     class Enum:  # type:ignore
         """This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support."""
 
@@ -36,15 +36,17 @@ class MarkupMachine(Machine):
     """
 
     # Special attributes such as NestedState._name/_parent or Transition._condition are handled differently
-    state_attributes = ['on_exit', 'on_enter', 'ignore_invalid_triggers', 'timeout', 'on_timeout', 'tags', 'label']
+    state_attributes = ['on_exit', 'on_enter', 'ignore_invalid_triggers', 'timeout', 'on_timeout', 'tags', 'label',
+                        'final']
     transition_attributes = ['source', 'dest', 'prepare', 'before', 'after', 'label']
 
     def __init__(self, model=Machine.self_literal, states=None, initial='initial', transitions=None,
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 markup=None, auto_transitions_markup=False, **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state',
+                 model_override=False, on_exception=None, on_final=None, markup=None, auto_transitions_markup=False,
+                 **kwargs):
         self._markup = markup or {}
         self._auto_transitions_markup = auto_transitions_markup
         self._needs_update = True
@@ -62,14 +64,19 @@ class MarkupMachine(Machine):
                 ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
                 before_state_change=before_state_change, after_state_change=after_state_change, name=name,
                 queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
-                model_attribute=model_attribute, on_exception=on_exception, **kwargs
+                model_attribute=model_attribute, model_override=model_override,
+                on_exception=on_exception, on_final=on_final, **kwargs
             )
             self._markup['before_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
             self._markup['after_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
             self._markup['prepare_event'] = [x for x in (rep(f) for f in self.prepare_event) if x]
             self._markup['finalize_event'] = [x for x in (rep(f) for f in self.finalize_event) if x]
+            self._markup['on_exception'] = [x for x in (rep(f) for f in self.on_exception) if x]
+            self._markup['on_final'] = [x for x in (rep(f) for f in self.on_final) if x]
             self._markup['send_event'] = self.send_event
             self._markup['auto_transitions'] = self.auto_transitions
+            self._markup['model_attribute'] = self.model_attribute
+            self._markup['model_override'] = self.model_override
             self._markup['ignore_invalid_triggers'] = self.ignore_invalid_triggers
             self._markup['queued'] = self.has_queue
 
@@ -244,6 +251,8 @@ def _convert(obj, attributes, format_references):
             continue
         if isinstance(val, string_types):
             definition[key] = val
+        elif val is True:
+            definition[key] = True
         else:
             try:
                 definition[key] = [rep(v, format_references) for v in iter(val)]
