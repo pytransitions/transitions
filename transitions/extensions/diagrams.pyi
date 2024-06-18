@@ -25,7 +25,6 @@ class GraphMachine(MarkupMachine):
     _pickle_blacklist: List[str]
     transition_cls: Type[TransitionGraphSupport]
     machine_attributes: Dict[str, str]
-    hierarchical_machine_attributes:Dict [str, str]
     style_attributes: Dict[str, Union[str, Dict[str, Union[str, Dict[str, Any]]]]]
     model_graphs: Dict[int, BaseGraph]
     title: str
