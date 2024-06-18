@@ -51,8 +51,8 @@ A lightweight, object-oriented state machine implementation in Python with many 
   - [(Re-)Storing machine instances](#restoring)
   - [Typing support](#typing-support)
   - [Extensions](#extensions)
-    - [Diagrams](#diagrams)
     - [Hierarchical State Machine](#hsm)
+    - [Diagrams](#diagrams)
     - [Threading](#threading)
     - [Async](#async)
     - [State features](#state-features)
@@ -1357,8 +1357,8 @@ assert model.state == State.A
 
 Even though the core of transitions is kept lightweight, there are a variety of MixIns to extend its functionality. Currently supported are:
 
-- **Diagrams** to visualize the current state of a machine
 - **Hierarchical State Machines** for nesting and reuse
+- **Diagrams** to visualize the current state of a machine
 - **Threadsafe Locks** for parallel execution
 - **Async callbacks** for asynchronous execution
 - **Custom States** for extended state-related behaviour
@@ -1406,182 +1406,7 @@ from transitions.extensions import LockedHierarchicalGraphMachine as LHGMachine
 machine = LHGMachine(model, states, transitions)
 ```
 
-#### <a name="diagrams"></a> Diagrams
-
-Additional Keywords:
-
-- `title` (optional): Sets the title of the generated image.
-- `show_conditions` (default False): Shows conditions at transition edges
-- `show_auto_transitions` (default False): Shows auto transitions in graph
-- `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
-
-Transitions can generate basic state diagrams displaying all valid transitions between states.
-The basic diagram support generates a [mermaid](https://mermaid.js.org) state machine definition which can be used with mermaid's [live editor](https://mermaid.live), in markdown files in GitLab or GitHub and other web services.
-For instance, this code:
-```python
-from transitions.extensions.diagrams import HierarchicalGraphMachine
-import pyperclip
-
-states = ['A', 'B', {'name': 'C',
-                     'final': True,
-                     'parallel': [{'name': '1', 'children': ['a', {"name": "b", "final": True}],
-                                   'initial': 'a',
-                                   'transitions': [['go', 'a', 'b']]},
-                                  {'name': '2', 'children': ['a', {"name": "b", "final": True}],
-                                   'initial': 'a',
-                                   'transitions': [['go', 'a', 'b']]}]}]
-transitions = [['reset', 'C', 'A'], ["init", "A", "B"], ["do", "B", "C"]]
-
-
-m = HierarchicalGraphMachine(states=states, transitions=transitions, initial="A", show_conditions=True,
-                             title="Mermaid", graph_engine="mermaid", auto_transitions=False)
-m.init()
-
-pyperclip.copy(m.get_graph().draw(None))  # using pyperclip for convenience
-print("Graph copied to clipboard!")
-```
-
-Produces this diagram (check the document source to see the markdown notation):
-
-```mermaid
----
-Mermaid Graph
----
-stateDiagram-v2
-  direction LR
-  classDef s_default fill:white,color:black
-  classDef s_inactive fill:white,color:black
-  classDef s_parallel color:black,fill:white
-  classDef s_active color:red,fill:darksalmon
-  classDef s_previous color:blue,fill:azure
-  
-  state "A" as A
-  Class A s_previous
-  state "B" as B
-  Class B s_active
-  state "C" as C
-  C --> [*]
-  Class C s_default
-  state C {
-    state "1" as C_1
-    state C_1 {
-      [*] --> C_1_a
-      state "a" as C_1_a
-      state "b" as C_1_b
-      C_1_b --> [*]
-    }
-    --
-    state "2" as C_2
-    state C_2 {
-      [*] --> C_2_a
-      state "a" as C_2_a
-      state "b" as C_2_b
-      C_2_b --> [*]
-    }
-  }
-  
-  C --> A: reset
-  A --> B: init
-  B --> C: do
-  C_1_a --> C_1_b: go
-  C_2_a --> C_2_b: go
-  [*] --> A
-```
-
-To use more sophisticated graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed.
-To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
-
-    sudo apt-get install graphviz graphviz-dev  # Ubuntu and Debian
-    brew install graphviz  # MacOS
-    conda install graphviz python-graphviz  # (Ana)conda
-
-Now you can install the actual Python packages
-
-    pip install graphviz pygraphviz  # install graphviz and/or pygraphviz manually...
-    pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras which currently depends on pygraphviz
-
-Currently, `GraphMachine` will use `pygraphviz` when available and fall back to `graphviz` when `pygraphviz` cannot be
-found.
-If `graphviz` is not available either, `mermaid` will be used.
-This can be overridden by passing `graph_engine="graphviz"` (or `"mermaid"`) to the constructor.
-Note that this default might change in the future and `pygraphviz` support may be dropped.
-With `Model.get_graph()` you can get the current graph or the region of interest (roi) and draw it like this:
-
-```python
-# import transitions
-
-from transitions.extensions import GraphMachine
-m = Model()
-# without further arguments pygraphviz will be used
-machine = GraphMachine(model=m, ...)
-# when you want to use graphviz explicitly
-machine = GraphMachine(model=m, graph_engine="graphviz", ...)
-# in cases where auto transitions should be visible
-machine = GraphMachine(model=m, show_auto_transitions=True, ...)
-
-# draw the whole graph ...
-m.get_graph().draw('my_state_diagram.png', prog='dot')
-# ... or just the region of interest
-# (previous state, active state and all reachable states)
-roi = m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
-```
-
-This produces something like this:
-
-![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
-
-Independent of the backend you use, the draw function also accepts a file descriptor or a binary stream as the first argument. If you set this parameter to `None`, the byte stream will be returned:
-
-```python
-import io
-
-with open('a_graph.png', 'bw') as f:
-    # you need to pass the format when you pass objects instead of filenames.
-    m.get_graph().draw(f, format="png", prog='dot')
-
-# you can pass a (binary) stream too
-b = io.BytesIO()
-m.get_graph().draw(b, format="png", prog='dot')
-
-# or just handle the binary string yourself
-result = m.get_graph().draw(None, format="png", prog='dot')
-assert result == b.getvalue()
-```
-
-References and partials passed as callbacks will be resolved as good as possible:
-
-```python
-from transitions.extensions import GraphMachine
-from functools import partial
-
-
-class Model:
-
-    def clear_state(self, deep=False, force=False):
-        print("Clearing state ...")
-        return True
-
-
-model = Model()
-machine = GraphMachine(model=model, states=['A', 'B', 'C'],
-                       transitions=[
-                           {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
-                           {'trigger': 'clear', 'source': 'C', 'dest': 'A',
-                            'conditions': partial(model.clear_state, False, force=True)},
-                       ],
-                       initial='A', show_conditions=True)
-
-model.get_graph().draw('my_state_diagram.png', prog='dot')
-```
-
-This should produce something similar to this:
-
-![state diagram references_example](https://user-images.githubusercontent.com/205986/110783076-39087f80-8268-11eb-8fa1-fc7bac97f4cf.png)
-
-If the format of references does not suit your needs, you can override the static method `GraphMachine.format_references`. If you want to skip reference entirely, just let `GraphMachine.format_references` return `None`.
-Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example about how to use and edit graphs.
-
-### <a name="hsm"></a>Hierarchical State Machine (HSM)
+#### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
 Transitions includes an extension module which allows nesting states.
 This allows us to create contexts and to model cases where states are related to certain subtasks in the state machine.
@@ -1832,7 +1657,7 @@ machine.final_Z()
 # >>> Machine is final!
 ```
 
-#### Reuse of previously created HSMs
+##### Reuse of previously created HSMs
 
 Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
 Before _0.8.0_, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
@@ -1948,6 +1773,181 @@ collector.count()
 collector.increase()
 assert collector.is_counting_2()
 ```
+
+#### <a name="diagrams"></a> Diagrams
+
+Additional Keywords:
+
+- `title` (optional): Sets the title of the generated image.
+- `show_conditions` (default False): Shows conditions at transition edges
+- `show_auto_transitions` (default False): Shows auto transitions in graph
+- `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
+
+Transitions can generate basic state diagrams displaying all valid transitions between states.
+The basic diagram support generates a [mermaid](https://mermaid.js.org) state machine definition which can be used with mermaid's [live editor](https://mermaid.live), in markdown files in GitLab or GitHub and other web services.
+For instance, this code:
+```python
+from transitions.extensions.diagrams import HierarchicalGraphMachine
+import pyperclip
+
+states = ['A', 'B', {'name': 'C',
+                     'final': True,
+                     'parallel': [{'name': '1', 'children': ['a', {"name": "b", "final": True}],
+                                   'initial': 'a',
+                                   'transitions': [['go', 'a', 'b']]},
+                                  {'name': '2', 'children': ['a', {"name": "b", "final": True}],
+                                   'initial': 'a',
+                                   'transitions': [['go', 'a', 'b']]}]}]
+transitions = [['reset', 'C', 'A'], ["init", "A", "B"], ["do", "B", "C"]]
+
+
+m = HierarchicalGraphMachine(states=states, transitions=transitions, initial="A", show_conditions=True,
+                             title="Mermaid", graph_engine="mermaid", auto_transitions=False)
+m.init()
+
+pyperclip.copy(m.get_graph().draw(None))  # using pyperclip for convenience
+print("Graph copied to clipboard!")
+```
+
+Produces this diagram (check the document source to see the markdown notation):
+
+```mermaid
+---
+Mermaid Graph
+---
+stateDiagram-v2
+  direction LR
+  classDef s_default fill:white,color:black
+  classDef s_inactive fill:white,color:black
+  classDef s_parallel color:black,fill:white
+  classDef s_active color:red,fill:darksalmon
+  classDef s_previous color:blue,fill:azure
+  
+  state "A" as A
+  Class A s_previous
+  state "B" as B
+  Class B s_active
+  state "C" as C
+  C --> [*]
+  Class C s_default
+  state C {
+    state "1" as C_1
+    state C_1 {
+      [*] --> C_1_a
+      state "a" as C_1_a
+      state "b" as C_1_b
+      C_1_b --> [*]
+    }
+    --
+    state "2" as C_2
+    state C_2 {
+      [*] --> C_2_a
+      state "a" as C_2_a
+      state "b" as C_2_b
+      C_2_b --> [*]
+    }
+  }
+  
+  C --> A: reset
+  A --> B: init
+  B --> C: do
+  C_1_a --> C_1_b: go
+  C_2_a --> C_2_b: go
+  [*] --> A
+```
+
+To use more sophisticated graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed.
+To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
+
+    sudo apt-get install graphviz graphviz-dev  # Ubuntu and Debian
+    brew install graphviz  # MacOS
+    conda install graphviz python-graphviz  # (Ana)conda
+
+Now you can install the actual Python packages
+
+    pip install graphviz pygraphviz  # install graphviz and/or pygraphviz manually...
+    pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras which currently depends on pygraphviz
+
+Currently, `GraphMachine` will use `pygraphviz` when available and fall back to `graphviz` when `pygraphviz` cannot be
+found.
+If `graphviz` is not available either, `mermaid` will be used.
+This can be overridden by passing `graph_engine="graphviz"` (or `"mermaid"`) to the constructor.
+Note that this default might change in the future and `pygraphviz` support may be dropped.
+With `Model.get_graph()` you can get the current graph or the region of interest (roi) and draw it like this:
+
+```python
+# import transitions
+
+from transitions.extensions import GraphMachine
+m = Model()
+# without further arguments pygraphviz will be used
+machine = GraphMachine(model=m, ...)
+# when you want to use graphviz explicitly
+machine = GraphMachine(model=m, graph_engine="graphviz", ...)
+# in cases where auto transitions should be visible
+machine = GraphMachine(model=m, show_auto_transitions=True, ...)
+
+# draw the whole graph ...
+m.get_graph().draw('my_state_diagram.png', prog='dot')
+# ... or just the region of interest
+# (previous state, active state and all reachable states)
+roi = m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
+```
+
+This produces something like this:
+
+![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
+
+Independent of the backend you use, the draw function also accepts a file descriptor or a binary stream as the first argument. If you set this parameter to `None`, the byte stream will be returned:
+
+```python
+import io
+
+with open('a_graph.png', 'bw') as f:
+    # you need to pass the format when you pass objects instead of filenames.
+    m.get_graph().draw(f, format="png", prog='dot')
+
+# you can pass a (binary) stream too
+b = io.BytesIO()
+m.get_graph().draw(b, format="png", prog='dot')
+
+# or just handle the binary string yourself
+result = m.get_graph().draw(None, format="png", prog='dot')
+assert result == b.getvalue()
+```
+
+References and partials passed as callbacks will be resolved as good as possible:
+
+```python
+from transitions.extensions import GraphMachine
+from functools import partial
+
+
+class Model:
+
+    def clear_state(self, deep=False, force=False):
+        print("Clearing state ...")
+        return True
+
+
+model = Model()
+machine = GraphMachine(model=model, states=['A', 'B', 'C'],
+                       transitions=[
+                           {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
+                           {'trigger': 'clear', 'source': 'C', 'dest': 'A',
+                            'conditions': partial(model.clear_state, False, force=True)},
+                       ],
+                       initial='A', show_conditions=True)
+
+model.get_graph().draw('my_state_diagram.png', prog='dot')
+```
+
+This should produce something similar to this:
+
+![state diagram references_example](https://user-images.githubusercontent.com/205986/110783076-39087f80-8268-11eb-8fa1-fc7bac97f4cf.png)
+
+If the format of references does not suit your needs, you can override the static method `GraphMachine.format_references`. If you want to skip reference entirely, just let `GraphMachine.format_references` return `None`.
+Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example about how to use and edit graphs.
 
 #### <a name="threading"></a> Threadsafe(-ish) State Machine
 
