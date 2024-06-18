@@ -171,7 +171,9 @@ class TestEnumsAsStates(TestCase):
         m.add_transition('go', self.States.RED, self.States.GREEN)
         m.add_transition('stop', self.States.YELLOW, self.States.RED)
         assert t.may_go()
+        assert t.may_trigger("go")
         assert not t.may_stop()
+        assert not t.may_trigger("stop")
 
 
 @skipIf(enum is None, "enum is not available")

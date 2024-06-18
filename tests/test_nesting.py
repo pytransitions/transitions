@@ -639,14 +639,19 @@ class TestNestedTransitions(TestTransitions):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
         m = self.stuff.machine_cls(states=states, initial='A')
         assert m.may_to_A()
+        assert m.may_trigger("to_A")
         m.to_A()
         assert m.may_to_B()
+        assert m.may_trigger("to_B")
         m.to_B()
         assert m.may_to_C()
+        assert m.may_trigger("to_C")
         m.to_C()
         assert m.may_to_C_1()
+        assert m.may_trigger("to_C_1")
         m.to_C_1()
         assert m.may_to_D()
+        assert m.may_trigger("to_D")
         m.to_D()
 
     def test_get_nested_triggers(self):
@@ -895,7 +900,7 @@ class TestSeparatorsBase(TestCase):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2',
                                                        {'name': '3', 'children': ['a', 'b', 'c']}]}, 'D', 'E', 'F']
         machine = CustomHierarchicalGraphMachine(states=states, initial='A', auto_transitions=False,
-                                                 ignore_invalid_triggers=True, use_pygraphviz=False)
+                                                 ignore_invalid_triggers=True, graph_engine="graphviz")
         machine.add_ordered_transitions(trigger='next_state')
         machine.next_state()
         self.assertEqual(machine.state, 'B')
@@ -957,20 +962,32 @@ class TestSeparatorsBase(TestCase):
             states=states, transitions=transitions, initial='A', auto_transitions=False
         )
         assert m.may_walk()
+        assert m.may_trigger("walk")
         assert not m.may_run()
+        assert not m.may_trigger("run")
         assert not m.may_run_fast()
+        assert not m.may_trigger("run_fast")
         assert not m.may_sprint()
+        assert not m.may_trigger("sprint")
         assert not m.may_wait()
+        assert not m.may_trigger("wait")
 
         m.walk()
         assert not m.may_walk()
+        assert not m.may_trigger("walk")
         assert m.may_run()
+        assert m.may_trigger("run")
         assert not m.may_run_fast()
+        assert not m.may_trigger("run_fast")
         assert m.may_wait()
+        assert m.may_trigger("wait")
 
         m.run()
         assert m.may_run_fast()
+        assert m.may_trigger("run_fast")
         assert m.may_sprint()
+        assert m.may_trigger("sprint")
+
         m.run_fast()
 
     def test_remove_nested_transition(self):
