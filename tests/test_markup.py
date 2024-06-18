@@ -189,7 +189,7 @@ class TestMarkupHierarchicalMachine(TestMarkupMachine):
                    'initial': '2'}]  # type: List[Dict]
         machine = self.machine_cls(states=states, initial='A', auto_transitions=False, name='TestMachine')
         markup = {k: v for k, v in machine.markup.items() if v and k != 'models'}
-        self.assertEqual(dict(initial='A', states=states, name='TestMachine'), markup)
+        self.assertEqual(dict(initial='A', states=states, name='TestMachine', model_attribute='state'), markup)
 
 
 @skipIf(enum is None, "enum is not available")
