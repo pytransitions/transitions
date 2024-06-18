@@ -47,8 +47,8 @@ class LockedMachine(Machine):
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
                  name: str = ..., queued: bool = ...,
                  prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
-                 model_attribute: str = ..., on_exception: CallbacksArg = ...,
-                 machine_context: Optional[Union[List[LockContext], LockContext]] = ...,
+                 model_attribute: str = ..., model_override: bool = ..., on_exception: CallbacksArg = ...,
+                 on_final: CallbacksArg = ..., machine_context: Optional[Union[List[LockContext], LockContext]] = ...,
                  **kwargs: Dict[str, Any]) -> None: ...
     def __getstate__(self) -> Dict[str, Any]: ...
     def __setstate__(self, state: Dict[str, Any]) -> None: ...

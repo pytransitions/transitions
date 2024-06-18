@@ -395,8 +395,8 @@ class HierarchicalMachine(Machine):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state',
+                 model_override=False, on_exception=None, on_final=None, **kwargs):
         assert issubclass(self.state_cls, NestedState)
         assert issubclass(self.event_cls, NestedEvent)
         assert issubclass(self.transition_cls, NestedTransition)
@@ -410,7 +410,7 @@ class HierarchicalMachine(Machine):
             ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
             before_state_change=before_state_change, after_state_change=after_state_change, name=name,
             queued=queued, prepare_event=prepare_event, finalize_event=finalize_event, model_attribute=model_attribute,
-            on_exception=on_exception, **kwargs
+            model_override=model_override, on_exception=on_exception, on_final=on_final, **kwargs
         )
 
     def __call__(self, to_scope=None):
@@ -949,8 +949,7 @@ class HierarchicalMachine(Machine):
                 self._checked_assignment(model, 'is_' + path[0], FunctionWrapper(trig_func))
         with self(state.name):
             for event in self.events.values():
-                if not hasattr(model, event.name):
-                    self._add_trigger_to_model(event.name, model)
+                self._add_trigger_to_model(event.name, model)
             for a_state in self.states.values():
                 self._add_model_to_state(a_state, model)
 

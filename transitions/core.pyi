@@ -120,6 +120,7 @@ class Machine:
     ignore_invalid_triggers: Optional[bool]
     name: str
     model_attribute: str
+    model_override: bool
     models: List[Any]
     def __init__(self, model: Optional[ModelParameter] = ...,
                  states: Optional[Union[Sequence[StateConfig], Type[Enum]]] = ...,
@@ -130,7 +131,8 @@ class Machine:
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
                  name: str = ..., queued: bool = ...,
                  prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
-                 model_attribute: str = ..., on_exception: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
+                 model_attribute: str = ..., model_override: bool = ...,
+                 on_exception: CallbacksArg = ..., on_final: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
     def add_model(self, model: ModelParameter,
                   initial: Optional[StateIdentifier] = ...) -> None: ...
     def remove_model(self, model: ModelParameter) -> None: ...

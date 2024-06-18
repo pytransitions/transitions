@@ -123,9 +123,10 @@ class GraphMachine(MarkupMachine):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 title="State Machine", show_conditions=False, show_state_attributes=False, show_auto_transitions=False,
-                 use_pygraphviz=True, **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', model_override=False,
+                 on_exception=None, on_final=None, title="State Machine", show_conditions=False,
+                 show_state_attributes=False, show_auto_transitions=False,
+                 use_pygraphviz=True, graph_engine="pygraphviz", **kwargs):
         # remove graph config from keywords
         self.title = title
         self.show_conditions = show_conditions
@@ -143,7 +144,8 @@ class GraphMachine(MarkupMachine):
             ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
             before_state_change=before_state_change, after_state_change=after_state_change, name=name,
             queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
-            model_attribute=model_attribute, on_exception=on_exception, **kwargs
+            model_attribute=model_attribute, model_override=model_override,
+            on_exception=on_exception, on_final=on_final, **kwargs
         )
 
         # for backwards compatibility assign get_combined_graph to get_graph

@@ -5,6 +5,8 @@
 - Bug #610: Decorate models appropriately when `HierarchicalMachine` is passed to `add_state` (thanks @e0lithic)
 - Bug #647: Let `may_<trigger>` check all parallel states in processing order (thanks @spearsear)
 - Bug: `HSM.is_state` works with parallel states now
+- Experimental features: 
+  + Add `model_override` to Machine constructor to determine the mode of operation. With `model_override=Fale` (default), `transitions` will not override already defined methods on a model just as it did before. For workflows relying on typing, `model_override=True` will override methods already defined on the model and only those (!). This allows to control which convenience methods shall be assigned to the model and keeps the statically 'assumed' model in sync with its runtime counterpart. Since defining each and every method manually is rather tiresome, `transitions.experimental.utils.generate_base_model` features a way to convert a machine configuration into a `BaseClass` with all convenience functions and callbacks.
 
 ## 0.9.1 (May 2024)
 
