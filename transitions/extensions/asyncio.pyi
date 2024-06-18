@@ -74,8 +74,8 @@ class AsyncMachine(Machine):
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
                  name: str = ..., queued: Union[bool, Literal["model"]] = ...,
                  prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
-                 model_attribute: str = ..., on_exception: CallbacksArg = ..., on_final: CallbacksArg = ...,
-                 **kwargs: Dict[str, Any]) -> None: ...
+                 model_attribute: str = ..., model_override: bool= ..., on_exception: CallbacksArg = ...,
+                 on_final: CallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
     def add_model(self, model: Union[Union[Literal["self"], object], Sequence[Union[Literal["self"], object]]],
                   initial: Optional[StateIdentifier] = ...) -> None: ...
     async def dispatch(self, trigger: str, *args: List[Any], **kwargs: Dict[str, Any]) -> bool: ...  # type: ignore[override]

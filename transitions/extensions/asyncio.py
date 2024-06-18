@@ -305,18 +305,21 @@ class AsyncMachine(Machine):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 **kwargs):
-        self._transition_queue_dict = {}
-        super().__init__(model=model, states=states, initial=initial, transitions=transitions,
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state',
+                 model_override=False, on_exception=None, on_final=None, **kwargs):
+
+        super().__init__(model=None, states=states, initial=initial, transitions=transitions,
                          send_event=send_event, auto_transitions=auto_transitions,
                          ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
                          before_state_change=before_state_change, after_state_change=after_state_change, name=name,
-                         queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
-                         model_attribute=model_attribute, on_exception=on_exception, **kwargs)
-        if self.has_queue is True:
-            # _DictionaryMock sets and returns ONE internal value and ignores the passed key
-            self._transition_queue_dict = _DictionaryMock(self._transition_queue)
+                         queued=bool(queued), prepare_event=prepare_event, finalize_event=finalize_event,
+                         model_attribute=model_attribute, model_override=model_override,
+                         on_exception=on_exception, on_final=on_final, **kwargs)
+
+        self._transition_queue_dict = _DictionaryMock(self._transition_queue) if queued is True else {}
+        self._queued = queued
+        for model in listify(model):
+            self.add_model(model)
 
     def add_model(self, model, initial=None):
         super().add_model(model, initial)

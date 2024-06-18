@@ -511,8 +511,8 @@ class Machine(object):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 on_final=None, **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', model_override=False,
+                 on_exception=None, on_final=None, **kwargs):
         """
         Args:
             model (object or list): The object(s) whose states we want to manage. If set to `Machine.self_literal`
@@ -593,6 +593,7 @@ class Machine(object):
         self.on_final = on_final
         self.name = name + ": " if name is not None else ""
         self.model_attribute = model_attribute
+        self.model_override = model_override
 
         self.models = []
 
@@ -887,10 +888,10 @@ class Machine(object):
 
     def _checked_assignment(self, model, name, func):
         bound_func = getattr(model, name, None)
-        if bound_func is None or getattr(bound_func, "expect_override", False):
+        if (bound_func is None) ^ self.model_override:
             setattr(model, name, func)
         else:
-            _LOGGER.warning("%sModel already contains an attribute '%s'. Skip binding.", self.name, name)
+            _LOGGER.warning("%sSkip binding of '%s' to model due to model override policy.", self.name, name)
 
     def _can_trigger(self, model, trigger, *args, **kwargs):
         state = self.get_model_state(model)

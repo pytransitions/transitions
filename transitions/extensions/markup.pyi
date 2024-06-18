@@ -25,8 +25,8 @@ class MarkupMachine(Machine):
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
                  name: str = ..., queued: bool = ...,
                  prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
-                 model_attribute: str = ..., on_exception: CallbacksArg = ...,
-                 markup: Optional[MarkupConfig] = ..., auto_transitions_markup: bool = ...,
+                 model_attribute: str = ..., model_override: bool = ...,
+                 on_exception: CallbacksArg = ..., markup: Optional[MarkupConfig] = ..., auto_transitions_markup: bool = ...,
                  **kwargs: Dict[str, Any]) -> None: ...
     @property
     def auto_transitions_markup(self) -> bool: ...

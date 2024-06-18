@@ -102,7 +102,8 @@ class LockedMachine(Machine):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state',
+                 model_override=False, on_exception=None, on_final=None,
                  machine_context=None, **kwargs):
 
         self._ident = IdentManager()
@@ -116,7 +117,8 @@ class LockedMachine(Machine):
             ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
             before_state_change=before_state_change, after_state_change=after_state_change, name=name,
             queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
-            model_attribute=model_attribute, on_exception=on_exception, **kwargs
+            model_attribute=model_attribute, model_override=model_override, on_exception=on_exception,
+            on_final=on_final, **kwargs
         )
 
     # When we attempt to pickle a locked machine, using IDs wont suffice to unpickle the contexts since

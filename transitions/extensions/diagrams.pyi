@@ -44,7 +44,8 @@ class GraphMachine(MarkupMachine):
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
                  name: str = ..., queued: bool = ...,
                  prepare_event: CallbacksArg = ..., finalize_event: CallbacksArg = ...,
-                 model_attribute: str = ..., on_exception: CallbacksArg = ...,
+                 model_attribute: str = ..., model_override: bool = ...,
+                 on_exception: CallbacksArg = ..., on_final: CallbacksArg = ...,
                  title: str = ..., show_conditions: bool = ..., show_state_attributes: bool = ...,
                  show_auto_transitions: bool = ..., use_pygraphviz: bool = ..., **kwargs: Dict[str, Any]) -> None: ...
     def _init_graphviz_engine(self, use_pygraphviz: bool) -> Type[BaseGraph]: ...

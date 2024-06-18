@@ -49,6 +49,7 @@ A lightweight, object-oriented state machine implementation in Python with many 
   - [Alternative initialization patterns](#alternative-initialization-patterns)
   - [Logging](#logging)
   - [(Re-)Storing machine instances](#restoring)
+  - [Typing support](#typing-support)
   - [Extensions](#extensions)
     - [Diagrams](#diagrams)
     - [Hierarchical State Machine](#hsm)
@@ -1224,6 +1225,79 @@ m2.state
 
 m2.states.keys()
 >>> ['A', 'B', 'C']
+```
+
+### <a name="typing-support"></a> Typing support
+
+As you probably noticed, `transitions` uses some of Python's dynamic features to give you handy ways to handle models. However, static type checkers don't like model attributes and methods not being known before runtime. Historically, `transitions` also didn't assign convenience methods already defined on models to prevent accidental overrides.
+
+But don't worry!  You can use the machine constructor parameter `model_override` to change how models are decorated. If you set `model_override=True`, `transitions` will only override already defined methods. This prevents new methods from showing up at runtime and also allows you to define which helper methods you want to use.
+
+```python
+from transitions import Machine
+
+# Dynamic assignment
+class Model:
+    pass
+
+model = Model()
+default_machine = Machine(model, states=["A", "B"], transitions=[["go", "A", "B"]], initial="A")
+print(model.__dict__.keys())  # all convenience functions have been assigned
+# >> dict_keys(['trigger', 'to_A', 'may_to_A', 'to_B', 'may_to_B', 'go', 'may_go', 'is_A', 'is_B', 'state'])
+assert model.is_A()  # Unresolved attribute reference 'is_A' for class 'Model'
+
+
+# Predefined assigment: We are just interested in calling our 'go' event and will trigger the other events by name
+class PredefinedModel:
+    # state (or another parameter if you set 'model_attribute') will be assigned anyway 
+    # because we need to keep track of the model's state
+    state: str
+
+    def go(self) -> bool:
+        raise RuntimeError("Should be overridden!")
+
+    def trigger(self, trigger_name: str) -> bool:
+        raise RuntimeError("Should be overridden!")
+
+
+model = PredefinedModel()
+override_machine = Machine(model, states=["A", "B"], transitions=[["go", "A", "B"]], initial="A", model_override=True)
+print(model.__dict__.keys())
+# >> dict_keys(['trigger', 'go', 'state'])
+model.trigger("to_B")
+assert model.state == "B"
+```
+
+If you want to use all the convenience functions and throw some callbacks into the mix, defining a model can get pretty complicated when you have a lot of states and transitions defined.
+The method `generate_base_model` in `transitions` can generate a base model from a machine configuration to help you out with that.
+
+```python
+from transitions.experimental.utils import generate_base_model
+simple_config = {
+    "states": ["A", "B"],
+    "transitions": [
+        ["go", "A", "B"],
+    ],
+    "initial": "A",
+    "before_state_change": "call_this",
+    "model_override": True,
+} 
+
+class_definition = generate_base_model(simple_config)
+with open("base_model.py", "w") as f:
+    f.write(class_definition)
+
+# ... in another file
+from transitions import Machine
+from base_model import BaseModel
+
+class Model(BaseModel):  #  call_this will be an abstract method in BaseModel
+
+    def call_this(self) -> None:
+        # do something  
+
+model = Model()
+machine = Machine(model, **simple_config)
 ```
 
 ### <a name="extensions"></a> Extensions
