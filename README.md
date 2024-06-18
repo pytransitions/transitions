@@ -1306,6 +1306,53 @@ model = Model()
 machine = Machine(model, **simple_config)
 ```
 
+Defining model methods that will be overridden adds a bit of extra work.
+It might be cumbersome to switch back and forth to make sure event names are spelled correctly, especially if states and transitions are defined in lists before or after your model. You can cut down on the boilerplate and the uncertainty of working with strings by defining states as enums. You can also define transitions right in your model class with the help of `add_transitions` and `event`. 
+It's up to you whether you use the function decorator `add_transitions` or event to assign values to attributes depends on your preferred code style.
+They both work the same way, have the same signature, and should result in (almost) the same IDE type hints.
+As this is still a work in progress, you'll need to create a custom Machine class and use with_model_definitions for transitions to check for transitions defined that way.
+
+```python
+from enum import Enum
+
+from transitions.experimental.utils import with_model_definitions, event, add_transitions, transition
+from transitions import Machine
+
+
+class State(Enum):
+    A = "A"
+    B = "B"
+    C = "C"
+
+
+class Model:
+
+    state: State = State.A
+
+    @add_transitions(transition(source=State.A, dest=State.B), [State.C, State.A])
+    @add_transitions({"source": State.B,  "dest": State.A})
+    def foo(self): ...
+
+    bar = event(
+        {"source": State.B, "dest": State.A, "conditions": lambda: False},
+        transition(source=State.B, dest=State.C)
+    )
+
+
+@with_model_definitions  # don't forget to define your model with this decorator!
+class MyMachine(Machine):
+    pass
+
+
+model = Model()
+machine = MyMachine(model, states=State, initial=model.state)
+model.foo()
+model.bar()
+assert model.state == State.C
+model.foo()
+assert model.state == State.A
+```
+
 ### <a name="extensions"></a> Extensions
 
 Even though the core of transitions is kept lightweight, there are a variety of MixIns to extend its functionality. Currently supported are:
