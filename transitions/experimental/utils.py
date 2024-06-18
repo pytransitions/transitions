@@ -91,3 +91,57 @@ class BaseModel(metaclass=ABCMeta):
     return template
 
 
+def with_model_definitions(cls):
+    add_model = getattr(cls, "add_model")
+
+    def add_model_override(self, model, initial=None):
+        self.model_override = True
+        for model in listify(model):
+            model = self if model == "self" else model
+            for name, specs in TriggerPlaceholder.definitions.get(model.__class__).items():
+                for spec in specs:
+                    if isinstance(spec, list):
+                        self.add_transition(name, *spec)
+                    elif isinstance(spec, dict):
+                        self.add_transition(name, **spec)
+                    else:
+                        raise ValueError("Cannot add {} for event {} to machine", spec, name)
+        add_model(self, model, initial)
+
+    setattr(cls, 'add_model', add_model_override)
+    return cls
+
+
+class TriggerPlaceholder:
+    definitions = defaultdict(lambda: defaultdict(list))
+
+    def __init__(self, configs):
+        self.configs = deque(configs)
+
+    def __set_name__(self, owner, name):
+        for config in self.configs:
+            TriggerPlaceholder.definitions[owner][name].append(config)
+
+    def __call__(self, *args, **kwargs):
+        raise RuntimeError("Trigger was not initialized correctly!")
+
+
+def event(*configs):
+    return TriggerPlaceholder(configs)
+
+
+def add_transitions(*configs):
+    def _outer(trigger_func):
+        if isinstance(trigger_func, TriggerPlaceholder):
+            for config in reversed(configs):
+                trigger_func.configs.appendleft(config)
+        else:
+            trigger_func = TriggerPlaceholder(configs)
+        return trigger_func
+
+    return _outer
+
+
+def transition(source, dest=None, conditions=None, unless=None, before=None, after=None, prepare=None):
+    return {"source": source, "dest": dest, "conditions": conditions, "unless": unless, "before": before,
+            "after": after, "prepare": prepare}
