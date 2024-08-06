@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.9.2 ()
+## 0.9.2 (August 2024)
+
+Release 0.9.2 is a minor release and contains a new mermaid diagram backend, a new model decoration mode for easier development with types and some more features and bugfixes.
 
 - Bug #610: Decorate models appropriately when `HierarchicalMachine` is passed to `add_state` (thanks @e0lithic)
 - Bug #647: Let `may_<trigger>` check all parallel states in processing order (thanks @spearsear)
