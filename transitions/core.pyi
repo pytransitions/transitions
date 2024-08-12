@@ -1,7 +1,7 @@
 from logging import Logger
 from typing import (
     Any, Optional, Callable, Sequence, Union, Iterable, List, Dict, DefaultDict,
-    Type, Deque, OrderedDict, Tuple, Literal, Collection, TypedDict
+    Type, Deque, OrderedDict, Tuple, Literal, Collection, TypedDict, Mapping
 )
 
 # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
@@ -87,7 +87,12 @@ class Transition:
     def add_callback(self, trigger: str, func: Callback) -> None: ...
     def __repr__(self) -> str: ...
 
-TransitionConfig = Union[Sequence[Union[str, Any]], Dict[str, Any], Transition]
+TransitionConfigList = Union[
+    List[str], List[Sequence[str]], List[Optional[str]],
+    List[Union[str, Enum]], List[Optional[Union[str, Enum]]]
+]
+TransitionConfigDict = Mapping[str, Union[None, StateConfig, Callback, Iterable[Callback]]]
+TransitionConfig = Union[TransitionConfigList, TransitionConfigDict]
 
 class EventData:
     state: State
@@ -145,7 +150,7 @@ class Machine:
     def __init__(self, model: Optional[ModelParameter] = ...,
                  states: Optional[Union[Sequence[StateConfig], Type[Enum]]] = ...,
                  initial: Optional[StateIdentifier] = ...,
-                 transitions: Optional[Union[TransitionConfig, Sequence[TransitionConfig]]] = ...,
+                 transitions: Optional[Sequence[TransitionConfig]] = ...,
                  send_event: bool = ..., auto_transitions: bool = ..., ordered_transitions: bool = ...,
                  ignore_invalid_triggers: Optional[bool] = ...,
                  before_state_change: CallbacksArg = ..., after_state_change: CallbacksArg = ...,
@@ -211,7 +216,7 @@ class Machine:
                        conditions: CallbacksArg = ..., unless: CallbacksArg = ...,
                        before: CallbacksArg = ..., after: CallbacksArg = ..., prepare: CallbacksArg = ...,
                        **kwargs: Dict[str, Any]) -> None: ...
-    def add_transitions(self, transitions: Union[TransitionConfig, List[TransitionConfig]]) -> None: ...
+    def add_transitions(self, transitions: Sequence[TransitionConfig]) -> None: ...
     def add_ordered_transitions(self, states: Optional[Sequence[Union[str, State]]] = ...,
                                 trigger: str = ..., loop: bool = ...,
                                 loop_includes_initial: bool = ...,

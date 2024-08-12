@@ -47,7 +47,7 @@ class LockedHierarchicalGraphMachine(GraphMachine, LockedHierarchicalMachine):  
     @staticmethod
     def format_references(func: CallbackFunc) -> str: ...
 
-class AsyncGraphMachine(GraphMachine, AsyncMachine):
+class AsyncGraphMachine(GraphMachine, AsyncMachine):  # type: ignore
     # AsyncTransition already considers graph models when necessary
     transition_cls: Type[AsyncTransition]  # type: ignore
 
