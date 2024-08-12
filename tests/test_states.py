@@ -14,7 +14,8 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from typing import Type
+    from typing import Type, Sequence
+    from transitions.core import TransitionConfig
 
 
 class TestTransitions(TestCase):
@@ -58,7 +59,7 @@ class TestTransitions(TestCase):
                   {'name': 'S2', 'accepted': True}]
 
         transitions = [['to_B', ['S1', 'S2'], 'B'], ['go', 'A', 'B'], ['fail', 'B', 'F'],
-                       ['success1', 'B', 'S2'], ['success2', 'B', 'S2']]
+                       ['success1', 'B', 'S2'], ['success2', 'B', 'S2']]  # type: Sequence[TransitionConfig]
         m = CustomMachine(states=states, transitions=transitions, auto_transitions=False, initial='A')
         m.go()
         m.success1()

@@ -1,11 +1,11 @@
-from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine
 from transitions.extensions.factory import AsyncGraphMachine, HierarchicalAsyncGraphMachine
 
 try:
     import asyncio
+    from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine, AsyncEventData
+
 except (ImportError, SyntaxError):
     asyncio = None  # type: ignore
-
 
 from unittest.mock import MagicMock
 from unittest import skipIf
@@ -17,7 +17,8 @@ from .test_graphviz import pgv as gv
 from .test_pygraphviz import pgv
 
 if TYPE_CHECKING:
-    from typing import Type
+    from typing import Type, Sequence
+    from transitions.extensions.asyncio import AsyncTransitionConfig
 
 
 @skipIf(asyncio is None, "AsyncMachine requires asyncio and contextvars suppport")
@@ -218,6 +219,7 @@ class TestAsync(TestTransitions):
         # Define with list of dictionaries
 
         async def change_state(machine):
+            # type: (AsyncMachine) -> None
             self.assertEqual(machine.state, 'A')
             if machine.has_queue:
                 await machine.run(machine=machine)
@@ -227,12 +229,14 @@ class TestAsync(TestTransitions):
                     await machine.run(machine=machine)
 
         async def raise_machine_error(event_data):
+            # type: (AsyncEventData) -> None
             self.assertTrue(event_data.machine.has_queue)
             await event_data.model.to_A()
             event_data.machine._queued = False
             await event_data.model.to_C()
 
         async def raise_exception(event_data):
+            # type: (AsyncEventData) -> None
             await event_data.model.to_C()
             raise ValueError("Clears queue")
 
@@ -240,7 +244,7 @@ class TestAsync(TestTransitions):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B', 'before': change_state},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
+        ]  # type: Sequence[AsyncTransitionConfig]
 
         m = self.machine_cls(states=states, transitions=transitions, initial='A')
         asyncio.run(m.walk(machine=m))
@@ -269,10 +273,12 @@ class TestAsync(TestTransitions):
         m2 = DummyModel()
 
         async def run():
-            transitions = [{'trigger': 'mock', 'source': ['A', 'B'], 'dest': 'B', 'after': mock},
-                           {'trigger': 'delayed', 'source': 'A', 'dest': 'B', 'before': partial(asyncio.sleep, 0.1)},
-                           {'trigger': 'check', 'source': 'B', 'dest': 'A', 'after': check_mock},
-                           {'trigger': 'error', 'source': 'B', 'dest': 'C', 'before': self.raise_value_error}]
+            transitions = [
+                {'trigger': 'mock', 'source': ['A', 'B'], 'dest': 'B', 'after': mock},
+                {'trigger': 'delayed', 'source': 'A', 'dest': 'B', 'before': partial(asyncio.sleep, 0.1)},
+                {'trigger': 'check', 'source': 'B', 'dest': 'A', 'after': check_mock},
+                {'trigger': 'error', 'source': 'B', 'dest': 'C', 'before': self.raise_value_error}
+            ]  # type: Sequence[AsyncTransitionConfig]
             m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions, initial='A',
                                  queued='model')
             # call m1.delayed and m2.mock should be called immediately
@@ -307,7 +313,7 @@ class TestAsync(TestTransitions):
              'before': partial(check_queue, 4), 'after': remove_model},
             {'trigger': 'remove_queue', 'source': 'B', 'dest': None, 'prepare': ['to_A', 'to_C'],
              'before': partial(check_queue, 3), 'after': remove_model}
-        ]
+        ]  # type: Sequence[AsyncTransitionConfig]
 
         async def run():
             m1 = DummyModel()
@@ -599,13 +605,15 @@ class TestHierarchicalAsync(TestAsync):
         mock = MagicMock()
 
         async def sleep_mock():
+            # type: () -> None
             await asyncio.sleep(0.1)
             mock()
 
         states = ['A', 'B', {'name': 'C', 'children': ['1', {'name': '2', 'children': ['a', 'b'], 'initial': 'a'},
                                                        '3'], 'initial': '2'}]
-        transitions = [{'trigger': 'go', 'source': 'A', 'dest': 'C',
-                        'after': [sleep_mock] * 100}]
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'C', 'after': [sleep_mock] * 100}
+        ]  # type: Sequence[AsyncTransitionConfig]
         machine = self.machine_cls(states=states, transitions=transitions, initial='A')
         asyncio.run(machine.go())
         self.assertEqual('C{0}2{0}a'.format(machine.state_cls.separator), machine.state)

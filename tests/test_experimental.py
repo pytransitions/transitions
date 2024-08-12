@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence, Union, List
 from unittest import TestCase
 from types import ModuleType
 from unittest.mock import MagicMock
@@ -11,7 +11,7 @@ from transitions.extensions import HierarchicalMachine
 from .utils import Stuff
 
 if TYPE_CHECKING:
-    from transitions.core import MachineConfig
+    from transitions.core import MachineConfig, TransitionConfig
     from typing import Type
 
 
@@ -137,8 +137,10 @@ class TestExperimental(TestCase):
             def is_B(self) -> bool:
                 return False
 
+            transition_config = [["A", "B"], "C"]  # type: TransitionConfig
+
             @add_transitions(transition(source="A", dest="B"))
-            @add_transitions([["A", "B"], "C"])
+            @add_transitions(transition_config)
             def go(self) -> bool:
                 raise RuntimeError("Should be overridden!")
 
@@ -194,7 +196,8 @@ class TestExperimental(TestCase):
             def is_B(self) -> bool:
                 return False
 
-            go = event(transition(source="A", dest="B"), [["A", "B"], "C"])
+            transition_config = [["A", "B"], "C"]  # type: TransitionConfig
+            go = event(transition(source="A", dest="B"), transition_config)
 
         model = Model()
         machine = self.trigger_machine(model, states=["A", "B", "C"], initial="A")

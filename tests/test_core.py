@@ -22,7 +22,8 @@ except ImportError:
     from mock import MagicMock  # type: ignore
 
 if TYPE_CHECKING:
-    from typing import List, Union, Dict, Callable
+    from typing import Sequence
+    from transitions.core import TransitionConfig, StateConfig
 
 
 def on_exit_A(event):
@@ -104,7 +105,7 @@ class TestTransitions(TestCase):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]  # type: List[Union[List[str], Dict[str, str]]]
+        ]  # type: Sequence[TransitionConfig]
         m = Machine(states=states, transitions=transitions, initial='A')
         m.walk()
         self.assertEqual(m.state, 'B')
@@ -351,7 +352,7 @@ class TestTransitions(TestCase):
         self.assertEqual(s.state, 'B')
 
     def test_auto_transitions(self):
-        states = ['A', {'name': 'B'}, State(name='C')]  # type: List[Union[str, Dict[str, str], State]]
+        states = ['A', {'name': 'B'}, State(name='C')]  # type: Sequence[StateConfig]
         m = Machine(states=states, initial='A', auto_transitions=True)
         m.to_B()
         self.assertEqual(m.state, 'B')
@@ -609,7 +610,7 @@ class TestTransitions(TestCase):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B', 'before': change_state},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
+        ]  # type: Sequence[TransitionConfig]
 
         m = Machine(states=states, transitions=transitions, initial='A')
         m.walk(machine=m)
@@ -628,8 +629,11 @@ class TestTransitions(TestCase):
             machine.to_C(machine)
 
         states = ['A', 'B', 'C']
-        transitions = [{'trigger': 'do', 'source': '*', 'dest': 'C',
-                        'before': partial(self.stuff.this_raises, ValueError)}]
+        transitions = [{
+            'trigger': 'do', 'source': '*', 'dest': 'C',
+            'before': partial(self.stuff.this_raises, ValueError)
+        }]  # type: Sequence[TransitionConfig]
+
         m = Machine(states=states, transitions=transitions, queued=True,
                     before_state_change=before_change, after_state_change=after_change)
         with self.assertRaises(MachineError):
@@ -972,7 +976,7 @@ class TestTransitions(TestCase):
             {'trigger': 'go', 'source': 'A', 'dest': 'B', 'conditions': always_fails, 'prepare': local_callback},
             {'trigger': 'go', 'source': 'A', 'dest': 'B', 'prepare': local_callback},
 
-        ]
+        ]  # type: Sequence[TransitionConfig]
         m = Machine(states=['A', 'B'], transitions=transitions,
                     prepare_event=global_callback, initial='A')
 
