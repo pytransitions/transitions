@@ -19,7 +19,8 @@ except ImportError:  # pragma: no cover
     pgv = None
 
 if TYPE_CHECKING:
-    from typing import Type, List, Collection, Union, Literal
+    from typing import Type, List, Collection, Union, Literal, Sequence, Dict, Optional
+    from transitions.core import TransitionConfig
 
 
 class TestDiagramsImport(TestCase):
@@ -74,7 +75,7 @@ class TestDiagrams(TestTransitions):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D', 'conditions': 'is_fast'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
-        ]
+        ]  # type: Sequence[Dict[str, str]]
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
@@ -325,7 +326,8 @@ class TestDiagramsNested(TestDiagrams):
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D',    # + 1 edge
              'conditions': 'is_fast'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'},   # + 1 edge
-            {'trigger': 'reset', 'source': '*', 'dest': 'A'}]    # + 4 edges (from base state) = 8
+            {'trigger': 'reset', 'source': '*', 'dest': 'A'}     # + 4 edges (from base state) = 8
+        ]  # type: Sequence[Dict[str, str]]
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
@@ -419,9 +421,11 @@ class TestDiagramsNested(TestDiagrams):
 
     def test_internal(self):
         states = ['A', 'B']
-        transitions = [['go', 'A', 'B'],
-                       dict(trigger='fail', source='A', dest=None, conditions=['failed']),
-                       dict(trigger='fail', source='A', dest='B', unless=['failed'])]
+        transitions = [
+            ['go', 'A', 'B'],
+            dict(trigger='fail', source='A', dest=None, conditions=['failed']),
+            dict(trigger='fail', source='A', dest='B', unless=['failed'])
+        ]  # type: Sequence[TransitionConfig]
         m = self.machine_cls(states=states, transitions=transitions, initial='A', show_conditions=True,
                              graph_engine=self.graph_engine)
 
@@ -442,7 +446,7 @@ class TestDiagramsNested(TestDiagrams):
             {"trigger": "polled", "source": "ready", "dest": "running", "conditions": "door_closed"},
             ["done", "running", "ready"],
             ["polled", "*", None]
-        ]
+        ]  # type: Sequence[TransitionConfig]
         m = self.machine_cls(states=states, transitions=transitions, show_conditions=True,
                              graph_engine=self.graph_engine, initial='initial')
         _, nodes, edges = self.parse_dot(m.get_graph())

@@ -28,7 +28,8 @@ except ImportError:
         pass
 
 if TYPE_CHECKING:
-    from typing import List, Dict, Type, Union
+    from typing import List, Dict, Sequence, Union, Type
+    from transitions.core import TransitionConfig, StateConfig
 
 
 class SimpleModel(object):
@@ -96,12 +97,12 @@ class TestMarkupMachine(TestCase):
 
     def setUp(self):
         self.machine_cls = MarkupMachine
-        self.states = ['A', 'B', 'C', 'D']  # type: Union[List[Union[str, Dict]], Type[Enum]]
+        self.states = ['A', 'B', 'C', 'D']  # type: Union[Sequence[StateConfig], Type[Enum]]
         self.transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]  # type: List[Union[str, Dict[str, Union[str, Enum]]]]
+        ]  # type: Sequence[TransitionConfig]
         self.num_trans = len(self.transitions)
         self.num_auto = len(self.states) ** 2
 

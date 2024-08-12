@@ -1,3 +1,4 @@
+from enum import Enum
 from unittest import TestCase, skipIf
 
 from transitions.core import Machine
@@ -15,7 +16,8 @@ from .test_pygraphviz import pgv
 from .test_graphviz import pgv as gv
 
 if TYPE_CHECKING:
-    from typing import Type, List, Union, Dict
+    from typing import Type, List, Union, Dict, Sequence
+    from transitions.core import TransitionConfig
 
 
 @skipIf(enum is None, "enum is not available")
@@ -73,7 +75,7 @@ class TestEnumsAsStates(TestCase):
         transitions = [
             {'trigger': 'switch_to_yellow', 'source': self.States.RED, 'dest': self.States.YELLOW},
             {'trigger': 'switch_to_green', 'source': 'YELLOW', 'dest': 'GREEN'},
-        ]
+        ]  # type: Sequence[TransitionConfig]
 
         m = self.machine_cls(states=self.States, initial=self.States.RED, transitions=transitions)
         m.switch_to_yellow()
@@ -137,7 +139,7 @@ class TestEnumsAsStates(TestCase):
         transitions = [
             ['foo', State.FOO, State.BAR],
             ['bar', State.BAR, State.FOO]
-        ]
+        ]  # type: Sequence[List[Union[str, Enum]]]
 
         m = self.machine_cls(states=State, initial=State.FOO, transitions=transitions)
         m.foo()
@@ -418,4 +420,5 @@ class TestNestedStateGraphEnums(TestNestedStateEnums):
             INVALID = 1
 
         with self.assertRaises(ValueError):
-            self.machine_cls(states=States, transitions=[['go', '*', Invalid.INVALID]], initial=States.ONE)
+            transitions = [['go', '*', Invalid.INVALID]]  # type: Sequence[List[Union[str, Enum]]]
+            self.machine_cls(states=States, transitions=transitions, initial=States.ONE)

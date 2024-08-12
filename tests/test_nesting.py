@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 try:
     from builtins import object
 except ImportError:
@@ -31,8 +30,8 @@ except ImportError:  # pragma: no cover
 
 
 if TYPE_CHECKING:
-    from typing import List, Dict, Union, Type
-
+    from typing import List, Dict, Union, Type, Sequence
+    from transitions.core import TransitionConfig
 
 default_separator = NestedState.separator
 
@@ -661,7 +660,7 @@ class TestNestedTransitions(TestTransitions):
             ['goA', '*', 'A'],
             ['goF1', ['C{0}1'.format(self.machine_cls.separator), 'C{0}2'.format(self.machine_cls.separator)], 'F'],
             ['goF2', 'C', 'F']
-        ]
+        ]  # type: Sequence[TransitionConfig]
         m = self.machine_cls(states=test_states, transitions=transitions, auto_transitions=False, initial='A')
         self.assertEqual(1, len(m.get_nested_triggers(['C', '1'])))
         with m('C'):
