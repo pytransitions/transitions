@@ -2,6 +2,11 @@
 
 ## 0.9.3 ()
 
+- Bug #683: Typing wrongly suggested that `Transition` instances can be passed to `Machine.__init__` and/or `Machine.add_transition(s)` (thanks @antonio-antuan)
+- Typing should be more precise now
+  - `Machine.add_transitions` and `Machine.__init__` expect a `Sequence` of configurations for transitions now
+  - Added 'async' callbacks to types in `asyncio` extension
+
 ## 0.9.2 (August 2024)
 
 Release 0.9.2 is a minor release and contains a new mermaid diagram backend, a new model decoration mode for easier development with types and some more features and bugfixes.
