@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.9.3 ()
+
 ## 0.9.2 (August 2024)
 
 Release 0.9.2 is a minor release and contains a new mermaid diagram backend, a new model decoration mode for easier development with types and some more features and bugfixes.
