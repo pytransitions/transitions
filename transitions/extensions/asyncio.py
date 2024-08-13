@@ -678,7 +678,7 @@ class AsyncTimeout(AsyncState):
             except asyncio.CancelledError:
                 pass
 
-        return asyncio.ensure_future(_timeout())
+        return asyncio.create_task(_timeout(), context=contextvars.Context())
 
     async def _process_timeout(self, event_data):
         _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
