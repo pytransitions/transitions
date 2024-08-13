@@ -1,7 +1,7 @@
 from logging import Logger
 from typing import (
     Any, Optional, Callable, Sequence, Union, Iterable, List, Dict, DefaultDict,
-    Type, Deque, OrderedDict, Tuple, Literal, Collection, TypedDict, Mapping, Required
+    Type, Deque, OrderedDict, Tuple, Literal, Collection, TypedDict, Required
 )
 
 # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
@@ -102,8 +102,8 @@ class TransitionConfigDict(TypedDict, total=False):
     conditions: CallbacksArg
     unless: CallbacksArg
 
-# For backwards compatibility we also accept untyped dictionaries/mappings
-TransitionConfig = Union[TransitionConfigList, TransitionConfigDict, Mapping[str, Any]]
+# For backwards compatibility we also accept generic collections
+TransitionConfig = Union[TransitionConfigList, TransitionConfigDict, Collection[str]]
 
 class EventData:
     state: State

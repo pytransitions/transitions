@@ -3,7 +3,7 @@ from ..core import Callback, Condition, Event, EventData, Machine, State, Transi
 from .nesting import HierarchicalMachine, NestedEvent, NestedState, NestedTransition, NestedEventData, \
     NestedStateConfig, NestedStateIdentifier
 from typing import Any, Awaitable, Optional, List, Type, Dict, Deque, Callable, Union, Iterable, DefaultDict, Literal, \
-    Sequence, Coroutine, Mapping, Required, TypedDict
+    Sequence, Coroutine, Required, TypedDict, Collection
 from asyncio import Task
 from logging import Logger
 from enum import Enum
@@ -27,8 +27,8 @@ class AsyncTransitionConfigDict(TypedDict, total=False):
     conditions: AsyncCallbacksArg
     unless: AsyncCallbacksArg
 
-# For backwards compatibility we also accept untyped dictionaries/mappings
-AsyncTransitionConfig = Union[TransitionConfigList, AsyncTransitionConfigDict, Mapping[str, Any]]
+# For backwards compatibility we also accept generic collections
+AsyncTransitionConfig = Union[TransitionConfigList, AsyncTransitionConfigDict, Collection[str]]
 
 class AsyncState(State):
     async def enter(self, event_data: AsyncEventData) -> None: ...  # type: ignore[override]
