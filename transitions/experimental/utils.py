@@ -66,7 +66,7 @@ def generate_base_model(config):
             f"    def may_{trigger_name}(self) -> bool: {_placeholder_body}\n"
         )
 
-    extra_params = "event_data: EventData" if m.send_event else "*args: List[Any], **kwargs: Dict[str, Any]"
+    extra_params = "event_data: EventData" if m.send_event else "*args: Any, **kwargs: Any"
     for callback_name in callbacks:
         if isinstance(callback_name, str):
             callback_block += (f"    @abstractmethod\n"
@@ -98,7 +98,7 @@ def with_model_definitions(cls):
         self.model_override = True
         for model in listify(model):
             model = self if model == "self" else model
-            for name, specs in TriggerPlaceholder.definitions.get(model.__class__).items():
+            for name, specs in TriggerPlaceholder.definitions.get(model.__class__, {}).items():
                 for spec in specs:
                     if isinstance(spec, list):
                         self.add_transition(name, *spec)

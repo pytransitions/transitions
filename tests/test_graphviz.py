@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover
 
 if TYPE_CHECKING:
     from typing import Type, List, Collection, Union, Literal, Sequence, Dict, Optional
-    from transitions.core import TransitionConfig
+    from transitions.core import TransitionConfig, TransitionConfigDict
 
 
 class TestDiagramsImport(TestCase):
@@ -75,7 +75,7 @@ class TestDiagrams(TestTransitions):
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D', 'conditions': 'is_fast'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'}
-        ]  # type: Sequence[Dict[str, str]]
+        ]  # type: Sequence[TransitionConfigDict]
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,
@@ -327,7 +327,7 @@ class TestDiagramsNested(TestDiagrams):
              'conditions': 'is_fast'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'B'},   # + 1 edge
             {'trigger': 'reset', 'source': '*', 'dest': 'A'}     # + 4 edges (from base state) = 8
-        ]  # type: Sequence[Dict[str, str]]
+        ]  # type: Sequence[TransitionConfigDict]
 
     def test_diagram(self):
         m = self.machine_cls(states=self.states, transitions=self.transitions, initial='A', auto_transitions=False,

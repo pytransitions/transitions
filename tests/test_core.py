@@ -4,13 +4,13 @@ except ImportError:
     pass
 
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 from functools import partial
 from unittest import TestCase, skipIf
 import weakref
 
 from transitions import Machine, MachineError, State, EventData
-from transitions.core import listify, _prep_ordered_arg
+from transitions.core import listify, _prep_ordered_arg, Transition
 
 from .utils import InheritedStuff
 from .utils import Stuff, DummyModel
@@ -23,7 +23,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from typing import Sequence
-    from transitions.core import TransitionConfig, StateConfig
+    from transitions.core import TransitionConfig, StateConfig, TransitionConfigDict
 
 
 def on_exit_A(event):
@@ -570,7 +570,7 @@ class TestTransitions(TestCase):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
         m = Machine(states=states, transitions=transitions, initial='A')
         m.walk()
         dump = pickle.dumps(m)
@@ -1350,3 +1350,44 @@ class TestTransitions(TestCase):
         self.assertEqual(1, final_mock.call_count)
         machine.to_B()
         self.assertEqual(2, final_mock.call_count)
+
+    def test_custom_transition(self):
+
+        class MyTransition(self.machine_cls.transition_cls):  # type: ignore
+
+            def __init__(self, source, dest, conditions=None, unless=None, before=None,
+                         after=None, prepare=None, my_int=None, my_none=None, my_str=None, my_dict=None):
+                super(MyTransition, self).__init__(source, dest, conditions, unless, before, after, prepare)
+                self.my_int = my_int
+                self.my_none = my_none
+                self.my_str = my_str
+                self.my_dict = my_dict
+
+        class MyMachine(self.machine_cls):  # type: ignore
+            transition_cls = MyTransition
+
+        a_transition = {
+            "trigger": "go", "source": "B", "dest": "A",
+            "my_int": 42, "my_str": "foo", "my_dict": {"bar": "baz"}
+        }
+        transitions = [
+            ["go", "A", "B"],
+            a_transition
+        ]
+
+        m = MyMachine(states=["A", "B"], transitions=transitions, initial="A")
+        m.add_transition("reset", "*", "A",
+                         my_int=23, my_str="foo2", my_none=None, my_dict={"baz": "bar"})
+        assert m.go()
+        trans = m.get_transitions("go", "B")  # type: List[MyTransition]
+        assert len(trans) == 1
+        assert trans[0].my_str == a_transition["my_str"]
+        assert trans[0].my_int == a_transition["my_int"]
+        assert trans[0].my_dict == a_transition["my_dict"]
+        assert trans[0].my_none is None
+        trans = m.get_transitions("reset", "A")
+        assert len(trans) == 1
+        assert trans[0].my_str == "foo2"
+        assert trans[0].my_int == 23
+        assert trans[0].my_dict == {"baz": "bar"}
+        assert trans[0].my_none is None

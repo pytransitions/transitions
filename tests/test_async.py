@@ -2,7 +2,8 @@ from transitions.extensions.factory import AsyncGraphMachine, HierarchicalAsyncG
 
 try:
     import asyncio
-    from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine, AsyncEventData
+    from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine, AsyncEventData, \
+        AsyncTransition
 
 except (ImportError, SyntaxError):
     asyncio = None  # type: ignore
@@ -17,7 +18,7 @@ from .test_graphviz import pgv as gv
 from .test_pygraphviz import pgv
 
 if TYPE_CHECKING:
-    from typing import Type, Sequence
+    from typing import Type, Sequence, List
     from transitions.extensions.asyncio import AsyncTransitionConfig
 
 
@@ -581,6 +582,51 @@ class TestAsync(TestTransitions):
             self.assertEqual(1, final_mock.call_count)
             await machine.to_B()
             self.assertEqual(2, final_mock.call_count)
+
+        asyncio.run(run())
+
+    def test_custom_transition(self):
+
+        class MyTransition(self.machine_cls.transition_cls):  # type: ignore
+
+            def __init__(self, source, dest, conditions=None, unless=None, before=None,
+                         after=None, prepare=None, my_int=None, my_none=None, my_str=None, my_dict=None):
+                super(MyTransition, self).__init__(source, dest, conditions, unless, before, after, prepare)
+                self.my_int = my_int
+                self.my_none = my_none
+                self.my_str = my_str
+                self.my_dict = my_dict
+
+        class MyMachine(self.machine_cls):  # type: ignore
+            transition_cls = MyTransition
+
+        a_transition = {
+            "trigger": "go", "source": "B", "dest": "A",
+            "my_int": 42, "my_str": "foo", "my_dict": {"bar": "baz"}
+        }
+        transitions = [
+            ["go", "A", "B"],
+            a_transition
+        ]
+
+        m = MyMachine(states=["A", "B"], transitions=transitions, initial="A")
+        m.add_transition("reset", "*", "A",
+                         my_int=23, my_str="foo2", my_none=None, my_dict={"baz": "bar"})
+
+        async def run():
+            assert await m.go()
+            trans = m.get_transitions("go", "B")  # type: List[MyTransition]
+            assert len(trans) == 1
+            assert trans[0].my_str == a_transition["my_str"]
+            assert trans[0].my_int == a_transition["my_int"]
+            assert trans[0].my_dict == a_transition["my_dict"]
+            assert trans[0].my_none is None
+            trans = m.get_transitions("reset", "A")
+            assert len(trans) == 1
+            assert trans[0].my_str == "foo2"
+            assert trans[0].my_int == 23
+            assert trans[0].my_dict == {"baz": "bar"}
+            assert trans[0].my_none is None
 
         asyncio.run(run())
 

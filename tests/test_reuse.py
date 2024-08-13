@@ -20,8 +20,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from typing import List, Union, Dict, Any, Sequence
-    from transitions.core import TransitionConfig
-
+    from transitions.core import TransitionConfig, TransitionConfigDict
 
 test_states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                'D', 'E', 'F']
@@ -91,7 +90,7 @@ class TestReuse(TestCase):
             {'trigger': 'decrease', 'source': '3', 'dest': '2'},
             {'trigger': 'decrease', 'source': '1', 'dest': '1'},
             {'trigger': 'reset', 'source': '*', 'dest': '1'},
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
 
         counter = self.machine_cls(states=states, transitions=transitions, before_state_change='check',
                                    after_state_change='clear', initial='1')
@@ -103,7 +102,7 @@ class TestReuse(TestCase):
             {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
             {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
             {'trigger': 'calc', 'source': '*', 'dest': 'C'},
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
 
         walker = self.machine_cls(states=new_states, transitions=new_transitions, before_state_change='watch',
                                   after_state_change='look_back', initial='A')
@@ -144,7 +143,7 @@ class TestReuse(TestCase):
             {'trigger': 'decrease', 'source': '1', 'dest': '1'},
             {'trigger': 'reset', 'source': '*', 'dest': '1'},
             {'trigger': 'done', 'source': '3', 'dest': 'finished'}
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
 
         counter = self.machine_cls(states=states, transitions=transitions, initial='1')
 
@@ -158,7 +157,7 @@ class TestReuse(TestCase):
             {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
             {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
             {'trigger': 'calc', 'source': '*', 'dest': 'C%s1' % State.separator},
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
 
         walker = self.machine_cls(states=new_states, transitions=new_transitions, before_state_change='watch',
                                   after_state_change='look_back', initial='A')
