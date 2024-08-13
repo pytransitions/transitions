@@ -137,10 +137,8 @@ class TestExperimental(TestCase):
             def is_B(self) -> bool:
                 return False
 
-            transition_config = [["A", "B"], "C"]  # type: TransitionConfig
-
             @add_transitions(transition(source="A", dest="B"))
-            @add_transitions(transition_config)
+            @add_transitions([["A", "B"], "C"])
             def go(self) -> bool:
                 raise RuntimeError("Should be overridden!")
 
@@ -196,8 +194,7 @@ class TestExperimental(TestCase):
             def is_B(self) -> bool:
                 return False
 
-            transition_config = [["A", "B"], "C"]  # type: TransitionConfig
-            go = event(transition(source="A", dest="B"), transition_config)
+            go = event(transition(source="A", dest="B"), [["A", "B"], "C"], {"source": "*", "dest": None})
 
         model = Model()
         machine = self.trigger_machine(model, states=["A", "B", "C"], initial="A")

@@ -3,7 +3,7 @@ from ..core import Callback, Condition, Event, EventData, Machine, State, Transi
 from .nesting import HierarchicalMachine, NestedEvent, NestedState, NestedTransition, NestedEventData, \
     NestedStateConfig, NestedStateIdentifier
 from typing import Any, Awaitable, Optional, List, Type, Dict, Deque, Callable, Union, Iterable, DefaultDict, Literal, \
-    Sequence, Coroutine, Mapping
+    Sequence, Coroutine, Mapping, Required, TypedDict
 from asyncio import Task
 from logging import Logger
 from enum import Enum
@@ -16,8 +16,19 @@ _LOGGER: Logger
 AsyncCallbackFunc = Callable[..., Coroutine[Any, Any, Optional[bool]]]
 AsyncCallback = Union[str, AsyncCallbackFunc]
 AsyncCallbacksArg = Optional[Union[Callback, Iterable[Callback], AsyncCallback, Iterable[AsyncCallback]]]
-AsyncTransitionConfigDict = Mapping[str, Union[None, StateConfig, Union[AsyncCallback, Callback], Iterable[Union[AsyncCallback, Callback]]]]
-AsyncTransitionConfig = Union[TransitionConfigList, AsyncTransitionConfigDict]
+
+class AsyncTransitionConfigDict(TypedDict, total=False):
+    trigger: Required[str]
+    source: Required[Union[str, Enum, Sequence[Union[str, Enum]]]]
+    dest: Required[Optional[Union[str, Enum]]]
+    prepare: AsyncCallbacksArg
+    before: AsyncCallbacksArg
+    after: AsyncCallbacksArg
+    conditions: AsyncCallbacksArg
+    unless: AsyncCallbacksArg
+
+# For backwards compatibility we also accept untyped dictionaries/mappings
+AsyncTransitionConfig = Union[TransitionConfigList, AsyncTransitionConfigDict, Mapping[str, Any]]
 
 class AsyncState(State):
     async def enter(self, event_data: AsyncEventData) -> None: ...  # type: ignore[override]
@@ -55,7 +66,7 @@ class AsyncEvent(Event):
     machine: AsyncMachine
     transitions: DefaultDict[str, List[AsyncTransition]]  # type: ignore
 
-    async def trigger(self, model: object, *args: List[Any], **kwargs: Dict[str, Any]) -> bool: ...  # type: ignore[override]
+    async def trigger(self, model: object, *args: Any, **kwargs: Any) -> bool: ...  # type: ignore[override]
     async def _trigger(self, event_data: AsyncEventData) -> bool: ...  # type: ignore[override]
     async def _process(self, event_data: AsyncEventData) -> bool: ...  # type: ignore[override]
 
@@ -86,7 +97,7 @@ class AsyncMachine(Machine):
                  name: str = ..., queued: Union[bool, Literal["model"]] = ...,
                  prepare_event: AsyncCallbacksArg = ..., finalize_event: AsyncCallbacksArg = ...,
                  model_attribute: str = ..., model_override: bool= ..., on_exception: AsyncCallbacksArg = ...,
-                 on_final: AsyncCallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
+                 on_final: AsyncCallbacksArg = ..., **kwargs: Any) -> None: ...
     def add_model(self, model: Union[Union[Literal["self"], object], Sequence[Union[Literal["self"], object]]],
                   initial: Optional[StateIdentifier] = ...) -> None: ...
     def add_transition(self, trigger: str,
@@ -94,13 +105,13 @@ class AsyncMachine(Machine):
                        dest: Optional[StateIdentifier] = ...,
                        conditions: AsyncCallbacksArg = ..., unless: AsyncCallbacksArg = ...,
                        before: AsyncCallbacksArg = ..., after: AsyncCallbacksArg = ..., prepare: AsyncCallbacksArg = ...,
-                       **kwargs: Dict[str, Any]) -> None: ...
+                       **kwargs: Any) -> None: ...
     def add_transitions(self, transitions: Sequence[AsyncTransitionConfig] = ...) -> None: ...
-    async def dispatch(self, trigger: str, *args: List[Any], **kwargs: Dict[str, Any]) -> bool: ...  # type: ignore[override]
+    async def dispatch(self, trigger: str, *args: Any, **kwargs: Any) -> bool: ...  # type: ignore[override]
     async def callbacks(self, funcs: Iterable[Callback], event_data: AsyncEventData) -> None: ...  # type: ignore[override]
     async def callback(self, func: AsyncCallback, event_data: AsyncEventData) -> None: ...  # type: ignore[override]
     @staticmethod
-    async def await_all(callables: List[AsyncCallbackFunc]) -> List[Any]: ...
+    async def await_all(callables: List[AsyncCallbackFunc]) -> List[Optional[bool]]: ...
     async def switch_model_context(self, model: object) -> None: ...
     def get_state(self, state: Union[str, Enum]) -> AsyncState: ...
     async def process_context(self, func: Callable[[], Awaitable[None]], model: object) -> bool: ...
@@ -121,9 +132,9 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):  # type: igno
                  before_state_change: AsyncCallbacksArg = ..., after_state_change: AsyncCallbacksArg = ...,
                  name: str = ..., queued: Union[bool, str] = ...,
                  prepare_event: AsyncCallbacksArg = ..., finalize_event: AsyncCallbacksArg = ...,
-                 model_attribute: str = ..., on_exception: AsyncCallbacksArg = ..., **kwargs: Dict[str, Any]) -> None: ...
+                 model_attribute: str = ..., on_exception: AsyncCallbacksArg = ..., **kwargs: Any) -> None: ...
     async def trigger_event(self, model: object, trigger: str,  # type: ignore[override]
-                            *args: List[Any], **kwargs: Dict[str, Any]) -> bool: ...
+                            *args: Any, **kwargs: Any) -> bool: ...
     async def _trigger_event(self, event_data: NestedAsyncEventData, trigger: str) -> bool: ...  # type: ignore[override]
 
     def get_state(self, state: Union[str, Enum, List[str]], hint: Optional[List[str]] = ...) -> NestedAsyncState: ...
@@ -134,7 +145,7 @@ class AsyncTimeout(AsyncState):
     timeout: float
     _on_timeout: AsyncCallbacksArg
     runner: Dict[int, Task[Any]]
-    def __init__(self, *args: List[Any], **kwargs: Dict[str, Any]) -> None: ...
+    def __init__(self, *args: Any, **kwargs: Any) -> None: ...
     async def enter(self, event_data: AsyncEventData) -> None: ...  # type: ignore[override]
     async def exit(self, event_data: AsyncEventData) -> None: ...  # type: ignore[override]
     def create_timer(self, event_data: AsyncEventData) -> Task[Any]: ...
