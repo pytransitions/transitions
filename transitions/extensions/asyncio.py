@@ -686,13 +686,13 @@ class AsyncTimeout(AsyncState):
                 await asyncio.shield(self._process_timeout(event_data))
             except asyncio.CancelledError:
                 pass
-
-        return asyncio.create_task(_timeout(), context=contextvars.Context())
+        return asyncio.create_task(_timeout())
 
     async def _process_timeout(self, event_data):
         _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
         event_data = AsyncEventData(event_data.state, AsyncEvent("timeout", event_data.machine),
                                     event_data.machine, event_data.model, args=tuple(), kwargs={})
+        token = AsyncMachine.current_context.set(None)
         try:
             await event_data.machine.callbacks(self.on_timeout, event_data)
         except BaseException as err:
@@ -708,6 +708,8 @@ class AsyncTimeout(AsyncState):
                 _LOGGER.error("%sHandling timeout exception '%s' caused another exception: %s. "
                               "Cancel running transitions...", event_data.machine.name, repr(err), repr(err2))
                 await event_data.machine.cancel_running_transitions(event_data.model, "timeout")
+        finally:
+            AsyncMachine.current_context.reset(token)
         _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
 
     @property
