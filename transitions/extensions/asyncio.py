@@ -18,6 +18,7 @@ import logging
 import asyncio
 import contextvars
 import inspect
+import warnings
 from collections import deque
 from functools import partial, reduce
 import copy
@@ -116,7 +117,7 @@ class AsyncTransition(Transition):
 
         machine = event_data.machine
         # cancel running tasks since the transition will happen
-        await machine.switch_model_context(event_data.model)
+        await machine.cancel_running_transitions(event_data.model)
 
         await event_data.machine.callbacks(event_data.machine.before_state_change, event_data)
         await event_data.machine.callbacks(self.before, event_data)
@@ -189,7 +190,8 @@ class AsyncEvent(Event):
             if self._is_valid_source(event_data.state):
                 await self._process(event_data)
         except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
-            _LOGGER.error("%sException was raised while processing the trigger: %s", self.machine.name, err)
+            _LOGGER.error("%sException was raised while processing the trigger '%s': %s",
+                          self.machine.name, event_data.event.name, repr(err))
             event_data.error = err
             if self.machine.on_exception:
                 await self.machine.callbacks(self.machine.on_exception, event_data)
@@ -374,6 +376,11 @@ class AsyncMachine(Machine):
         return await asyncio.gather(*[func() for func in callables])
 
     async def switch_model_context(self, model):
+        warnings.warn("Please replace 'AsyncMachine.switch_model_context' with "
+                      "'AsyncMachine.cancel_running_transitions'.", category=DeprecationWarning)
+        await self.cancel_running_transitions(model)
+
+    async def cancel_running_transitions(self, model):
         """
         This method is called by an `AsyncTransition` when all conditional tests have passed
         and the transition will happen. This requires already running tasks to be cancelled.
@@ -399,7 +406,7 @@ class AsyncMachine(Machine):
             bool: returns the success state of the triggered event
         """
         if self.current_context.get() is None:
-            self.current_context.set(asyncio.current_task())
+            token = self.current_context.set(asyncio.current_task())
             if id(model) in self.async_tasks:
                 self.async_tasks[id(model)].append(asyncio.current_task())
             else:
@@ -410,6 +417,7 @@ class AsyncMachine(Machine):
                 res = False
             finally:
                 self.async_tasks[id(model)].remove(asyncio.current_task())
+                self.current_context.reset(token)
                 if len(self.async_tasks[id(model)]) == 0:
                     del self.async_tasks[id(model)]
         else:
@@ -682,7 +690,23 @@ class AsyncTimeout(AsyncState):
 
     async def _process_timeout(self, event_data):
         _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
-        await event_data.machine.callbacks(self.on_timeout, event_data)
+        event_data = AsyncEventData(event_data.state, AsyncEvent("_timeout", event_data.machine),
+                                    event_data.machine, event_data.model, args=tuple(), kwargs={})
+        try:
+            await event_data.machine.callbacks(self.on_timeout, event_data)
+        except BaseException as err:
+            _LOGGER.warning("%sException raised while processing timeout!",
+                            event_data.machine.name)
+            event_data.error = err
+            try:
+                if event_data.machine.on_exception:
+                    await event_data.machine.callbacks(event_data.machine.on_exception, event_data)
+                else:
+                    raise
+            except BaseException as err2:
+                _LOGGER.error("%sHandling timeout exception '%s' caused another exception: %s. "
+                              "Cancel running transitions...", event_data.machine.name, repr(err), repr(err2))
+                await event_data.machine.cancel_running_transitions(event_data.model)
         _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
 
     @property
