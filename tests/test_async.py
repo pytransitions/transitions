@@ -1,9 +1,12 @@
+from asyncio import CancelledError
+
 from transitions.extensions.factory import AsyncGraphMachine, HierarchicalAsyncGraphMachine
+from transitions.extensions.states import add_state_features
 
 try:
     import asyncio
     from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine, AsyncEventData, \
-        AsyncTransition
+        AsyncTransition, AsyncTimeout
 
 except (ImportError, SyntaxError):
     asyncio = None  # type: ignore
@@ -342,9 +345,6 @@ class TestAsync(TestTransitions):
         asyncio.run(run())
 
     def test_async_timeout(self):
-        from transitions.extensions.states import add_state_features
-        from transitions.extensions.asyncio import AsyncTimeout
-
         timeout_called = MagicMock()
 
         @add_state_features(AsyncTimeout)
@@ -374,6 +374,72 @@ class TestAsync(TestTransitions):
             self.assertTrue(m.is_D())
             self.assertEqual(2, timeout_called.call_count)
 
+        asyncio.run(run())
+
+    def test_timeout_cancel(self):
+        error_mock = MagicMock()
+        timout_mock = MagicMock()
+        long_op_mock = MagicMock()
+
+        @add_state_features(AsyncTimeout)
+        class TimeoutMachine(self.machine_cls):  # type: ignore
+            async def on_enter_B(self):
+                await asyncio.sleep(0.2)
+                long_op_mock()  # should never be called
+
+            async def handle_timeout(self):
+                timout_mock()
+                await self.to_A()
+
+        machine = TimeoutMachine(states=["A", {"name": "B", "timeout": 0.1, "on_timeout": "handle_timeout"}],
+                                 initial="A", on_exception=error_mock)
+
+        async def run():
+            await machine.to_B()
+            assert timout_mock.called
+            assert error_mock.call_count == 1  # should only be one CancelledError
+            assert not long_op_mock.called
+            assert machine.is_A()
+        asyncio.run(run())
+
+    def test_queued_timeout_cancel(self):
+        error_mock = MagicMock()
+        timout_mock = MagicMock()
+        long_op_mock = MagicMock()
+
+        @add_state_features(AsyncTimeout)
+        class TimeoutMachine(self.machine_cls):  # type: ignore
+            async def long_op(self, event_data):
+                await self.to_C()
+                await self.to_D()
+                await self.to_E()
+                await asyncio.sleep(1)
+                long_op_mock()
+
+            async def handle_timeout(self, event_data):
+                timout_mock()
+                raise TimeoutError()
+
+            async def handle_error(self, event_data):
+                if isinstance(event_data.error, CancelledError):
+                    if error_mock.called:
+                        raise RuntimeError()
+                    error_mock()
+                raise event_data.error
+
+        machine = TimeoutMachine(states=["A", "C", "D", "E",
+                                         {"name": "B", "timeout": 0.1, "on_timeout": "handle_timeout",
+                                          "on_enter": "long_op"}],
+                                 initial="A", queued=True, send_event=True, on_exception="handle_error")
+
+        async def run():
+            await machine.to_B()
+            assert timout_mock.called
+            assert error_mock.called
+            assert not long_op_mock.called
+            assert machine.is_B()
+            with self.assertRaises(RuntimeError):
+                await machine.to_B()
         asyncio.run(run())
 
     def test_callback_order(self):
