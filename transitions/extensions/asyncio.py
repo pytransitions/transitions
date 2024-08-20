@@ -117,7 +117,7 @@ class AsyncTransition(Transition):
 
         machine = event_data.machine
         # cancel running tasks since the transition will happen
-        await machine.cancel_running_transitions(event_data.model)
+        await machine.cancel_running_transitions(event_data.model, event_data.event.name)
 
         await event_data.machine.callbacks(event_data.machine.before_state_change, event_data)
         await event_data.machine.callbacks(self.before, event_data)
@@ -380,19 +380,20 @@ class AsyncMachine(Machine):
                       "'AsyncMachine.cancel_running_transitions'.", category=DeprecationWarning)
         await self.cancel_running_transitions(model)
 
-    async def cancel_running_transitions(self, model):
+    async def cancel_running_transitions(self, model, msg=None):
         """
         This method is called by an `AsyncTransition` when all conditional tests have passed
         and the transition will happen. This requires already running tasks to be cancelled.
         Args:
             model (object): The currently processed model
+            msg (str): Optional message to pass to a running task's cancel request
         """
         for running_task in self.async_tasks.get(id(model), []):
             if self.current_context.get() == running_task or running_task in self.protected_tasks:
                 continue
             if running_task.done() is False:
                 _LOGGER.debug("Cancel running tasks...")
-                running_task.cancel()
+                running_task.cancel(msg)
 
     async def process_context(self, func, model):
         """
@@ -690,7 +691,7 @@ class AsyncTimeout(AsyncState):
 
     async def _process_timeout(self, event_data):
         _LOGGER.debug("%sTimeout state %s. Processing callbacks...", event_data.machine.name, self.name)
-        event_data = AsyncEventData(event_data.state, AsyncEvent("_timeout", event_data.machine),
+        event_data = AsyncEventData(event_data.state, AsyncEvent("timeout", event_data.machine),
                                     event_data.machine, event_data.model, args=tuple(), kwargs={})
         try:
             await event_data.machine.callbacks(self.on_timeout, event_data)
@@ -706,7 +707,7 @@ class AsyncTimeout(AsyncState):
             except BaseException as err2:
                 _LOGGER.error("%sHandling timeout exception '%s' caused another exception: %s. "
                               "Cancel running transitions...", event_data.machine.name, repr(err), repr(err2))
-                await event_data.machine.cancel_running_transitions(event_data.model)
+                await event_data.machine.cancel_running_transitions(event_data.model, "timeout")
         _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
 
     @property
