@@ -7,6 +7,7 @@
   - Made `transitions.core.(Async)TransitionConfigDict` a `TypedDict` which can be used to spot parameter errors during static analysis
   - `Machine.add_transitions` and `Machine.__init__` expect a `Sequence` of configurations for transitions now
   - Added 'async' callbacks to types in `asyncio` extension
+- Bug #687: Instances of `HierarchicalMachine` can now directly be passed to "parallel" keyword in constructor; Machine states will be processed as a list and thus must be unique (thanks @translunar)
 
 ## 0.9.2 (August 2024)
 
