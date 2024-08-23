@@ -966,6 +966,7 @@ class HierarchicalMachine(Machine):
         if state_parallel:
             state_children = state_parallel
             state['initial'] = [s['name'] if isinstance(s, dict)
+                                else s.initial if isinstance(s, HierarchicalMachine)
                                 else s for s in state_children]
         else:
             state_children = state.pop('children', state.pop('states', []))

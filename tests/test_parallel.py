@@ -263,6 +263,14 @@ class TestParallel(TestNested):
         assert m.is_P_2(allow_substates=True)
         assert not m.is_A(allow_substates=True)
 
+    def test_reuse(self):
+        a = self.machine_cls(states=["A", "B"], initial="A")
+        b = self.machine_cls(states=["C", "D"], initial="D")
+        c = self.machine_cls(states=["A", {"name": "X", "parallel": [a, b]}], initial="A")
+        assert c.to_X()
+        assert c.state == ["X{}A".format(self.state_cls.separator),
+                           "X{}D".format(self.state_cls.separator)]
+
 
 @skipIf(pgv is None, "pygraphviz is not available")
 class TestParallelWithPyGraphviz(TestParallel):
