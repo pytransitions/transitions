@@ -8,14 +8,12 @@
 import copy
 import abc
 import logging
-import six
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseGraph(object):
+class BaseGraph(metaclass=abc.ABCMeta):
     """Provides the common foundation for graphs generated either with pygraphviz or graphviz. This abstract class
     should not be instantiated directly. Use .(py)graphviz.(Nested)Graph instead.
     Attributes:

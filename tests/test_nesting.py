@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-try:
-    from builtins import object
-except ImportError:
-    pass
 
 import sys
 import tempfile
@@ -36,7 +32,7 @@ if TYPE_CHECKING:
 default_separator = NestedState.separator
 
 
-class Dummy(object):
+class Dummy:
     pass
 
 
