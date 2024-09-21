@@ -1,11 +1,11 @@
 # <a name="transitions-module"></a> transitions
 
-[![Version](https://img.shields.io/badge/version-v0.9.1-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.9.3-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://github.com/pytransitions/transitions/actions/workflows/pytest.yml/badge.svg)](https://github.com/pytransitions/transitions/actions?query=workflow%3Apytest)
-[![Coverage Status](https://codecov.io/gh/pytransitions/transitions/branch/master/graphs/badge.svg)](https://app.codecov.io/gh/pytransitions/transitions/tree/master)
+[![Coverage Status](https://coveralls.io/repos/github/pytransitions/transitions/badge.svg?branch=master)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![Copr](https://img.shields.io/badge/dynamic/json?color=blue&label=copr&query=builds.latest.source_package.version&url=https%3A%2F%2Fcopr.fedorainfracloud.org%2Fapi_3%2Fpackage%3Fownername%3Daleneum%26projectname%3Dpython3-transitions%26packagename%3Dpython3-transitions%26with_latest_build%3DTrue)](https://copr.fedorainfracloud.org/coprs/aleneum/python3-transitions/package/python3-transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.9.0.svg)](https://github.com/pytransitions/transitions/compare/0.9.0...master)
+[![Copr](https://img.shields.io/badge/dynamic/json?color=blue&label=copr&query=builds.latest.source_package.version&url=https%3A%2F%2Fcopr.fedorainfracloud.org%2Fapi_3%2Fpackage%3Fownername%3Daleneum%26projectname%3Dpython-transitions%26packagename%3Dpython-transitions%26with_latest_build%3DTrue)](https://copr.fedorainfracloud.org/coprs/aleneum/python-transitions/)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.9.2.svg)](https://github.com/pytransitions/transitions/compare/0.9.2...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb)
 
@@ -26,12 +26,14 @@ A lightweight, object-oriented state machine implementation in Python with many 
 
 - [Quickstart](#quickstart)
 - [Non-Quickstart](#the-non-quickstart)
+  - [Some key concepts](#some-key-concepts)
   - [Basic initialization](#basic-initialization)
   - [States](#states)
     - [Callbacks](#state-callbacks)
     - [Checking state](#checking-state)
     - [Enumerations](#enum-state)
   - [Transitions](#transitions)
+    - [Triggering a transition](#triggers)
     - [Automatic transitions](#automatic-transitions-for-all-states)
     - [Transitioning from multiple states](#transitioning-from-multiple-states)
     - [Reflexive transitions from multiple states](#reflexive-from-multiple-states)
@@ -47,9 +49,10 @@ A lightweight, object-oriented state machine implementation in Python with many 
   - [Alternative initialization patterns](#alternative-initialization-patterns)
   - [Logging](#logging)
   - [(Re-)Storing machine instances](#restoring)
+  - [Typing support](#typing-support)
   - [Extensions](#extensions)
-    - [Diagrams](#diagrams)
     - [Hierarchical State Machine](#hsm)
+    - [Diagrams](#diagrams)
     - [Threading](#threading)
     - [Async](#async)
     - [State features](#state-features)
@@ -184,6 +187,22 @@ Have a look at the [Diagrams](#diagrams) extensions if you want to know how.
 
 ## The non-quickstart
 
+A state machine is a _model_ of behavior composed of a finite number of _states_ and _transitions_ between those states. Within each state and transition some _action_ can be performed. A state machine needs to start at some _initial state_. When using `transitions`, a state machine may consist of multiple objects where some (_machines_) contain definitions for the manipulation of other (_models_). Below, we will look at some core concepts and how to work with them.
+
+### Some key concepts
+
+- **State**. A state represents a particular condition or stage in the state machine. It's a distinct mode of behavior or phase in a process.
+
+- **Transition**. This is the process or event that causes the state machine to change from one state to another.
+
+- **Model**. The actual stateful structure. It's the entity that gets updated during transitions. It may also define _actions_ that will be executed during transitions. For instance, right before a transition or when a state is entered or exited.
+
+- **Machine**. This is the entity that manages and controls the model, states, transitions, and actions. It's the conductor that orchestrates the entire process of the state machine.
+
+- **Trigger**. This is the event that initiates a transition, the method that sends the signal to start a transition.
+
+- **Action**. Specific operation or task that is performed when a certain state is entered, exited, or during a transition. The action is implemented through _callbacks_, which are functions that get executed when some event happens.
+
 ### Basic initialization
 
 Getting a state machine up and running is pretty simple. Let's say you have the object `lump` (an instance of class `Matter`), and you want to manage its states:
@@ -195,18 +214,31 @@ class Matter(object):
 lump = Matter()
 ```
 
-You can initialize a (_minimal_) working state machine bound to `lump` like this:
+You can initialize a (_minimal_) working state machine bound to the model `lump` like this:
 
 ```python
 from transitions import Machine
 machine = Machine(model=lump, states=['solid', 'liquid', 'gas', 'plasma'], initial='solid')
 
-# Lump now has state!
+# Lump now has a new state attribute!
 lump.state
 >>> 'solid'
 ```
 
-I say "minimal", because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined... yet!
+An alternative is to not explicitly pass a model to the `Machine` initializer:
+
+```python
+
+machine = Machine(states=['solid', 'liquid', 'gas', 'plasma'], initial='solid')
+
+# The machine instance itself now acts as a model
+machine.state
+>>> 'solid'
+```
+
+Note that this time I did not pass the `lump` model as an argument. The first argument passed to `Machine` acts as a model. So when I pass something there, all the convenience functions will be added to the object. If no model is provided then the `machine` instance itself acts as a model.
+
+When at the beginning I said "minimal", it was because while this state machine is technically operational, it doesn't actually _do_ anything. It starts in the `'solid'` state, but won't ever move into another state, because no transitions are defined... yet!
 
 Let's try again.
 
@@ -231,19 +263,22 @@ lump.state
 >>> 'liquid'
 
 # And that state can change...
+# Either calling the shiny new trigger methods
 lump.evaporate()
 lump.state
 >>> 'gas'
+
+# Or by calling the trigger method directly
 lump.trigger('ionize')
 lump.state
 >>> 'plasma'
 ```
 
-Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.). Each method triggers the corresponding transition. You don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`).
-To be more precise, your model **should not** already contain methods with the same name as event triggers since `transitions` will only attach convenience methods to your model if the spot is not already taken.
-If you want to modify that behaviour, have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb).
-Furthermore, there is a method called `trigger` now attached to your model (if it hasn't been there before).
-This method lets you execute transitions by name in case dynamic triggering is required.
+Notice the shiny new methods attached to the `Matter` instance (`evaporate()`, `ionize()`, etc.).
+Each method triggers the corresponding transition.
+Transitions can also be triggered _dynamically_ by calling the `trigger()` method provided with the name of the transition, as shown above.
+More on this in the [Triggering a transition](#triggers) section.
+
 
 ### <a name="states"></a>States
 
@@ -284,6 +319,8 @@ machine.add_states([solid, liquid, gas])
 States are initialized _once_ when added to the machine and will persist until they are removed from it. In other words: if you alter the attributes of a state object, this change will NOT be reset the next time you enter that state. Have a look at how to [extend state features](#state-features) in case you require some other behaviour.
 
 #### <a name="state-callbacks"></a>Callbacks
+
+But just having states and being able to move around between them (transitions) isn't very useful by itself. What if you want to do something, perform some _action_ when you enter or exit a state? This is where _callbacks_ come in.
 
 A `State` can also be associated with a list of `enter` and `exit` callbacks, which are called whenever the state machine enters or leaves that state. You can specify callbacks during initialization by passing them to a `State` object constructor, in a state property dictionary, or add them later.
 
@@ -336,6 +373,45 @@ machine = Machine(lump, states=['A', 'B', 'C'])
 ```
 
 Now, any time `lump` transitions to state `A`, the `on_enter_A()` method defined in the `Matter` class will fire.
+
+You can make use of `on_final` callbacks which will be triggered when a state with `final=True` is entered.
+```python
+from transitions import Machine, State
+
+states = [State(name='idling'),
+          State(name='rescuing_kitten'),
+          State(name='offender_gone', final=True),
+          State(name='offender_caught', final=True)]
+
+transitions = [["called", "idling", "rescuing_kitten"],  # we will come when  called
+               {"trigger": "intervene",
+                "source": "rescuing_kitten",
+                "dest": "offender_gone",  # we
+                "conditions": "offender_is_faster"},  # unless they are faster
+               ["intervene", "rescuing_kitten", "offender_caught"]]
+
+
+class FinalSuperhero(object):
+
+    def __init__(self, speed):
+        self.machine = Machine(self, states=states, transitions=transitions, initial="idling", on_final="claim_success")
+        self.speed = speed
+
+    def offender_is_faster(self, offender_speed):
+        return self.speed < offender_speed
+
+    def claim_success(self, **kwargs):
+        print("The kitten is safe.")
+
+
+hero = FinalSuperhero(speed=10)  # we are not in shape today
+hero.called()
+assert hero.is_rescuing_kitten()
+hero.intervene(offender_speed=15)
+# >>> 'The kitten is safe'
+assert hero.machine.get_state(hero.state).final  # it's over
+assert hero.is_offender_gone()  # maybe next time ...
+```
 
 #### <a name="checking-state"></a>Checking state
 
@@ -441,15 +517,34 @@ machine = Machine(model=lump, states=states, initial='solid')
 machine.add_transition('melt', source='solid', dest='liquid')
 ```
 
-The `trigger` argument defines the name of the new triggering method that gets attached to the base model. When this method is called, it will try to execute the transition:
+#### <a name="triggers"></a>Triggering a transition
 
-```python
->>> lump.melt()
->>> lump.state
-'liquid'
-```
+For a transition to be executed, some event needs to _trigger_ it. There are two ways to do this:
 
-By default, calling an invalid trigger will raise an exception:
+1. Using the automatically attached method in the base model:
+    ```python
+    >>> lump.melt()
+    >>> lump.state
+    'liquid'
+    >>> lump.evaporate()
+    >>> lump.state
+    'gas'
+    ```
+    
+    Note how you don't have to explicitly define these methods anywhere; the name of each transition is bound to the model passed to the `Machine` initializer (in this case, `lump`). This also means that your model **should not** already contain methods with the same name as event triggers since `transitions` will only attach convenience methods to your model if the spot is not already taken. If you want to modify that behaviour, have a look at the [FAQ](examples/Frequently%20asked%20questions.ipynb).
+2. Using the `trigger` method, now attached to your model (if it hasn't been there before). This method lets you execute transitions by name in case dynamic triggering is required:
+    ```python
+    >>> lump.trigger('melt')
+    >>> lump.state
+    'liquid'
+    >>> lump.trigger('evaporate')
+    >>> lump.state
+    'gas'
+    ```
+
+#### Triggering invalid transitions
+
+By default, triggering an invalid transition will raise an exception:
 
 ```python
 >>> lump.to_gas()
@@ -700,11 +795,13 @@ lump.heat(temp=74)
 
 #### <a name="check-transitions"></a>Check transitions
 
-If you want to check whether a transition is possible before you execute it ('look before you leap'), you can use `may_<trigger_name>` convenience functions that have been attached to your model:
+If you want to make sure a transition is possible before you go ahead with it, you can use the `may_<trigger_name>` functions that have been added to your model.
+Your model also contains the `may_trigger` function to check a trigger by name:
 
 ```python
 # check if the current temperature is hot enough to trigger a transition
 if lump.may_heat():
+# if lump.may_trigger("heat"):
     lump.heat()
 ```
 
@@ -714,6 +811,7 @@ Transition checks can also be used when a transition's destination is not availa
 ```python
 machine.add_transition('elevate', 'solid', 'spiritual')
 assert not lump.may_elevate()  # not ready yet :(
+assert not lump.may_trigger("elevate")  # same result for checks via trigger name
 ```
 
 #### <a name="transition-callbacks"></a>Callbacks
@@ -900,7 +998,7 @@ execute triggers by name such as `lump.trigger("melt")` or dispatch events on mu
 Callbacks on transitions are then executed in the following order:
 
 | Callback                        |    Current State     | Comments                                                                                    |
-| ------------------------------- | :------------------: | ------------------------------------------------------------------------------------------- |
+|---------------------------------| :------------------: |---------------------------------------------------------------------------------------------|
 | `'machine.prepare_event'`       |       `source`       | executed _once_ before individual transitions are processed                                 |
 | `'transition.prepare'`          |       `source`       | executed as soon as the transition starts                                                   |
 | `'transition.conditions'`       |       `source`       | conditions _may_ fail and halt the transition                                               |
@@ -911,7 +1009,8 @@ Callbacks on transitions are then executed in the following order:
 | `<STATE CHANGE>`                |                      |                                                                                             |
 | `'state.on_enter'`              |    `destination`     | callbacks declared on the destination state                                                 |
 | `'transition.after'`            |    `destination`     |                                                                                             |
-| `'machine.after_state_change'`  |    `destination`     | default callbacks declared on model                                                         |
+| `'machine.on_final'`            |    `destination`     | callbacks on children will be called first                                                  |
+| `'machine.after_state_change'`  |    `destination`     | default callbacks declared on model; will also be called after internal transitions         |
 | `'machine.on_exception'`        | `source/destination` | callbacks will be executed when an exception has been raised                                |
 | `'machine.finalize_event'`      | `source/destination` | callbacks will be executed even if no transition took place or an exception has been raised |
 
@@ -1134,12 +1233,132 @@ m2.states.keys()
 >>> ['A', 'B', 'C']
 ```
 
+### <a name="typing-support"></a> Typing support
+
+As you probably noticed, `transitions` uses some of Python's dynamic features to give you handy ways to handle models. However, static type checkers don't like model attributes and methods not being known before runtime. Historically, `transitions` also didn't assign convenience methods already defined on models to prevent accidental overrides.
+
+But don't worry!  You can use the machine constructor parameter `model_override` to change how models are decorated. If you set `model_override=True`, `transitions` will only override already defined methods. This prevents new methods from showing up at runtime and also allows you to define which helper methods you want to use.
+
+```python
+from transitions import Machine
+
+# Dynamic assignment
+class Model:
+    pass
+
+model = Model()
+default_machine = Machine(model, states=["A", "B"], transitions=[["go", "A", "B"]], initial="A")
+print(model.__dict__.keys())  # all convenience functions have been assigned
+# >> dict_keys(['trigger', 'to_A', 'may_to_A', 'to_B', 'may_to_B', 'go', 'may_go', 'is_A', 'is_B', 'state'])
+assert model.is_A()  # Unresolved attribute reference 'is_A' for class 'Model'
+
+
+# Predefined assigment: We are just interested in calling our 'go' event and will trigger the other events by name
+class PredefinedModel:
+    # state (or another parameter if you set 'model_attribute') will be assigned anyway 
+    # because we need to keep track of the model's state
+    state: str
+
+    def go(self) -> bool:
+        raise RuntimeError("Should be overridden!")
+
+    def trigger(self, trigger_name: str) -> bool:
+        raise RuntimeError("Should be overridden!")
+
+
+model = PredefinedModel()
+override_machine = Machine(model, states=["A", "B"], transitions=[["go", "A", "B"]], initial="A", model_override=True)
+print(model.__dict__.keys())
+# >> dict_keys(['trigger', 'go', 'state'])
+model.trigger("to_B")
+assert model.state == "B"
+```
+
+If you want to use all the convenience functions and throw some callbacks into the mix, defining a model can get pretty complicated when you have a lot of states and transitions defined.
+The method `generate_base_model` in `transitions` can generate a base model from a machine configuration to help you out with that.
+
+```python
+from transitions.experimental.utils import generate_base_model
+simple_config = {
+    "states": ["A", "B"],
+    "transitions": [
+        ["go", "A", "B"],
+    ],
+    "initial": "A",
+    "before_state_change": "call_this",
+    "model_override": True,
+} 
+
+class_definition = generate_base_model(simple_config)
+with open("base_model.py", "w") as f:
+    f.write(class_definition)
+
+# ... in another file
+from transitions import Machine
+from base_model import BaseModel
+
+class Model(BaseModel):  #  call_this will be an abstract method in BaseModel
+
+    def call_this(self) -> None:
+        # do something  
+
+model = Model()
+machine = Machine(model, **simple_config)
+```
+
+Defining model methods that will be overridden adds a bit of extra work.
+It might be cumbersome to switch back and forth to make sure event names are spelled correctly, especially if states and transitions are defined in lists before or after your model. You can cut down on the boilerplate and the uncertainty of working with strings by defining states as enums. You can also define transitions right in your model class with the help of `add_transitions` and `event`. 
+It's up to you whether you use the function decorator `add_transitions` or event to assign values to attributes depends on your preferred code style.
+They both work the same way, have the same signature, and should result in (almost) the same IDE type hints.
+As this is still a work in progress, you'll need to create a custom Machine class and use with_model_definitions for transitions to check for transitions defined that way.
+
+```python
+from enum import Enum
+
+from transitions.experimental.utils import with_model_definitions, event, add_transitions, transition
+from transitions import Machine
+
+
+class State(Enum):
+    A = "A"
+    B = "B"
+    C = "C"
+
+
+class Model:
+
+    state: State = State.A
+
+    @add_transitions(transition(source=State.A, dest=State.B), [State.C, State.A])
+    @add_transitions({"source": State.B,  "dest": State.A})
+    def foo(self): ...
+
+    bar = event(
+        {"source": State.B, "dest": State.A, "conditions": lambda: False},
+        transition(source=State.B, dest=State.C)
+    )
+
+
+@with_model_definitions  # don't forget to define your model with this decorator!
+class MyMachine(Machine):
+    pass
+
+
+model = Model()
+machine = MyMachine(model, states=State, initial=model.state)
+model.foo()
+model.bar()
+assert model.state == State.C
+model.foo()
+assert model.state == State.A
+```
+
 ### <a name="extensions"></a> Extensions
 
 Even though the core of transitions is kept lightweight, there are a variety of MixIns to extend its functionality. Currently supported are:
 
-- **Diagrams** to visualize the current state of a machine
 - **Hierarchical State Machines** for nesting and reuse
+- **Diagrams** to visualize the current state of a machine
 - **Threadsafe Locks** for parallel execution
 - **Async callbacks** for asynchronous execution
 - **Custom States** for extended state-related behaviour
@@ -1187,107 +1406,7 @@ from transitions.extensions import LockedHierarchicalGraphMachine as LHGMachine
 machine = LHGMachine(model, states, transitions)
 ```
 
-#### <a name="diagrams"></a> Diagrams
-
-Additional Keywords:
-
-- `title` (optional): Sets the title of the generated image.
-- `show_conditions` (default False): Shows conditions at transition edges
-- `show_auto_transitions` (default False): Shows auto transitions in graph
-- `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
-
-Transitions can generate basic state diagrams displaying all valid transitions between states. To use the graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed:  
-To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
-
-    sudo apt-get install graphviz graphviz-dev  # Ubuntu and Debian
-    brew install graphviz  # MacOS
-    conda install graphviz python-graphviz  # (Ana)conda
-
-Now you can install the actual Python packages
-
-    pip install graphviz pygraphviz # install graphviz and/or pygraphviz manually...
-    pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras which currently depends on pygraphviz
-
-Currently, `GraphMachine` will use `pygraphviz` when available and fall back to `graphviz` when `pygraphviz` cannot be
-found. This can be overridden by passing `use_pygraphviz=False` to the constructor. Note that this default might change
-in the future and `pygraphviz` support may be dropped.
-With `Model.get_graph()` you can get the current graph or the region of interest (roi) and draw it like this:
-
-```python
-# import transitions
-
-from transitions.extensions import GraphMachine
-m = Model()
-# without further arguments pygraphviz will be used
-machine = GraphMachine(model=m, ...)
-# when you want to use graphviz explicitly
-machine = GraphMachine(model=m, use_pygraphviz=False, ...)
-# in cases where auto transitions should be visible
-machine = GraphMachine(model=m, show_auto_transitions=True, ...)
-
-# draw the whole graph ...
-m.get_graph().draw('my_state_diagram.png', prog='dot')
-# ... or just the region of interest
-# (previous state, active state and all reachable states)
-roi = m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
-```
-
-This produces something like this:
-
-![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
-
-Independent of the backend you use, the draw function also accepts a file descriptor or a binary stream as the first argument. If you set this parameter to `None`, the byte stream will be returned:
-
-```python
-import io
-
-with open('a_graph.png', 'bw') as f:
-    # you need to pass the format when you pass objects instead of filenames.
-    m.get_graph().draw(f, format="png", prog='dot')
-
-# you can pass a (binary) stream too
-b = io.BytesIO()
-m.get_graph().draw(b, format="png", prog='dot')
-
-# or just handle the binary string yourself
-result = m.get_graph().draw(None, format="png", prog='dot')
-assert result == b.getvalue()
-```
-
-References and partials passed as callbacks will be resolved as good as possible:
-
-```python
-from transitions.extensions import GraphMachine
-from functools import partial
-
-
-class Model:
-
-    def clear_state(self, deep=False, force=False):
-        print("Clearing state ...")
-        return True
-
-
-model = Model()
-machine = GraphMachine(model=model, states=['A', 'B', 'C'],
-                       transitions=[
-                           {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
-                           {'trigger': 'clear', 'source': 'C', 'dest': 'A',
-                            'conditions': partial(model.clear_state, False, force=True)},
-                       ],
-                       initial='A', show_conditions=True)
-
-model.get_graph().draw('my_state_diagram.png', prog='dot')
-```
-
-This should produce something similar to this:
-
-![state diagram references_example](https://user-images.githubusercontent.com/205986/110783076-39087f80-8268-11eb-8fa1-fc7bac97f4cf.png)
-
-If the format of references does not suit your needs, you can override the static method `GraphMachine.format_references`. If you want to skip reference entirely, just let `GraphMachine.format_references` return `None`.
-Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example about how to use and edit graphs.
-
-### <a name="hsm"></a>Hierarchical State Machine (HSM)
+#### <a name="hsm"></a>Hierarchical State Machine (HSM)
 
 Transitions includes an extension module which allows nesting states.
 This allows us to create contexts and to model cases where states are related to certain subtasks in the state machine.
@@ -1421,7 +1540,6 @@ assert machine.is_C.s2() is False
 assert machine.is_C.s2(allow_substates=True)  # FunctionWrapper support allow_substate as well
 ```
 
-_new in 0.8.0_  
 You can use enumerations in HSMs as well but keep in mind that `Enum` are compared by value.
 If you have a value more than once in a state tree those states cannot be distinguished.
 
@@ -1433,7 +1551,6 @@ machine.to_B()
 machine.is_GREEN()  # returns True even though the actual state is B_GREEN
 ```
 
-_new in 0.8.0_  
 `HierarchicalMachine` has been rewritten from scratch to support parallel states and better isolation of nested states.
 This involves some tweaks based on community feedback.
 To get an idea of processing order and configuration have a look at the following example:
@@ -1487,7 +1604,60 @@ m.to_B_1()
 assert m.is_B(allow_substates=True)
 ```
 
-#### Reuse of previously created HSMs
+_Experimental in 0.9.1:_
+You can make use of `on_final` callbacks either in states or on the HSM itself. Callbacks will be triggered if a) the state itself is tagged with `final` and has just been entered or b) all substates are considered final and at least one substate just entered a final state. In case of b) all parents will be considered final as well if condition b) holds true for them. This might be useful in cases where processing happens in parallel and your HSM or any parent state should be notified when all substates have reached a final state:
+
+
+```python
+from transitions.extensions import HierarchicalMachine
+from functools import partial
+
+# We initialize this parallel HSM in state A:
+#        / X
+#       /   / yI
+# A -> B - Y - yII [final]
+#        \ Z - zI
+#            \ zII [final]
+
+def final_event_raised(name):
+    print("{} is final!".format(name))
+
+
+states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'final': True, 'on_final': partial(final_event_raised, 'X')},
+                                          {'name': 'Y', 'transitions': [['final_Y', 'yI', 'yII']],
+                                           'initial': 'yI',
+                                           'on_final': partial(final_event_raised, 'Y'),
+                                           'states':
+                                               ['yI', {'name': 'yII', 'final': True}]
+                                           },
+                                          {'name': 'Z', 'transitions': [['final_Z', 'zI', 'zII']],
+                                           'initial': 'zI',
+                                           'on_final': partial(final_event_raised, 'Z'),
+                                           'states':
+                                               ['zI', {'name': 'zII', 'final': True}]
+                                           },
+                                          ],
+                "on_final": partial(final_event_raised, 'B')}]
+
+machine = HierarchicalMachine(states=states, on_final=partial(final_event_raised, 'Machine'), initial='A')
+# X will emit a final event right away
+machine.to_B()
+# >>> X is final!
+print(machine.state)
+# >>> ['B_X', 'B_Y_yI', 'B_Z_zI']
+# Y's substate is final now and will trigger 'on_final' on Y
+machine.final_Y()
+# >>> Y is final!
+print(machine.state)
+# >>> ['B_X', 'B_Y_yII', 'B_Z_zI']
+# Z's substate becomes final which also makes all children of B final and thus machine itself
+machine.final_Z()
+# >>> Z is final!
+# >>> B is final!
+# >>> Machine is final!
+```
+
+##### Reuse of previously created HSMs
 
 Besides semantic order, nested states are very handy if you want to specify state machines for specific tasks and plan to reuse them.
 Before _0.8.0_, a `HierarchicalMachine` would not integrate the machine instance itself but the states and transitions by creating copies of them.
@@ -1603,6 +1773,181 @@ collector.count()
 collector.increase()
 assert collector.is_counting_2()
 ```
+
+#### <a name="diagrams"></a> Diagrams
+
+Additional Keywords:
+
+- `title` (optional): Sets the title of the generated image.
+- `show_conditions` (default False): Shows conditions at transition edges
+- `show_auto_transitions` (default False): Shows auto transitions in graph
+- `show_state_attributes` (default False): Show callbacks (enter, exit), tags and timeouts in graph
+
+Transitions can generate basic state diagrams displaying all valid transitions between states.
+The basic diagram support generates a [mermaid](https://mermaid.js.org) state machine definition which can be used with mermaid's [live editor](https://mermaid.live), in markdown files in GitLab or GitHub and other web services.
+For instance, this code:
+```python
+from transitions.extensions.diagrams import HierarchicalGraphMachine
+import pyperclip
+
+states = ['A', 'B', {'name': 'C',
+                     'final': True,
+                     'parallel': [{'name': '1', 'children': ['a', {"name": "b", "final": True}],
+                                   'initial': 'a',
+                                   'transitions': [['go', 'a', 'b']]},
+                                  {'name': '2', 'children': ['a', {"name": "b", "final": True}],
+                                   'initial': 'a',
+                                   'transitions': [['go', 'a', 'b']]}]}]
+transitions = [['reset', 'C', 'A'], ["init", "A", "B"], ["do", "B", "C"]]
+
+
+m = HierarchicalGraphMachine(states=states, transitions=transitions, initial="A", show_conditions=True,
+                             title="Mermaid", graph_engine="mermaid", auto_transitions=False)
+m.init()
+
+pyperclip.copy(m.get_graph().draw(None))  # using pyperclip for convenience
+print("Graph copied to clipboard!")
+```
+
+Produces this diagram (check the document source to see the markdown notation):
+
+```mermaid
+---
+Mermaid Graph
+---
+stateDiagram-v2
+  direction LR
+  classDef s_default fill:white,color:black
+  classDef s_inactive fill:white,color:black
+  classDef s_parallel color:black,fill:white
+  classDef s_active color:red,fill:darksalmon
+  classDef s_previous color:blue,fill:azure
+  
+  state "A" as A
+  Class A s_previous
+  state "B" as B
+  Class B s_active
+  state "C" as C
+  C --> [*]
+  Class C s_default
+  state C {
+    state "1" as C_1
+    state C_1 {
+      [*] --> C_1_a
+      state "a" as C_1_a
+      state "b" as C_1_b
+      C_1_b --> [*]
+    }
+    --
+    state "2" as C_2
+    state C_2 {
+      [*] --> C_2_a
+      state "a" as C_2_a
+      state "b" as C_2_b
+      C_2_b --> [*]
+    }
+  }
+  
+  C --> A: reset
+  A --> B: init
+  B --> C: do
+  C_1_a --> C_1_b: go
+  C_2_a --> C_2_b: go
+  [*] --> A
+```
+
+To use more sophisticated graphing functionality, you'll need to have `graphviz` and/or `pygraphviz` installed.
+To generate graphs with the package `graphviz`, you need to install [Graphviz](https://graphviz.org/) manually or via a package manager.
+
+    sudo apt-get install graphviz graphviz-dev  # Ubuntu and Debian
+    brew install graphviz  # MacOS
+    conda install graphviz python-graphviz  # (Ana)conda
+
+Now you can install the actual Python packages
+
+    pip install graphviz pygraphviz  # install graphviz and/or pygraphviz manually...
+    pip install transitions[diagrams]  # ... or install transitions with 'diagrams' extras which currently depends on pygraphviz
+
+Currently, `GraphMachine` will use `pygraphviz` when available and fall back to `graphviz` when `pygraphviz` cannot be
+found.
+If `graphviz` is not available either, `mermaid` will be used.
+This can be overridden by passing `graph_engine="graphviz"` (or `"mermaid"`) to the constructor.
+Note that this default might change in the future and `pygraphviz` support may be dropped.
+With `Model.get_graph()` you can get the current graph or the region of interest (roi) and draw it like this:
+
+```python
+# import transitions
+
+from transitions.extensions import GraphMachine
+m = Model()
+# without further arguments pygraphviz will be used
+machine = GraphMachine(model=m, ...)
+# when you want to use graphviz explicitly
+machine = GraphMachine(model=m, graph_engine="graphviz", ...)
+# in cases where auto transitions should be visible
+machine = GraphMachine(model=m, show_auto_transitions=True, ...)
+
+# draw the whole graph ...
+m.get_graph().draw('my_state_diagram.png', prog='dot')
+# ... or just the region of interest
+# (previous state, active state and all reachable states)
+roi = m.get_graph(show_roi=True).draw('my_state_diagram.png', prog='dot')
+```
+
+This produces something like this:
+
+![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
+
+Independent of the backend you use, the draw function also accepts a file descriptor or a binary stream as the first argument. If you set this parameter to `None`, the byte stream will be returned:
+
+```python
+import io
+
+with open('a_graph.png', 'bw') as f:
+    # you need to pass the format when you pass objects instead of filenames.
+    m.get_graph().draw(f, format="png", prog='dot')
+
+# you can pass a (binary) stream too
+b = io.BytesIO()
+m.get_graph().draw(b, format="png", prog='dot')
+
+# or just handle the binary string yourself
+result = m.get_graph().draw(None, format="png", prog='dot')
+assert result == b.getvalue()
+```
+
+References and partials passed as callbacks will be resolved as good as possible:
+
+```python
+from transitions.extensions import GraphMachine
+from functools import partial
+
+
+class Model:
+
+    def clear_state(self, deep=False, force=False):
+        print("Clearing state ...")
+        return True
+
+
+model = Model()
+machine = GraphMachine(model=model, states=['A', 'B', 'C'],
+                       transitions=[
+                           {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
+                           {'trigger': 'clear', 'source': 'C', 'dest': 'A',
+                            'conditions': partial(model.clear_state, False, force=True)},
+                       ],
+                       initial='A', show_conditions=True)
+
+model.get_graph().draw('my_state_diagram.png', prog='dot')
+```
+
+This should produce something similar to this:
+
+![state diagram references_example](https://user-images.githubusercontent.com/205986/110783076-39087f80-8268-11eb-8fa1-fc7bac97f4cf.png)
+
+If the format of references does not suit your needs, you can override the static method `GraphMachine.format_references`. If you want to skip reference entirely, just let `GraphMachine.format_references` return `None`.
+Also, have a look at our [example](./examples) IPython/Jupyter notebooks for a more detailed example about how to use and edit graphs.
 
 #### <a name="threading"></a> Threadsafe(-ish) State Machine
 
@@ -1878,7 +2223,7 @@ asyncio.run(asyncio.wait([m.to_B(), asyncio.sleep(0.3)]))
 assert m.is_C()   # now timeout should have been processed
 ```
 
-You should consider passing `queued=True` to the `TimeoutMachine` constructor. This will make sure that events are processed sequentially and avoid asynchronous [racing conditions](https://github.com/pytransitions/transitions/issues/459) that may appear when timeout and event happen in close proximity.
+You should consider passing `queued=True` to the `TimeoutMachine` constructor. This will make sure that events are processed sequentially and avoid asynchronous [racing conditions](https://github.com/pytransitions/transitions/issues/459) that may appear when timeout and event happen in proximity.
 
 #### <a name="django-support"></a> Using transitions together with Django
 

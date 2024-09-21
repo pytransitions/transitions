@@ -1,5 +1,5 @@
 import abc
-from typing import Protocol, Optional, Union, List, Dict, IO, Tuple, Generator
+from typing import BinaryIO, Protocol, Optional, Union, List, Dict, Tuple, Generator
 
 from .diagrams import GraphMachine, HierarchicalGraphMachine
 from ..core import ModelState
@@ -7,7 +7,7 @@ from ..core import ModelState
 
 class GraphProtocol(Protocol):
 
-    def draw(self, filename: Optional[Union[str, IO]], format:Optional[str] = ...,
+    def draw(self, filename: Optional[Union[str, BinaryIO]], format:Optional[str] = ...,
              prog: Optional[str] = ..., args:str = ...) -> Optional[str]: ...
 
 class GraphModelProtocol(Protocol):
@@ -34,3 +34,4 @@ class BaseGraph(metaclass=abc.ABCMeta):
     def _transition_label(self, tran: Dict[str, str]) -> str: ...
     def _get_global_name(self, path: List[str]) -> str: ...
     def _get_elements(self) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]: ...
+    def _flatten(self, *lists: Union[str, Tuple[str]]) -> List[str]: ...

@@ -5,52 +5,58 @@ name: pytest
 
 on:
   push:
-    branches: [ master, dev-gha ]
+    branches: [master, dev-gha]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
         extras: ["[diagrams]"]
         include:
-          - python-version: "3.11"
+          - python-version: "3.12"
             extras: "[]"
-          - python-version: "3.11"
+          - python-version: "3.12"
             extras: "[diagrams,mypy]"
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install -r requirements.txt
-        python -m pip install -U -r requirements_test.txt
-    - name: Install dependencies for diagrams
-      if: contains(matrix.extras, 'diagrams')
-      run: |
-        sudo apt-get install libgraphviz-dev graphviz
-        python -m pip install -r requirements.txt -r requirements_diagrams.txt 
-    - name: Install dependencies for mypy
-      if: contains(matrix.extras, 'mypy')
-      run: |
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -U -r requirements_test.txt
+      - name: Install dependencies for diagrams
+        if: contains(matrix.extras, 'diagrams')
+        run: |
+          sudo apt-get install libgraphviz-dev graphviz
+          python -m pip install -r requirements.txt -r requirements_diagrams.txt
+      - name: Install dependencies for mypy
+        if: contains(matrix.extras, 'mypy')
+        run: |
           python -c "print 'hello'" > /dev/null 2>&1 || pip install -r requirements_mypy.txt
-    - name: Test with pytest
-      run: |
-        coverage run --source=transitions -m pytest --doctest-modules tests/
-        coverage xml --ignore-errors
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        env_vars: OS,PYTHON
-        fail_ci_if_error: true
-        files: ./coverage.xml
-        name: codecov-umbrella
-        verbose: true
+      - name: Test with pytest
+        run: |
+          coverage run -m pytest --doctest-modules tests/
+          coverage lcov --ignore-errors
+      - name: Coveralls Parallel
+        if: contains(matrix.extras, 'mypy')
+        uses: coverallsapp/github-action@v2
+        with:
+          flag-name: run-${{ join(matrix.*, '-') }}
+          parallel: true
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true

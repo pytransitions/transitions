@@ -6,7 +6,8 @@ class Stuff(object):
     is_false = False
     is_True = True
 
-    def __init__(self, states=None, machine_cls=Machine, extra_kwargs={}):
+    def __init__(self, states=None, machine_cls=Machine, extra_kwargs=None):
+        extra_kwargs = extra_kwargs if extra_kwargs is not None else {}
 
         self.state = None
         self.message = None

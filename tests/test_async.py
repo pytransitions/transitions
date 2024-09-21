@@ -1,23 +1,25 @@
-from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine
 from transitions.extensions.factory import AsyncGraphMachine, HierarchicalAsyncGraphMachine
 
 try:
     import asyncio
+    from transitions.extensions.asyncio import AsyncMachine, HierarchicalAsyncMachine, AsyncEventData, \
+        AsyncTransition
+
 except (ImportError, SyntaxError):
     asyncio = None  # type: ignore
-
 
 from unittest.mock import MagicMock
 from unittest import skipIf
 from functools import partial
 import weakref
 from .test_core import TestTransitions, MachineError, TYPE_CHECKING
-from .utils import DummyModel
+from .utils import DummyModel, Stuff
 from .test_graphviz import pgv as gv
 from .test_pygraphviz import pgv
 
 if TYPE_CHECKING:
-    from typing import Type
+    from typing import Type, Sequence, List
+    from transitions.extensions.asyncio import AsyncTransitionConfig
 
 
 @skipIf(asyncio is None, "AsyncMachine requires asyncio and contextvars suppport")
@@ -218,6 +220,7 @@ class TestAsync(TestTransitions):
         # Define with list of dictionaries
 
         async def change_state(machine):
+            # type: (AsyncMachine) -> None
             self.assertEqual(machine.state, 'A')
             if machine.has_queue:
                 await machine.run(machine=machine)
@@ -227,12 +230,14 @@ class TestAsync(TestTransitions):
                     await machine.run(machine=machine)
 
         async def raise_machine_error(event_data):
+            # type: (AsyncEventData) -> None
             self.assertTrue(event_data.machine.has_queue)
             await event_data.model.to_A()
             event_data.machine._queued = False
             await event_data.model.to_C()
 
         async def raise_exception(event_data):
+            # type: (AsyncEventData) -> None
             await event_data.model.to_C()
             raise ValueError("Clears queue")
 
@@ -240,7 +245,7 @@ class TestAsync(TestTransitions):
             {'trigger': 'walk', 'source': 'A', 'dest': 'B', 'before': change_state},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
-        ]
+        ]  # type: Sequence[AsyncTransitionConfig]
 
         m = self.machine_cls(states=states, transitions=transitions, initial='A')
         asyncio.run(m.walk(machine=m))
@@ -269,10 +274,12 @@ class TestAsync(TestTransitions):
         m2 = DummyModel()
 
         async def run():
-            transitions = [{'trigger': 'mock', 'source': ['A', 'B'], 'dest': 'B', 'after': mock},
-                           {'trigger': 'delayed', 'source': 'A', 'dest': 'B', 'before': partial(asyncio.sleep, 0.1)},
-                           {'trigger': 'check', 'source': 'B', 'dest': 'A', 'after': check_mock},
-                           {'trigger': 'error', 'source': 'B', 'dest': 'C', 'before': self.raise_value_error}]
+            transitions = [
+                {'trigger': 'mock', 'source': ['A', 'B'], 'dest': 'B', 'after': mock},
+                {'trigger': 'delayed', 'source': 'A', 'dest': 'B', 'before': partial(asyncio.sleep, 0.1)},
+                {'trigger': 'check', 'source': 'B', 'dest': 'A', 'after': check_mock},
+                {'trigger': 'error', 'source': 'B', 'dest': 'C', 'before': self.raise_value_error}
+            ]  # type: Sequence[AsyncTransitionConfig]
             m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions, initial='A',
                                  queued='model')
             # call m1.delayed and m2.mock should be called immediately
@@ -307,7 +314,7 @@ class TestAsync(TestTransitions):
              'before': partial(check_queue, 4), 'after': remove_model},
             {'trigger': 'remove_queue', 'source': 'B', 'dest': None, 'prepare': ['to_A', 'to_C'],
              'before': partial(check_queue, 3), 'after': remove_model}
-        ]
+        ]  # type: Sequence[AsyncTransitionConfig]
 
         async def run():
             m1 = DummyModel()
@@ -435,6 +442,21 @@ class TestAsync(TestTransitions):
 
         asyncio.run(run())
 
+    def test_on_exception_finalize(self):
+        mock = MagicMock()
+
+        def finalize():
+            mock()
+            raise RuntimeError("Could not finalize")
+
+        m = self.machine_cls(states=['A', 'B'], initial='A', finalize_event=finalize)
+
+        async def run():
+            self.assertTrue(await m.to_B())
+            self.assertTrue(mock.called)
+
+        asyncio.run(run())
+
     def test_weakproxy_model(self):
         d = DummyModel()
         pr = weakref.proxy(d)
@@ -449,8 +471,11 @@ class TestAsync(TestTransitions):
 
         async def run():
             assert await d.may_to_A()
+            assert await d.may_trigger("to_A")
             assert await d.may_to_B()
+            assert await d.may_trigger("to_B")
             assert await d.may_to_C()
+            assert await d.may_trigger("to_C")
 
         asyncio.run(run())
 
@@ -463,12 +488,18 @@ class TestAsync(TestTransitions):
 
         async def run():
             assert not await m.may_walk()
+            assert not await m.may_trigger("walk")
             assert not await m.may_stop()
+            assert not await m.may_trigger("stop")
             assert await m.may_run()
+            assert await m.may_trigger("run")
             await m.run()
             assert not await m.may_run()
+            assert not await m.may_trigger("run")
             assert not await m.may_stop()
+            assert not await m.may_trigger("stop")
             assert not await m.may_walk()
+            assert not await m.may_trigger("walk")
 
         asyncio.run(run())
 
@@ -480,6 +511,122 @@ class TestAsync(TestTransitions):
 
         async def run():
             assert not await d.may_walk()
+            assert not await d.may_trigger("walk")
+
+        asyncio.run(run())
+
+    def test_may_transition_internal(self):
+        states = ['A', 'B', 'C']
+        d = DummyModel()
+        _ = self.machine_cls(model=d, states=states, transitions=[["go", "A", "B"], ["wait", "B", None]],
+                             initial='A', auto_transitions=False)
+
+        async def run():
+            assert await d.may_go()
+            assert await d.may_trigger("go")
+            assert not await d.may_wait()
+            assert not await d.may_trigger("wait")
+            await d.go()
+            assert not await d.may_go()
+            assert not await d.may_trigger("go")
+            assert await d.may_wait()
+            assert await d.may_trigger("wait")
+
+        asyncio.run(run())
+
+    def test_may_transition_with_exception(self):
+
+        stuff = Stuff(machine_cls=self.machine_cls, extra_kwargs={"send_event": True})
+        stuff.machine.add_transition(trigger="raises", source="A", dest="B", prepare=partial(stuff.this_raises, RuntimeError("Prepare Exception")))
+        stuff.machine.add_transition(trigger="raises", source="B", dest="C", conditions=partial(stuff.this_raises, ValueError("Condition Exception")))
+        stuff.machine.add_transition(trigger="works", source="A", dest="B")
+
+        def process_exception(event_data):
+            assert event_data.error is not None
+            assert event_data.transition is not None
+            assert event_data.event.name == "raises"
+            assert event_data.machine == stuff.machine
+
+        async def run():
+            with self.assertRaises(RuntimeError):
+                await stuff.may_raises()
+            with self.assertRaises(RuntimeError):
+                await stuff.may_trigger("raises")
+            assert stuff.is_A()
+            assert await stuff.may_works()
+            assert await stuff.may_trigger("works")
+            assert await stuff.works()
+            with self.assertRaises(ValueError):
+                await stuff.may_raises()
+            with self.assertRaises(ValueError):
+                await stuff.may_trigger("raises")
+            assert stuff.is_B()
+            stuff.machine.on_exception.append(process_exception)
+            assert not await stuff.may_raises()
+            assert not await stuff.may_trigger("raises")
+            assert await stuff.to_A()
+            assert not await stuff.may_raises()
+            assert not await stuff.may_trigger("raises")
+
+        asyncio.run(run())
+
+    def test_on_final(self):
+        final_mock = MagicMock()
+        machine = self.machine_cls(states=['A', {'name': 'B', 'final': True}], on_final=final_mock, initial='A')
+
+        async def run():
+            self.assertFalse(final_mock.called)
+            await machine.to_B()
+            self.assertTrue(final_mock.called)
+            await machine.to_A()
+            self.assertEqual(1, final_mock.call_count)
+            await machine.to_B()
+            self.assertEqual(2, final_mock.call_count)
+
+        asyncio.run(run())
+
+    def test_custom_transition(self):
+
+        class MyTransition(self.machine_cls.transition_cls):  # type: ignore
+
+            def __init__(self, source, dest, conditions=None, unless=None, before=None,
+                         after=None, prepare=None, my_int=None, my_none=None, my_str=None, my_dict=None):
+                super(MyTransition, self).__init__(source, dest, conditions, unless, before, after, prepare)
+                self.my_int = my_int
+                self.my_none = my_none
+                self.my_str = my_str
+                self.my_dict = my_dict
+
+        class MyMachine(self.machine_cls):  # type: ignore
+            transition_cls = MyTransition
+
+        a_transition = {
+            "trigger": "go", "source": "B", "dest": "A",
+            "my_int": 42, "my_str": "foo", "my_dict": {"bar": "baz"}
+        }
+        transitions = [
+            ["go", "A", "B"],
+            a_transition
+        ]
+
+        m = MyMachine(states=["A", "B"], transitions=transitions, initial="A")
+        m.add_transition("reset", "*", "A",
+                         my_int=23, my_str="foo2", my_none=None, my_dict={"baz": "bar"})
+
+        async def run():
+            assert await m.go()
+            trans = m.get_transitions("go", "B")  # type: List[MyTransition]
+            assert len(trans) == 1
+            assert trans[0].my_str == a_transition["my_str"]
+            assert trans[0].my_int == a_transition["my_int"]
+            assert trans[0].my_dict == a_transition["my_dict"]
+            assert trans[0].my_none is None
+            trans = m.get_transitions("reset", "A")
+            assert len(trans) == 1
+            assert trans[0].my_str == "foo2"
+            assert trans[0].my_int == 23
+            assert trans[0].my_dict == {"baz": "bar"}
+            assert trans[0].my_none is None
 
         asyncio.run(run())
 
@@ -504,13 +651,15 @@ class TestHierarchicalAsync(TestAsync):
         mock = MagicMock()
 
         async def sleep_mock():
+            # type: () -> None
             await asyncio.sleep(0.1)
             mock()
 
         states = ['A', 'B', {'name': 'C', 'children': ['1', {'name': '2', 'children': ['a', 'b'], 'initial': 'a'},
                                                        '3'], 'initial': '2'}]
-        transitions = [{'trigger': 'go', 'source': 'A', 'dest': 'C',
-                        'after': [sleep_mock] * 100}]
+        transitions = [
+            {'trigger': 'go', 'source': 'A', 'dest': 'C', 'after': [sleep_mock] * 100}
+        ]  # type: Sequence[AsyncTransitionConfig]
         machine = self.machine_cls(states=states, transitions=transitions, initial='A')
         asyncio.run(machine.go())
         self.assertEqual('C{0}2{0}a'.format(machine.state_cls.separator), machine.state)
@@ -529,6 +678,49 @@ class TestHierarchicalAsync(TestAsync):
                           'P{0}3{0}y'.format(machine.state_cls.separator)], machine.state)
         asyncio.run(machine.to_B())
         self.assertTrue(machine.is_B())
+
+    def test_final_state_nested(self):
+        final_mock_B = MagicMock()
+        final_mock_Y = MagicMock()
+        final_mock_Z = MagicMock()
+        final_mock_machine = MagicMock()
+
+        mocks = [final_mock_B, final_mock_Y, final_mock_Z, final_mock_machine]
+
+        states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'final': True},
+                                                  {'name': 'Y', 'transitions': [['final_Y', 'yI', 'yII']],
+                                                   'initial': 'yI',
+                                                   'on_final': final_mock_Y,
+                                                   'states':
+                                                       ['yI', {'name': 'yII', 'final': True}]
+                                                   },
+                                                  {'name': 'Z', 'transitions': [['final_Z', 'zI', 'zII']],
+                                                   'initial': 'zI',
+                                                   'on_final': final_mock_Z,
+                                                   'states':
+                                                       ['zI', {'name': 'zII', 'final': True}]
+                                                   },
+                                                  ],
+                        "on_final": final_mock_B}]
+
+        machine = self.machine_cls(states=states, on_final=final_mock_machine, initial='A')
+
+        async def run():
+            self.assertFalse(any(mock.called for mock in mocks))
+            await machine.to_B()
+            self.assertFalse(any(mock.called for mock in mocks))
+            await machine.final_Y()
+            self.assertTrue(final_mock_Y.called)
+            self.assertFalse(final_mock_Z.called)
+            self.assertFalse(final_mock_B.called)
+            self.assertFalse(final_mock_machine.called)
+            await machine.final_Z()
+            self.assertEqual(1, final_mock_Y.call_count)
+            self.assertEqual(1, final_mock_Z.call_count)
+            self.assertEqual(1, final_mock_B.call_count)
+            self.assertEqual(1, final_mock_machine.call_count)
+
+        asyncio.run(run())
 
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")

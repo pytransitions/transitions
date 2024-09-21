@@ -26,8 +26,8 @@ except ImportError:  # pragma: no cover
 
 
 if TYPE_CHECKING:
-    from typing import List, Dict, Union, Type
-
+    from typing import List, Dict, Union, Type, Sequence
+    from transitions.core import TransitionConfig
 
 default_separator = NestedState.separator
 
@@ -634,14 +634,19 @@ class TestNestedTransitions(TestTransitions):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', '3']}, 'D']
         m = self.stuff.machine_cls(states=states, initial='A')
         assert m.may_to_A()
+        assert m.may_trigger("to_A")
         m.to_A()
         assert m.may_to_B()
+        assert m.may_trigger("to_B")
         m.to_B()
         assert m.may_to_C()
+        assert m.may_trigger("to_C")
         m.to_C()
         assert m.may_to_C_1()
+        assert m.may_trigger("to_C_1")
         m.to_C_1()
         assert m.may_to_D()
+        assert m.may_trigger("to_D")
         m.to_D()
 
     def test_get_nested_triggers(self):
@@ -651,7 +656,7 @@ class TestNestedTransitions(TestTransitions):
             ['goA', '*', 'A'],
             ['goF1', ['C{0}1'.format(self.machine_cls.separator), 'C{0}2'.format(self.machine_cls.separator)], 'F'],
             ['goF2', 'C', 'F']
-        ]
+        ]  # type: Sequence[TransitionConfig]
         m = self.machine_cls(states=test_states, transitions=transitions, auto_transitions=False, initial='A')
         self.assertEqual(1, len(m.get_nested_triggers(['C', '1'])))
         with m('C'):
@@ -714,6 +719,45 @@ class TestNestedTransitions(TestTransitions):
         self.assertEqual(state_name, machine.state)
         machine.reflexive()
         self.assertEqual(state_name, machine.state)
+
+    def test_final_state_nested(self):
+        final_mock_B = MagicMock()
+        final_mock_Y = MagicMock()
+        final_mock_Z = MagicMock()
+        final_mock_machine = MagicMock()
+
+        mocks = [final_mock_B, final_mock_Y, final_mock_Z, final_mock_machine]
+
+        states = ['A', {'name': 'B', 'parallel': [{'name': 'X', 'final': True},
+                                                  {'name': 'Y', 'transitions': [['final_Y', 'yI', 'yII']],
+                                                   'initial': 'yI',
+                                                   'on_final': final_mock_Y,
+                                                   'states':
+                                                       ['yI', {'name': 'yII', 'final': True}]
+                                                   },
+                                                  {'name': 'Z', 'transitions': [['final_Z', 'zI', 'zII']],
+                                                   'initial': 'zI',
+                                                   'on_final': final_mock_Z,
+                                                   'states':
+                                                       ['zI', {'name': 'zII', 'final': True}]
+                                                   },
+                                                  ],
+                        "on_final": final_mock_B}]
+
+        machine = self.machine_cls(states=states, on_final=final_mock_machine, initial='A')
+        self.assertFalse(any(mock.called for mock in mocks))
+        machine.to_B()
+        self.assertFalse(any(mock.called for mock in mocks))
+        machine.final_Y()
+        self.assertTrue(final_mock_Y.called)
+        self.assertFalse(final_mock_Z.called)
+        self.assertFalse(final_mock_B.called)
+        self.assertFalse(final_mock_machine.called)
+        machine.final_Z()
+        self.assertEqual(1, final_mock_Y.call_count)
+        self.assertEqual(1, final_mock_Z.call_count)
+        self.assertEqual(1, final_mock_B.call_count)
+        self.assertEqual(1, final_mock_machine.call_count)
 
 
 class TestSeparatorsBase(TestCase):
@@ -851,7 +895,7 @@ class TestSeparatorsBase(TestCase):
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2',
                                                        {'name': '3', 'children': ['a', 'b', 'c']}]}, 'D', 'E', 'F']
         machine = CustomHierarchicalGraphMachine(states=states, initial='A', auto_transitions=False,
-                                                 ignore_invalid_triggers=True, use_pygraphviz=False)
+                                                 ignore_invalid_triggers=True, graph_engine="graphviz")
         machine.add_ordered_transitions(trigger='next_state')
         machine.next_state()
         self.assertEqual(machine.state, 'B')
@@ -905,6 +949,7 @@ class TestSeparatorsBase(TestCase):
         transitions = [
             {'trigger': 'walk', 'source': 'A', 'dest': 'B'},
             {'trigger': 'run', 'source': 'B', 'dest': 'C'},
+            {'trigger': 'wait', 'source': 'B', 'dest': None},
             {'trigger': 'run_fast', 'source': 'C', 'dest': 'C{0}1'.format(self.separator)},
             {'trigger': 'sprint', 'source': 'C', 'dest': 'D'}
         ]
@@ -912,19 +957,52 @@ class TestSeparatorsBase(TestCase):
             states=states, transitions=transitions, initial='A', auto_transitions=False
         )
         assert m.may_walk()
+        assert m.may_trigger("walk")
         assert not m.may_run()
+        assert not m.may_trigger("run")
         assert not m.may_run_fast()
+        assert not m.may_trigger("run_fast")
         assert not m.may_sprint()
+        assert not m.may_trigger("sprint")
+        assert not m.may_wait()
+        assert not m.may_trigger("wait")
 
         m.walk()
         assert not m.may_walk()
+        assert not m.may_trigger("walk")
         assert m.may_run()
+        assert m.may_trigger("run")
         assert not m.may_run_fast()
+        assert not m.may_trigger("run_fast")
+        assert m.may_wait()
+        assert m.may_trigger("wait")
 
         m.run()
         assert m.may_run_fast()
+        assert m.may_trigger("run_fast")
         assert m.may_sprint()
+        assert m.may_trigger("sprint")
+
         m.run_fast()
+
+    def test_remove_nested_transition(self):
+        separator = self.state_cls.separator
+        state = {
+            'name': 'B',
+            'children': ['1', '2'],
+            'transitions': [['jo', '1', '2']],
+            'initial': '2'
+        }
+        m = self.stuff.machine_cls(initial='A', states=['A', state],
+                                   transitions=[['go', 'A', 'B'], ['go', 'B{0}2'.format(separator),
+                                                                   'B{0}1'.format(separator)]])
+        m.remove_transition("go", "A", "B")
+        assert m.get_transitions("go")
+        m.remove_transition("go")
+        assert not m.get_transitions("go")
+        assert m.get_transitions("jo")
+        m.remove_transition("jo")
+        assert not m.get_transitions("jo")
 
 
 class TestSeparatorsSlash(TestSeparatorsBase):

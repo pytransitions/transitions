@@ -75,7 +75,7 @@ class State(object):
     dynamic_methods = ['on_enter', 'on_exit']
 
     def __init__(self, name, on_enter=None, on_exit=None,
-                 ignore_invalid_triggers=None):
+                 ignore_invalid_triggers=None, final=False):
         """
         Args:
             name (str or Enum): The name of the state
@@ -90,6 +90,7 @@ class State(object):
 
         """
         self._name = name
+        self.final = final
         self.ignore_invalid_triggers = ignore_invalid_triggers
         self.on_enter = listify(on_enter) if on_enter else []
         self.on_exit = listify(on_exit) if on_exit else []
@@ -267,7 +268,10 @@ class Transition(object):
         event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
         event_data.update(getattr(event_data.model, event_data.machine.model_attribute))
-        event_data.machine.get_state(self.dest).enter(event_data)
+        dest = event_data.machine.get_state(self.dest)
+        dest.enter(event_data)
+        if dest.final:
+            event_data.machine.callbacks(event_data.machine.on_final, event_data)
 
     def add_callback(self, trigger, func):
         """Add a new before, after, or prepare callback.
@@ -397,7 +401,7 @@ class Event(object):
         try:
             if self._is_valid_source(event_data.state):
                 self._process(event_data)
-        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+        except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.machine.on_exception:
                 self.machine.callbacks(self.machine.on_exception, event_data)
@@ -407,7 +411,7 @@ class Event(object):
             try:
                 self.machine.callbacks(self.machine.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
-            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+            except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.machine.name,
                               type(err).__name__,
@@ -490,8 +494,8 @@ class Machine(object):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', model_override=False,
+                 on_exception=None, on_final=None, **kwargs):
         """
         Args:
             model (object or list): The object(s) whose states we want to manage. If set to `Machine.self_literal`
@@ -556,6 +560,7 @@ class Machine(object):
         self._prepare_event = []
         self._finalize_event = []
         self._on_exception = []
+        self._on_final = []
         self._initial = None
 
         self.states = OrderedDict()
@@ -568,8 +573,10 @@ class Machine(object):
         self.after_state_change = after_state_change
         self.finalize_event = finalize_event
         self.on_exception = on_exception
+        self.on_final = on_final
         self.name = name + ": " if name is not None else ""
         self.model_attribute = model_attribute
+        self.model_override = model_override
 
         self.models = []
 
@@ -601,6 +608,7 @@ class Machine(object):
             mod = self if mod is self.self_literal else mod
             if mod not in self.models:
                 self._checked_assignment(mod, 'trigger', partial(self._get_trigger, mod))
+                self._checked_assignment(mod, 'may_trigger', partial(self._can_trigger, mod))
 
                 for trigger in self.events:
                     self._add_trigger_to_model(trigger, mod)
@@ -722,6 +730,16 @@ class Machine(object):
     @on_exception.setter
     def on_exception(self, value):
         self._on_exception = listify(value)
+
+    @property
+    def on_final(self):
+        """Callbacks will be executed when the reached state is tagged with 'final'"""
+        return self._on_final
+
+    # this should make sure that finalize_event is always a list
+    @on_final.setter
+    def on_final(self, value):
+        self._on_final = listify(value)
 
     def get_state(self, state):
         """Return the State instance with the passed name."""
@@ -853,29 +871,37 @@ class Machine(object):
                 state.add_callback(callback[3:], method)
 
     def _checked_assignment(self, model, name, func):
-        if hasattr(model, name):
-            _LOGGER.warning("%sModel already contains an attribute '%s'. Skip binding.", self.name, name)
-        else:
+        bound_func = getattr(model, name, None)
+        if (bound_func is None) ^ self.model_override:
             setattr(model, name, func)
+        else:
+            _LOGGER.warning("%sSkip binding of '%s' to model due to model override policy.", self.name, name)
 
     def _can_trigger(self, model, trigger, *args, **kwargs):
-        evt = EventData(None, None, self, model, args, kwargs)
-        state = self.get_model_state(model).name
+        state = self.get_model_state(model)
+        event_data = EventData(state, Event(name=trigger, machine=self), self, model, args, kwargs)
 
         for trigger_name in self.get_triggers(state):
             if trigger_name != trigger:
                 continue
-            for transition in self.events[trigger_name].transitions[state]:
+            for transition in self.events[trigger_name].transitions[state.name]:
                 try:
-                    _ = transition.source if transition.dest is None else self.get_state(transition.dest)
+                    _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                 except ValueError:
                     continue
 
-                evt.transition = transition
-                self.callbacks(self.prepare_event, evt)
-                self.callbacks(transition.prepare, evt)
-                if all(c.check(evt) for c in transition.conditions):
-                    return True
+                event_data.transition = transition
+                try:
+                    self.callbacks(self.prepare_event, event_data)
+                    self.callbacks(transition.prepare, event_data)
+                    if all(c.check(event_data) for c in transition.conditions):
+                        return True
+                except BaseException as err:
+                    event_data.error = err
+                    if self.on_exception:
+                        self.callbacks(self.on_exception, event_data)
+                    else:
+                        raise
         return False
 
     def _add_may_transition_func_for_trigger(self, trigger, model):
@@ -1207,7 +1233,7 @@ class Machine(object):
             try:
                 self._transition_queue[0]()
                 self._transition_queue.popleft()
-            except Exception:
+            except BaseException:
                 # if a transition raises an exception, clear queue and delegate exception handling
                 self._transition_queue.clear()
                 raise

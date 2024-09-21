@@ -13,6 +13,7 @@
 """
 
 import logging
+import warnings
 from functools import partial
 
 from transitions import Transition
@@ -67,18 +68,10 @@ class GraphMachine(MarkupMachine):
         "rankdir": "LR",
     }
 
-    hierarchical_machine_attributes = {
-        "rankdir": "TB",
-        "rank": "source",
-        "nodesep": "1.5",
-        "compound": "true",
-    }
-
     style_attributes = {
         "node": {
-            "": {},
             "default": {
-                "style": "rounded, filled",
+                "style": "rounded,filled",
                 "shape": "rectangle",
                 "fillcolor": "white",
                 "color": "black",
@@ -93,13 +86,12 @@ class GraphMachine(MarkupMachine):
                 "peripheries": "1",
             },
             "active": {"color": "red", "fillcolor": "darksalmon", "peripheries": "2"},
-            "previous": {"color": "blue", "fillcolor": "azure2", "peripheries": "1"},
+            "previous": {"color": "blue", "fillcolor": "azure", "peripheries": "1"},
         },
-        "edge": {"": {}, "default": {"color": "black"}, "previous": {"color": "blue"}},
+        "edge": {"default": {"color": "black"}, "previous": {"color": "blue"}},
         "graph": {
-            "": {},
             "default": {"color": "black", "fillcolor": "white", "style": "solid"},
-            "previous": {"color": "blue", "fillcolor": "azure2", "style": "filled"},
+            "previous": {"color": "blue", "fillcolor": "azure", "style": "filled"},
             "active": {"color": "red", "fillcolor": "darksalmon", "style": "filled"},
             "parallel": {"color": "black", "fillcolor": "white", "style": "dotted"},
         },
@@ -123,9 +115,10 @@ class GraphMachine(MarkupMachine):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 title="State Machine", show_conditions=False, show_state_attributes=False, show_auto_transitions=False,
-                 use_pygraphviz=True, **kwargs):
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', model_override=False,
+                 on_exception=None, on_final=None, title="State Machine", show_conditions=False,
+                 show_state_attributes=False, show_auto_transitions=False,
+                 use_pygraphviz=True, graph_engine="pygraphviz", **kwargs):
         # remove graph config from keywords
         self.title = title
         self.show_conditions = show_conditions
@@ -134,7 +127,11 @@ class GraphMachine(MarkupMachine):
         # keep 'auto_transitions_markup' for backwards compatibility
         kwargs["auto_transitions_markup"] = show_auto_transitions
         self.model_graphs = {}
-        self.graph_cls = self._init_graphviz_engine(use_pygraphviz)
+        if use_pygraphviz is False:
+            warnings.warn("Please replace 'use_pygraphviz=True' with graph_engine='graphviz'.",
+                          category=DeprecationWarning)
+            graph_engine = 'graphviz'
+        self.graph_cls = self._init_graphviz_engine(graph_engine)
 
         _LOGGER.debug("Using graph engine %s", self.graph_cls)
         super(GraphMachine, self).__init__(
@@ -143,7 +140,8 @@ class GraphMachine(MarkupMachine):
             ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
             before_state_change=before_state_change, after_state_change=after_state_change, name=name,
             queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
-            model_attribute=model_attribute, on_exception=on_exception, **kwargs
+            model_attribute=model_attribute, model_override=model_override,
+            on_exception=on_exception, on_final=on_final, **kwargs
         )
 
         # for backwards compatibility assign get_combined_graph to get_graph
@@ -151,35 +149,24 @@ class GraphMachine(MarkupMachine):
         if not hasattr(self, "get_graph"):
             setattr(self, "get_graph", self.get_combined_graph)
 
-    def _init_graphviz_engine(self, use_pygraphviz):
+    def _init_graphviz_engine(self, graph_engine):
         """Imports diagrams (py)graphviz backend based on machine configuration"""
-        if use_pygraphviz:
-            try:
-                # state class needs to have a separator and machine needs to be a context manager
-                if hasattr(self.state_cls, "separator") and hasattr(self, "__enter__"):
-                    from .diagrams_pygraphviz import (  # pylint: disable=import-outside-toplevel
-                        NestedGraph as Graph, pgv
-                    )
+        is_hsm = issubclass(self.transition_cls, NestedTransition)
+        if graph_engine == "pygraphviz":
+            from .diagrams_pygraphviz import Graph, NestedGraph, pgv  # pylint: disable=import-outside-toplevel
+            if pgv:
+                return NestedGraph if is_hsm else Graph
+            _LOGGER.warning("Could not import pygraphviz backend. Will try graphviz backend next.")
+            graph_engine = "graphviz"
 
-                    self.machine_attributes.update(self.hierarchical_machine_attributes)
-                else:
-                    from .diagrams_pygraphviz import (  # pylint: disable=import-outside-toplevel
-                        Graph, pgv
-                    )
-                if pgv is None:
-                    raise ImportError
-                return Graph
-            except ImportError:
-                _LOGGER.warning("Could not import pygraphviz backend. Will try graphviz backend next")
-        if hasattr(self.state_cls, "separator") and hasattr(self, "__enter__"):
-            from .diagrams_graphviz import (  # pylint: disable=import-outside-toplevel
-                NestedGraph as Graph,
-            )
+        if graph_engine == "graphviz":
+            from .diagrams_graphviz import Graph, NestedGraph, pgv  # pylint: disable=import-outside-toplevel
+            if pgv:
+                return NestedGraph if is_hsm else Graph
+            _LOGGER.warning("Could not import graphviz backend. Fallback to mermaid graphs")
 
-            self.machine_attributes.update(self.hierarchical_machine_attributes)
-        else:
-            from .diagrams_graphviz import Graph  # pylint: disable=import-outside-toplevel
-        return Graph
+        from .diagrams_mermaid import NestedGraph, Graph  # pylint: disable=import-outside-toplevel
+        return NestedGraph if is_hsm else Graph
 
     def _get_graph(self, model, title=None, force_new=False, show_roi=False):
         """This method will be bound as a partial to models and return a graph object to be drawn or manipulated.
@@ -239,7 +226,7 @@ class GraphMachine(MarkupMachine):
     def add_states(
         self, states, on_enter=None, on_exit=None, ignore_invalid_triggers=None, **kwargs
     ):
-        """Calls the base method and regenerates all models's graphs."""
+        """Calls the base method and regenerates all models' graphs."""
         super(GraphMachine, self).add_states(
             states,
             on_enter=on_enter,
@@ -260,8 +247,9 @@ class GraphMachine(MarkupMachine):
 
     def remove_transition(self, trigger, source="*", dest="*"):
         super(GraphMachine, self).remove_transition(trigger, source, dest)
+        # update all model graphs since some transitions might be gone
         for model in self.models:
-            model.get_graph(force_new=True)
+            _ = model.get_graph(force_new=True)
 
 
 class NestedGraphTransition(TransitionGraphSupport, NestedTransition):

@@ -13,7 +13,7 @@ except ImportError:
 class TestCodeFormat(unittest.TestCase):
     def test_conformance(self):
         """Test that we conform to PEP-8."""
-        style = pycodestyle.StyleGuide(quiet=False, ignore=['E501', 'W605'])
+        style = pycodestyle.StyleGuide(quiet=False, ignore=['E501', 'W605', 'W503'])
         if exists('transitions'):  # when run from root directory (e.g. tox)
             style.input_dir('transitions')
             style.input_dir('tests')
@@ -26,7 +26,7 @@ class TestCodeFormat(unittest.TestCase):
 
     @unittest.skipIf(mypy is None, "mypy not found")
     def test_mypy_package(self):
-        call = ['mypy', '--config-file', 'mypy.ini', 'transitions']
+        call = ['mypy', '--config-file', 'mypy.ini', '--strict', 'transitions', 'tests/test_imports.py']
 
         # when run from root directory (e.g. tox) else when run from test directory (e.g. pycharm)
         project_root = '.' if exists('transitions') else '..'

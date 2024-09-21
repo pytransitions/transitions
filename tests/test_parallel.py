@@ -211,10 +211,57 @@ class TestParallel(TestNested):
                       ))]
                  ))]
             ))]
-        )
+        )  # type: ignore
         m = self.machine_cls()
         self.assertEqual(tree, m.build_state_tree(states, sep))
         self.assertEqual(states, _build_state_list(tree, sep))
+
+    def test_may_transition_with_parallel(self):
+        states = ['A',
+                  {'name': 'P',
+                   'parallel': [
+                       {'name': '1', 'states': ["a", "b"], "initial": 'a'},
+                       {'name': '2', 'states': ["a", "b"], "initial": 'a',
+                        'transitions': [['valid', 'a', 'b']]}
+                   ]}]
+        m = self.machine_cls(states=states, initial="A")
+        assert not m.may_valid()
+        assert m.to_P()
+        assert m.is_P(allow_substates=True)
+        assert m.is_P_1_a()
+        assert m.is_P_2_a()
+        assert m.may_valid()
+        assert m.valid()
+        assert m.is_P_1_a()
+        assert not m.is_P_2_a()
+        assert m.is_P_2_b()
+
+    def test_is_state_parallel(self):
+        states = ['A',
+                  {'name': 'P',
+                   'parallel': [
+                       '1',
+                       {'name': '2', 'parallel': [
+                           {'name': 'a'},
+                           {'name': 'b', 'parallel': [
+                               {'name': 'x', 'parallel': ['1', '2']}, 'y'
+                           ]}
+                       ]},
+                   ]}]
+        m = self.machine_cls(states=states, initial="A")
+        assert m.is_A()
+        assert not m.is_P_2()
+        assert not m.is_P_2_a()
+        assert not m.is_P_2_b()
+        assert not m.is_P_2_b_x()
+        assert not m.is_P(allow_substates=True)
+        m.to_P()
+        assert m.is_P_1()
+        assert m.is_P_2_a()
+        assert not m.is_P_2()
+        assert m.is_P(allow_substates=True)
+        assert m.is_P_2(allow_substates=True)
+        assert not m.is_A(allow_substates=True)
 
 
 @skipIf(pgv is None, "pygraphviz is not available")
@@ -224,7 +271,7 @@ class TestParallelWithPyGraphviz(TestParallel):
         class PGVMachine(HierarchicalGraphMachine):
 
             def __init__(self, *args, **kwargs):
-                kwargs['use_pygraphviz'] = True
+                kwargs['graph_engine'] = "pygraphviz"
                 super(PGVMachine, self).__init__(*args, **kwargs)
 
         super(TestParallelWithPyGraphviz, self).setUp()
@@ -238,7 +285,7 @@ class TestParallelWithGraphviz(TestParallel):
         class GVMachine(HierarchicalGraphMachine):
 
             def __init__(self, *args, **kwargs):
-                kwargs['use_pygraphviz'] = False
+                kwargs['graph_engine'] = "graphviz"
                 super(GVMachine, self).__init__(*args, **kwargs)
 
         super(TestParallelWithGraphviz, self).setUp()

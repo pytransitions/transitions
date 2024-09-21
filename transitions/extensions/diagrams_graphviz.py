@@ -16,7 +16,6 @@ try:
 except ImportError:
     pgv = None
 
-from ..core import listify
 from .diagrams_base import BaseGraph
 
 _LOGGER = logging.getLogger(__name__)
@@ -53,7 +52,7 @@ class Graph(BaseGraph):
             container.node(
                 state["name"],
                 label=self._convert_state_attributes(state),
-                **self.machine.style_attributes["node"][style]
+                **self.machine.style_attributes.get("node", {}).get(style, {})
             )
 
     def _add_edges(self, transitions, container):
@@ -71,7 +70,7 @@ class Graph(BaseGraph):
                     src,
                     dst,
                     label=" | ".join(labels),
-                    **self.machine.style_attributes["edge"][style]
+                    **self.machine.style_attributes.get("edge", {}).get(style, {})
                 )
 
     def generate(self):
@@ -87,9 +86,9 @@ class Graph(BaseGraph):
 
         fsm_graph = pgv.Digraph(
             name=title,
-            node_attr=self.machine.style_attributes["node"]["default"],
-            edge_attr=self.machine.style_attributes["edge"]["default"],
-            graph_attr=self.machine.style_attributes["graph"]["default"],
+            node_attr=self.machine.style_attributes.get("node", {}).get("default", {}),
+            edge_attr=self.machine.style_attributes.get("edge", {}).get("default", {}),
+            graph_attr=self.machine.style_attributes.get("graph", {}).get("default", {}),
         )
         fsm_graph.graph_attr.update(**self.machine.machine_attributes)
         fsm_graph.graph_attr["label"] = title
@@ -116,7 +115,7 @@ class Graph(BaseGraph):
                 for t in [trans["source"], trans.get("dest", trans["source"])]
             })
             active_states = active_states.union({k for k, style in self.custom_styles["node"].items() if style})
-            states = _filter_states(copy.deepcopy(states), active_states, self.machine.state_cls)
+            states = filter_states(copy.deepcopy(states), active_states, self.machine.state_cls)
         self._add_nodes(states, fsm_graph)
         self._add_edges(transitions, fsm_graph)
         setattr(fsm_graph, "draw", partial(self.draw, fsm_graph))
@@ -183,9 +182,9 @@ class NestedGraph(Graph):
                 cluster_name = "cluster_" + name
                 attr = {"label": label, "rank": "source"}
                 attr.update(
-                    **self.machine.style_attributes["graph"][
-                        self.custom_styles["node"][name] or default_style
-                    ]
+                    **self.machine.style_attributes.get("graph", {}).get(
+                        self.custom_styles["node"][name] or default_style, {}
+                    )
                 )
                 with container.subgraph(name=cluster_name, graph_attr=attr) as sub:
                     self._cluster_states.append(name)
@@ -207,11 +206,11 @@ class NestedGraph(Graph):
                         prefix=prefix + state["name"] + self.machine.state_cls.separator,
                     )
             else:
-                style = self.machine.style_attributes["node"][default_style].copy()
+                style = self.machine.style_attributes.get("node", {}).get(default_style, {}).copy()
                 style.update(
-                    self.machine.style_attributes["node"][
-                        self.custom_styles["node"][name] or default_style
-                    ]
+                    self.machine.style_attributes.get("node", {}).get(
+                        self.custom_styles["node"][name] or default_style, {}
+                    )
                 )
                 container.node(name, label=label, **style)
 
@@ -246,7 +245,7 @@ class NestedGraph(Graph):
             for dst, attr in dests.items():
                 del attr["label_pos"]
                 style = self.custom_styles["edge"][src][dst]
-                attr.update(**self.machine.style_attributes["edge"][style])
+                attr.update(**self.machine.style_attributes.get("edge", {}).get(style, {}))
                 container.edge(attr.pop("source"), attr.pop("dest"), **attr)
 
     def _create_edge_attr(self, src, dst, transition):
@@ -274,14 +273,14 @@ class NestedGraph(Graph):
         return attr
 
 
-def _filter_states(states, state_names, state_cls, prefix=None):
+def filter_states(states, state_names, state_cls, prefix=None):
     prefix = prefix or []
     result = []
     for state in states:
         pref = prefix + [state["name"]]
         included = getattr(state_cls, "separator", "_").join(pref) in state_names
         if "children" in state:
-            state["children"] = _filter_states(
+            state["children"] = filter_states(
                 state["children"], state_names, state_cls, prefix=pref
             )
             if state["children"] or included:

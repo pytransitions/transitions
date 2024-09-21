@@ -19,8 +19,8 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from typing import List, Union, Dict, Any
-
+    from typing import List, Union, Dict, Any, Sequence
+    from transitions.core import TransitionConfig, TransitionConfigDict
 
 test_states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                'D', 'E', 'F']
@@ -90,7 +90,7 @@ class TestReuse(TestCase):
             {'trigger': 'decrease', 'source': '3', 'dest': '2'},
             {'trigger': 'decrease', 'source': '1', 'dest': '1'},
             {'trigger': 'reset', 'source': '*', 'dest': '1'},
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
 
         counter = self.machine_cls(states=states, transitions=transitions, before_state_change='check',
                                    after_state_change='clear', initial='1')
@@ -102,7 +102,7 @@ class TestReuse(TestCase):
             {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
             {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
             {'trigger': 'calc', 'source': '*', 'dest': 'C'},
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
 
         walker = self.machine_cls(states=new_states, transitions=new_transitions, before_state_change='watch',
                                   after_state_change='look_back', initial='A')
@@ -143,7 +143,7 @@ class TestReuse(TestCase):
             {'trigger': 'decrease', 'source': '1', 'dest': '1'},
             {'trigger': 'reset', 'source': '*', 'dest': '1'},
             {'trigger': 'done', 'source': '3', 'dest': 'finished'}
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
 
         counter = self.machine_cls(states=states, transitions=transitions, initial='1')
 
@@ -157,7 +157,7 @@ class TestReuse(TestCase):
             {'trigger': 'backward', 'source': 'C', 'dest': 'B'},
             {'trigger': 'backward', 'source': 'B', 'dest': 'A'},
             {'trigger': 'calc', 'source': '*', 'dest': 'C%s1' % State.separator},
-        ]
+        ]  # type: Sequence[TransitionConfigDict]
 
         walker = self.machine_cls(states=new_states, transitions=new_transitions, before_state_change='watch',
                                   after_state_change='look_back', initial='A')
@@ -199,7 +199,7 @@ class TestReuse(TestCase):
             ['decrease', '3', '2'],
             ['decrease', '2', '1'],
             {'trigger': 'done', 'source': '3', 'dest': 'done', 'conditions': 'this_passes'},
-        ]
+        ]  # type: Sequence[TransitionConfig]
 
         counter = self.machine_cls(states=count_states, transitions=count_trans, initial='1')
         counter.increase()  # love my counter
@@ -211,7 +211,7 @@ class TestReuse(TestCase):
             ['collect', '*', 'collecting'],
             ['wait', '*', 'waiting'],
             ['count', '*', 'counting%s1' % State.separator]
-        ]
+        ]  # type: Sequence[TransitionConfig]
 
         collector = self.stuff.machine_cls(states=states, transitions=transitions, initial='waiting')
         collector.this_passes = self.stuff.this_passes
@@ -232,6 +232,8 @@ class TestReuse(TestCase):
         collector.increase()  # counting_2
         collector.increase()  # counting_3
         collector.done()  # counting_done
+        with self.assertRaises(AttributeError):
+            collector.is_counting_done()
         self.assertEqual(collector.state, 'waiting')
 
         # # same as above but with states and therefore stateless embedding
@@ -253,26 +255,128 @@ class TestReuse(TestCase):
         with self.assertRaises(ValueError):
             collector.fail()
 
-    def test_reuse_prepare(self):
-        class Model:
-            def __init__(self):
-                self.prepared = False
+    def test_reuse_add_state(self):
+        State = self.state_cls
+        count_states = ['1', '2', '3', 'done']
+        count_trans = [
+            ['increase', '1', '2'],
+            ['increase', '2', '3'],
+            ['decrease', '3', '2'],
+            ['decrease', '2', '1'],
+            {'trigger': 'done', 'source': '3', 'dest': 'done', 'conditions': 'this_passes'},
+        ]  # type: Sequence[TransitionConfig]
 
-            def preparation(self):
-                self.prepared = True
+        counter = self.machine_cls(states=count_states, transitions=count_trans, initial='1')
+        counter.increase()  # love my counter
+        states_remap = ['waiting', 'collecting'] \
+            # type: List[Union[str, Dict[str, Union[str, HierarchicalMachine, Dict]]]]
+        additional_state = {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}
+        transitions = [
+            ['collect', '*', 'collecting'],
+            ['wait', '*', 'waiting'],
+            ['count', '*', 'counting%s1' % State.separator]
+        ]
 
-        ms_model = Model()
-        ms = self.machine_cls(ms_model, states=["C", "D"],
-                              transitions={"trigger": "go", "source": "*", "dest": "D",
-                                           "prepare": "preparation"}, initial="C")
-        ms_model.go()
-        self.assertTrue(ms_model.prepared)
+        # reuse counter instance with remap
+        collector = self.machine_cls(states=states_remap, transitions=transitions, initial='waiting')
+        collector.add_state(additional_state)
+        collector.this_passes = self.stuff.this_passes
+        collector.collect()  # collecting
+        collector.count()  # let's see what we got
+        collector.increase()  # counting_2
+        collector.increase()  # counting_3
+        collector.done()  # counting_done
+        self.assertEqual(collector.state, 'waiting')
 
-        m_model = Model()
-        m = self.machine_cls(m_model, states=["A", "B", {"name": "NEST", "children": ms}])
-        m_model.to('NEST%sC' % self.state_cls.separator)
-        m_model.go()
-        self.assertTrue(m_model.prepared)
+        # check if counting_done was correctly omitted
+        collector.add_transition('fail', '*', 'counting%sdone' % State.separator)
+        with self.assertRaises(ValueError):
+            collector.fail()
+
+        # same as above but with states and therefore stateless embedding
+        additional_state['children'] = count_states
+        transitions.append(['increase', 'counting%s1' % State.separator, 'counting%s2' % State.separator])
+        transitions.append(['increase', 'counting%s2' % State.separator, 'counting%s3' % State.separator])
+        transitions.append(['done', 'counting%s3' % State.separator, 'waiting'])
+
+        collector = self.machine_cls(states=states_remap, transitions=transitions, initial='waiting')
+        collector.add_state(additional_state)
+        collector.collect()  # collecting
+        collector.count()  # let's see what we got
+        collector.increase()  # counting_2
+        collector.increase()  # counting_3
+        collector.done()  # counting_done
+        self.assertEqual(collector.state, 'waiting')
+
+        # check if counting_done was correctly omitted
+        collector.add_transition('fail', '*', 'counting%sdone' % State.separator)
+        with self.assertRaises(ValueError):
+            collector.fail()
+
+    def test_reuse_model_decoration(self):
+        State = self.state_cls
+        count_states = ['1', '2', '3', 'done']
+        count_trans = [
+            ['increase', '1', '2'],
+            ['increase', '2', '3'],
+            ['decrease', '3', '2'],
+            ['decrease', '2', '1'],
+            {'trigger': 'done', 'source': '3', 'dest': 'done', 'conditions': 'this_passes'},
+        ]  # type: Sequence[TransitionConfig]
+
+        counter = self.machine_cls(states=count_states, transitions=count_trans, initial='1')
+        states_remap = ['waiting', 'collecting'] \
+            # type: List[Union[str, Dict[str, Union[str, HierarchicalMachine, Dict]]]]
+        additional_state = {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}
+        transitions = [
+            ['collect', '*', 'collecting'],
+            ['wait', '*', 'waiting'],
+            ['count', '*', 'counting%s1' % State.separator]
+        ]
+
+        # reuse counter instance with remap
+        collector = self.machine_cls(states=states_remap + [additional_state],
+                                     transitions=transitions, initial='waiting')
+
+        assert hasattr(collector, "is_waiting")
+        assert hasattr(collector, "is_counting")
+        assert hasattr(collector, "is_counting_1")
+        assert not hasattr(collector, "is_1")
+        assert not hasattr(collector, "is_done")
+        assert not hasattr(collector, "is_counting_done")
+
+    def test_reuse_model_decoration_add_state(self):
+        State = self.state_cls
+        count_states = ['1', '2', '3', 'done']
+        count_trans = [
+            ['increase', '1', '2'],
+            ['increase', '2', '3'],
+            ['decrease', '3', '2'],
+            ['decrease', '2', '1'],
+            {'trigger': 'done', 'source': '3', 'dest': 'done', 'conditions': 'this_passes'},
+        ]  # type: Sequence[TransitionConfig]
+
+        counter = self.machine_cls(states=count_states, transitions=count_trans, initial='1')
+        states_remap = ['waiting', 'collecting'] \
+            # type: List[Union[str, Dict[str, Union[str, HierarchicalMachine, Dict]]]]
+        additional_state = {'name': 'counting', 'children': counter, 'remap': {'done': 'waiting'}}
+        transitions = [
+            ['collect', '*', 'collecting'],
+            ['wait', '*', 'waiting'],
+            ['count', '*', 'counting%s1' % State.separator]
+        ]
+
+        # reuse counter instance with remap
+        collector = self.machine_cls(states=states_remap,
+                                     transitions=transitions, initial='waiting')
+        collector.add_states(additional_state)
+
+        assert hasattr(collector, "is_waiting")
+        assert hasattr(collector, "is_counting")
+        assert hasattr(collector, "is_counting_1")
+        assert not hasattr(collector, "is_1")
+        assert not hasattr(collector, "is_done")
+        assert not hasattr(collector, "is_counting_done")
 
     def test_reuse_self_reference(self):
         separator = self.state_cls.separator
@@ -425,7 +529,7 @@ class TestReuse(TestCase):
         transitions = [
             {"trigger": "go", "source": "A", "dest": "B",
              "conditions": m.check_self, "prepare": m.check_self, "before": m.check_self, "after": m.check_self}
-        ]
+        ]  # type: Sequence[TransitionConfig]
 
         child = self.machine_cls(None, states=["A", "B"], transitions=transitions, initial="A")
         parent = self.machine_cls(m, states=[{"name": "P", "states": child, "remap": {}}], initial="P")

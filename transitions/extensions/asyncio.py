@@ -138,7 +138,10 @@ class AsyncTransition(Transition):
         await event_data.machine.get_state(self.source).exit(event_data)
         event_data.machine.set_state(self.dest, event_data.model)
         event_data.update(getattr(event_data.model, event_data.machine.model_attribute))
-        await event_data.machine.get_state(self.dest).enter(event_data)
+        dest = event_data.machine.get_state(self.dest)
+        await dest.enter(event_data)
+        if dest.final:
+            await event_data.machine.callbacks(event_data.machine.on_final, event_data)
 
 
 class NestedAsyncTransition(AsyncTransition, NestedTransition):
@@ -154,6 +157,10 @@ class NestedAsyncTransition(AsyncTransition, NestedTransition):
         self._update_model(event_data, state_tree)
         for func in enter_partials:
             await func()
+        with event_data.machine():
+            on_final_cbs, _ = self._final_check(event_data, state_tree, enter_partials)
+            for on_final_cb in on_final_cbs:
+                await on_final_cb()
 
 
 class AsyncEventData(EventData):
@@ -181,7 +188,7 @@ class AsyncEvent(Event):
         try:
             if self._is_valid_source(event_data.state):
                 await self._process(event_data)
-        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+        except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             _LOGGER.error("%sException was raised while processing the trigger: %s", self.machine.name, err)
             event_data.error = err
             if self.machine.on_exception:
@@ -189,8 +196,14 @@ class AsyncEvent(Event):
             else:
                 raise
         finally:
-            await self.machine.callbacks(self.machine.finalize_event, event_data)
-            _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
+            try:
+                await self.machine.callbacks(self.machine.finalize_event, event_data)
+                _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
+            except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
+                              self.machine.name,
+                              type(err).__name__,
+                              str(err))
         return event_data.result
 
     async def _process(self, event_data):
@@ -292,18 +305,21 @@ class AsyncMachine(Machine):
                  send_event=False, auto_transitions=True,
                  ordered_transitions=False, ignore_invalid_triggers=None,
                  before_state_change=None, after_state_change=None, name=None,
-                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state', on_exception=None,
-                 **kwargs):
-        self._transition_queue_dict = {}
-        super().__init__(model=model, states=states, initial=initial, transitions=transitions,
+                 queued=False, prepare_event=None, finalize_event=None, model_attribute='state',
+                 model_override=False, on_exception=None, on_final=None, **kwargs):
+
+        super().__init__(model=None, states=states, initial=initial, transitions=transitions,
                          send_event=send_event, auto_transitions=auto_transitions,
                          ordered_transitions=ordered_transitions, ignore_invalid_triggers=ignore_invalid_triggers,
                          before_state_change=before_state_change, after_state_change=after_state_change, name=name,
-                         queued=queued, prepare_event=prepare_event, finalize_event=finalize_event,
-                         model_attribute=model_attribute, on_exception=on_exception, **kwargs)
-        if self.has_queue is True:
-            # _DictionaryMock sets and returns ONE internal value and ignores the passed key
-            self._transition_queue_dict = _DictionaryMock(self._transition_queue)
+                         queued=bool(queued), prepare_event=prepare_event, finalize_event=finalize_event,
+                         model_attribute=model_attribute, model_override=model_override,
+                         on_exception=on_exception, on_final=on_final, **kwargs)
+
+        self._transition_queue_dict = _DictionaryMock(self._transition_queue) if queued is True else {}
+        self._queued = queued
+        for model in listify(model):
+            self.add_model(model)
 
     def add_model(self, model, initial=None):
         super().add_model(model, initial)
@@ -419,21 +435,29 @@ class AsyncMachine(Machine):
             self._transition_queue.extend(new_queue)
 
     async def _can_trigger(self, model, trigger, *args, **kwargs):
-        evt = AsyncEventData(None, None, self, model, args, kwargs)
-        state = self.get_model_state(model).name
+        state = self.get_model_state(model)
+        event_data = AsyncEventData(state, AsyncEvent(name=trigger, machine=self), self, model, args, kwargs)
 
         for trigger_name in self.get_triggers(state):
             if trigger_name != trigger:
                 continue
-            for transition in self.events[trigger_name].transitions[state]:
+            for transition in self.events[trigger_name].transitions[state.name]:
                 try:
-                    _ = self.get_state(transition.dest)
+                    _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                 except ValueError:
                     continue
-                await self.callbacks(self.prepare_event, evt)
-                await self.callbacks(transition.prepare, evt)
-                if all(await self.await_all([partial(c.check, evt) for c in transition.conditions])):
-                    return True
+                event_data.transition = transition
+                try:
+                    await self.callbacks(self.prepare_event, event_data)
+                    await self.callbacks(transition.prepare, event_data)
+                    if all(await self.await_all([partial(c.check, event_data) for c in transition.conditions])):
+                        return True
+                except BaseException as err:
+                    event_data.error = err
+                    if self.on_exception:
+                        await self.callbacks(self.on_exception, event_data)
+                    else:
+                        raise
         return False
 
     def _process(self, trigger):
@@ -455,7 +479,7 @@ class AsyncMachine(Machine):
         while self._transition_queue_dict[id(model)]:
             try:
                 await self._transition_queue_dict[id(model)][0]()
-            except Exception:
+            except BaseException:
                 # if a transition raises an exception, clear queue and delegate exception handling
                 self._transition_queue_dict[id(model)].clear()
                 raise
@@ -503,7 +527,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
             with self():
                 res = await self._trigger_event_nested(event_data, trigger, None)
             event_data.result = self._check_event_result(res, event_data.model, trigger)
-        except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+        except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err
             if self.on_exception:
                 await self.callbacks(self.on_exception, event_data)
@@ -513,7 +537,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
             try:
                 await self.callbacks(self.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.name)
-            except Exception as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
+            except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.name,
                               type(err).__name__,
@@ -546,20 +570,29 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                 return await self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
 
     async def _can_trigger_nested(self, model, trigger, path, *args, **kwargs):
-        evt = AsyncEventData(None, None, self, model, args, kwargs)
         if trigger in self.events:
             source_path = copy.copy(path)
             while source_path:
+                event_data = AsyncEventData(self.get_state(source_path), AsyncEvent(name=trigger, machine=self), self,
+                                            model, args, kwargs)
                 state_name = self.state_cls.separator.join(source_path)
                 for transition in self.events[trigger].transitions.get(state_name, []):
                     try:
-                        _ = self.get_state(transition.dest)
+                        _ = self.get_state(transition.dest) if transition.dest is not None else transition.source
                     except ValueError:
                         continue
-                    await self.callbacks(self.prepare_event, evt)
-                    await self.callbacks(transition.prepare, evt)
-                    if all(await self.await_all([partial(c.check, evt) for c in transition.conditions])):
-                        return True
+                    event_data.transition = transition
+                    try:
+                        await self.callbacks(self.prepare_event, event_data)
+                        await self.callbacks(transition.prepare, event_data)
+                        if all(await self.await_all([partial(c.check, event_data) for c in transition.conditions])):
+                            return True
+                    except BaseException as err:
+                        event_data.error = err
+                        if self.on_exception:
+                            await self.callbacks(self.on_exception, event_data)
+                        else:
+                            raise
                 source_path.pop(-1)
         if path:
             with self(path.pop(0)):

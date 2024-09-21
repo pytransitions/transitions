@@ -1,13 +1,47 @@
 # Changelog
 
-## 0.9.1 ()
+## 0.9.3 ()
+
+- Bug #683: Typing wrongly suggested that `Transition` instances can be passed to `Machine.__init__` and/or `Machine.add_transition(s)` (thanks @antonio-antuan)
+- Typing should be more precise now
+  - Made `transitions.core.(Async)TransitionConfigDict` a `TypedDict` which can be used to spot parameter errors during static analysis
+  - `Machine.add_transitions` and `Machine.__init__` expect a `Sequence` of configurations for transitions now
+  - Added 'async' callbacks to types in `asyncio` extension
+
+## 0.9.2 (August 2024)
+
+Release 0.9.2 is a minor release and contains a new mermaid diagram backend, a new model decoration mode for easier development with types and some more features and bugfixes.
+
+- Bug #610: Decorate models appropriately when `HierarchicalMachine` is passed to `add_state` (thanks @e0lithic)
+- Bug #647: Let `may_<trigger>` check all parallel states in processing order (thanks @spearsear)
+- Bug: `HSM.is_state` works with parallel states now
+- Experimental features: 
+  + Add `model_override` to Machine constructor to determine the mode of operation. With `model_override=Fale` (default), `transitions` will not override already defined methods on a model just as it did before. For workflows relying on typing, `model_override=True` will override methods already defined on the model and only those (!). This allows to control which convenience methods shall be assigned to the model and keeps the statically 'assumed' model in sync with its runtime counterpart. Since defining each and every method manually is rather tiresome, `transitions.experimental.utils.generate_base_model` features a way to convert a machine configuration into a `BaseClass` with all convenience functions and callbacks.
+  + Add `transitions.experimental.utils.{add_transitions, event, with_model_definitions, transition}` to define trigger methods in a class model for more convenient type checking. `add_transitions` can be used as a function decorator and is stackable. `event` returns a placeholder object for attribute assigment. `add_transitions` and `event` have the same signature and support transition definition like machine constructors. The function `transition` can used for better typing and returns a dictionary that can be passed to the utility functions but also to a machine constructor. `add_transitions` and `event` require a machine decorated with `with_model_definitions`. Decorating a machine `with_model_definitions` implies `model_override=True`.
+- Feature: Add `may_trigger` to models to check whether transitions can be conducted by trigger name.
+- Feature: Add Mermaid diagram backend that returns a mermaid diagram as a string. `use_pygraphviz` is deprecated in favour for `graph_engine` which may be `pygraphviz` (default), `graphviz` or `mermaid`.
+
+## 0.9.1 (May 2024)
+
+Release 0.9.1 is a minor release and contains several bugfixes and some (typing) improvements. This release also introduces `on_final` callbacks on machines (as well as `NestedState`) and `final` flags for states.
 
 - Bug #594: Fix may_<trigger> always returning false for internal transitions (thanks @a-schade)
 - PR #592: Pass investigated transition to `EventData` context in 'may' check (thanks @msclock)
 - PR #634: Improve the handling of diagrams when working with parallel states, especially when using the show_roi option (thanks @seanxlliu)
+- Bug #619/#639: `Exception` is not broad enough and does not catch `asyncio.CancelledError` or `KeyboardInterrupt`; use `BaseException` instead (thanks @e0lithic and @ofacklam)
 - '_anchor' suffix has been removed for (py)graphviz cluster node anchors
 - local testing switched from [tox](https://github.com/tox-dev/tox) to [nox](https://github.com/wntrblm/nox)
 - PR #633: Remove surrounding whitespace from docstrings (thanks @artofhuman)
+- PR #665: Add `on_final` to `Machine` and `NestedState` constructor and `final` to `State`. Callbacks passed to `on_final` will be executed when a State with `final=True` is entered or all children of a parallel state are final.
+- Bug #626: Process exceptions with `Machine.on_exception` in may_<trigger> as well (thanks @match1)
+- PR #666: Improved handling of removing transitions for `GraphMachine` and `HiearachicalMachine` (thanks @drpjm)
+- PR #667: Better handling of unset styling in `GraphMachine`
+- Typing:
+  + Added `--strict` mypy flag for `transitions` type checks (not `tests` though)
+  + Made state, event and machine property mandatory in (Nested)EventData
+  + Transition.dest may be None
+  + Introduced (Async)CallbackFunc to declutter callback-related signatures
+  + Add stub file for extension package for explicite reexport (thanks @DrewDevereux)
 
 ## 0.9.0 (September 2022)
 

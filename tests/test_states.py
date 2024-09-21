@@ -3,8 +3,9 @@ from transitions.extensions.states import *
 from transitions.extensions import MachineFactory
 from time import sleep
 
-from unittest import TestCase
-from .test_graphviz import TestDiagramsLockedNested
+from unittest import TestCase, skipIf
+from .test_core import TYPE_CHECKING
+from .test_graphviz import TestDiagramsLockedNested, pgv
 
 try:
     from unittest.mock import MagicMock
@@ -12,13 +13,27 @@ except ImportError:
     from mock import MagicMock  # type: ignore
 
 
+if TYPE_CHECKING:
+    from typing import Type, Sequence
+    from transitions.core import TransitionConfig
+
+
 class TestTransitions(TestCase):
+
+    def setUp(self):
+        super(TestTransitions, self).setUp()
+        self.machine_cls = Machine  # type: Type[Machine]
 
     def test_tags(self):
 
-        @add_state_features(Tags)
-        class CustomMachine(Machine):
-            pass
+        if TYPE_CHECKING:
+            @add_state_features(Tags)
+            class CustomMachine(Machine):
+                pass
+        else:
+            @add_state_features(Tags)
+            class CustomMachine(self.machine_cls):
+                pass
 
         states = [{"name": "A", "tags": ["initial", "success", "error_state"]}]
         m = CustomMachine(states=states, initial='A')
@@ -30,16 +45,21 @@ class TestTransitions(TestCase):
 
     def test_error(self):
 
-        @add_state_features(Error)
-        class CustomMachine(Machine):
-            pass
+        if TYPE_CHECKING:
+            @add_state_features(Error)
+            class CustomMachine(Machine):
+                pass
+        else:
+            @add_state_features(Error)
+            class CustomMachine(self.machine_cls):
+                pass
 
         states = ['A', 'B', 'F',
                   {'name': 'S1', 'tags': ['accepted']},
                   {'name': 'S2', 'accepted': True}]
 
         transitions = [['to_B', ['S1', 'S2'], 'B'], ['go', 'A', 'B'], ['fail', 'B', 'F'],
-                       ['success1', 'B', 'S2'], ['success2', 'B', 'S2']]
+                       ['success1', 'B', 'S2'], ['success2', 'B', 'S2']]  # type: Sequence[TransitionConfig]
         m = CustomMachine(states=states, transitions=transitions, auto_transitions=False, initial='A')
         m.go()
         m.success1()
@@ -52,9 +72,15 @@ class TestTransitions(TestCase):
             m.fail()
 
     def test_error_callback(self):
-        @add_state_features(Error)
-        class CustomMachine(Machine):
-            pass
+
+        if TYPE_CHECKING:
+            @add_state_features(Error)
+            class CustomMachine(Machine):
+                pass
+        else:
+            @add_state_features(Error)
+            class CustomMachine(self.machine_cls):
+                pass
 
         mock_callback = MagicMock()
 
@@ -71,11 +97,18 @@ class TestTransitions(TestCase):
     def test_timeout(self):
         mock = MagicMock()
 
-        @add_state_features(Timeout)
-        class CustomMachine(Machine):
+        if TYPE_CHECKING:
+            @add_state_features(Timeout)
+            class CustomMachine(Machine):
 
-            def timeout(self):
-                mock()
+                def timeout(self):
+                    mock()
+        else:
+            @add_state_features(Timeout)
+            class CustomMachine(self.machine_cls):
+
+                def timeout(self):
+                    mock()
 
         states = ['A',
                   {'name': 'B', 'timeout': 0.3, 'on_timeout': 'timeout'},
@@ -101,9 +134,14 @@ class TestTransitions(TestCase):
         notification = MagicMock()
         counter = MagicMock()
 
-        @add_state_features(Timeout)
-        class CustomMachine(Machine):
-            pass
+        if TYPE_CHECKING:
+            @add_state_features(Timeout)
+            class CustomMachine(Machine):
+                pass
+        else:
+            @add_state_features(Timeout)
+            class CustomMachine(self.machine_cls):
+                pass
 
         class Model(object):
 
@@ -142,9 +180,14 @@ class TestTransitions(TestCase):
     def test_timeout_transitioning(self):
         timeout_mock = MagicMock()
 
-        @add_state_features(Timeout)
-        class CustomMachine(Machine):
-            pass
+        if TYPE_CHECKING:
+            @add_state_features(Timeout)
+            class CustomMachine(Machine):
+                pass
+        else:
+            @add_state_features(Timeout)
+            class CustomMachine(self.machine_cls):
+                pass
 
         states = ['A', {'name': 'B', 'timeout': 0.05, 'on_timeout': ['to_A', timeout_mock]}]
         machine = CustomMachine(states=states, initial='A')
@@ -163,9 +206,14 @@ class TestTransitions(TestCase):
             def increase(self):
                 self.value += 1
 
-        @add_state_features(Volatile)
-        class CustomMachine(Machine):
-            pass
+        if TYPE_CHECKING:
+            @add_state_features(Volatile)
+            class CustomMachine(Machine):
+                pass
+        else:
+            @add_state_features(Volatile)
+            class CustomMachine(self.machine_cls):
+                pass
 
         states = ['A', {'name': 'B', 'volatile': TemporalState}]
         m = CustomMachine(states=states, initial='A')
@@ -189,6 +237,7 @@ class TestTransitions(TestCase):
         self.assertEqual(m.scope.value, 5)
 
 
+@skipIf(pgv is None, 'Graph diagram requires pygraphviz')
 class TestStatesDiagramsLockedNested(TestDiagramsLockedNested):
 
     def setUp(self):
