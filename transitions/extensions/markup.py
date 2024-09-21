@@ -13,8 +13,6 @@ import importlib
 import itertools
 import numbers
 
-from six import iteritems
-
 from ..core import Machine
 from .nesting import HierarchicalMachine
 
@@ -125,7 +123,7 @@ class MarkupMachine(Machine):
                 ", ".join(itertools.chain(
                     (str(_) for _ in func.args),
                     ("%s=%s" % (key, value)
-                     for key, value in iteritems(func.keywords if func.keywords else {})))))
+                     for key, value in (func.keywords.items() if func.keywords else {}.items())))))
         return str(func)
 
     def _convert_states_and_transitions(self, root):

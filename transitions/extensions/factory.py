@@ -9,7 +9,6 @@
 
 from functools import partial
 import itertools
-from six import iteritems
 
 from ..core import Machine, Transition
 
@@ -78,7 +77,7 @@ class LockedGraphMachine(GraphMachine, LockedMachine):
                 ", ".join(itertools.chain(
                     (str(_) for _ in func.args[1:]),
                     ("%s=%s" % (key, value)
-                     for key, value in iteritems(func.keywords if func.keywords else {})))))
+                     for key, value in (func.keywords.items() if func.keywords else {}.items())))))
         return GraphMachine.format_references(func)
 
 
