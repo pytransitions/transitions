@@ -1008,6 +1008,21 @@ class TestSeparatorsBase(TestCase):
         m.remove_transition("jo")
         assert not m.get_transitions("jo")
 
+    def test_add_nested_instances(self):
+        if self.separator != '_':
+            idle_state = NestedState(name='idle')
+            task_machine = self.machine_cls(states=[idle_state], initial=idle_state.name)
+            task_state = NestedState('mock_task')
+            parent_state = NestedState(name='seq', initial=task_state.name)
+            parent_state.add_substate(task_state)
+            # add_state breaks in versions greater than 0.9.0
+            task_machine.add_state(parent_state)
+            task_machine.add_transition('t0', 'idle', parent_state.name)
+            task_machine.t0()
+            assert not task_machine.is_seq()
+            assert task_machine.is_seq(allow_substates=True)
+            assert task_machine.is_seq.mock_task()
+
 
 class TestSeparatorsSlash(TestSeparatorsBase):
     separator = '/'
