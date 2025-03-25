@@ -86,14 +86,17 @@ class FunctionWrapper(object):
             func (callable): Function to be called at the end of the path.
             path (list of strings): Remaining segment of the substate path.
         """
-        name = path[0]
-        if name[0].isdigit():
-            name = 's' + name
-        if hasattr(self, name):
-            getattr(self, name).add(func, path[1:])
+        if not path:
+            self._func = func
         else:
-            assert not path[1:], "nested path should be empty"
-            setattr(self, name, FunctionWrapper(func))
+            name = path[0]
+            if name[0].isdigit():
+                name = 's' + name
+            if hasattr(self, name):
+                getattr(self, name).add(func, path[1:])
+            else:
+                assert not path[1:], "nested path should be empty"
+                setattr(self, name, FunctionWrapper(func))
 
     def __call__(self, *args, **kwargs):
         return self._func(*args, **kwargs)
