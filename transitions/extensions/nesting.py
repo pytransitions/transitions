@@ -417,13 +417,13 @@ class HierarchicalMachine(Machine):
         )
 
     def __call__(self, to_scope=None):
-        if isinstance(to_scope, string_types):
+        if isinstance(to_scope, Enum):
+            state = self.states[to_scope.name]
+            to_scope = (state, state.states, state.events, self.prefix_path + [to_scope.name])
+        elif isinstance(to_scope, string_types):
             state_name = to_scope.split(self.state_cls.separator)[0]
             state = self.states[state_name]
             to_scope = (state, state.states, state.events, self.prefix_path + [state_name])
-        elif isinstance(to_scope, Enum):
-            state = self.states[to_scope.name]
-            to_scope = (state, state.states, state.events, self.prefix_path + [to_scope.name])
         elif to_scope is None:
             if self._stack:
                 to_scope = self._stack[0]
