@@ -695,12 +695,12 @@ class HierarchicalMachine(Machine):
         """
         with self():
             source_path = [] if source == "*" \
-                else source.split(self.state_cls.separator) if isinstance(source, string_types) \
                 else self._get_enum_path(source) if isinstance(source, Enum) \
+                else source.split(self.state_cls.separator) if isinstance(source, string_types) \
                 else self._get_state_path(source)
             dest_path = [] if dest == "*" \
-                else dest.split(self.state_cls.separator) if isinstance(dest, string_types) \
                 else self._get_enum_path(dest) if isinstance(dest, Enum) \
+                else dest.split(self.state_cls.separator) if isinstance(dest, string_types) \
                 else self._get_state_path(dest)
             matches = self.get_nested_transitions(trigger, source_path, dest_path)
             # only consider delegations when source_path contains a nested state (len > 1)
