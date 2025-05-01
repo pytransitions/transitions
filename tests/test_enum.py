@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, StrEnum
 from unittest import TestCase, skipIf
 
 from transitions.core import Machine
@@ -383,6 +383,19 @@ class TestNestedStateEnums(TestEnumsAsStates):
 
         ref_state = [P.P1, [Q.Q1, [[[X.X1, X.X2], B.B2], A.A2]]]
         self.assertEqual(ref_state, m.state)
+
+
+class TestNestedStateStrEnums(TestNestedStateEnums):
+
+    def setUp(self):
+        super().setUp()
+
+        class States(StrEnum):
+            RED = "red"
+            YELLOW = "yellow"
+            GREEN = "green"
+
+        self.States = States
 
 
 @skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
