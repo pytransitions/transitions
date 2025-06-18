@@ -214,8 +214,6 @@ class NestedGraph(Graph):
 
         for src, dests in edges_attr.items():
             for dst, attr in dests.items():
-                if not attr["label"]:
-                    continue
                 container.append("{source} --> {dest}: {label}".format(**attr))
 
     def _create_edge_attr(self, src, dst, transition):
