@@ -42,9 +42,9 @@ class Graph(BaseGraph):
 
     def _add_nodes(self, states, container):
         for state in states:
-            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state["name"]))
-            container.append("Class {} s_{}".format(state["name"],
-                                                    self.custom_styles["node"][state["name"]] or "default"))
+            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), self._sanitize_name(state["name"])))
+            container.append("Class {} s_{}".format(self._sanitize_name(state["name"]),
+                                                    self._sanitize_name(self.custom_styles["node"][state["name"]]) or "default"))
 
     def _add_edges(self, transitions, container):
         edge_labels = defaultdict(lambda: defaultdict(list))
@@ -56,7 +56,7 @@ class Graph(BaseGraph):
             edge_labels[transition["source"]][dst].append(self._transition_label(transition))
         for src, dests in edge_labels.items():
             for dst, labels in dests.items():
-                container.append("{} --> {}: {}".format(src, dst, " | ".join(labels)))
+                container.append("{} --> {}: {}".format(self._sanitize_name(src), self._sanitize_name(dst), " | ".join(labels)))
 
     def generate(self):
         """Triggers the generation of a graph. With graphviz backend, this does nothing since graph trees need to be
@@ -73,7 +73,7 @@ class Graph(BaseGraph):
         for style_name, style_attrs in self.machine.style_attributes["node"].items():
             if style_name:
                 fsm_graph.append("classDef s_{} {}".format(
-                    style_name, ','.join(_to_mermaid(style_attrs, ":"))))
+                    self._sanitize_name(style_name), ','.join(_to_mermaid(style_attrs, ":"))))
         fsm_graph.append("")
         states, transitions = self._get_elements()
         if roi_state:
@@ -102,7 +102,7 @@ class Graph(BaseGraph):
         fsm_graph.append("")
         self._add_edges(transitions, fsm_graph)
         if self.machine.initial and (roi_state is None or roi_state == self.machine.initial):
-            fsm_graph.append("[*] --> {}".format(self.machine.initial))
+            fsm_graph.append("[*] --> {}".format(self._sanitize_name(self.machine.initial)))
 
         indent = 0
         for i in range(len(fsm_graph)):
@@ -130,6 +130,9 @@ class Graph(BaseGraph):
                 label += r'\n- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
         # end each label with a left-aligned newline
         return label
+    
+    def _sanitize_name(cls, name):
+        return name.replace(" ", "-").replace("-", "_")
 
 
 class NestedGraph(Graph):
@@ -153,14 +156,14 @@ class NestedGraph(Graph):
     def _add_nested_nodes(self, states, container, prefix, default_style):
         for state in states:
             name = prefix + state["name"]
-            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), name))
+            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), self._sanitize_name(name)))
             if state.get("final", False):
-                container.append("{} --> [*]".format(name))
+                container.append("{} --> [*]".format(self._sanitize_name(name)))
             if not prefix:
-                container.append("Class {} s_{}".format(name.replace(" ", ""),
-                                                        self.custom_styles["node"][name] or default_style))
+                container.append("Class {} s_{}".format(self._sanitize_name(name),
+                                                        self._sanitize_name(self.custom_styles["node"][name] or default_style)))
             if state.get("children", None) is not None:
-                container.append("state {} {{".format(name))
+                container.append("state {} {{".format(self._sanitize_name(name)))
                 self._cluster_states.append(name)
                 # with container.subgraph(name=cluster_name, graph_attr=attr) as sub:
                 initial = state.get("initial", "")
@@ -179,7 +182,7 @@ class NestedGraph(Graph):
                 else:
                     if initial:
                         container.append("[*] --> {}".format(
-                            prefix + state["name"] + self.machine.state_cls.separator + initial))
+                            self._sanitize_name(prefix + state["name"] + self.machine.state_cls.separator + initial)))
                     self._add_nested_nodes(
                         state["children"],
                         container,
@@ -216,7 +219,7 @@ class NestedGraph(Graph):
             for dst, attr in dests.items():
                 if not attr["label"]:
                     continue
-                container.append("{source} --> {dest}: {label}".format(**attr))
+                container.append("{source} --> {dest}: {label}".format(**{k: self._sanitize_name(v) if k != 'label' else v for k, v in attr.items()}))
 
     def _create_edge_attr(self, src, dst, transition):
         return {"source": src, "dest": dst, "label": self._transition_label(transition)}
