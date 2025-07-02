@@ -123,7 +123,7 @@ class AsyncTransition(Transition):
         await event_data.machine.callbacks(self.before, event_data)
         _LOGGER.debug("%sExecuted callback before transition.", event_data.machine.name)
 
-        if self.dest:  # if self.dest is None this is an internal transition with no actual state change
+        if self.dest is not None:  # if self.dest is None this is an internal transition with no actual state change
             await self._change_state(event_data)
 
         await event_data.machine.callbacks(self.after, event_data)

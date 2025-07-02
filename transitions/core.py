@@ -274,7 +274,7 @@ class Transition(object):
         event_data.machine.callbacks(itertools.chain(event_data.machine.before_state_change, self.before), event_data)
         _LOGGER.debug("%sExecuted callback before transition.", event_data.machine.name)
 
-        if self.dest:  # if self.dest is None this is an internal transition with no actual state change
+        if self.dest is not None:  # if self.dest is None this is an internal transition with no actual state change
             self._change_state(event_data)
 
         event_data.machine.callbacks(itertools.chain(self.after, event_data.machine.after_state_change), event_data)
