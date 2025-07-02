@@ -18,6 +18,7 @@ import logging
 import asyncio
 import contextvars
 import inspect
+import sys
 import warnings
 from collections import deque
 from functools import partial, reduce
@@ -30,6 +31,10 @@ from .nesting import HierarchicalMachine, NestedState, NestedEvent, NestedTransi
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
+
+
+CANCELLED_MSG = "_transition"
+"""A message passed to a cancelled task to indicate that the cancellation was caused by transitions."""
 
 
 class AsyncState(State):
@@ -117,7 +122,7 @@ class AsyncTransition(Transition):
 
         machine = event_data.machine
         # cancel running tasks since the transition will happen
-        await machine.cancel_running_transitions(event_data.model, event_data.event.name)
+        await machine.cancel_running_transitions(event_data.model)
 
         await event_data.machine.callbacks(event_data.machine.before_state_change, event_data)
         await event_data.machine.callbacks(self.before, event_data)
@@ -386,14 +391,20 @@ class AsyncMachine(Machine):
         and the transition will happen. This requires already running tasks to be cancelled.
         Args:
             model (object): The currently processed model
-            msg (str): Optional message to pass to a running task's cancel request
+            msg (str): Optional message to pass to a running task's cancel request (deprecated).
         """
+        if msg is not None:
+            warnings.warn(
+                "When you call cancel_running_transitions with a custom message "
+                "transitions will re-raise all raised CancelledError. "
+                "Make sure to catch them in your code. "
+                "The parameter 'msg' will likely be removed in a future release.", category=DeprecationWarning)
         for running_task in self.async_tasks.get(id(model), []):
             if self.current_context.get() == running_task or running_task in self.protected_tasks:
                 continue
             if running_task.done() is False:
                 _LOGGER.debug("Cancel running tasks...")
-                running_task.cancel(msg)
+                running_task.cancel(msg or CANCELLED_MSG)
 
     async def process_context(self, func, model):
         """
@@ -414,7 +425,12 @@ class AsyncMachine(Machine):
                 self.async_tasks[id(model)] = [asyncio.current_task()]
             try:
                 res = await self._process_async(func, model)
-            except asyncio.CancelledError:
+            except asyncio.CancelledError as err:
+                # raise CancelledError only if the task was not cancelled by internal processes
+                # we indicate internal cancellation by passing CANCELLED_MSG to cancel()
+                if CANCELLED_MSG not in err.args and sys.version_info >= (3, 11):
+                    _LOGGER.debug("%sExternal cancellation of task. Raise CancelledError...", self.name)
+                    raise
                 res = False
             finally:
                 self.async_tasks[id(model)].remove(asyncio.current_task())
@@ -681,11 +697,8 @@ class AsyncTimeout(AsyncState):
         Returns (cancellable): A running timer with a cancel method
         """
         async def _timeout():
-            try:
-                await asyncio.sleep(self.timeout)
-                await asyncio.shield(self._process_timeout(event_data))
-            except asyncio.CancelledError:
-                pass
+            await asyncio.sleep(self.timeout)
+            await asyncio.shield(self._process_timeout(event_data))
         return asyncio.create_task(_timeout())
 
     async def _process_timeout(self, event_data):
@@ -707,7 +720,7 @@ class AsyncTimeout(AsyncState):
             except BaseException as err2:
                 _LOGGER.error("%sHandling timeout exception '%s' caused another exception: %s. "
                               "Cancel running transitions...", event_data.machine.name, repr(err), repr(err2))
-                await event_data.machine.cancel_running_transitions(event_data.model, "timeout")
+                await event_data.machine.cancel_running_transitions(event_data.model)
         finally:
             AsyncMachine.current_context.reset(token)
         _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)

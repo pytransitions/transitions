@@ -13,6 +13,8 @@ from ..core import StateIdentifier, CallbackList
 
 _LOGGER: Logger
 
+CANCELLED_MSG: str = ...
+
 AsyncCallbackFunc = Callable[..., Coroutine[Any, Any, Optional[bool]]]
 AsyncCallback = Union[str, AsyncCallbackFunc]
 AsyncCallbacksArg = Optional[Union[Callback, Iterable[Callback], AsyncCallback, Iterable[AsyncCallback]]]

@@ -1,4 +1,5 @@
 from asyncio import CancelledError
+import sys
 
 from transitions.extensions.factory import AsyncGraphMachine, HierarchicalAsyncGraphMachine
 from transitions.extensions.states import add_state_features
@@ -402,6 +403,30 @@ class TestAsync(TestTransitions):
             assert machine.is_A()
         asyncio.run(run())
 
+    @skipIf(sys.version_info < (3, 11), "Cancel requires Python 3.11+")
+    def test_user_cancel(self):
+        machine = self.machine_cls(states=['A', 'B'], initial='A', before_state_change=self.cancel_soon)
+
+        async def run1():
+            try:
+                await asyncio.wait_for(machine.to_B(), timeout=0.5)
+            except asyncio.TimeoutError:
+                return  # expected case
+            assert False, "Expected a TimeoutError"
+
+        async def run2():
+            async def raise_timeout():
+                raise asyncio.TimeoutError("My custom timeout")
+            try:
+                machine.add_transition('cancelled', 'A', 'B', before=raise_timeout)
+                await machine.cancelled()
+            except asyncio.TimeoutError:
+                return  # expected case
+            assert False, "Expected a TimeoutError"
+        asyncio.run(run1())
+        assert machine.is_A()
+        asyncio.run(run2())
+
     def test_queued_timeout_cancel(self):
         error_mock = MagicMock()
         timout_mock = MagicMock()
@@ -693,6 +718,28 @@ class TestAsync(TestTransitions):
             assert trans[0].my_int == 23
             assert trans[0].my_dict == {"baz": "bar"}
             assert trans[0].my_none is None
+
+        asyncio.run(run())
+
+    def test_deprecation_warnings(self):
+        import warnings
+
+        async def run():
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                machine = self.machine_cls(states=['A', 'B'], initial='A')
+                await machine.cancel_running_transitions(self)
+                self.assertEqual(len(w), 0)
+                # msg is deprecated, should not be used
+                await machine.cancel_running_transitions(self, msg="Custom message")
+                self.assertEqual(len(w), 1)
+
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                self.assertEqual(len(w), 0)
+                # should use cancel_running_transitions instead
+                await machine.switch_model_context(self)
+                self.assertEqual(len(w), 1)
 
         asyncio.run(run())
 
