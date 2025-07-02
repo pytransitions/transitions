@@ -2,8 +2,9 @@
 
 ## 0.9.4 ()
 
-- Bug #688: `Machine.remove_transitions` did not work with `State` and `Enum` even though the signature implied this (@thanks @hookokoko)
-- PR #696: Improve handling of `StrEnum` which were previously confused as string (@jbrocher)
+- Bug #688: `Machine.remove_transitions` did not work with `State` and `Enum` even though the signature implied this (thanks @hookokoko)
+- PR #696: Improve handling of `StrEnum` which were previously confused as string (thanks @jbrocher)
+- Bug #697: An empty string as a destination made a transition internal but only `dest=None` should do this (thanks @rudy-lath-vizio)
 
 ## 0.9.3 (July 2024)
 
