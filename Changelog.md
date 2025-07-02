@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.3 ()
+## 0.9.3 (July 2024)
 
 - Bug #682: `AsyncTimeout` did not stop execution (thanks @matt3o)
 - Bug #683: Typing wrongly suggested that `Transition` instances can be passed to `Machine.__init__` and/or `Machine.add_transition(s)` (thanks @antonio-antuan)
