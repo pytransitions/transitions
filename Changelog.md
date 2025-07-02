@@ -4,7 +4,8 @@
 
 - Bug #682: `AsyncTimeout` did not stop execution (thanks @matt3o)
 - Bug #683: Typing wrongly suggested that `Transition` instances can be passed to `Machine.__init__` and/or `Machine.add_transition(s)` (thanks @antonio-antuan)
-- Bug #692: When adding an already constructed `NestedState`, FunctionWrapper was not properly initialized (thanks drpjm)
+- Bug #692: When adding an already constructed `NestedState`, FunctionWrapper was not properly initialized (thanks @drpjm)
+- Bug #701: `Machine.dispatch` should not short-circuit when a model returns False (thanks @Joshuaalbert)
 - Typing should be more precise now
   - Made `transitions.core.(Async)TransitionConfigDict` a `TypedDict` which can be used to spot parameter errors during static analysis
   - `Machine.add_transitions` and `Machine.__init__` expect a `Sequence` of configurations for transitions now

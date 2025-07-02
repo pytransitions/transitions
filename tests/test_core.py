@@ -840,8 +840,18 @@ class TestTransitions(TestCase):
         m = Machine(model=s1, states=states, ignore_invalid_triggers=True,
                     initial=states[0], transitions=[['go', 'A', 'B'], ['go', 'B', 'C']])
         m.add_model(s2, initial='B')
-        m.dispatch('go')
+        assert m.dispatch('go')
         self.assertEqual(s1.state, 'B')
+        self.assertEqual(s2.state, 'C')
+
+    def test_dispatch_with_error(self):
+        s1, s2 = Stuff(), Stuff()
+        states = ['A', 'B', 'C']
+        m = Machine(model=s1, states=states, ignore_invalid_triggers=True,
+                    initial=states[0], transitions=[['go', 'B', 'C']])
+        m.add_model(s2, initial='B')
+        assert not m.dispatch('go')
+        self.assertEqual(s1.state, 'A')
         self.assertEqual(s2.state, 'C')
 
     def test_remove_model(self):

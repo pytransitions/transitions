@@ -1166,7 +1166,8 @@ class Machine(object):
         Returns:
             bool The truth value of all triggers combined with AND
         """
-        return all(getattr(model, trigger)(*args, **kwargs) for model in self.models)
+        res = [getattr(model, trigger)(*args, **kwargs) for model in self.models]
+        return all(res)
 
     def callbacks(self, funcs, event_data):
         """Triggers a list of callbacks"""
