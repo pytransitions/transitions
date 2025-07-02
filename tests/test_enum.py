@@ -177,6 +177,19 @@ class TestEnumsAsStates(TestCase):
         assert not t.may_stop()
         assert not t.may_trigger("stop")
 
+    def test_remove_transition(self):
+        m = self.machine_cls(states=self.States, initial=self.States.RED)
+        m.add_transition('switch', self.States.RED, self.States.YELLOW)
+        m.add_transition('switch', self.States.YELLOW, self.States.RED)  # this must be removed
+        m.add_transition('switch', self.States.YELLOW, self.States.GREEN)
+
+        m.switch()
+        assert m.is_YELLOW() is True
+
+        m.remove_transition('switch', source=self.States.YELLOW, dest=self.States.RED)
+        m.switch()
+        assert m.is_GREEN() is True
+
 
 @skipIf(enum is None, "enum is not available")
 class TestNestedStateEnums(TestEnumsAsStates):

@@ -1125,6 +1125,23 @@ class TestTransitions(TestCase):
         self.stuff.machine.remove_transition('go', dest='D')
         self.assertFalse(hasattr(self.stuff, 'go'))
 
+    def test_remove_transition_state(self):
+        self.stuff.machine.add_transition('go', ['A', 'B', 'C'], 'D')
+        self.stuff.machine.add_transition('walk', 'A', 'B')
+        self.stuff.go()
+        self.assertEqual(self.stuff.state, 'D')
+        self.stuff.to_A()
+        self.stuff.machine.remove_transition('go', source=self.stuff.machine.states['A'])
+        with self.assertRaises(MachineError):
+            self.stuff.go()
+        self.stuff.machine.add_transition('go', 'A', 'D')
+        self.stuff.walk()
+        self.stuff.go()
+        self.assertEqual(self.stuff.state, 'D')
+        self.stuff.to_C()
+        self.stuff.machine.remove_transition('go', dest=self.stuff.machine.states['D'])
+        self.assertFalse(hasattr(self.stuff, 'go'))
+
     def test_reflexive_transition(self):
         self.stuff.machine.add_transition('reflex', ['A', 'B'], '=', after='increase_level')
         self.assertEqual(self.stuff.state, 'A')
