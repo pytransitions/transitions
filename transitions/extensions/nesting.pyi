@@ -95,7 +95,7 @@ class HierarchicalMachine(Machine):
     def add_model(self, model: ModelParameter, initial: Optional[NestedStateIdentifier] = ...) -> None: ...  # type: ignore[override]
     @property
     def initial(self) -> Optional[str]: ...
-    @initial.setter
+    @initial.setter  # type: ignore[override]
     def initial(self, value: NestedStateIdentifier) -> None: ...
     def add_ordered_transitions(self, states: Optional[Sequence[NestedState]] = ..., trigger: str = ..., loop: bool = ...,  # type: ignore[override]
                                 loop_includes_initial: bool = ..., conditions: CallbacksArg = ...,
