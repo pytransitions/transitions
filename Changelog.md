@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.4 ()
+
+- Bug #688: `Machine.remove_transitions` did not work with `State` and `Enum` even though the signature implied this (@thanks @hookokoko)
+- PR #696: Improve handling of `StrEnum` which were previously confused as string (@jbrocher)
+
 ## 0.9.3 (July 2024)
 
 - Bug #682: `AsyncTimeout` did not stop execution (thanks @matt3o)
