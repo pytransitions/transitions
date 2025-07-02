@@ -29,7 +29,7 @@ class TestEnumsAsStates(TestCase):
             YELLOW = 2
             GREEN = 3
         self.machine_cls = Machine
-        self.States = States
+        self.States = States  # type: Type[enum.Enum]
 
     def test_pass_enums_as_states(self):
         m = self.machine_cls(states=self.States, initial=self.States.YELLOW)

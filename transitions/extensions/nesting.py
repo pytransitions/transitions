@@ -745,12 +745,12 @@ class HierarchicalMachine(Machine):
         """
         with self():
             source_path = [] if source == "*" \
-                else source.split(self.state_cls.separator) if isinstance(source, string_types) \
                 else self._get_enum_path(source) if isinstance(source, Enum) \
+                else source.split(self.state_cls.separator) if isinstance(source, string_types) \
                 else self._get_state_path(source)
             dest_path = [] if dest == "*" \
-                else dest.split(self.state_cls.separator) if isinstance(dest, string_types) \
                 else self._get_enum_path(dest) if isinstance(dest, Enum) \
+                else dest.split(self.state_cls.separator) if isinstance(dest, string_types) \
                 else self._get_state_path(dest)
             self._remove_nested_transitions(trigger, source_path, dest_path)
 
