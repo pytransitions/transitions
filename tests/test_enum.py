@@ -1,4 +1,4 @@
-from enum import Enum, StrEnum
+from enum import Enum
 from unittest import TestCase, skipIf
 
 from transitions.core import Machine
@@ -398,17 +398,23 @@ class TestNestedStateEnums(TestEnumsAsStates):
         self.assertEqual(ref_state, m.state)
 
 
-class TestNestedStateStrEnums(TestNestedStateEnums):
+try:
+    from enum import StrEnum
 
-    def setUp(self):
-        super().setUp()
+    class TestNestedStateStrEnums(TestNestedStateEnums):
 
-        class States(StrEnum):
-            RED = "red"
-            YELLOW = "yellow"
-            GREEN = "green"
+        def setUp(self):
+            super().setUp()
 
-        self.States = States
+            class States(StrEnum):
+                RED = "red"
+                YELLOW = "yellow"
+                GREEN = "green"
+
+            self.States = States
+
+except ImportError:
+    pass  # Python < 3.11 does not have StrEnum
 
 
 @skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")
