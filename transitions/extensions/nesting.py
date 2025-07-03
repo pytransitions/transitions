@@ -140,6 +140,9 @@ class NestedEvent(Event):
                     while elems:
                         done.add(machine.state_cls.separator.join(elems))
                         elems.pop()
+        if event_data.result and self.machine._can_trigger(model, "", *event_data.args, **event_data.kwargs):
+            _LOGGER.debug("%sTriggering completion event", machine.name)
+            event_data.result = machine.events[""].trigger_nested(event_data)
         return event_data.result
 
     def _process(self, event_data):
@@ -793,9 +796,9 @@ class HierarchicalMachine(Machine):
                         else:
                             raise
                 source_path.pop(-1)
-        if path:
-            with self(path.pop(0)):
-                return self._can_trigger_nested(model, trigger, path, *args, **kwargs)
+        if path and path[0] in self.states:
+            with self(path[0]):
+                return self._can_trigger_nested(model, trigger, path[1:], *args, **kwargs)
         return False
 
     def get_triggers(self, *args):
