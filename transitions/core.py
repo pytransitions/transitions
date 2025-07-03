@@ -403,7 +403,12 @@ class Event(object):
         # noinspection PyProtectedMember
         # Machine._process should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
-        return self.machine._process(func)
+        res = self.machine._process(func)
+        if res and self.machine._can_trigger(model, "", *args, **kwargs):
+            _LOGGER.debug("%sTriggering completion event", self.machine.name)
+            # Trigger the completion event if the machine allows it
+            res = self.machine.events[""].trigger(model, *args, **kwargs)
+        return res
 
     def _trigger(self, event_data):
         """Internal trigger function called by the ``Machine`` instance. This should not
@@ -925,8 +930,9 @@ class Machine(object):
         self._checked_assignment(model, "may_%s" % trigger, partial(self._can_trigger, model, trigger))
 
     def _add_trigger_to_model(self, trigger, model):
-        self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
-        self._add_may_transition_func_for_trigger(trigger, model)
+        if trigger:
+            self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
+            self._add_may_transition_func_for_trigger(trigger, model)
 
     def _get_trigger(self, model, trigger_name, *args, **kwargs):
         """Convenience function added to the model to trigger events by name.
