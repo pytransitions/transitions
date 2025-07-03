@@ -696,6 +696,18 @@ class TestAsync(TestTransitions):
 
         asyncio.run(run())
 
+    def test_completion_transition(self):
+        states = ['A', 'B', 'C']
+        m = self.machine_cls(states=states, initial='A', auto_transitions=False)
+        m.add_transition('walk', 'A', 'B')
+        m.add_transition('', 'B', 'C')
+
+        async def run():
+            assert await m.walk()
+            assert m.is_C()
+
+        asyncio.run(run())
+
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
 class TestAsyncGraphMachine(TestAsync):
