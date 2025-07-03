@@ -7,6 +7,7 @@ from transitions import Machine
 from transitions.experimental.utils import generate_base_model
 from transitions.experimental.utils import add_transitions, transition, event, with_model_definitions
 from transitions.extensions import HierarchicalMachine
+from transitions.extensions.markup import MarkupMachine
 
 from .utils import Stuff
 
@@ -73,6 +74,32 @@ class TestExperimental(TestCase):
         }  # type: MachineConfig
 
         mod = import_code(generate_base_model(simple_config), "base_module")
+        model = mod.BaseModel()
+        machine = self.machine_cls(model, **simple_config)
+        self.assertTrue(model.is_A())
+        self.assertTrue(model.go())
+        self.assertTrue(model.is_B())
+        self.assertTrue(model.back())
+        self.assertTrue(model.state == "A")
+        with self.assertRaises(AttributeError):
+            model.is_C()
+
+    def test_generate_base_model_from_machine(self):
+        simple_config = {
+            "states": ["A", "B"],
+            "transitions": [
+                ["go", "A", "B"],
+                ["back", "*", "A"]
+            ],
+            "initial": "A",
+            "model_override": True
+        }  # type: MachineConfig
+
+        # Cannot generate base model from a Machine instance
+        with self.assertRaises(ValueError):
+            generate_base_model(Machine(**simple_config))  # type: ignore
+
+        mod = import_code(generate_base_model(MarkupMachine(**simple_config)), "base_module")
         model = mod.BaseModel()
         machine = self.machine_cls(model, **simple_config)
         self.assertTrue(model.is_A())
