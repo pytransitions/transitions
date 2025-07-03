@@ -42,8 +42,9 @@ class Graph(BaseGraph):
 
     def _add_nodes(self, states, container):
         for state in states:
-            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state["name"]))
-            container.append("Class {} s_{}".format(state["name"],
+            state_id = self._name_to_id(state["name"])
+            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state_id))
+            container.append("Class {} s_{}".format(state_id,
                                                     self.custom_styles["node"][state["name"]] or "default"))
 
     def _add_edges(self, transitions, container):
@@ -102,7 +103,7 @@ class Graph(BaseGraph):
         fsm_graph.append("")
         self._add_edges(transitions, fsm_graph)
         if self.machine.initial and (roi_state is None or roi_state == self.machine.initial):
-            fsm_graph.append("[*] --> {}".format(self.machine.initial))
+            fsm_graph.append("[*] --> {}".format(self._name_to_id(self.machine.initial)))
 
         indent = 0
         for i in range(len(fsm_graph)):
@@ -130,6 +131,10 @@ class Graph(BaseGraph):
                 label += r'\n- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
         # end each label with a left-aligned newline
         return label
+    
+    def _name_to_id(self, name):
+        """Convert a state name to a valid identifier."""
+        return name.replace(" ", "___").replace("-", "___").replace(".", "___").replace(":", "___")
 
 
 class NestedGraph(Graph):
@@ -152,7 +157,8 @@ class NestedGraph(Graph):
 
     def _add_nested_nodes(self, states, container, prefix, default_style):
         for state in states:
-            name = prefix + state["name"]
+            state_id = self._name_to_id(state["name"])
+            name = prefix + state_id
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), name))
             if state.get("final", False):
                 container.append("{} --> [*]".format(name))
@@ -171,7 +177,7 @@ class NestedGraph(Graph):
                             [child],
                             container,
                             default_style="parallel",
-                            prefix=prefix + state["name"] + self.machine.state_cls.separator,
+                            prefix=prefix + state_id + self.machine.state_cls.separator,
                         )
                         container.append("--")
                     if state["children"]:
@@ -179,12 +185,12 @@ class NestedGraph(Graph):
                 else:
                     if initial:
                         container.append("[*] --> {}".format(
-                            prefix + state["name"] + self.machine.state_cls.separator + initial))
+                            prefix + state_id + self.machine.state_cls.separator + initial))
                     self._add_nested_nodes(
                         state["children"],
                         container,
                         default_style="default",
-                        prefix=prefix + state["name"] + self.machine.state_cls.separator,
+                        prefix=prefix + state_id + self.machine.state_cls.separator,
                     )
                 container.append("}")
 
@@ -213,8 +219,10 @@ class NestedGraph(Graph):
                     )
 
         for src, dests in edges_attr.items():
+            source_id = self._name_to_id(src)
             for dst, attr in dests.items():
-                t = "{source} --> {dest}".format(**attr)
+                dest_id = self._name_to_id(dst)
+                t = "{} --> {}".format(source_id, dest_id)
                 if attr["label"]:
                     t += ": {}".format(attr["label"])
                 container.append(t)
@@ -253,7 +261,7 @@ class DigraphMock:
         return None
 
 
-invalid = {"style", "shape", "peripheries", "strict", "directed"}
+invalid = {"style", "shape", "peripheries", "strict", "directed", "compound"}
 convertible = {"fillcolor": "fill", "rankdir": "direction"}
 
 
