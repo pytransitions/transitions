@@ -66,6 +66,7 @@ class GraphMachine(MarkupMachine):
         "directed": "true",
         "strict": "false",
         "rankdir": "LR",
+        "compound": "true",
     }
 
     style_attributes = {
