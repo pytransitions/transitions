@@ -8,6 +8,7 @@
 import copy
 import logging
 from collections import defaultdict
+import re
 
 from .diagrams_graphviz import filter_states
 from .diagrams_base import BaseGraph
@@ -134,7 +135,9 @@ class Graph(BaseGraph):
     
     def _name_to_id(self, name):
         """Convert a state name to a valid identifier."""
-        return name.replace(" ", "___").replace("-", "___").replace(".", "___").replace(":", "___")
+        # replace all non-alphanumeric characters with underscores
+        return re.sub(r'\W+', '___', name)
+
 
 
 class NestedGraph(Graph):
