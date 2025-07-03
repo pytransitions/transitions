@@ -5,7 +5,7 @@ from enum import Enum
 from transitions.core import StateIdentifier, CallbacksArg, CallbackFunc, Machine, MachineConfig, \
     TransitionConfigList
 from transitions.extensions.asyncio import AsyncCallbacksArg
-from transitions.extensions.markup import MarkupConfig
+from transitions.extensions.markup import MarkupConfig, MarkupMachine
 
 _placeholder_body: str
 
@@ -20,7 +20,7 @@ class TransitionConfigDictWithoutTrigger(TypedDict, total=False):
 
 TransitionConfigWithoutTrigger =  Union[TransitionConfigList, TransitionConfigDictWithoutTrigger]
 
-def generate_base_model(config: Union[MachineConfig, MarkupConfig]) -> str: ...
+def generate_base_model(config: Union[MachineConfig, MarkupConfig, MarkupMachine]) -> str: ...
 
 def with_model_definitions(cls: Type[Machine]) -> Type[Machine]: ...
 

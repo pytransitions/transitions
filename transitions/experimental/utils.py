@@ -1,14 +1,29 @@
 from collections import deque, defaultdict
 
-from transitions.core import listify
-from transitions.extensions.markup import HierarchicalMarkupMachine
+from transitions.core import Machine, listify
+from transitions.extensions.markup import HierarchicalMarkupMachine, MarkupMachine
 
 
 _placeholder_body = "raise RuntimeError('This should be overridden')"
 
 
 def generate_base_model(config):
-    m = HierarchicalMarkupMachine(**config)
+    """Generates a base model class definition from a given machine configuration or an instance of a MarkupMachine.
+
+    Note that (Hierachical/Locked/Async)GraphMachine also feature markup.
+    Args:
+        config (Union[MachineConfig, MarkupConfig, MarkupMachine]): A configuration or an instance of a MarkupMachine to generate the definition from.
+    Returns:
+        str: A string containing the base model class definition.
+    """
+    if isinstance(config, Machine):
+        if isinstance(config, MarkupMachine):
+            m = config
+        else:
+            raise ValueError("The provided machine must be an instance of MarkupMachine or HierarchicalMarkupMachine.")
+    else:
+        _ = config.pop("models", None)  # remove models to prevent inheritance errors
+        m = HierarchicalMarkupMachine(**config)
     triggers = set()
     markup = m.markup
     model_attribute = markup.get("model_attribute", "state")
