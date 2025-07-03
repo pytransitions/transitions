@@ -87,9 +87,9 @@ class Transition:
     def add_callback(self, trigger: str, func: Callback) -> None: ...
     def __repr__(self) -> str: ...
 
+
 TransitionConfigList = Union[
-    List[str], List[Sequence[str]], List[Optional[str]],
-    List[Union[str, Enum]], List[Optional[Union[str, Enum]]]
+    Sequence[Union[None, str, Enum, Sequence[Enum], Sequence[str]]],
 ]
 
 class TransitionConfigDict(TypedDict, total=False):
