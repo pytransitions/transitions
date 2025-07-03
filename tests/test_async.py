@@ -740,6 +740,16 @@ class TestAsync(TestTransitions):
                 # should use cancel_running_transitions instead
                 await machine.switch_model_context(self)
                 self.assertEqual(len(w), 1)
+    
+    def test_completion_transition(self):
+        states = ['A', 'B', 'C']
+        m = self.machine_cls(states=states, initial='A', auto_transitions=False)
+        m.add_transition('walk', 'A', 'B')
+        m.add_transition('', 'B', 'C')
+
+        async def run():
+            assert await m.walk()
+            assert m.is_C()
 
         asyncio.run(run())
 

@@ -1418,3 +1418,16 @@ class TestTransitions(TestCase):
         assert trans[0].my_int == 23
         assert trans[0].my_dict == {"baz": "bar"}
         assert trans[0].my_none is None
+
+    def test_completion_transition(self):
+        states = ['A', 'B', 'C']
+        transitions = [
+            ['walk', 'A', 'B'],
+            ['', 'B', 'C'],
+            ['complete', 'C', 'A']
+        ]
+
+        m = self.machine_cls(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        self.assertTrue(m.is_A())
+        m.walk()
+        self.assertTrue(m.is_C())
