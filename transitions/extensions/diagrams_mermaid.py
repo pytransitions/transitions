@@ -45,7 +45,7 @@ class Graph(BaseGraph):
         for state in states:
             state_id = self._name_to_id(state["name"])
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state_id))
-            _ = self.custom_styles["node"][state_id]
+            self.custom_styles["node"][state_id] = self.custom_styles["node"][state_id] or "default"
 
     def _add_edges(self, transitions, container):
         edge_labels = defaultdict(lambda: defaultdict(list))
@@ -140,10 +140,11 @@ class Graph(BaseGraph):
     
     def _add_node_styles(self, container):
         """Add styles to the graph."""
+        collection = defaultdict(set)
         for state_id, style_name in self.custom_styles["node"].items():
-            container.append("{}:::s_{}".format(
-                state_id, style_name or "default")
-            )
+            collection[style_name or "default"].add(state_id)
+        for style_name, state_ids in collection.items():
+            container.append("class {} {}".format(", ".join(state_ids), "s_" + style_name))
 
 class NestedGraph(Graph):
     """Graph creation support for transitions.extensions.nested.HierarchicalGraphMachine."""
@@ -170,7 +171,7 @@ class NestedGraph(Graph):
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), name))
             if state.get("final", False):
                 container.append("{} --> [*]".format(name))
-            _ = self.custom_styles["node"][name]
+            self.custom_styles["node"][name] = self.custom_styles["node"][name] or default_style
             if state.get("children", None) is not None:
                 container.append("state {} {{".format(name))
                 self._cluster_states.append(name)
