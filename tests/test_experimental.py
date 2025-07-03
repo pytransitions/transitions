@@ -51,7 +51,7 @@ class TestExperimental(TestCase):
         machine = self.machine_cls(model, states=["A", "B"], initial="A", model_override=True)
         self.assertTrue(model.is_A())
         with self.assertRaises(AttributeError):
-            model.to_B()  # type: ignore # Should not be assigned to model since its not declared
+            model.to_B()  # Should not be assigned to model since its not declared
         self.assertTrue(model.trigger("to_B"))
         self.assertFalse(model.is_A())
         with self.assertRaises(RuntimeError):
@@ -148,7 +148,7 @@ class TestExperimental(TestCase):
         self.assertTrue(machine.is_state("A", model))
         self.assertTrue(model.go())
         with self.assertRaises(AttributeError):
-            model.is_A()  # type: ignore
+            model.is_A()
         self.assertEqual("B", model.state)
         self.assertTrue(model.is_B())
         self.assertTrue(model.go())
@@ -202,7 +202,7 @@ class TestExperimental(TestCase):
         self.assertTrue(machine.is_state("A", model))
         self.assertTrue(model.go())
         with self.assertRaises(AttributeError):
-            model.is_A()  # type: ignore
+            model.is_A()
         self.assertEqual("B", model.state)
         self.assertTrue(model.is_B())
         self.assertTrue(model.go())

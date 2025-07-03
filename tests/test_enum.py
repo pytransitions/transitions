@@ -29,7 +29,7 @@ class TestEnumsAsStates(TestCase):
             YELLOW = 2
             GREEN = 3
         self.machine_cls = Machine
-        self.States = States
+        self.States = States  # type: Type[enum.Enum]
 
     def test_pass_enums_as_states(self):
         m = self.machine_cls(states=self.States, initial=self.States.YELLOW)
@@ -176,6 +176,19 @@ class TestEnumsAsStates(TestCase):
         assert t.may_trigger("go")
         assert not t.may_stop()
         assert not t.may_trigger("stop")
+
+    def test_remove_transition(self):
+        m = self.machine_cls(states=self.States, initial=self.States.RED)
+        m.add_transition('switch', self.States.RED, self.States.YELLOW)
+        m.add_transition('switch', self.States.YELLOW, self.States.RED)  # this must be removed
+        m.add_transition('switch', self.States.YELLOW, self.States.GREEN)
+
+        m.switch()
+        assert m.is_YELLOW() is True
+
+        m.remove_transition('switch', source=self.States.YELLOW, dest=self.States.RED)
+        m.switch()
+        assert m.is_GREEN() is True
 
 
 @skipIf(enum is None, "enum is not available")
@@ -383,6 +396,25 @@ class TestNestedStateEnums(TestEnumsAsStates):
 
         ref_state = [P.P1, [Q.Q1, [[[X.X1, X.X2], B.B2], A.A2]]]
         self.assertEqual(ref_state, m.state)
+
+
+try:
+    from enum import StrEnum
+
+    class TestNestedStateStrEnums(TestNestedStateEnums):
+
+        def setUp(self):
+            super().setUp()
+
+            class States(StrEnum):
+                RED = "red"
+                YELLOW = "yellow"
+                GREEN = "green"
+
+            self.States = States
+
+except ImportError:
+    pass  # Python < 3.11 does not have StrEnum
 
 
 @skipIf(enum is None or (pgv is None and gv is None), "enum and (py)graphviz are not available")

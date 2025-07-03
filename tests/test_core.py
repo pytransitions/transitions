@@ -840,8 +840,18 @@ class TestTransitions(TestCase):
         m = Machine(model=s1, states=states, ignore_invalid_triggers=True,
                     initial=states[0], transitions=[['go', 'A', 'B'], ['go', 'B', 'C']])
         m.add_model(s2, initial='B')
-        m.dispatch('go')
+        assert m.dispatch('go')
         self.assertEqual(s1.state, 'B')
+        self.assertEqual(s2.state, 'C')
+
+    def test_dispatch_with_error(self):
+        s1, s2 = Stuff(), Stuff()
+        states = ['A', 'B', 'C']
+        m = Machine(model=s1, states=states, ignore_invalid_triggers=True,
+                    initial=states[0], transitions=[['go', 'B', 'C']])
+        m.add_model(s2, initial='B')
+        assert not m.dispatch('go')
+        self.assertEqual(s1.state, 'A')
         self.assertEqual(s2.state, 'C')
 
     def test_remove_model(self):
@@ -1113,6 +1123,23 @@ class TestTransitions(TestCase):
         self.assertEqual(self.stuff.state, 'D')
         self.stuff.to_C()
         self.stuff.machine.remove_transition('go', dest='D')
+        self.assertFalse(hasattr(self.stuff, 'go'))
+
+    def test_remove_transition_state(self):
+        self.stuff.machine.add_transition('go', ['A', 'B', 'C'], 'D')
+        self.stuff.machine.add_transition('walk', 'A', 'B')
+        self.stuff.go()
+        self.assertEqual(self.stuff.state, 'D')
+        self.stuff.to_A()
+        self.stuff.machine.remove_transition('go', source=self.stuff.machine.states['A'])
+        with self.assertRaises(MachineError):
+            self.stuff.go()
+        self.stuff.machine.add_transition('go', 'A', 'D')
+        self.stuff.walk()
+        self.stuff.go()
+        self.assertEqual(self.stuff.state, 'D')
+        self.stuff.to_C()
+        self.stuff.machine.remove_transition('go', dest=self.stuff.machine.states['D'])
         self.assertFalse(hasattr(self.stuff, 'go'))
 
     def test_reflexive_transition(self):
@@ -1391,3 +1418,16 @@ class TestTransitions(TestCase):
         assert trans[0].my_int == 23
         assert trans[0].my_dict == {"baz": "bar"}
         assert trans[0].my_none is None
+
+    def test_completion_transition(self):
+        states = ['A', 'B', 'C']
+        transitions = [
+            ['walk', 'A', 'B'],
+            ['', 'B', 'C'],
+            ['complete', 'C', 'A']
+        ]
+
+        m = self.machine_cls(states=states, transitions=transitions, initial='A', auto_transitions=False)
+        self.assertTrue(m.is_A())
+        m.walk()
+        self.assertTrue(m.is_C())

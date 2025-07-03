@@ -1,10 +1,18 @@
 # Changelog
 
-## 0.9.3 ()
+## 0.9.4 ()
+
+- Bug #688: `Machine.remove_transitions` did not work with `State` and `Enum` even though the signature implied this (thanks @hookokoko)
+- PR #696: Improve handling of `StrEnum` which were previously confused as string (thanks @jbrocher)
+- Bug #697: An empty string as a destination made a transition internal but only `dest=None` should do this (thanks @rudy-lath-vizio)
+- Feat #706: Instroduce completion transitions which will be executed after a transition has been conducted (thanks @oEscal)
+
+## 0.9.3 (July 2024)
 
 - Bug #682: `AsyncTimeout` did not stop execution (thanks @matt3o)
 - Bug #683: Typing wrongly suggested that `Transition` instances can be passed to `Machine.__init__` and/or `Machine.add_transition(s)` (thanks @antonio-antuan)
-- Bug #692: When adding an already constructed `NestedState`, FunctionWrapper was not properly initialized (thanks drpjm)
+- Bug #692: When adding an already constructed `NestedState`, FunctionWrapper was not properly initialized (thanks @drpjm)
+- Bug #701: `Machine.dispatch` should not short-circuit when a model returns False (thanks @Joshuaalbert)
 - Typing should be more precise now
   - Made `transitions.core.(Async)TransitionConfigDict` a `TypedDict` which can be used to spot parameter errors during static analysis
   - `Machine.add_transitions` and `Machine.__init__` expect a `Sequence` of configurations for transitions now

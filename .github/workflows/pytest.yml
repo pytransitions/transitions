@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
         extras: ["[diagrams]"]
         include:
-          - python-version: "3.12"
+          - python-version: "3.13"
             extras: "[]"
-          - python-version: "3.12"
+          - python-version: "3.13"
             extras: "[diagrams,mypy]"
 
     steps:

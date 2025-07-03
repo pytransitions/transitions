@@ -274,7 +274,7 @@ class Transition(object):
         event_data.machine.callbacks(itertools.chain(event_data.machine.before_state_change, self.before), event_data)
         _LOGGER.debug("%sExecuted callback before transition.", event_data.machine.name)
 
-        if self.dest:  # if self.dest is None this is an internal transition with no actual state change
+        if self.dest is not None:  # if self.dest is None this is an internal transition with no actual state change
             self._change_state(event_data)
 
         event_data.machine.callbacks(itertools.chain(self.after, event_data.machine.after_state_change), event_data)
@@ -403,7 +403,12 @@ class Event(object):
         # noinspection PyProtectedMember
         # Machine._process should not be called somewhere else. That's why it should not be exposed
         # to Machine users.
-        return self.machine._process(func)
+        res = self.machine._process(func)
+        if res and self.machine._can_trigger(model, "", *args, **kwargs):
+            _LOGGER.debug("%sTriggering completion event", self.machine.name)
+            # Trigger the completion event if the machine allows it
+            res = self.machine.events[""].trigger(model, *args, **kwargs)
+        return res
 
     def _trigger(self, event_data):
         """Internal trigger function called by the ``Machine`` instance. This should not
@@ -925,8 +930,9 @@ class Machine(object):
         self._checked_assignment(model, "may_%s" % trigger, partial(self._can_trigger, model, trigger))
 
     def _add_trigger_to_model(self, trigger, model):
-        self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
-        self._add_may_transition_func_for_trigger(trigger, model)
+        if trigger:
+            self._checked_assignment(model, trigger, partial(self.events[trigger].trigger, model))
+            self._add_may_transition_func_for_trigger(trigger, model)
 
     def _get_trigger(self, model, trigger_name, *args, **kwargs):
         """Convenience function added to the model to trigger events by name.
@@ -1137,8 +1143,10 @@ class Machine(object):
             source (str, Enum or State): Limits removal to transitions from a certain state.
             dest (str, Enum or State): Limits removal to transitions to a certain state.
         """
-        source = listify(source) if source != "*" else source
-        dest = listify(dest) if dest != "*" else dest
+        if source != "*":
+            source = [s.name if hasattr(source, 'name') else s for s in listify(source)]
+        if dest != "*":
+            dest = [d.name if hasattr(dest, 'name') else d for d in listify(dest)]
         # outer comprehension, keeps events if inner comprehension returns lists with length > 0
         tmp = {key: value for key, value in
                {k: [t for t in v
@@ -1166,7 +1174,8 @@ class Machine(object):
         Returns:
             bool The truth value of all triggers combined with AND
         """
-        return all(getattr(model, trigger)(*args, **kwargs) for model in self.models)
+        res = [getattr(model, trigger)(*args, **kwargs) for model in self.models]
+        return all(res)
 
     def callbacks(self, funcs, event_data):
         """Triggers a list of callbacks"""
