@@ -45,8 +45,7 @@ class Graph(BaseGraph):
         for state in states:
             state_id = self._name_to_id(state["name"])
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state_id))
-            container.append("Class {} s_{}".format(state_id,
-                                                    self.custom_styles["node"][state["name"]] or "default"))
+            _ = self.custom_styles["node"][state_id]
 
     def _add_edges(self, transitions, container):
         edge_labels = defaultdict(lambda: defaultdict(list))
@@ -101,6 +100,7 @@ class Graph(BaseGraph):
             active_states = active_states.union({k for k, style in self.custom_styles["node"].items() if style})
             states = filter_states(copy.deepcopy(states), active_states, self.machine.state_cls)
         self._add_nodes(states, fsm_graph)
+        self._add_node_styles(fsm_graph)
         fsm_graph.append("")
         self._add_edges(transitions, fsm_graph)
         if self.machine.initial and (roi_state is None or roi_state == self.machine.initial):
@@ -137,8 +137,13 @@ class Graph(BaseGraph):
         """Convert a state name to a valid identifier."""
         # replace all non-alphanumeric characters with underscores
         return re.sub(r'\W+', '___', name)
-
-
+    
+    def _add_node_styles(self, container):
+        """Add styles to the graph."""
+        for state_id, style_name in self.custom_styles["node"].items():
+            container.append("{}:::s_{}".format(
+                state_id, style_name or "default")
+            )
 
 class NestedGraph(Graph):
     """Graph creation support for transitions.extensions.nested.HierarchicalGraphMachine."""
@@ -149,7 +154,7 @@ class NestedGraph(Graph):
 
     def set_node_style(self, state, style):
         for state_name in self._get_state_names(state):
-            super(NestedGraph, self).set_node_style(state_name, style)
+            super(NestedGraph, self).set_node_style(self._name_to_id(state_name), style)
 
     def set_previous_transition(self, src, dst):
         self.custom_styles["edge"][src][dst] = "previous"
@@ -165,9 +170,7 @@ class NestedGraph(Graph):
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), name))
             if state.get("final", False):
                 container.append("{} --> [*]".format(name))
-            if not prefix:
-                container.append("Class {} s_{}".format(name.replace(" ", ""),
-                                                        self.custom_styles["node"][name] or default_style))
+            _ = self.custom_styles["node"][name]
             if state.get("children", None) is not None:
                 container.append("state {} {{".format(name))
                 self._cluster_states.append(name)
