@@ -16,7 +16,7 @@ from .utils import Stuff, DummyModel
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock  # type: ignore
+    from mock import MagicMock
 
 try:
     # Just to skip tests if graphviz not installed

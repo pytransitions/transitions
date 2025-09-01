@@ -15,7 +15,7 @@ from unittest import TestCase
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock  # type: ignore
+    from mock import MagicMock
 
 
 if TYPE_CHECKING:

@@ -16,7 +16,7 @@ from unittest import skipIf
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock  # type: ignore
+    from mock import MagicMock
 
 
 class TestParallel(TestNested):
