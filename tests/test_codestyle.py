@@ -26,10 +26,10 @@ class TestCodeFormat(unittest.TestCase):
 
     @unittest.skipIf(mypy is None, "mypy not found")
     def test_mypy_package(self):
-        call = ['mypy', '--config-file', 'mypy.ini', '--strict', 'transitions', 'tests/test_imports.py']
+        call = ['mypy', '--config-file', 'mypy.ini', '--strict', 'src/transitions', 'tests/test_imports.py']
 
         # when run from root directory (e.g. tox) else when run from test directory (e.g. pycharm)
-        project_root = '.' if exists('transitions') else '..'
+        project_root = '.' if exists('src/transitions') else '..'
         subprocess.check_call(call, cwd=project_root)
 
     @unittest.skipIf(mypy is None, "mypy not found")
@@ -38,5 +38,5 @@ class TestCodeFormat(unittest.TestCase):
                 '--disable-error-code', 'attr-defined',
                 '--disable-error-code', 'no-untyped-def']
         # when run from root directory (e.g. tox) else when run from test directory (e.g. pycharm)
-        project_root = '.' if exists('transitions') else '..'
+        project_root = '.' if exists('src/transitions') else '..'
         subprocess.check_call(call, cwd=project_root)

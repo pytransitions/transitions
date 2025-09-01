@@ -2,8 +2,7 @@
 *.DS_Store
 *~
 build/
-dist
-dist/*
+dist/
 *.egg-info
 .eggs/
 *.iml
