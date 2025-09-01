@@ -27,7 +27,7 @@ test_script:
 #  # Again, you only need build.cmd if you're building C extensions for
 #  # 64-bit Python 3.3/3.4. And you need to use %PYTHON% to get the correct
 #  # interpreter
-#  - "%PYTHON%\\python.exe setup.py bdist_wheel"
+#  - "%PYTHON%\\python.exe -mbuild -w"
 
 #artifacts:
 #  # bdist_wheel puts your built wheel in the dist directory
