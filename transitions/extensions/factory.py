@@ -77,7 +77,7 @@ class LockedGraphMachine(GraphMachine, LockedMachine):
                 ", ".join(itertools.chain(
                     (str(_) for _ in func.args[1:]),
                     ("%s=%s" % (key, value)
-                     for key, value in (func.keywords.items() if func.keywords else {}.items())))))
+                     for key, value in (func.keywords.items() if func.keywords else ())))))
         return GraphMachine.format_references(func)
 
 

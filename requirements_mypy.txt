@@ -1,3 +1,2 @@
 mypy
 graphviz
-types-six

@@ -4,7 +4,6 @@ from typing import (
     Type, Deque, OrderedDict, Tuple, Literal, Collection, TypedDict, Required
 )
 
-# Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
 from enum import Enum, EnumMeta
 
 _LOGGER: Logger

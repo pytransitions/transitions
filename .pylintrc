@@ -347,7 +347,7 @@ init-import=no
 
 # List of qualified module names which can have objects that can redefine
 # builtins.
-redefining-builtins-modules=six.moves,future.builtins,builtins
+redefining-builtins-modules=future.builtins,builtins
 
 
 [CLASSES]

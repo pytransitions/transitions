@@ -130,7 +130,7 @@ class MarkupMachine(Machine):
                 ", ".join(itertools.chain(
                     (str(_) for _ in func.args),
                     ("%s=%s" % (key, value)
-                     for key, value in (func.keywords.items() if func.keywords else {}.items())))))
+                     for key, value in (func.keywords.items() if func.keywords else ())))))
         return str(func)
 
     def _convert_states_and_transitions(self, root):
