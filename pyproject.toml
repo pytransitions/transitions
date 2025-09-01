@@ -1,0 +1,121 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [ "setuptools", "wheel", "setuptools-scm"]
+
+[project]
+classifiers = [
+        "Intended Audience :: Developers",
+        "Programming Language :: Python :: 3",
+        "Development Status :: 5 - Production",
+        ]
+dependencies = [ ]
+dynamic = [ "version",]
+keywords = [ "state machine",]
+requires-python = ">=3.8"
+name = "transitions"
+description = "A lightweight, object-oriented state machine implementation"
+readme = "README.md"
+
+[project.optional-dependencies]
+diagrams = ["pygraphviz"]
+dev = ["mock", "tox", "graphviz", "pygraphviz"]
+
+[[project.authors]]
+name = "Tal Yarkoni"
+email = "tyarkoni@gmail.com"
+
+[[project.maintainers]]
+name = "Alexander Neumann"
+email = "aleneum@gmail.com"
+
+[project.urls]
+homepage = "https://github.com/pytransitions/transitions"
+repository = "https://github.com/pytransitions/transitions.git"
+
+[bdist_wheel]
+universal = 1
+
+[tool.setuptools_scm]
+
+[tool.pytest]
+filterwarnings = [
+    "error",
+    "ignore:.*With-statements.*:DeprecationWarning",
+]
+addopts = "-x -rf"
+junit_family = "xunit2"
+
+
+[tool.mypy]
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+ignore_missing_imports = false
+
+[[tool.mypy.overrides]]
+module = "pygraphviz.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "graphviz.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pycodestyle.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "anyio.*"
+ignore_missing_imports = true
+
+
+[tool.pylint.main]
+persistent = true
+unsafe-load-any-extension = false
+
+
+[tool.pylint."messages control"]
+disable = [
+    "raw-checker-failed",
+    "bad-inline-option",
+    "locally-disabled",
+    "file-ignored",
+    "suppressed-message",
+    "useless-suppression",
+    "deprecated-pragma",
+    "too-few-public-methods",
+    "super-with-arguments",
+    "useless-object-inheritance",
+    "raise-missing-from",
+]
+
+[tool.pylint.reports]
+evaluation = "10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)"
+output-format = "text"
+reports = false
+score = true
+
+[tool.pylint.refactoring]
+max-nested-blocks = 5
+
+[tool.pylint.format]
+
+max-line-length=120
+max-module-lines=1000
+
+# no-space-check="trailing-comma,dict-separator"
+
+
+[tool.pylint.similarities]
+
+# Ignore imports when computing similarities.
+ignore-imports=false
+
+
+[tool.coverage.run]
+source = "src/transitions"
+relative_files = true

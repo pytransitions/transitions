@@ -1,11 +1,9 @@
 include *.md
 include *.txt
 include .coveragerc
-include .pylintrc
 include LICENSE
 include MANIFEST
-include *.ini
-include conftest.py
+include pyproject.toml
 include noxfile.py
 
 recursive-include transitions *.pyi

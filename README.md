@@ -20,7 +20,7 @@ A lightweight, object-oriented state machine implementation in Python with many 
 
 ... or clone the repo from GitHub and then:
 
-    python setup.py install
+    python -mbuild
 
 ## Table of Contents
 
