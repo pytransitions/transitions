@@ -559,10 +559,7 @@ class TestTransitions(TestCase):
 
     def test_pickle(self):
         import sys
-        if sys.version_info < (3, 4):
-            import dill as pickle
-        else:
-            import pickle
+        import pickle
 
         states = ['A', 'B', 'C', 'D']
         # Define with list of dictionaries
@@ -581,10 +578,7 @@ class TestTransitions(TestCase):
 
     def test_pickle_model(self):
         import sys
-        if sys.version_info < (3, 4):
-            import dill as pickle
-        else:
-            import pickle
+        import pickle
 
         self.stuff.to_B()
         dump = pickle.dumps(self.stuff)

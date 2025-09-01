@@ -1210,10 +1210,10 @@ machine = Machine(states=states, transitions=transitions, initial='solid')
 
 ### <a name="restoring"></a>(Re-)Storing machine instances
 
-Machines are picklable and can be stored and loaded with `pickle`. For Python 3.3 and earlier `dill` is required.
+Machines are picklable and can be stored and loaded with `pickle`.
 
 ```python
-import dill as pickle # only required for Python 3.3 and earlier
+import pickle
 
 m = Machine(states=['A', 'B', 'C'], initial='A')
 m.to_B()

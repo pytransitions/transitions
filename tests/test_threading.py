@@ -85,10 +85,7 @@ class TestLockedTransitions(TestTransitions):
 
     def test_pickle(self):
         import sys
-        if sys.version_info < (3, 4):
-            import dill as pickle
-        else:
-            import pickle
+        import pickle
 
         # go to non initial state B
         self.stuff.to_B()
@@ -253,10 +250,7 @@ class TestLockedHierarchicalTransitions(TestNestedTransitions, TestLockedTransit
 
     def test_pickle(self):
         import sys
-        if sys.version_info < (3, 4):
-            import dill as pickle
-        else:
-            import pickle
+        import pickle
 
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']

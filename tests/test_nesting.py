@@ -292,10 +292,7 @@ class TestNestedTransitions(TestTransitions):
 
     def test_pickle(self):
         print("separator", self.state_cls.separator)
-        if sys.version_info < (3, 4):
-            import dill as pickle
-        else:
-            import pickle
+        import pickle
 
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
