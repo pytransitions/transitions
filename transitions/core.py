@@ -422,7 +422,7 @@ class Event(object):
             event_data.error = err
             if self.machine.on_exception:
                 self.machine.callbacks(self.machine.on_exception, event_data)
-            else:
+            if not self.machine.on_exception or not isinstance(err, Exception):
                 raise
         finally:
             try:
@@ -917,7 +917,7 @@ class Machine(object):
                     event_data.error = err
                     if self.on_exception:
                         self.callbacks(self.on_exception, event_data)
-                    else:
+                    if not self.on_exception or not isinstance(err, BaseException):
                         raise
         return False
 

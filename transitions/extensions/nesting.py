@@ -790,7 +790,7 @@ class HierarchicalMachine(Machine):
                         event_data.error = err
                         if self.on_exception:
                             self.callbacks(self.on_exception, event_data)
-                        else:
+                        if not self.on_exception or not isinstance(err, Exception):
                             raise
                 source_path.pop(-1)
         if path:
@@ -916,7 +916,7 @@ class HierarchicalMachine(Machine):
             event_data.error = err
             if self.on_exception:
                 self.callbacks(self.on_exception, event_data)
-            else:
+            if not self.on_exception or not isinstance(err, Exception):
                 raise
         finally:
             try:
@@ -927,6 +927,8 @@ class HierarchicalMachine(Machine):
                               self.name,
                               type(err).__name__,
                               str(err))
+                if not isinstance(err, Exception):
+                    raise
         return event_data.result
 
     def _add_model_to_state(self, state, model):

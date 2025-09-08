@@ -23,6 +23,7 @@ import warnings
 from collections import deque
 from functools import partial, reduce
 import copy
+from concurrent.futures import CancelledError
 
 from ..core import State, Condition, Transition, EventData, listify
 from ..core import Event, MachineError, Machine
@@ -197,20 +198,25 @@ class AsyncEvent(Event):
         except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             _LOGGER.error("%sException was raised while processing the trigger '%s': %s",
                           self.machine.name, event_data.event.name, repr(err))
-            event_data.error = err
+            event_data.error = err if isinstance(err,Exception) else CancelledError()
+
             if self.machine.on_exception:
-                await self.machine.callbacks(self.machine.on_exception, event_data)
-            else:
+                with anyio.move_on_after(2, shield=True):
+                    await self.machine.callbacks(self.machine.on_exception, event_data)
+            if not self.machine.on_exception or not isinstance(err, Exception):
                 raise
         finally:
             try:
-                await self.machine.callbacks(self.machine.finalize_event, event_data)
+                with anyio.CancelScope(shield=True):
+                    await self.machine.callbacks(self.machine.finalize_event, event_data)
                 _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
             except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
                               self.machine.name,
                               type(err).__name__,
                               str(err))
+                if not isinstance(err, Exception):
+                    raise
         return event_data.result
 
     async def _process(self, event_data):
@@ -481,7 +487,7 @@ class AsyncMachine(Machine):
                     event_data.error = err
                     if self.on_exception:
                         await self.callbacks(self.on_exception, event_data)
-                    else:
+                    if not self.on_exception or not isinstance(err, Exception):
                         raise
         return False
 
@@ -556,7 +562,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
             event_data.error = err
             if self.on_exception:
                 await self.callbacks(self.on_exception, event_data)
-            else:
+            if not self.on_exception or not isinstance(err, Exception):
                 raise
         finally:
             try:
@@ -567,6 +573,8 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                               self.name,
                               type(err).__name__,
                               str(err))
+                if not isinstance(err, Exception):
+                    raise
         return event_data.result
 
     async def _trigger_event_nested(self, event_data, _trigger, _state_tree):
@@ -616,7 +624,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                         event_data.error = err
                         if self.on_exception:
                             await self.callbacks(self.on_exception, event_data)
-                        else:
+                        if not self.on_exception or not isinstance(err, Exception):
                             raise
                 source_path.pop(-1)
         if path:
@@ -711,16 +719,19 @@ class AsyncTimeout(AsyncState):
         except BaseException as err:
             _LOGGER.warning("%sException raised while processing timeout!",
                             event_data.machine.name)
-            event_data.error = err
+            event_data.error = err if isinstance(err,Exception) else CancelledError()
             try:
                 if event_data.machine.on_exception:
                     await event_data.machine.callbacks(event_data.machine.on_exception, event_data)
-                else:
+                # always re-raise BaseException!
+                if not event_data.machine.on_exception or not isinstance(err, Exception):
                     raise
             except BaseException as err2:
                 _LOGGER.error("%sHandling timeout exception '%s' caused another exception: %s. "
                               "Cancel running transitions...", event_data.machine.name, repr(err), repr(err2))
                 await event_data.machine.cancel_running_transitions(event_data.model)
+                if not isinstance(err, Exception):
+                    raise
         finally:
             AsyncMachine.current_context.reset(token)
         _LOGGER.info("%sTimeout state %s processed.", event_data.machine.name, self.name)
