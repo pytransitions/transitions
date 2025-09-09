@@ -945,10 +945,12 @@ class HierarchicalMachine(Machine):
             path = name.split(self.state_cls.separator)
             value = state.value if isinstance(state.value, Enum) else name
             trig_func = partial(self.is_state, value, model)
+            # In a previous loop the base state checker is_<state> should have been added to the model.
+            # If that's not the case, _checked_assignment prevented that.
+            # One reason could be that model_override is True and is_<state> has not been defined on the model.
             if hasattr(model, 'is_' + path[0]):
                 getattr(model, 'is_' + path[0]).add(trig_func, path[1:])
-            else:
-                assert not path[1:], "nested path should be empty"
+            elif len(path) == 1:
                 self._checked_assignment(model, 'is_' + path[0], FunctionWrapper(trig_func))
         with self(state.name):
             for event in self.events.values():
