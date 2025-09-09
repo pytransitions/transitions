@@ -7,6 +7,7 @@
 - Bug #697: An empty string as a destination made a transition internal but only `dest=None` should do this (thanks @rudy-lath-vizio)
 - Bug #704: `AsyncMachine` processed all `CancelledErrors` but will from now on only do so if the error message is equal to `asyncio.CANCELLED_MSG`; this should make bypassing catch clauses easier; requires Python 3.11+ (thanks @Salier13)
 - Feature #710: `experimental.utils.generate_base_model` can now be called with an instance of MarkupMachine directly (thanks @patrickwolf)
+- Bug #715: `HierarchicalMachine._final_check` wrongly determined a parallel state final when the last child was final (thanks @DenizKucukozturk)
 
 ## 0.9.3 (July 2024)
 

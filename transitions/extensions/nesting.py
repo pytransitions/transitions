@@ -298,9 +298,9 @@ class NestedTransition(Transition):
         # processes states with children
         if state_tree:
             all_children_final = True
-            for child_cbs, is_final in (self._final_check_nested(state, event_data, state_tree, enter_partials) for state in state_tree):
+            for child_cbs, child_final in (self._final_check_nested(state, event_data, state_tree, enter_partials) for state in state_tree):
                 # if one child is not considered final, processing can stop
-                if not is_final:
+                if not child_final:
                     all_children_final = False
                     # if one child has recently transitioned to a final state, we need to update all parents
                 on_final_cbs.extend(child_cbs)
