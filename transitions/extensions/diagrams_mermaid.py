@@ -44,6 +44,7 @@ class Graph(BaseGraph):
     def _add_nodes(self, states, container):
         for state in states:
             state_id = self._name_to_id(state["name"])
+            self.custom_styles["node"][state_id] = self.custom_styles["node"][state_id] or ""
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state_id))
 
     def _add_edges(self, transitions, container):
@@ -142,7 +143,7 @@ class Graph(BaseGraph):
         for state_id, style_name in self.custom_styles["node"].items():
             collection[style_name or "default"].add(state_id)
         for style_name, state_ids in collection.items():
-            container.append("class {} {}".format(", ".join(state_ids), "s_" + (style_name or 'default')))
+            container.append("class {} {}".format(", ".join(state_ids), "s_" + style_name))
 
 
 class NestedGraph(Graph):
@@ -161,7 +162,7 @@ class NestedGraph(Graph):
         self.set_node_style(src, "previous")
 
     def _add_nodes(self, states, container):
-        self._add_nested_nodes(states, container, prefix="", default_style="default")
+        self._add_nested_nodes(states, container, prefix="", default_style="")
 
     def _add_nested_nodes(self, states, container, prefix, default_style):
         for state in states:
@@ -170,6 +171,7 @@ class NestedGraph(Graph):
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), name))
             if state.get("final", False):
                 container.append("{} --> [*]".format(name))
+            self.custom_styles["node"][name] = self.custom_styles["node"][name] or default_style
             if state.get("children", None) is not None:
                 container.append("state {} {{".format(name))
                 self._cluster_states.append(name)
@@ -193,7 +195,7 @@ class NestedGraph(Graph):
                     self._add_nested_nodes(
                         state["children"],
                         container,
-                        default_style="default",
+                        default_style="",
                         prefix=prefix + state_id + self.machine.state_cls.separator,
                     )
                 container.append("}")
