@@ -45,7 +45,6 @@ class Graph(BaseGraph):
         for state in states:
             state_id = self._name_to_id(state["name"])
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state_id))
-            self.custom_styles["node"][state_id] = self.custom_styles["node"][state_id] or "default"
 
     def _add_edges(self, transitions, container):
         edge_labels = defaultdict(lambda: defaultdict(list))
@@ -130,21 +129,21 @@ class Graph(BaseGraph):
                 label += r"\n- exit:\n  + " + r"\n  + ".join(state["on_exit"])
             if "timeout" in state:
                 label += r'\n- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
-        # end each label with a left-aligned newline
         return label
-    
+
     def _name_to_id(self, name):
         """Convert a state name to a valid identifier."""
         # replace all non-alphanumeric characters with underscores
         return re.sub(r'\W+', '___', name)
-    
+
     def _add_node_styles(self, container):
         """Add styles to the graph."""
         collection = defaultdict(set)
         for state_id, style_name in self.custom_styles["node"].items():
             collection[style_name or "default"].add(state_id)
         for style_name, state_ids in collection.items():
-            container.append("class {} {}".format(", ".join(state_ids), "s_" + style_name))
+            container.append("class {} {}".format(", ".join(state_ids), "s_" + (style_name or 'default')))
+
 
 class NestedGraph(Graph):
     """Graph creation support for transitions.extensions.nested.HierarchicalGraphMachine."""
@@ -171,11 +170,9 @@ class NestedGraph(Graph):
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), name))
             if state.get("final", False):
                 container.append("{} --> [*]".format(name))
-            self.custom_styles["node"][name] = self.custom_styles["node"][name] or default_style
             if state.get("children", None) is not None:
                 container.append("state {} {{".format(name))
                 self._cluster_states.append(name)
-                # with container.subgraph(name=cluster_name, graph_attr=attr) as sub:
                 initial = state.get("initial", "")
                 is_parallel = isinstance(initial, list)
                 if is_parallel:
