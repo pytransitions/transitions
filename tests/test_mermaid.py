@@ -1,26 +1,11 @@
 from .test_graphviz import TestDiagrams, TestDiagramsNested
-from .utils import Stuff, DummyModel
-from .test_core import TestTransitions, TYPE_CHECKING
 
-from transitions.extensions import (
-    LockedGraphMachine, GraphMachine, HierarchicalGraphMachine, LockedHierarchicalGraphMachine
-)
-from transitions.extensions.states import add_state_features, Timeout, Tags
+from transitions.extensions import HierarchicalGraphMachine, LockedHierarchicalGraphMachine
 from unittest import skipIf
 import tempfile
 import os
 import re
 import sys
-from unittest import TestCase
-
-try:
-    # Just to skip tests if graphviz not installed
-    import graphviz as pgv  # @UnresolvedImport
-except ImportError:  # pragma: no cover
-    pgv = None
-
-if TYPE_CHECKING:
-    from typing import Type, List, Collection, Union, Literal
 
 
 class TestMermaidDiagrams(TestDiagrams):
