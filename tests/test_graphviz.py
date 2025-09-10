@@ -389,7 +389,6 @@ class TestDiagramsNested(TestDiagrams):
         g1 = model.get_graph(show_roi=True)
         _, nodes, edges = self.parse_dot(g1)
         self.assertEqual(len(edges), 2)  # reset and walk
-        print(nodes)
         self.assertEqual(len(nodes), 4)
         model.walk()
         model.run()
