@@ -187,7 +187,11 @@ class AsyncEvent(Event):
             successfully executed (True if successful, False if not).
         """
         func = partial(self._trigger, EventData(None, self, self.machine, model, args=args, kwargs=kwargs))
-        return await self.machine.process_context(func, model)
+        res = await self.machine.process_context(func, model)
+        if res and await self.machine._can_trigger(model, "", *args, **kwargs):
+            _LOGGER.debug("%sTriggering completion event", self.machine.name)
+            res = await self.machine.events[""].trigger(model, *args, **kwargs)
+        return res
 
     async def _trigger(self, event_data):
         event_data.state = self.machine.get_state(getattr(event_data.model, self.machine.model_attribute))
@@ -256,6 +260,9 @@ class NestedAsyncEvent(NestedEvent):
                     while elems:
                         done.add(machine.state_cls.separator.join(elems))
                         elems.pop()
+        if event_data.result and await self.machine._can_trigger(model, "", *event_data.args, **event_data.kwargs):
+            _LOGGER.debug("%sTriggering completion event", self.machine.name)
+            event_data.result = await self.machine.events[""].trigger_nested(event_data)
         return event_data.result
 
     async def _process(self, event_data):

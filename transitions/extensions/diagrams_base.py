@@ -63,18 +63,21 @@ class BaseGraph(object):
         """
 
     def _convert_state_attributes(self, state):
-        label = state.get("label", state["name"])
+        label = state.get("label", state["name"]) + "\\n"
         if self.machine.show_state_attributes:
             if "tags" in state:
-                label += " [" + ", ".join(state["tags"]) + "]"
+                label += "[" + ", ".join(state["tags"]) + "]\\n"
             if "on_enter" in state:
-                label += r"\l- enter:\l  + " + r"\l  + ".join(state["on_enter"])
+                label += "- enter:\\l"
+                for action in state["on_enter"]:
+                    label += "  + " + action + "\\l"
             if "on_exit" in state:
-                label += r"\l- exit:\l  + " + r"\l  + ".join(state["on_exit"])
+                label += "- exit:\\l"
+                for action in state["on_exit"]:
+                    label += "  + " + action + "\\l"
             if "timeout" in state:
-                label += r'\l- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
-        # end each label with a left-aligned newline
-        return label + r"\l"
+                label += '- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
+        return label
 
     def _get_state_names(self, state):
         if isinstance(state, (list, tuple, set)):

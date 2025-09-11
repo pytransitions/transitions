@@ -8,6 +8,7 @@
 import copy
 import logging
 from collections import defaultdict
+import re
 
 from .diagrams_graphviz import filter_states
 from .diagrams_base import BaseGraph
@@ -42,9 +43,9 @@ class Graph(BaseGraph):
 
     def _add_nodes(self, states, container):
         for state in states:
-            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state["name"]))
-            container.append("Class {} s_{}".format(state["name"],
-                                                    self.custom_styles["node"][state["name"]] or "default"))
+            state_id = self._name_to_id(state["name"])
+            self.custom_styles["node"][state_id] = self.custom_styles["node"][state_id] or ""
+            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state_id))
 
     def _add_edges(self, transitions, container):
         edge_labels = defaultdict(lambda: defaultdict(list))
@@ -99,10 +100,11 @@ class Graph(BaseGraph):
             active_states = active_states.union({k for k, style in self.custom_styles["node"].items() if style})
             states = filter_states(copy.deepcopy(states), active_states, self.machine.state_cls)
         self._add_nodes(states, fsm_graph)
+        self._add_node_styles(fsm_graph)
         fsm_graph.append("")
         self._add_edges(transitions, fsm_graph)
         if self.machine.initial and (roi_state is None or roi_state == self.machine.initial):
-            fsm_graph.append("[*] --> {}".format(self.machine.initial))
+            fsm_graph.append("[*] --> {}".format(self._name_to_id(self.machine.initial)))
 
         indent = 0
         for i in range(len(fsm_graph)):
@@ -128,8 +130,20 @@ class Graph(BaseGraph):
                 label += r"\n- exit:\n  + " + r"\n  + ".join(state["on_exit"])
             if "timeout" in state:
                 label += r'\n- timeout(' + state['timeout'] + 's) -> (' + ', '.join(state['on_timeout']) + ')'
-        # end each label with a left-aligned newline
         return label
+
+    def _name_to_id(self, name):
+        """Convert a state name to a valid identifier."""
+        # replace all non-alphanumeric characters with underscores
+        return re.sub(r'\W+', '___', name)
+
+    def _add_node_styles(self, container):
+        """Add styles to the graph."""
+        collection = defaultdict(set)
+        for state_id, style_name in self.custom_styles["node"].items():
+            collection[style_name or "default"].add(state_id)
+        for style_name, state_ids in collection.items():
+            container.append("class {} {}".format(", ".join(state_ids), "s_" + style_name))
 
 
 class NestedGraph(Graph):
@@ -141,28 +155,26 @@ class NestedGraph(Graph):
 
     def set_node_style(self, state, style):
         for state_name in self._get_state_names(state):
-            super(NestedGraph, self).set_node_style(state_name, style)
+            super(NestedGraph, self).set_node_style(self._name_to_id(state_name), style)
 
     def set_previous_transition(self, src, dst):
         self.custom_styles["edge"][src][dst] = "previous"
         self.set_node_style(src, "previous")
 
     def _add_nodes(self, states, container):
-        self._add_nested_nodes(states, container, prefix="", default_style="default")
+        self._add_nested_nodes(states, container, prefix="", default_style="")
 
     def _add_nested_nodes(self, states, container, prefix, default_style):
         for state in states:
-            name = prefix + state["name"]
+            state_id = self._name_to_id(state["name"])
+            name = prefix + state_id
             container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), name))
             if state.get("final", False):
                 container.append("{} --> [*]".format(name))
-            if not prefix:
-                container.append("Class {} s_{}".format(name.replace(" ", ""),
-                                                        self.custom_styles["node"][name] or default_style))
+            self.custom_styles["node"][name] = self.custom_styles["node"][name] or default_style
             if state.get("children", None) is not None:
                 container.append("state {} {{".format(name))
                 self._cluster_states.append(name)
-                # with container.subgraph(name=cluster_name, graph_attr=attr) as sub:
                 initial = state.get("initial", "")
                 is_parallel = isinstance(initial, list)
                 if is_parallel:
@@ -171,7 +183,7 @@ class NestedGraph(Graph):
                             [child],
                             container,
                             default_style="parallel",
-                            prefix=prefix + state["name"] + self.machine.state_cls.separator,
+                            prefix=prefix + state_id + self.machine.state_cls.separator,
                         )
                         container.append("--")
                     if state["children"]:
@@ -179,12 +191,12 @@ class NestedGraph(Graph):
                 else:
                     if initial:
                         container.append("[*] --> {}".format(
-                            prefix + state["name"] + self.machine.state_cls.separator + initial))
+                            prefix + state_id + self.machine.state_cls.separator + initial))
                     self._add_nested_nodes(
                         state["children"],
                         container,
-                        default_style="default",
-                        prefix=prefix + state["name"] + self.machine.state_cls.separator,
+                        default_style="",
+                        prefix=prefix + state_id + self.machine.state_cls.separator,
                     )
                 container.append("}")
 
@@ -213,10 +225,13 @@ class NestedGraph(Graph):
                     )
 
         for src, dests in edges_attr.items():
+            source_id = self._name_to_id(src)
             for dst, attr in dests.items():
-                if not attr["label"]:
-                    continue
-                container.append("{source} --> {dest}: {label}".format(**attr))
+                dest_id = self._name_to_id(dst)
+                t = "{} --> {}".format(source_id, dest_id)
+                if attr["label"]:
+                    t += ": {}".format(attr["label"])
+                container.append(t)
 
     def _create_edge_attr(self, src, dst, transition):
         return {"source": src, "dest": dst, "label": self._transition_label(transition)}
@@ -252,7 +267,7 @@ class DigraphMock:
         return None
 
 
-invalid = {"style", "shape", "peripheries", "strict", "directed"}
+invalid = {"style", "shape", "peripheries", "strict", "directed", "compound"}
 convertible = {"fillcolor": "fill", "rankdir": "direction"}
 
 

@@ -204,7 +204,7 @@ class TestDiagrams(TestTransitions):
         g1 = m.get_graph(show_roi=True)
         dot, nodes, edges = self.parse_dot(g1)
         self.assertEqual(0, len(edges))
-        self.assertIn(r'label="A\l"', dot)
+        self.assertIn('label="A\\n"', dot)
         # make sure that generating a graph without ROI has not influence on the later generated graph
         # this has to be checked since graph.custom_style is a class property and is persistent for multiple
         # calls of graph.generate()
@@ -213,7 +213,7 @@ class TestDiagrams(TestTransitions):
         _ = m.get_graph()
         g2 = m.get_graph(show_roi=True)
         dot, _, _ = self.parse_dot(g2)
-        self.assertNotIn(r'label="A\l"', dot)
+        self.assertNotIn('label="A\\n"', dot)
         m.to_B()
         g3 = m.get_graph(show_roi=True)
         _, nodes, edges = self.parse_dot(g3)
@@ -247,10 +247,10 @@ class TestDiagrams(TestTransitions):
                           transitions=[{'trigger': 'event', 'source': 'A', 'dest': 'B', 'label': 'LabelEvent'}],
                           initial='A', graph_engine=self.graph_engine)
         dot, _, _ = self.parse_dot(m.get_graph())
-        self.assertIn(r'label="LabelA\l"', dot)
-        self.assertIn(r'label="NotLabelA\l"', dot)
+        self.assertIn('label="LabelA\\n"', dot)
+        self.assertIn('label="NotLabelA\\n"', dot)
         self.assertIn("label=LabelEvent", dot)
-        self.assertNotIn(r'label="A\l"', dot)
+        self.assertNotIn('label="A\\n"', dot)
         self.assertNotIn("label=event", dot)
 
     def test_binary_stream(self):
@@ -389,7 +389,6 @@ class TestDiagramsNested(TestDiagrams):
         g1 = model.get_graph(show_roi=True)
         _, nodes, edges = self.parse_dot(g1)
         self.assertEqual(len(edges), 2)  # reset and walk
-        print(nodes)
         self.assertEqual(len(nodes), 4)
         model.walk()
         model.run()
