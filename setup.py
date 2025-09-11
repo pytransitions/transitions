@@ -43,7 +43,6 @@ setup(
         "transitions.tests": ["data/*"],
     },
     include_package_data=True,
-    install_requires=["six"],
     extras_require=extras_require,
     tests_require=tests_require,
     license="MIT",
@@ -51,8 +50,6 @@ setup(
     % __version__,
     classifiers=[
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

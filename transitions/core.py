@@ -6,23 +6,7 @@
     and transition concepts.
 """
 
-
-try:
-    from builtins import object
-except ImportError:  # pragma: no cover
-    # python2
-    pass
-
-try:
-    # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
-    from enum import Enum, EnumMeta
-except ImportError:  # pragma: no cover
-    # If enum is not available, create dummy classes for type checks
-    class Enum:  # type:ignore
-        """This is just an Enum stub for Python 2 and Python 3.3 and before without Enum support."""
-
-    class EnumMeta:  # type:ignore
-        """This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support."""
+from enum import Enum, EnumMeta
 
 import inspect
 import itertools
@@ -31,7 +15,6 @@ import warnings
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
-from six import string_types
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -150,50 +133,6 @@ class State(object):
         return "<%s('%s')@%s>" % (type(self).__name__, self.name, id(self))
 
 
-class Condition(object):
-    """A helper class to call condition checks in the intended way.
-
-    Attributes:
-        func (str or callable): The function to call for the condition check
-        target (bool): Indicates the target state--i.e., when True,
-                the condition-checking callback should return True to pass,
-                and when False, the callback should return False to pass.
-    """
-
-    def __init__(self, func, target=True):
-        """
-        Args:
-            func (str or callable): Name of the condition-checking callable
-            target (bool): Indicates the target state--i.e., when True,
-                the condition-checking callback should return True to pass,
-                and when False, the callback should return False to pass.
-        Notes:
-            This class should not be initialized or called from outside a
-            Transition instance, and exists at module level (rather than
-            nesting under the transition class) only because of a bug in
-            dill that prevents serialization under Python 2.7.
-        """
-        self.func = func
-        self.target = target
-
-    def check(self, event_data):
-        """Check whether the condition passes.
-        Args:
-            event_data (EventData): An EventData instance to pass to the
-                condition (if event sending is enabled) or to extract arguments
-                from (if event sending is disabled). Also contains the data
-                model attached to the current machine which is used to invoke
-                the condition.
-        """
-        predicate = event_data.machine.resolve_callable(self.func, event_data)
-        if event_data.machine.send_event:
-            return predicate(event_data) == self.target
-        return predicate(*event_data.args, **event_data.kwargs) == self.target
-
-    def __repr__(self):
-        return "<%s(%s)@%s>" % (type(self).__name__, self.func, id(self))
-
-
 class Transition(object):
     """Representation of a transition managed by a ``Machine`` instance.
 
@@ -209,8 +148,47 @@ class Transition(object):
             but only if condition checks have been successful.
     """
 
+    class Condition(object):
+        """A helper class to call condition checks in the intended way.
+
+        Attributes:
+            func (str or callable): The function to call for the condition check
+            target (bool): Indicates the target state--i.e., when True,
+                    the condition-checking callback should return True to pass,
+                    and when False, the callback should return False to pass.
+        """
+
+        def __init__(self, func, target=True):
+            """
+            Args:
+                func (str or callable): Name of the condition-checking callable
+                target (bool): Indicates the target state--i.e., when True,
+                    the condition-checking callback should return True to pass,
+                    and when False, the callback should return False to pass.
+            """
+            self.func = func
+            self.target = target
+
+        def check(self, event_data):
+            """Check whether the condition passes.
+            Args:
+                event_data (EventData): An EventData instance to pass to the
+                    condition (if event sending is enabled) or to extract arguments
+                    from (if event sending is disabled). Also contains the data
+                    model attached to the current machine which is used to invoke
+                    the condition.
+            """
+            predicate = event_data.machine.resolve_callable(self.func, event_data)
+            if event_data.machine.send_event:
+                return predicate(event_data) == self.target
+            return predicate(*event_data.args, **event_data.kwargs) == self.target
+
+        def __repr__(self):
+            return "<%s(%s)@%s>" % (type(self).__name__, self.func, id(self))
+
     dynamic_methods = ['before', 'after', 'prepare']
     """ A list of dynamic methods which can be resolved by a ``Machine`` instance for convenience functions. """
+
     condition_cls = Condition
     """ The class used to wrap condition checks. Can be replaced to alter condition resolution behaviour
         (e.g. OR instead of AND for 'conditions' or AND instead of OR for 'unless') """
@@ -838,7 +816,7 @@ class Machine(object):
         states = listify(states)
 
         for state in states:
-            if isinstance(state, (string_types, Enum)):
+            if isinstance(state, (str, Enum)):
                 state = self._create_state(
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore, **kwargs)
@@ -1207,7 +1185,7 @@ class Machine(object):
         Returns:
             callable function resolved from string or func
         """
-        if isinstance(func, string_types):
+        if isinstance(func, str):
             try:
                 func = getattr(event_data.model, func)
                 if not callable(func):  # if a property or some other not callable attribute was passed

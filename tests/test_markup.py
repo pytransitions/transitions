@@ -15,17 +15,10 @@ from unittest import TestCase, skipIf
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock  # type: ignore
+    from mock import MagicMock
 
-try:
-    import enum
-    from enum import Enum
-except ImportError:
-    enum = None  # type: ignore
-
-    # placeholder for Python < 3.4 without enum
-    class Enum:  # type: ignore
-        pass
+import enum
+from enum import Enum
 
 if TYPE_CHECKING:
     from typing import List, Dict, Sequence, Union, Type

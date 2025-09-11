@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-try:
-    from builtins import object
-except ImportError:
-    pass
 
 import sys
 import tempfile
@@ -20,7 +16,7 @@ from .utils import Stuff, DummyModel
 try:
     from unittest.mock import MagicMock
 except ImportError:
-    from mock import MagicMock  # type: ignore
+    from mock import MagicMock
 
 try:
     # Just to skip tests if graphviz not installed
@@ -36,7 +32,7 @@ if TYPE_CHECKING:
 default_separator = NestedState.separator
 
 
-class Dummy(object):
+class Dummy:
     pass
 
 
@@ -296,10 +292,7 @@ class TestNestedTransitions(TestTransitions):
 
     def test_pickle(self):
         print("separator", self.state_cls.separator)
-        if sys.version_info < (3, 4):
-            import dill as pickle
-        else:
-            import pickle
+        import pickle
 
         states = ['A', 'B', {'name': 'C', 'children': ['1', '2', {'name': '3', 'children': ['a', 'b', 'c']}]},
                   'D', 'E', 'F']
