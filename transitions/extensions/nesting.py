@@ -24,8 +24,6 @@ except ImportError:  # pragma: no cover
     class EnumMeta:  # type: ignore
         """This is just an EnumMeta stub for Python 2 and Python 3.3 and before without Enum support."""
 
-from six import string_types
-
 from ..core import State, Machine, Transition, Event, listify, MachineError, EventData
 
 _LOGGER = logging.getLogger(__name__)
@@ -420,7 +418,7 @@ class HierarchicalMachine(Machine):
         if isinstance(to_scope, Enum):
             state = self.states[to_scope.name]
             to_scope = (state, state.states, state.events, self.prefix_path + [to_scope.name])
-        elif isinstance(to_scope, string_types):
+        elif isinstance(to_scope, str):
             state_name = to_scope.split(self.state_cls.separator)[0]
             state = self.states[state_name]
             to_scope = (state, state.states, state.events, self.prefix_path + [state_name])
@@ -451,7 +449,7 @@ class HierarchicalMachine(Machine):
         if hasattr(initial_name, 'name'):
             initial_name = initial_name.name
         # initial states set by add_model or machine might contain initial states themselves.
-        if isinstance(initial_name, string_types):
+        if isinstance(initial_name, str):
             initial_states = self._resolve_initial(models, initial_name.split(self.state_cls.separator))
         # when initial is set to a (parallel) state, we accept it as it is
         else:
@@ -516,7 +514,7 @@ class HierarchicalMachine(Machine):
                     state = {'name': state, 'children': state.value}
                 elif isinstance(state.value, dict):
                     state = dict(name=state, **state.value)
-            if isinstance(state, string_types):
+            if isinstance(state, str):
                 self._add_string_state(state, on_enter, on_exit, ignore, remap, **kwargs)
             elif isinstance(state, Enum):
                 self._add_enum_state(state, on_enter, on_exit, ignore, remap, **kwargs)
@@ -643,7 +641,7 @@ class HierarchicalMachine(Machine):
         """
         if isinstance(state, Enum):
             state = self._get_enum_path(state)
-        elif isinstance(state, string_types):
+        elif isinstance(state, str):
             state = state.split(self.state_cls.separator)
         if not hint:
             state = copy.copy(state)
@@ -696,11 +694,11 @@ class HierarchicalMachine(Machine):
         with self():
             source_path = [] if source == "*" \
                 else self._get_enum_path(source) if isinstance(source, Enum) \
-                else source.split(self.state_cls.separator) if isinstance(source, string_types) \
+                else source.split(self.state_cls.separator) if isinstance(source, str) \
                 else self._get_state_path(source)
             dest_path = [] if dest == "*" \
                 else self._get_enum_path(dest) if isinstance(dest, Enum) \
-                else dest.split(self.state_cls.separator) if isinstance(dest, string_types) \
+                else dest.split(self.state_cls.separator) if isinstance(dest, str) \
                 else self._get_state_path(dest)
             matches = self.get_nested_transitions(trigger, source_path, dest_path)
             # only consider delegations when source_path contains a nested state (len > 1)
@@ -746,11 +744,11 @@ class HierarchicalMachine(Machine):
         with self():
             source_path = [] if source == "*" \
                 else self._get_enum_path(source) if isinstance(source, Enum) \
-                else source.split(self.state_cls.separator) if isinstance(source, string_types) \
+                else source.split(self.state_cls.separator) if isinstance(source, str) \
                 else self._get_state_path(source)
             dest_path = [] if dest == "*" \
                 else self._get_enum_path(dest) if isinstance(dest, Enum) \
-                else dest.split(self.state_cls.separator) if isinstance(dest, string_types) \
+                else dest.split(self.state_cls.separator) if isinstance(dest, str) \
                 else self._get_state_path(dest)
             self._remove_nested_transitions(trigger, source_path, dest_path)
 
@@ -1171,7 +1169,7 @@ class HierarchicalMachine(Machine):
                 self._init_state(substate)
 
     def _recursive_initial(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             path = value.split(self.state_cls.separator, 1)
             if len(path) > 1:
                 state_name, suffix = path

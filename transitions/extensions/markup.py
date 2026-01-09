@@ -12,7 +12,6 @@ import importlib
 import itertools
 import numbers
 
-from six import string_types, iteritems
 
 try:
     # Enums are supported for Python 3.4+ and Python 2.7 with enum34 package installed
@@ -143,7 +142,7 @@ class MarkupMachine(Machine):
                 ", ".join(itertools.chain(
                     (str(_) for _ in func.args),
                     ("%s=%s" % (key, value)
-                     for key, value in iteritems(func.keywords if func.keywords else {})))))
+                     for key, value in (func.keywords if func.keywords else {}).items()))))
         return str(func)
 
     def _convert_states_and_transitions(self, root):
@@ -236,7 +235,7 @@ class HierarchicalMarkupMachine(MarkupMachine, HierarchicalMachine):
 
 def rep(func, format_references=None):
     """Return a string representation for `func`."""
-    if isinstance(func, string_types):
+    if isinstance(func, str):
         return func
     if isinstance(func, numbers.Number):
         return str(func)
@@ -249,7 +248,7 @@ def _convert(obj, attributes, format_references):
         val = getattr(obj, key, False)
         if not val:
             continue
-        if isinstance(val, string_types):
+        if isinstance(val, str):
             definition[key] = val
         elif val is True:
             definition[key] = True
