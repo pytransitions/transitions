@@ -31,7 +31,6 @@ import warnings
 
 from collections import OrderedDict, defaultdict, deque
 from functools import partial
-from six import string_types
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -838,7 +837,7 @@ class Machine(object):
         states = listify(states)
 
         for state in states:
-            if isinstance(state, (string_types, Enum)):
+            if isinstance(state, (str, Enum)):
                 state = self._create_state(
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore, **kwargs)
@@ -1207,7 +1206,7 @@ class Machine(object):
         Returns:
             callable function resolved from string or func
         """
-        if isinstance(func, string_types):
+        if isinstance(func, str):
             try:
                 func = getattr(event_data.model, func)
                 if not callable(func):  # if a property or some other not callable attribute was passed
