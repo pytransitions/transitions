@@ -239,6 +239,26 @@ class TestMermaidDiagramsNested(TestDiagramsNested, TestMermaidDiagrams):
         self.assertEqual(len(edges), 2)
         self.assertEqual(len(nodes), 10)
 
+    def test_transitions_without_labels_between_outer_states(self):
+        states = [
+            'A', 'B',
+            {'name': 'C',
+             'parallel': [
+                 {'name': '1', 'children': ['a', {'name': 'b', 'final': True}],
+                  'initial': 'a', 'transitions': [['go', 'a', 'b']]},
+                 {'name': '2', 'children': ['a', {'name': 'b', 'final': True}],
+                  'initial': 'a', 'transitions': [['go', 'a', 'b']]}
+             ]}
+        ]
+        transitions = [['', 'C', 'A'], ['', 'A', 'B'], ['', 'B', 'C']]
+        machine = self.machine_cls(states=states, transitions=transitions, initial='A',
+                                   graph_engine=self.graph_engine)
+        dot = machine.get_graph().source
+
+        self.assertIn('C --> A', dot)
+        self.assertIn('A --> B', dot)
+        self.assertIn('B --> C', dot)
+
 
 class TestDiagramsLockedNested(TestDiagramsNested):
 
