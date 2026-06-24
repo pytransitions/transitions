@@ -88,8 +88,8 @@ class AsyncCondition(Condition):
         func = event_data.machine.resolve_callable(self.func, event_data)
         res = func(event_data) if event_data.machine.send_event else func(*event_data.args, **event_data.kwargs)
         if inspect.isawaitable(res):
-            return await res == self.target
-        return res == self.target
+            return bool(await res) == self.target
+        return bool(res) == self.target
 
 
 class AsyncTransition(Transition):
