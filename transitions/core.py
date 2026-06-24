@@ -187,8 +187,8 @@ class Condition(object):
         """
         predicate = event_data.machine.resolve_callable(self.func, event_data)
         if event_data.machine.send_event:
-            return predicate(event_data) == self.target
-        return predicate(*event_data.args, **event_data.kwargs) == self.target
+            return bool(predicate(event_data)) == self.target
+        return bool(predicate(*event_data.args, **event_data.kwargs)) == self.target
 
     def __repr__(self):
         return "<%s(%s)@%s>" % (type(self).__name__, self.func, id(self))
