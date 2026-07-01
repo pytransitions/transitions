@@ -146,6 +146,24 @@ class TestMermaidDiagrams(TestDiagrams):
         assert "walk" not in edges
 
 
+class TestMermaidSafeIds(TestCase):
+
+    def test_state_names_with_special_characters(self):
+        m = GraphMachine(
+            states=['state A', 'state-B'],
+            transitions=[['go', 'state A', 'state-B']],
+            initial='state A',
+            auto_transitions=False,
+            graph_engine="mermaid",
+        )
+        source = m.get_graph().source
+
+        self.assertIn('state "state A" as state_A_', source)
+        self.assertIn('state "state-B" as state_B_', source)
+        self.assertNotIn("state A --> state-B", source)
+        self.assertNotIn("Class state A", source)
+
+
 class TestMermaidDiagramsNested(TestDiagramsNested, TestMermaidDiagrams):
 
     machine_cls = HierarchicalGraphMachine \

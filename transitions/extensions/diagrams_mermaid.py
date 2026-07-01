@@ -6,7 +6,9 @@
     of currently valid transitions.
 """
 import copy
+import hashlib
 import logging
+import re
 from collections import defaultdict
 
 from .diagrams_graphviz import filter_states
@@ -42,8 +44,13 @@ class Graph(BaseGraph):
 
     def _add_nodes(self, states, container):
         for state in states:
-            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), state["name"]))
-            container.append("Class {} s_{}".format(state["name"],
+            state_id = self._state_id(state["name"])
+            container.append(
+                "state \"{}\" as {}".format(
+                    self._convert_state_attributes(state), state_id
+                )
+            )
+            container.append("Class {} s_{}".format(state_id,
                                                     self.custom_styles["node"][state["name"]] or "default"))
 
     def _add_edges(self, transitions, container):
@@ -56,7 +63,13 @@ class Graph(BaseGraph):
             edge_labels[transition["source"]][dst].append(self._transition_label(transition))
         for src, dests in edge_labels.items():
             for dst, labels in dests.items():
-                container.append("{} --> {}: {}".format(src, dst, " | ".join(labels)))
+                container.append(
+                    "{} --> {}: {}".format(
+                        self._state_id(src),
+                        self._state_id(dst),
+                        " | ".join(labels),
+                    )
+                )
 
     def generate(self):
         """Triggers the generation of a graph. With graphviz backend, this does nothing since graph trees need to be
@@ -102,7 +115,9 @@ class Graph(BaseGraph):
         fsm_graph.append("")
         self._add_edges(transitions, fsm_graph)
         if self.machine.initial and (roi_state is None or roi_state == self.machine.initial):
-            fsm_graph.append("[*] --> {}".format(self.machine.initial))
+            fsm_graph.append(
+                "[*] --> {}".format(self._state_id(self.machine.initial))
+            )
 
         indent = 0
         for i in range(len(fsm_graph)):
@@ -131,6 +146,15 @@ class Graph(BaseGraph):
         # end each label with a left-aligned newline
         return label
 
+    @staticmethod
+    def _state_id(name):
+        name = str(name)
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
+            return name
+        safe_name = re.sub(r"[^A-Za-z0-9_]", "_", name).strip("_") or "state"
+        digest = hashlib.sha1(name.encode("utf-8")).hexdigest()[:8]
+        return "{}_{}".format(safe_name, digest)
+
 
 class NestedGraph(Graph):
     """Graph creation support for transitions.extensions.nested.HierarchicalGraphMachine."""
@@ -153,14 +177,19 @@ class NestedGraph(Graph):
     def _add_nested_nodes(self, states, container, prefix, default_style):
         for state in states:
             name = prefix + state["name"]
-            container.append("state \"{}\" as {}".format(self._convert_state_attributes(state), name))
+            state_id = self._state_id(name)
+            container.append(
+                "state \"{}\" as {}".format(
+                    self._convert_state_attributes(state), state_id
+                )
+            )
             if state.get("final", False):
-                container.append("{} --> [*]".format(name))
+                container.append("{} --> [*]".format(state_id))
             if not prefix:
-                container.append("Class {} s_{}".format(name.replace(" ", ""),
+                container.append("Class {} s_{}".format(state_id,
                                                         self.custom_styles["node"][name] or default_style))
             if state.get("children", None) is not None:
-                container.append("state {} {{".format(name))
+                container.append("state {} {{".format(state_id))
                 self._cluster_states.append(name)
                 # with container.subgraph(name=cluster_name, graph_attr=attr) as sub:
                 initial = state.get("initial", "")
@@ -178,8 +207,13 @@ class NestedGraph(Graph):
                         container.pop()
                 else:
                     if initial:
-                        container.append("[*] --> {}".format(
-                            prefix + state["name"] + self.machine.state_cls.separator + initial))
+                        initial_name = (
+                            prefix + state["name"] +
+                            self.machine.state_cls.separator + initial
+                        )
+                        container.append(
+                            "[*] --> {}".format(self._state_id(initial_name))
+                        )
                     self._add_nested_nodes(
                         state["children"],
                         container,
@@ -219,7 +253,11 @@ class NestedGraph(Graph):
                 container.append("{source} --> {dest}: {label}".format(**attr))
 
     def _create_edge_attr(self, src, dst, transition):
-        return {"source": src, "dest": dst, "label": self._transition_label(transition)}
+        return {
+            "source": self._state_id(src),
+            "dest": self._state_id(dst),
+            "label": self._transition_label(transition),
+        }
 
 
 class DigraphMock:
