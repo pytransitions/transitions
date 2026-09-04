@@ -62,15 +62,41 @@ class AsyncState(State):
 class NestedAsyncState(NestedState, AsyncState):
     """A state that allows substates. Callback execution is done asynchronously."""
 
+    # `scoped_enter` and `scoped_exit` await in between assigning and clearing the scope. A state
+    # object is shared by every model on the machine, so storing the scope on the state itself lets
+    # a model read the scope of another model that is suspended mid-callback, which resolves nested
+    # names against the wrong parent. Keep the scope with the task that set it instead.
+    _scopes = contextvars.ContextVar('nested_async_scopes', default=None)
+
+    @property
+    def _scope(self):
+        scopes = self._scopes.get()
+        if scopes is not None and id(self) in scopes:
+            return scopes[id(self)]
+        return self._unscoped
+
+    @_scope.setter
+    def _scope(self, value):
+        self._unscoped = value
+
+    def _enter_scope(self, scope):
+        scopes = dict(self._scopes.get() or {})
+        scopes[id(self)] = scope or []
+        return self._scopes.set(scopes)
+
     async def scoped_enter(self, event_data, scope=None):
-        self._scope = scope or []
-        await self.enter(event_data)
-        self._scope = []
+        token = self._enter_scope(scope)
+        try:
+            await self.enter(event_data)
+        finally:
+            self._scopes.reset(token)
 
     async def scoped_exit(self, event_data, scope=None):
-        self._scope = scope or []
-        await self.exit(event_data)
-        self._scope = []
+        token = self._enter_scope(scope)
+        try:
+            await self.exit(event_data)
+        finally:
+            self._scopes.reset(token)
 
 
 class AsyncCondition(Condition):

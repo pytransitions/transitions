@@ -7,7 +7,7 @@ from typing import Any, Awaitable, Optional, List, Type, Dict, Deque, Callable, 
 from asyncio import Task
 from logging import Logger
 from enum import Enum
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 
 from ..core import StateIdentifier, CallbackList
 
@@ -38,7 +38,10 @@ class AsyncState(State):
     def add_callback(self, trigger: str, func: AsyncCallback) -> Awaitable[Optional[bool]]: ...  # type: ignore[override]
 
 class NestedAsyncState(NestedState, AsyncState):
+    _scopes: ContextVar[Optional[Dict[int, List[str]]]]
+    _unscoped: List[str]
     _scope: Any
+    def _enter_scope(self, scope: Optional[List[str]]) -> Token[Optional[Dict[int, List[str]]]]: ...
     async def scoped_enter(self, event_data: AsyncEventData, scope: Optional[List[str]] = ...) -> None: ...  # type: ignore[override]
     async def scoped_exit(self, event_data: AsyncEventData, scope: Optional[List[str]] = ...) -> None: ...  # type: ignore[override]
 
