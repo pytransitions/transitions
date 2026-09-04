@@ -792,6 +792,39 @@ class TestHierarchicalAsync(TestAsync):
         asyncio.run(machine.to_B())
         self.assertTrue(machine.is_B())
 
+    def test_multiple_models_nested_scope(self):
+        # a state object is shared by all models, so a model must not observe the nested scope of
+        # another model that is suspended inside an enter callback; see issue #735
+        separator = self.machine_cls.state_cls.separator
+
+        async def slow():
+            # type: () -> None
+            await asyncio.sleep(0.01)
+
+        states = ['A', {'name': 'B', 'initial': '1',
+                        'children': [{'name': '1', 'on_enter': slow},
+                                     {'name': '2', 'on_enter': slow}]}, 'C']
+        transitions = [
+            ['go', 'A', 'B'],
+            ['go', 'B{0}1'.format(separator), 'B{0}2'.format(separator)],
+            ['go', 'B{0}2'.format(separator), 'C'],
+        ]  # type: Sequence[AsyncTransitionConfig]
+        first = DummyModel()
+        second = DummyModel()
+        self.machine_cls(model=[first, second], states=states, transitions=transitions,
+                         initial='A', queued='model')
+
+        async def drive(model):
+            for _ in range(3):
+                await model.go()
+
+        async def run():
+            await asyncio.gather(drive(first), drive(second))
+
+        asyncio.run(run())
+        self.assertTrue(first.is_C())
+        self.assertTrue(second.is_C())
+
     def test_final_state_nested(self):
         final_mock_B = MagicMock()
         final_mock_Y = MagicMock()
