@@ -89,7 +89,7 @@ class Graph(BaseGraph):
             transitions = [
                 t
                 for t in transitions
-                if t["source"] in active_states or self.custom_styles["edge"][t["source"]][t["dest"]]
+                if t["source"] in active_states or self.custom_styles["edge"][t["source"]][t.get("dest", t["source"])]
             ]
             active_states = active_states.union({
                 t

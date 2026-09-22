@@ -124,6 +124,23 @@ class TestMermaidDiagrams(TestDiagrams):
         self.assertNotIn(r'"A"', dot)
         self.assertNotIn("event", dot)
 
+    def test_roi_with_inactive_internal_transition(self):
+        m = self.machine_cls(states=['A', 'B'], initial='A', auto_transitions=False,
+                             graph_engine=self.graph_engine)
+        m.add_transition('go', 'A', 'B')
+        m.add_transition('wait', 'B', None)
+
+        self.assertIn('B --> B: wait [internal]', m.get_graph().source)
+        roi = m.get_graph(show_roi=True).source
+        self.assertIn('A --> B: go', roi)
+        self.assertNotIn('B --> B: wait', roi)
+
+        m.go()
+        self.assertIn('B --> B: wait [internal]', m.get_graph(show_roi=True).source)
+        m.wait()
+        self.assertEqual(m.state, 'B')
+        self.assertIn('B --> B: wait [internal]', m.get_graph(show_roi=True).source)
+
     def test_binary_stream(self):
         from io import BytesIO
         m = self.machine_cls(states=['A', 'B', 'C'], initial='A', auto_transitions=True,
