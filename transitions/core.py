@@ -647,7 +647,7 @@ class Machine(object):
         if len(self._transition_queue) > 0:
             # the first element of the list is currently executed. Keeping it for further Machine._process(ing)
             self._transition_queue = deque(
-                [self._transition_queue[0]] + [e for e in self._transition_queue if e.args[0].model not in models])
+                [self._transition_queue[0]] + [e for e in itertools.islice(self._transition_queue, 1, None) if e.args[0].model not in models])
 
     @classmethod
     def _create_transition(cls, *args, **kwargs):
