@@ -17,6 +17,70 @@ class Dummy(object):
 
 class TestTransitionsAddRemove(TestCase):
 
+    def test_queued_remove_other_model(self):
+        active, removed = Dummy(), Dummy()
+        machine = Machine([active, removed], states=['idle', 'busy'], initial='idle',
+                          queued=True, auto_transitions=False)
+        calls = []
+
+        def remove_other():
+            calls.append('start')
+            machine.remove_model(removed)
+
+        machine.add_transition('start', 'idle', 'busy', after=remove_other)
+        self.assertTrue(active.start())
+        self.assertEqual(calls, ['start'])
+        self.assertEqual(active.state, 'busy')
+        self.assertEqual(removed.state, 'idle')
+        self.assertEqual(machine.models, [active])
+        self.assertFalse(machine._transition_queue)
+
+    def test_queued_remove_other_models_preserves_pending_order(self):
+        active, removed, remaining, also_removed = Dummy(), Dummy(), Dummy(), Dummy()
+        machine = Machine([active, removed, remaining, also_removed], states=['idle', 'busy', 'done'],
+                          initial='idle', queued=True, auto_transitions=False, send_event=True)
+        calls = []
+
+        def after_start(event):
+            calls.append((event.model, 'start'))
+            if event.model is active:
+                removed.start()
+                active.finish()
+                also_removed.start()
+                remaining.start()
+                machine.remove_model([removed, also_removed])
+
+        machine.add_transition('start', 'idle', 'busy', after=after_start)
+        machine.add_transition('finish', 'busy', 'done',
+                               after=lambda event: calls.append((event.model, 'finish')))
+        self.assertTrue(active.start())
+        self.assertEqual(calls, [(active, 'start'), (active, 'finish'), (remaining, 'start')])
+        self.assertEqual([model.state for model in [active, removed, remaining, also_removed]],
+                         ['done', 'idle', 'busy', 'idle'])
+        self.assertEqual(machine.models, [active, remaining])
+        self.assertFalse(machine._transition_queue)
+
+    def test_queued_remove_active_model_preserves_other_pending_events(self):
+        active, remaining = Dummy(), Dummy()
+        machine = Machine([active, remaining], states=['idle', 'busy', 'done'], initial='idle',
+                          queued=True, auto_transitions=False, send_event=True)
+        calls = []
+
+        def after_start(event):
+            calls.append(event.model)
+            if event.model is active:
+                active.finish()
+                remaining.start()
+                machine.remove_model(active)
+
+        machine.add_transition('start', 'idle', 'busy', after=after_start)
+        machine.add_transition('finish', 'busy', 'done')
+        self.assertTrue(active.start())
+        self.assertEqual(calls, [active, remaining])
+        self.assertEqual([active.state, remaining.state], ['busy', 'busy'])
+        self.assertEqual(machine.models, [remaining])
+        self.assertFalse(machine._transition_queue)
+
     def test_garbage_collection(self):
 
         states = ['A', 'B', 'C', 'D', 'E', 'F']
