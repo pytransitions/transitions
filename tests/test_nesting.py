@@ -781,6 +781,39 @@ class TestSeparatorsBase(TestCase):
         self.state_cls = CustomNestedState
         self.stuff = Stuff(self.states, self.machine_cls)
 
+    def test_existing_model_helpers_are_preserved(self):
+        model = DummyModel()
+        model.to_B = lambda: 'custom transition'
+        model.is_B = lambda: 'custom check'
+        machine = self.machine_cls(model=model, states=['A', {'name': 'B', 'children': ['child']}],
+                                   initial='A')
+
+        self.assertEqual(model.to_B(), 'custom transition')
+        self.assertEqual(model.is_B(), 'custom check')
+        model.trigger('to_B' + self.separator + 'child')
+        self.assertEqual(model.state, 'B' + self.separator + 'child')
+        self.assertTrue(machine.is_state(model.state, model))
+
+    def test_existing_model_helpers_are_overridden(self):
+        model = DummyModel()
+        model.to_B = lambda: 'custom transition'
+        model.is_B = lambda: 'custom check'
+        machine = self.machine_cls(model=model, states=['A', {'name': 'B', 'children': ['child']}],
+                                   initial='A', model_override=True)
+
+        self.assertFalse(model.is_B())
+        model.to_B()
+        self.assertTrue(model.is_B())
+        if self.separator != '_':
+            model.to_B.child()
+            self.assertTrue(model.is_B.child())
+            self.assertFalse(model.is_B())
+            self.assertEqual(model.state, 'B' + self.separator + 'child')
+            machine.add_state('B' + self.separator + 'other')
+            model.to_B.other()
+            self.assertTrue(model.is_B.other())
+        self.assertFalse(hasattr(model, 'to_A'))
+
     def test_add_nested_state(self):
         m = self.machine_cls(states=['A'], initial='A')
         m.add_state('B{0}1{0}a'.format(self.state_cls.separator))

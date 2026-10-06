@@ -948,8 +948,9 @@ class HierarchicalMachine(Machine):
             # In a previous loop the base state checker is_<state> should have been added to the model.
             # If that's not the case, _checked_assignment prevented that.
             # One reason could be that model_override is True and is_<state> has not been defined on the model.
-            if hasattr(model, 'is_' + path[0]):
-                getattr(model, 'is_' + path[0]).add(trig_func, path[1:])
+            wrapper = getattr(model, 'is_' + path[0], None)
+            if isinstance(wrapper, FunctionWrapper):
+                wrapper.add(trig_func, path[1:])
             elif len(path) == 1:
                 self._checked_assignment(model, 'is_' + path[0], FunctionWrapper(trig_func))
         with self(state.name):
@@ -1043,9 +1044,10 @@ class HierarchicalMachine(Machine):
         # FunctionWrappers are only necessary if a custom separator is used
         if trigger.startswith('to_') and self.state_cls.separator != '_':
             path = trigger[3:].split(self.state_cls.separator)
-            if hasattr(model, 'to_' + path[0]):
+            wrapper = getattr(model, 'to_' + path[0], None)
+            if isinstance(wrapper, FunctionWrapper):
                 # add path to existing function wrapper
-                getattr(model, 'to_' + path[0]).add(trig_func, path[1:])
+                wrapper.add(trig_func, path[1:])
             else:
                 # create a new function wrapper
                 self._checked_assignment(model, 'to_' + path[0], FunctionWrapper(trig_func))
