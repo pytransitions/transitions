@@ -130,6 +130,37 @@ class TestMarkupMachine(TestCase):
         self.assertEqual(sorted(m1.states.keys()), sorted(m2.states.keys()))
         self.assertEqual(sorted(m1.events.keys()), sorted(m2.events.keys()))
 
+    def test_after_state_change_roundtrip(self):
+        self._assert_state_change_roundtrip(None, 'after_func', 0, 1)
+
+    def test_before_state_change_roundtrip(self):
+        self._assert_state_change_roundtrip('before_func', None, 1, 0)
+
+    def test_distinct_state_change_callbacks_roundtrip(self):
+        self._assert_state_change_roundtrip('before_func', 'after_func', 1, 1)
+
+    def test_state_change_callback_lists_roundtrip(self):
+        self._assert_state_change_roundtrip(['before_func'] * 2, ['after_func'] * 3, 2, 3)
+
+    def _assert_state_change_roundtrip(self, before, after, before_count, after_count):
+        original = self.machine_cls(model=None, states=self.states, initial='A',
+                                    transitions=self.transitions, auto_transitions=False,
+                                    before_state_change=before, after_state_change=after)
+        restored = self.machine_cls(markup=original.get_markup_config())
+        target = original.get_transitions('walk')[0].dest
+        for machine in (original, restored):
+            model = SimpleModel()
+            before_callback = MagicMock(side_effect=lambda: self.assertEqual(
+                model.state.name if isinstance(model.state, Enum) else model.state, 'A'))
+            after_callback = MagicMock(side_effect=lambda: self.assertEqual(
+                model.state.name if isinstance(model.state, Enum) else model.state, target))
+            setattr(model, 'before_func', before_callback)
+            setattr(model, 'after_func', after_callback)
+            machine.add_model(model)
+            self.assertTrue(model.walk())
+            self.assertEqual(before_callback.call_count, before_count)
+            self.assertEqual(after_callback.call_count, after_count)
+
     def test_conditions_unless(self):
         s = Stuff(machine_cls=self.machine_cls)
         s.machine.add_transition('go', 'A', 'B', conditions='this_passes',

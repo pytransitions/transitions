@@ -68,7 +68,7 @@ class MarkupMachine(Machine):
                 on_exception=on_exception, on_final=on_final, **kwargs
             )
             self._markup['before_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
-            self._markup['after_state_change'] = [x for x in (rep(f) for f in self.before_state_change) if x]
+            self._markup['after_state_change'] = [x for x in (rep(f) for f in self.after_state_change) if x]
             self._markup['prepare_event'] = [x for x in (rep(f) for f in self.prepare_event) if x]
             self._markup['finalize_event'] = [x for x in (rep(f) for f in self.finalize_event) if x]
             self._markup['on_exception'] = [x for x in (rep(f) for f in self.on_exception) if x]
