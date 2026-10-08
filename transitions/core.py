@@ -843,6 +843,7 @@ class Machine(object):
                     state, on_enter=on_enter, on_exit=on_exit,
                     ignore_invalid_triggers=ignore, **kwargs)
             elif isinstance(state, dict):
+                state = state.copy()
                 if 'ignore_invalid_triggers' not in state:
                     state['ignore_invalid_triggers'] = ignore
                 state = self._create_state(**state)

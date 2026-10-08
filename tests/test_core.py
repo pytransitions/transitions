@@ -22,7 +22,7 @@ except ImportError:
     from mock import MagicMock  # type: ignore
 
 if TYPE_CHECKING:
-    from typing import Sequence
+    from typing import Sequence, Type
     from transitions.core import TransitionConfig, StateConfig, TransitionConfigDict
 
 
@@ -1418,3 +1418,99 @@ class TestTransitions(TestCase):
         assert trans[0].my_int == 23
         assert trans[0].my_dict == {"baz": "bar"}
         assert trans[0].my_none is None
+
+
+class TestReusedStateConfiguration(TestCase):
+
+    def setUp(self):
+        self.machine_cls = Machine
+
+    def test_reused_state_configuration_keeps_machine_defaults(self):
+        for first_ignore in (False, True):
+            with self.subTest(first_ignore=first_ignore):
+                callback = MagicMock()
+                callbacks = [callback]
+                first_state = {'name': 'A'}
+                second_state = {'name': 'B', 'on_enter': callbacks}
+                states = [first_state, second_state]  # type: List[StateConfig]
+                models = [DummyModel(), DummyModel()]
+                ignores = [first_ignore, not first_ignore]
+                machines = [self.machine_cls(model=model, states=states, initial='A',
+                                             auto_transitions=False, ignore_invalid_triggers=ignore)
+                            for model, ignore in zip(models, ignores)]
+
+                for machine, model, ignore in zip(machines, models, ignores):
+                    machine.add_transition('go', 'A', 'B')
+                    self.assertTrue(model.go())
+                    if ignore:
+                        self.assertFalse(model.go())
+                    else:
+                        with self.assertRaises(MachineError):
+                            model.go()
+                    self.assertIs(machine.get_state('B').on_enter, callbacks)
+                    self.assertIs(machine.get_state('B').on_enter[0], callback)
+
+                self.assertEqual(callback.call_count, 2)
+                self.assertEqual(first_state, {'name': 'A'})
+                self.assertEqual(second_state, {'name': 'B', 'on_enter': callbacks})
+                self.assertIs(states[0], first_state)
+                self.assertIs(states[1], second_state)
+                self.assertIs(second_state['on_enter'], callbacks)
+
+    def test_reused_state_configuration_keeps_add_states_defaults(self):
+        state = {'name': 'B'}
+        for ignore in (True, False):
+            machine = self.machine_cls(states=['A'], initial='A', auto_transitions=False,
+                                       ignore_invalid_triggers=not ignore)
+            machine.add_states([state], ignore_invalid_triggers=ignore)
+            machine.add_transition('go', 'A', 'B')
+            self.assertTrue(machine.go())
+            if ignore:
+                self.assertFalse(machine.go())
+            else:
+                with self.assertRaises(MachineError):
+                    machine.go()
+        self.assertEqual(state, {'name': 'B'})
+
+    def test_reused_state_configuration_preserves_explicit_overrides(self):
+        for ignore in (False, True, None):
+            with self.subTest(ignore=ignore):
+                state = {'name': 'B', 'ignore_invalid_triggers': ignore}
+                for default in (True, False):
+                    machine = self.machine_cls(states=['A'], initial='A', auto_transitions=False,
+                                               ignore_invalid_triggers=default)
+                    machine.add_states([state], ignore_invalid_triggers=not default)
+                    self.assertIs(machine.get_state('B').ignore_invalid_triggers, ignore)
+                self.assertEqual(state, {'name': 'B', 'ignore_invalid_triggers': ignore})
+
+    def test_reused_state_configuration_with_two_machines_on_one_model(self):
+        model = DummyModel()
+        states = [{'name': 'A'}, {'name': 'B'}]
+        tolerant = self.machine_cls(
+            model=model, states=states, initial='A', auto_transitions=False,
+            model_attribute='tolerant_state', ignore_invalid_triggers=True)
+        strict = self.machine_cls(
+            model=model, states=states, initial='A', auto_transitions=False,
+            model_attribute='strict_state', ignore_invalid_triggers=False)
+        tolerant.add_transition('tolerant_go', 'A', 'B')
+        strict.add_transition('strict_go', 'A', 'B')
+        self.assertTrue(model.tolerant_go())
+        self.assertTrue(model.strict_go())
+        self.assertFalse(model.tolerant_go())
+        with self.assertRaises(MachineError):
+            model.strict_go()
+        self.assertEqual(states, [{'name': 'A'}, {'name': 'B'}])
+
+
+class TestReusedNestedStateConfiguration(TestReusedStateConfiguration):
+
+    def setUp(self):
+        from transitions.extensions import HierarchicalMachine
+        self.machine_cls = HierarchicalMachine  # type: Type[HierarchicalMachine]
+
+
+class TestReusedLockedStateConfiguration(TestReusedStateConfiguration):
+
+    def setUp(self):
+        from transitions.extensions import LockedMachine
+        self.machine_cls = LockedMachine  # type: Type[LockedMachine]
