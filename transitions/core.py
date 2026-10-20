@@ -1138,9 +1138,9 @@ class Machine(object):
             dest (str, Enum or State): Limits removal to transitions to a certain state.
         """
         if source != "*":
-            source = [s.name if hasattr(source, 'name') else s for s in listify(source)]
+            source = [s.name if hasattr(s, 'name') else s for s in listify(source)]
         if dest != "*":
-            dest = [d.name if hasattr(dest, 'name') else d for d in listify(dest)]
+            dest = [d.name if hasattr(d, 'name') else d for d in listify(dest)]
         # outer comprehension, keeps events if inner comprehension returns lists with length > 0
         tmp = {key: value for key, value in
                {k: [t for t in v

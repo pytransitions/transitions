@@ -17,6 +17,37 @@ class Dummy(object):
 
 class TestTransitionsAddRemove(TestCase):
 
+    def test_remove_transition_state_lists(self):
+        models = [Dummy(), Dummy()]
+        machine = Machine(models, states=['A', 'B', 'C', 'D'], initial='A',
+                          auto_transitions=False)
+        machine.add_transition('go', ['A', 'B'], 'C')
+        machine.add_transition('go', 'A', 'D')
+
+        machine.remove_transition('go', source=[machine.get_state('A'), 'B'],
+                                  dest=[machine.get_state('C')])
+        self.assertEqual([(t.source, t.dest) for t in machine.get_transitions('go')],
+                         [('A', 'D')])
+        for model in models:
+            model.go()
+            self.assertEqual(model.state, 'D')
+
+        machine.remove_transition('go', dest=[machine.get_state('D')])
+        self.assertNotIn('go', machine.events)
+        for model in models:
+            self.assertFalse(hasattr(model, 'go'))
+
+        machine.add_transition('go', 'D', 'A')
+        for model in models:
+            model.go()
+            self.assertEqual(model.state, 'A')
+        machine.remove_transition('go', source=[machine.get_state('A')])
+        self.assertEqual(len(machine.get_transitions('go')), 1)
+        machine.remove_transition('go', source=[machine.get_state('D')])
+        self.assertNotIn('go', machine.events)
+        for model in models:
+            self.assertFalse(hasattr(model, 'go'))
+
     def test_garbage_collection(self):
 
         states = ['A', 'B', 'C', 'D', 'E', 'F']
