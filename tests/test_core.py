@@ -1108,6 +1108,37 @@ class TestTransitions(TestCase):
                     for t in m.get_transitions(dest=m.states['D'])]),
             [('A', 'D'), ('A', 'D'), ('B', 'D'), ('C', 'D')])
 
+    def test_get_transitions_empty_source(self):
+        m = self.machine_cls(states=['', 'A', 'B'], initial='A', auto_transitions=False)
+        m.add_transition('go', '', 'A')
+        m.add_transition('go', 'A', 'B')
+        m.add_transition('go', 'B', '')
+        for source in ('', m.get_state('')):
+            self.assertEqual([(t.source, t.dest) for t in m.get_transitions('go', source=source)],
+                             [('', 'A')])
+        self.assertEqual(len(m.get_transitions('go', source='*')), 3)
+
+    def test_get_transitions_empty_destination(self):
+        m = self.machine_cls(states=['', 'A', 'B'], initial='A', auto_transitions=False)
+        m.add_transition('go', '', 'A')
+        m.add_transition('go', 'A', 'B')
+        m.add_transition('go', 'B', '')
+        m.add_transition('tick', 'A', None)
+        for dest in ('', m.get_state('')):
+            self.assertEqual([(t.source, t.dest) for t in m.get_transitions(dest=dest)],
+                             [('B', '')])
+        self.assertEqual(len(m.get_transitions(dest='*')), 4)
+
+    def test_get_transitions_empty_source_and_destination(self):
+        m = self.machine_cls(states=['', 'A'], initial='A', auto_transitions=False)
+        m.add_transition('go', '', '')
+        m.add_transition('go', '', 'A')
+        m.add_transition('go', 'A', '')
+        for state in ('', m.get_state('')):
+            self.assertEqual([(t.source, t.dest)
+                              for t in m.get_transitions('go', source=state, dest=state)],
+                             [('', '')])
+
     def test_remove_transition(self):
         self.stuff.machine.add_transition('go', ['A', 'B', 'C'], 'D')
         self.stuff.machine.add_transition('walk', 'A', 'B')

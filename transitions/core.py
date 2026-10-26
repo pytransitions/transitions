@@ -1111,6 +1111,7 @@ class Machine(object):
             trigger (str): Trigger name of the transition.
             source (str, Enum or State): Limits list to transitions from a certain state.
             dest (str, Enum or State): Limits list to transitions to a certain state.
+                Use '*' to match every state; '' matches only the empty-named state.
         """
         if trigger:
             try:
@@ -1123,12 +1124,14 @@ class Machine(object):
         for event in events:
             transitions.extend(
                 itertools.chain.from_iterable(event.transitions.values()))
-        target_source = source.name if hasattr(source, 'name') else source if source != "*" else ""
-        target_dest = dest.name if hasattr(dest, 'name') else dest if dest != "*" else ""
+        source_is_wildcard = not hasattr(source, 'name') and source == "*"
+        dest_is_wildcard = not hasattr(dest, 'name') and dest == "*"
+        target_source = source.name if hasattr(source, 'name') else source
+        target_dest = dest.name if hasattr(dest, 'name') else dest
         return [transition
                 for transition in transitions
-                if (transition.source, transition.dest) == (target_source or transition.source,
-                                                            target_dest or transition.dest)]
+                if (source_is_wildcard or transition.source == target_source)
+                and (dest_is_wildcard or transition.dest == target_dest)]
 
     def remove_transition(self, trigger, source="*", dest="*"):
         """Removes a transition from the Machine and all models.
