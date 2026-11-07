@@ -111,9 +111,9 @@ def with_model_definitions(cls):
 
     def add_model_override(self, model, initial=None):
         self.model_override = True
-        for model in listify(model):
-            model = self if model == "self" else model
-            for name, specs in TriggerPlaceholder.definitions.get(model.__class__, {}).items():
+        for item in listify(model):
+            item = self if item == "self" else item
+            for name, specs in TriggerPlaceholder.definitions.get(item.__class__, {}).items():
                 for spec in specs:
                     if isinstance(spec, list):
                         self.add_transition(name, *spec)

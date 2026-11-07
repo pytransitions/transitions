@@ -182,6 +182,18 @@ class TestExperimental(TestCase):
         self.assertFalse(model.is_B())
         self.assertEqual("C", model.state)
 
+    def test_decorator_multiple_models(self):
+        class Model:
+            go = event(transition(source="A", dest="B"))
+
+        first, second = Model(), Model()
+        machine = self.trigger_machine([first, second], states=["A", "B"], initial="A")
+        self.assertEqual(machine.models, [first, second])
+        for model in (first, second):
+            self.assertEqual(model.state, "A")
+            self.assertTrue(model.go())
+            self.assertEqual(model.state, "B")
+
     def test_decorator_complex(self):
 
         class Model:
