@@ -123,19 +123,22 @@ class LockedMachine(Machine):
 
     # When we attempt to pickle a locked machine, using IDs wont suffice to unpickle the contexts since
     # IDs have changed. We use a 'reference' store with objects as dictionary keys to resolve the newly created
-    # references. This should induce no restrictions compared to transitions 0.8.8 but enable the usage of unhashable
-    # objects in locked machine.
+    # references. Store reference/context pairs rather than using models as dict keys, so unhashable models
+    # remain serializable too.
     def __getstate__(self):
         state = {k: v for k, v in self.__dict__.items()}
         del state['model_context_map']
-        state['_model_context_map_store'] = {mod: self.model_context_map[id(mod)] for mod in self.models}
+        state['_model_context_map_store'] = [(mod, self.model_context_map[id(mod)]) for mod in self.models]
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.model_context_map = defaultdict(list)
-        for model in self.models:
-            self.model_context_map[id(model)] = self._model_context_map_store[model]
+        store = self._model_context_map_store
+        # Retain support for state saved with the former hash-keyed representation.
+        pairs = store.items() if isinstance(store, dict) else store
+        for model, contexts in pairs:
+            self.model_context_map[id(model)] = contexts
         del self._model_context_map_store
 
     def add_model(self, model, initial=None, model_context=None):
