@@ -47,7 +47,8 @@ class MarkupMachine(Machine):
                  queued=False, prepare_event=None, finalize_event=None, model_attribute='state',
                  model_override=False, on_exception=None, on_final=None, markup=None, auto_transitions_markup=False,
                  **kwargs):
-        self._markup = markup or {}
+        # Model extraction and later exports must not consume the caller's mapping.
+        self._markup = markup.copy() if markup else {}
         self._auto_transitions_markup = auto_transitions_markup
         self._needs_update = True
 

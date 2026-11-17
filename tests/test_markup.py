@@ -3,6 +3,7 @@ try:
 except ImportError:
     pass
 
+from copy import deepcopy
 from functools import partial
 
 from transitions.extensions.markup import MarkupMachine, HierarchicalMarkupMachine, rep
@@ -129,6 +130,67 @@ class TestMarkupMachine(TestCase):
         self.assertTrue(model1.state == model2.state or model1.state.name == model2.state)
         self.assertEqual(sorted(m1.states.keys()), sorted(m2.states.keys()))
         self.assertEqual(sorted(m1.events.keys()), sorted(m2.events.keys()))
+
+    def test_markup_can_initialize_multiple_machines(self):
+        source = self.machine_cls(states=self.states, transitions=self.transitions, initial='A')
+        source.walk()
+        config = deepcopy(source.markup)
+        original_models = deepcopy(config.get('models'))
+
+        first = self.machine_cls(markup=config)
+        second = self.machine_cls(markup=config)
+
+        self.assertEqual(config.get('models'), original_models)
+        self.assertEqual(len(first.models), 1)
+        self.assertEqual(len(second.models), 1)
+        self.assertEqual(first.state, second.state)
+        first.run()
+        self.assertNotEqual(first.state, second.state)
+        self.assertEqual(config.get('models'), original_models)
+
+        # Reading one restored machine's current markup must not replace the
+        # saved model states used to create another restored machine.
+        first.markup
+        self.assertEqual(config.get('models'), original_models)
+        third = self.machine_cls(markup=config)
+        self.assertEqual(third.state, second.state)
+
+    def test_markup_restore_does_not_consume_source_models(self):
+        source = self.machine_cls(states=self.states, transitions=self.transitions, initial='A')
+        source.walk()
+        exported = source.markup
+        original_models = deepcopy(exported.get('models'))
+        restored = self.machine_cls(markup=exported)
+        self.assertIn('models', exported)
+        self.assertEqual(exported.get('models'), original_models)
+        restored.run()
+        restored.markup
+        self.assertEqual(exported.get('models'), original_models)
+
+    def test_reusable_markup_with_external_models_and_custom_attribute(self):
+        models = [SimpleModel(), SimpleModel()]
+        source = self.machine_cls(models, states=self.states, transitions=self.transitions,
+                                  initial='A', model_attribute='status')
+        models[0].walk()
+        config = deepcopy(source.markup)
+        expected = [item['state'] for item in config.get('models')]
+        restored = [self.machine_cls(markup=config) for _ in range(2)]
+        for machine in restored:
+            self.assertEqual([model.status for model in machine.models], expected)
+            self.assertTrue(all(isinstance(model, SimpleModel) for model in machine.models))
+        restored[0].models[0].run()
+        restored[0].markup
+        self.assertEqual([item['state'] for item in config.get('models')], expected)
+        self.assertEqual([model.status for model in restored[1].models], expected)
+
+    def test_reusable_markup_without_models(self):
+        source = self.machine_cls(model=None, states=self.states, initial='A')
+        config = deepcopy(source.markup)
+        for _ in range(2):
+            restored = self.machine_cls(markup=config)
+            self.assertEqual(restored.models, [])
+            self.assertEqual(restored.markup.get('models'), [])
+            self.assertEqual(config.get('models'), [])
 
     def test_conditions_unless(self):
         s = Stuff(machine_cls=self.machine_cls)
