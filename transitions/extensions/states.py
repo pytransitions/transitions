@@ -50,6 +50,7 @@ class Error(Tags):
         tags = kwargs.get('tags', [])
         accepted = kwargs.pop('accepted', False)
         if accepted:
+            tags = list(tags)
             tags.append('accepted')
             kwargs['tags'] = tags
         super(Error, self).__init__(*args, **kwargs)
